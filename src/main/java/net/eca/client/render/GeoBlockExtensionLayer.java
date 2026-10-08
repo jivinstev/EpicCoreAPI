@@ -1,5 +1,6 @@
 package net.eca.client.render;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -9,6 +10,8 @@ import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
 import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import com.geckolib.renderer.base.GeoRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
@@ -22,18 +25,18 @@ import com.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
 
-public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> extends GeoRenderLayer<T> {
+public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable, R extends BlockEntityRenderState & GeoRenderState> extends GeoRenderLayer<T, Void, R> {
 
     private final GeoBoneVisibilityController boneVisibility = new GeoBoneVisibilityController();
     private BlockExtension activeExtension;
 
-    public GeoBlockExtensionLayer(GeoBlockRenderer<T> renderer) {
+    public GeoBlockExtensionLayer(GeoBlockRenderer<T, R> renderer) {
         super(renderer);
     }
 
     @Override
     public void preRender(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
-                          MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
+                          VertexConsumer buffer, float partialTick,
                           int packedLight, int packedOverlay) {
         BlockExtension extension = BlockExtensionManager.getExtension(animatable.getBlockState().getBlock());
         activeExtension = extension != null && animatable.getLevel() != null
@@ -46,13 +49,13 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
 
     @Override
     public void render(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
-                       MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
+                       VertexConsumer buffer, float partialTick,
                        int packedLight, int packedOverlay) {
         try {
             if (activeExtension == null) {
                 return;
             }
-            Identifier texture = getTextureResource(animatable);
+            Identifier texture = getRenderer().getTextureLocation(animatable);
             List<ShaderMaskPass> passes = activeExtension.getGeoShaderPasses(texture);
             if (passes == null || passes.isEmpty()) {
                 return;
@@ -61,7 +64,7 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
             int light = activeExtension.isGlow() ? 15728880 : packedLight;
             boolean queued = EcaShaderInstance.isOculusShadersActive();
             for (ShaderMaskPass pass : passes) {
-                renderPass(poseStack, animatable, bakedModel, bufferSource, partialTick, light,
+                renderPass(poseStack, animatable, bakedModel, partialTick, light,
                     pass, queued);
             }
         } finally {
@@ -71,19 +74,16 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
     }
 
     private void renderPass(PoseStack poseStack, T animatable, BakedGeoModel bakedModel,
-                            MultiBufferSource bufferSource, float partialTick, int light,
+                            float partialTick, int light,
                             ShaderMaskPass pass, boolean queued) {
         if (pass == null || pass.alpha() <= 0.0f) return;
         RenderType renderType = pass.renderType();
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, renderType.format());
-        renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, renderType, builder,
+        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(PrimitiveTopology.QUADS, renderType.format());
+        getRenderer().reRender(bakedModel, poseStack, ignored -> builder, animatable, renderType, builder,
             partialTick, light, OverlayTexture.NO_OVERLAY, -1);
         if (queued) {
             ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
         } else {
-            if (bufferSource instanceof MultiBufferSource.BufferSource source) {
-                source.endBatch();
-            }
             ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
         }
     }

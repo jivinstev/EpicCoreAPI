@@ -39,14 +39,14 @@ final class GeoBoneVisibilityController {
         for (Map.Entry<GeoBone, BoneVisibility> entry : originalVisibility.entrySet()) {
             GeoBone bone = entry.getKey();
             BoneVisibility visibility = entry.getValue();
-            bone.hidden(visibility.hidden());
-            bone.hidingChildren(visibility.childrenHidden());
+            bone.setHidden(visibility.hidden());
+            bone.setHidingChildren(visibility.childrenHidden());
         }
         originalVisibility.clear();
     }
 
     private void capture(GeoBone bone) {
-        originalVisibility.putIfAbsent(bone, new BoneVisibility(bone.hidden(), bone.hidingChildren()));
+        originalVisibility.putIfAbsent(bone, new BoneVisibility(bone.isHidden(), bone.isHidingChildren()));
         for (GeoBone child : bone.children()) {
             capture(child);
         }
@@ -54,7 +54,7 @@ final class GeoBoneVisibilityController {
 
     private void hideConfiguredBones(GeoBone bone, Set<String> hiddenBones) {
         if (hiddenBones != null && hiddenBones.contains(bone.name())) {
-            bone.hidden(true);
+            bone.setHidden(true);
             return;
         }
         for (GeoBone child : bone.children()) {
@@ -71,7 +71,7 @@ final class GeoBoneVisibilityController {
         }
 
         if (!renderThisBranch && !hasIncludedDescendant) {
-            bone.hidden(true);
+            bone.setHidden(true);
         }
         return renderThisBranch || hasIncludedDescendant;
     }

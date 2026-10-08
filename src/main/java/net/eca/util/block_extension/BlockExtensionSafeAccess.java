@@ -2,7 +2,7 @@ package net.eca.util.block_extension;
 
 import net.eca.util.EcaLogger;
 import net.minecraft.core.BlockPos;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -18,7 +18,7 @@ public final class BlockExtensionSafeAccess {
     }
 
     public static boolean shouldRender(BlockExtension extension, BlockState state,
-                                       BlockAndTintGetter level, BlockPos pos) {
+                                       Level level, BlockPos pos) {
         try {
             return extension.enabled() && extension.shouldRender(state, level, pos);
         } catch (Throwable throwable) {

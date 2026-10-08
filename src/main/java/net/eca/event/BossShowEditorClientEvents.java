@@ -19,7 +19,9 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.player.LocalPlayer;
 
-import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.util.ARGB;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -123,7 +125,7 @@ public final class BossShowEditorClientEvents {
             Camera cam = mc.gameRenderer.mainCamera();
             BossShowEditorState.captureFrameFromCamera(
                 cam.position().x, cam.position().y, cam.position().z,
-                cam.yRot(), cam.getXRot()
+                cam.yRot(), cam.xRot()
             );
         }
 
@@ -192,7 +194,7 @@ public final class BossShowEditorClientEvents {
                     Camera cam = mc.gameRenderer.mainCamera();
                     BossShowEditorState.commitPoseCapture(
                         cam.position().x, cam.position().y, cam.position().z,
-                        cam.yRot(), cam.getXRot());
+                        cam.yRot(), cam.xRot());
                 }
                 mc.setScreenAndShow(new BossShowEditorScreen());
             }
@@ -217,24 +219,22 @@ public final class BossShowEditorClientEvents {
     }
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
         if (!BossShowEditorState.isAnySelectionMode()) return;
         Entity target = cachedHovered;
         if (target == null || target.isRemoved()) return;
 
         Minecraft mc = Minecraft.getInstance();
-        Camera cam = mc.gameRenderer.mainCamera();
-        Vec3 camPos = cam.position();
+        Vec3 camPos = event.getLevelRenderState().cameraRenderState.pos;
 
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        var buffer = mc.renderBuffers().bufferSource();
-        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
         AABB box = target.getBoundingBox().inflate(0.02);
-        ShapeRenderer.renderLineBox(pose.last(), vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
-        buffer.endBatch(RenderTypes.lines());
+        float lineWidth = mc.gameRenderer.gameRenderState().windowRenderState.appropriateLineWidth;
+        event.getSubmitNodeCollector().submitShapeOutline(pose, Shapes.create(box), RenderTypes.lines(),
+                ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), lineWidth, false);
 
         pose.popPose();
     }

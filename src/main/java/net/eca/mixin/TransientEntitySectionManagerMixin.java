@@ -45,7 +45,9 @@ public class TransientEntitySectionManagerMixin<T extends EntityAccess> {
         if (!ForceLoadingManager.shouldForceLoad(realEntity)) return;
 
         // 仅在实体所在区块不在ticking集合中时手动启动（避免重复调用）
-        long chunkKey = ChunkPos.asLong(entity.blockPosition().getX() >> 4, entity.blockPosition().getZ() >> 4);
+        int chunkX = entity.blockPosition().getX() >> 4;
+        int chunkZ = entity.blockPosition().getZ() >> 4;
+        long chunkKey = (chunkX & 0xFFFFFFFFL) | ((chunkZ & 0xFFFFFFFFL) << 32);
         if (this.tickingChunks.contains(chunkKey)) return;
 
         ((LevelCallback<EntityAccess>) (LevelCallback<?>) this.callbacks).onTickingStart(entity);

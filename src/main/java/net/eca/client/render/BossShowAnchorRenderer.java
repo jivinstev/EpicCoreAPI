@@ -9,20 +9,23 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.object.skull.SkullModelBase;
-import net.minecraft.client.renderer.ShapeRenderer;
+
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
@@ -52,8 +55,9 @@ public final class BossShowAnchorRenderer {
 
     private BossShowAnchorRenderer() {}
 
+    //26.x 不再即时绘制：几何体提交到 SubmitNodeCollector，由渲染器统一绘制
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
         if (!BossShowEditorState.isActive()) return;
         if (!BossShowEditorState.hasAnchor()) return;
 
@@ -65,36 +69,35 @@ public final class BossShowAnchorRenderer {
         double az = BossShowEditorState.getAnchorZ();
         float anchorYaw = BossShowEditorState.getAnchorYawDeg();
 
-        Camera cam = mc.gameRenderer.getMainCamera();
+        Camera cam = mc.gameRenderer.mainCamera();
         Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
-        var buffer = mc.renderBuffers().bufferSource();
+        SubmitNodeCollector collector = event.getSubmitNodeCollector();
+        float lineWidth = mc.gameRenderer.gameRenderState().windowRenderState.appropriateLineWidth;
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
-
-        //锚点光柱
-        AABB beam = new AABB(
-            ax - BEAM_HALF, ay, az - BEAM_HALF,
-            ax + BEAM_HALF, ay + BEAM_HEIGHT, az + BEAM_HALF
-        );
-        ShapeRenderer.renderLineBox(pose.last(), vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
-
-        AABB base = new AABB(
-            ax - BASE_HALF, ay, az - BASE_HALF,
-            ax + BASE_HALF, ay + 0.02, az + BASE_HALF
-        );
-        ShapeRenderer.renderLineBox(pose.last(), vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
-
-        //摄像机路径折线
         List<Frame> frames = BossShowEditorState.getFrames();
-        if (frames.size() >= 2) {
-            renderCameraPath(pose, vc, frames, ax, ay, az, anchorYaw);
-        }
+        collector.submitCustomGeometry(pose, RenderTypes.lines(), (last, vc) -> {
+            //锚点光柱
+            AABB beam = new AABB(
+                ax - BEAM_HALF, ay, az - BEAM_HALF,
+                ax + BEAM_HALF, ay + BEAM_HEIGHT, az + BEAM_HALF
+            );
+            renderLineBox(last, vc, beam, 0.2f, 1.0f, 0.2f, 1.0f, lineWidth);
 
-        buffer.endBatch(RenderTypes.lines());
+            AABB base = new AABB(
+                ax - BASE_HALF, ay, az - BASE_HALF,
+                ax + BASE_HALF, ay + 0.02, az + BASE_HALF
+            );
+            renderLineBox(last, vc, base, 0.2f, 1.0f, 0.2f, 1.0f, lineWidth);
+
+            //摄像机路径折线
+            if (frames.size() >= 2) {
+                renderCameraPath(last, vc, frames, ax, ay, az, anchorYaw, lineWidth);
+            }
+        });
 
         //关键帧头颅 + 顺序序号
         List<Integer> kfIndices = BossShowEditorState.getKeyframeFrameIndices();
@@ -105,21 +108,50 @@ public final class BossShowAnchorRenderer {
                 for (int i = 0; i < kfIndices.size(); i++) {
                     int frameIdx = kfIndices.get(i);
                     if (frameIdx < frames.size()) {
-                        renderKeyframeHead(pose, buffer, frames.get(frameIdx),
+                        renderKeyframeHead(pose, collector, frames.get(frameIdx),
                             ax, ay, az, anchorYaw, i + 1, camRot, mc.font);
                     }
                 }
-                //显式 flush 头颅(translucent)与序号文字
-                buffer.endBatch();
             }
         }
 
         pose.popPose();
     }
 
-    private static void renderCameraPath(PoseStack pose, VertexConsumer vc,
+    //线框盒：逐条棱输出顶点（原 ShapeRenderer.renderLineBox 已不可用）
+    private static void renderLineBox(PoseStack.Pose last, VertexConsumer vc, AABB bb,
+                                      float r, float g, float bl, float a, float lineWidth) {
+        Matrix4f m = last.pose();
+        double[][] c = {
+            {bb.minX, bb.minY, bb.minZ}, {bb.maxX, bb.minY, bb.minZ},
+            {bb.maxX, bb.minY, bb.maxZ}, {bb.minX, bb.minY, bb.maxZ},
+            {bb.minX, bb.maxY, bb.minZ}, {bb.maxX, bb.maxY, bb.minZ},
+            {bb.maxX, bb.maxY, bb.maxZ}, {bb.minX, bb.maxY, bb.maxZ}
+        };
+        int[][] edges = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0},
+            {4, 5}, {5, 6}, {6, 7}, {7, 4},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+        };
+        for (int[] e : edges) {
+            double[] p1 = c[e[0]];
+            double[] p2 = c[e[1]];
+            Vec3 dir = new Vec3(p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]).normalize();
+            vc.addVertex(m, (float) p1[0], (float) p1[1], (float) p1[2])
+                .setColor(r, g, bl, a)
+                .setNormal(last, (float) dir.x, (float) dir.y, (float) dir.z)
+                .setLineWidth(lineWidth);
+            vc.addVertex(m, (float) p2[0], (float) p2[1], (float) p2[2])
+                .setColor(r, g, bl, a)
+                .setNormal(last, (float) dir.x, (float) dir.y, (float) dir.z)
+                .setLineWidth(lineWidth);
+        }
+    }
+
+    private static void renderCameraPath(PoseStack.Pose lastPose, VertexConsumer vc,
                                          List<Frame> frames,
-                                         double ax, double ay, double az, float anchorYaw) {
+                                         double ax, double ay, double az, float anchorYaw,
+                                         float lineWidth) {
         List<Vec3> vertices = new ArrayList<>();
 
         //用实际世界坐标连线，仅对几乎重合的相邻点去重，避免静止段产生零长度线段
@@ -132,8 +164,7 @@ public final class BossShowAnchorRenderer {
 
         if (vertices.size() < 2) return;
 
-        var poseMatrix = pose.last().pose();
-        var lastPose = pose.last();
+        var poseMatrix = lastPose.pose();
 
         for (int i = 0; i < vertices.size() - 1; i++) {
             Vec3 p1 = vertices.get(i);
@@ -144,14 +175,16 @@ public final class BossShowAnchorRenderer {
             float nz = (float) dir.z;
             vc.addVertex(poseMatrix, (float) p1.x, (float) p1.y, (float) p1.z)
                 .setColor(PATH_R, PATH_G, PATH_B, PATH_A)
-                .setNormal(lastPose, nx, ny, nz);
+                .setNormal(lastPose, nx, ny, nz)
+                .setLineWidth(lineWidth);
             vc.addVertex(poseMatrix, (float) p2.x, (float) p2.y, (float) p2.z)
                 .setColor(PATH_R, PATH_G, PATH_B, PATH_A)
-                .setNormal(lastPose, nx, ny, nz);
+                .setNormal(lastPose, nx, ny, nz)
+                .setLineWidth(lineWidth);
         }
     }
 
-    private static void renderKeyframeHead(PoseStack pose, MultiBufferSource.BufferSource buffer,
+    private static void renderKeyframeHead(PoseStack pose, SubmitNodeCollector collector,
                                            Frame frame,
                                            double ax, double ay, double az, float anchorYaw,
                                            int ordinal, Quaternionf camRot, Font font) {
@@ -163,27 +196,29 @@ public final class BossShowAnchorRenderer {
         pose.pushPose();
         pose.translate(wp.x, wp.y, wp.z);
         pose.scale(-1.0f, -1.0f, 1.0f);
-        playerHeadModel.setupAnim(new SkullModelBase.State(0f, worldYaw, 0f));
-        playerHeadModel.renderToBuffer(pose, buffer.getBuffer(playerHeadRenderType),
+        SkullModelBase.State state = new SkullModelBase.State();
+        state.animationPos = 0f;
+        state.yRot = worldYaw;
+        state.xRot = 0f;
+        collector.submitModel(playerHeadModel, state, pose, playerHeadRenderType,
             FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-            ARGB.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
+            ARGB.color((int) (HEAD_ALPHA * 255f), 255, 255, 255), null, 0, null);
         pose.popPose();
 
-        renderHeadLabel(pose, buffer, wp, ordinal, camRot, font);
+        renderHeadLabel(pose, collector, wp, ordinal, camRot, font);
     }
 
     //在头颅上方渲染朝向摄像机的序号（公告板）
-    private static void renderHeadLabel(PoseStack pose, MultiBufferSource.BufferSource buffer,
+    private static void renderHeadLabel(PoseStack pose, SubmitNodeCollector collector,
                                         Vec3 wp, int ordinal, Quaternionf camRot, Font font) {
         String label = Integer.toString(ordinal);
         pose.pushPose();
         pose.translate(wp.x, wp.y + LABEL_Y_OFFSET, wp.z);
         pose.mulPose(camRot);
         pose.scale(-0.025f, -0.025f, 0.025f);
-        Matrix4f mat = pose.last().pose();
         float x = -font.width(label) / 2f;
-        font.drawInBatch(label, x, 0f, 0xFFFFFFFF, true, mat, buffer,
-            Font.DisplayMode.NORMAL, 0, FULL_BRIGHT);
+        collector.submitText(pose, x, 0f, FormattedCharSequence.forward(label, Style.EMPTY), true,
+            Font.DisplayMode.NORMAL, FULL_BRIGHT, 0xFFFFFFFF, 0, 0);
         pose.popPose();
     }
 

@@ -963,6 +963,17 @@ public class EntityUtil {
     //补齐原版 hurt 留下的伤害源记账
     /* 掉落与经验判的是 lastHurtByPlayerTime > 0(dropAllDeathLoot / dropExperience)，死亡消息取
        lastDamageSource 与战斗记录，缺哪一项就少哪一项，因此逐项照原版 hurt 的记账写。 */
+    // lastHurtByPlayerMemoryTime is protected in LivingEntity; write it reflectively to keep the original 100 timestamp.
+    private static void setLastHurtByPlayerMemoryTime(LivingEntity entity, int value) {
+        try {
+            java.lang.reflect.Field field = LivingEntity.class.getDeclaredField("lastHurtByPlayerMemoryTime");
+            field.setAccessible(true);
+            field.setInt(entity, value);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("cannot set lastHurtByPlayerMemoryTime", e);
+        }
+    }
+
     private static void applyDamageSourceRecord(LivingEntity entity, DamageSource damageSource, float amount) {
         try {
             Entity sourceEntity = damageSource.getEntity();
@@ -981,7 +992,7 @@ public class EntityUtil {
                 /* 时间戳写原版的硬编码 100，不用 setLastHurtByPlayer——它写的是 tickCount，
                    刚生成的实体会得到 0，掉落与经验的 > 0 判定直接落空。 */
                 entity.lastHurtByPlayer = net.minecraft.world.entity.EntityReference.of(credit);
-                entity.lastHurtByPlayerMemoryTime = 100;
+                setLastHurtByPlayerMemoryTime(entity, 100);
             }
             entity.lastDamageSource = damageSource;
             entity.lastDamageStamp = entity.level().getGameTime();
@@ -1339,8 +1350,8 @@ public class EntityUtil {
                     SectionPos.blockToSectionCoord(Mth.floor(x)),
                     SectionPos.blockToSectionCoord(Mth.floor(z)));
             if (entity instanceof ServerPlayer) {
-                serverLevel.getChunkSource().addRegionTicket(
-                        TicketType.ENDER_PEARL, targetChunk, 1, entity.getId());
+                serverLevel.getChunkSource().addTicketWithRadius(
+                        TicketType.ENDER_PEARL, targetChunk, 1);
             }
             serverLevel.getChunk(targetChunk.x(), targetChunk.z());
 

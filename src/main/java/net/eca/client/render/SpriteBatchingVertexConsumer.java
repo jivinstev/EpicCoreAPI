@@ -1,8 +1,10 @@
 package net.eca.client.render;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
@@ -16,13 +18,7 @@ import java.util.function.Consumer;
 
 public final class SpriteBatchingVertexConsumer implements VertexConsumer {
 
-    // 烘焙方块的光照只经 putBulkData 的 lightmap 数组进入缓冲，没有独立的 packedLight 形参，
-    // 所以发光只能在这里替换该数组。VertexConsumer 的默认实现只读不写，共享常量数组安全。
     private static final int FULL_BRIGHT = 0xF000F0;
-    private static final int[] FULL_BRIGHT_LIGHTMAP = {
-        FULL_BRIGHT, FULL_BRIGHT,
-        FULL_BRIGHT, FULL_BRIGHT
-    };
 
     private final VertexFormat format;
     private final boolean fullBright;
@@ -48,11 +44,19 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
         fallback = null;
     }
 
-    public void putBulkData(PoseStack.Pose pose, BakedQuad quad, float[] brightness,
-                            float red, float green, float blue, float alpha,
-                            int[] lights, int overlay, boolean readExistingColor) {
-        builder(quad.sprite()).putBulkData(pose, quad, brightness, red, green, blue,
-            alpha, fullBright ? FULL_BRIGHT_LIGHTMAP : lights, overlay, readExistingColor);
+    // 烘焙四边形的光照只经 QuadInstance 进入缓冲，所以发光只能在这里替换光照坐标
+    @Override
+    public void putBakedQuad(PoseStack.Pose pose, BakedQuad quad, QuadInstance instance) {
+        QuadInstance target = instance;
+        if (fullBright) {
+            target = new QuadInstance();
+            for (int vertex = 0; vertex < 4; vertex++) {
+                target.setColor(vertex, instance.getColor(vertex));
+            }
+            target.setOverlayCoords(instance.overlayCoords());
+            target.setLightCoords(FULL_BRIGHT);
+        }
+        builder(quad.materialInfo().sprite()).putBakedQuad(pose, quad, target);
     }
 
     private BufferBuilder builder(TextureAtlasSprite sprite) {
@@ -67,7 +71,7 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
 
     private BufferBuilder newBuilder() {
         return new BufferBuilder(new ByteBufferBuilder(format.getVertexSize() * 256),
-            com.mojang.blaze3d.vertex.DrawMode.QUADS, format);
+            PrimitiveTopology.QUADS, format);
     }
 
     private BufferBuilder direct() {
@@ -84,6 +88,12 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     public VertexConsumer setColor(int red, int green, int blue, int alpha) {
         direct().setColor(red, green, blue, alpha);
         return this;
+    }
+
+    @Override
+    public VertexConsumer setColor(int packedColor) {
+        return setColor((packedColor >> 16) & 0xFF, (packedColor >> 8) & 0xFF,
+            packedColor & 0xFF, (packedColor >>> 24) & 0xFF);
     }
 
     @Override

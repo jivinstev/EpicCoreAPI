@@ -1,5 +1,6 @@
 package net.eca.client.render;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -19,7 +20,7 @@ public final class EntityLayerRenderQueue {
     private EntityLayerRenderQueue() {
     }
 
-    public static BufferBuilder acquireBuilder(VertexFormat.Mode mode, VertexFormat format) {
+    public static BufferBuilder acquireBuilder(PrimitiveTopology mode, VertexFormat format) {
         return ShaderMaskRenderQueue.acquireBuilder(mode, format);
     }
 

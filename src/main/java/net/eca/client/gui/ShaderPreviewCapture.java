@@ -1,6 +1,7 @@
 package net.eca.client.gui;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -15,7 +16,12 @@ final class ShaderPreviewCapture {
 
     static ShaderAiToolResult capture(int left, int top, int right, int bottom) {
         Minecraft minecraft = Minecraft.getInstance();
-        NativeImage screenshot = Screenshot.takeScreenshot(minecraft.getMainRenderTarget());
+        NativeImage[] captured = new NativeImage[1];
+        Screenshot.takeScreenshot(minecraft.gameRenderer.mainRenderTarget(), image -> captured[0] = image);
+        while (captured[0] == null) {
+            RenderSystem.executePendingTasks();
+        }
+        NativeImage screenshot = captured[0];
         try {
             double scale = minecraft.getWindow().getGuiScale();
             int pixelLeft = clamp(

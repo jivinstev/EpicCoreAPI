@@ -13,7 +13,7 @@ public final class BlenderModelRenderer {
     private BlenderModelRenderer() { }
 
     public static boolean render(LivingEntity entity, BlenderModelExtension extension, PoseStack poseStack,
-                                 MultiBufferSource buffers, int packedLight, int overlay, float partialTick) {
+                                 SubmitNodeCollector buffers, int packedLight, int overlay, float partialTick) {
         return BlenderEntityRenderer.render(entity, extension, poseStack, buffers, packedLight, overlay, partialTick);
     }
 }

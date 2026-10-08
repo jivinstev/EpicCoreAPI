@@ -1,9 +1,12 @@
 package net.eca.client.render.shader_generator;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.resources.metadata.animation.AnimationFrame;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
 
@@ -13,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 final class AnimatedPreviewAtlas implements PreviewAnimation {
 
@@ -65,7 +69,7 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
         float[] spriteUvs
     ) {
         this.atlasImage = atlasImage;
-        this.texture = new DynamicTexture(atlasImage);
+        this.texture = new DynamicTexture(() -> "eca_animated_preview_atlas", atlasImage);
         this.sprites = List.copyOf(sprites);
         this.spriteUvs = spriteUvs;
     }
@@ -108,12 +112,16 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
     private static void fill(NativeImage image, int x, int y, int width, int height, int color) {
         for (int row = 0; row < height; row++) {
             for (int column = 0; column < width; column++) {
-                image.setPixelRGBA(x + column, y + row, color);
+                image.setPixel(x + column, y + row, color);
             }
         }
     }
 
     private static final class AnimatedSprite implements AutoCloseable {
+
+        //原 AnimationMetadataSection.EMPTY：无帧列表、无帧尺寸、帧时长 1
+        private static final AnimationMetadataSection EMPTY_METADATA = new AnimationMetadataSection(
+            Optional.empty(), Optional.empty(), Optional.empty(), 1, false);
 
         private final NativeImage sheet;
         private final int frameWidth;
@@ -141,14 +149,16 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
                 }
                 int availableFrames = sheet.getWidth() / frameWidth * (sheet.getHeight() / frameHeight);
                 List<Frame> frames = new ArrayList<>();
-                metadata.forEachFrame((index, duration) -> {
+                for (AnimationFrame frame : metadata.frames().orElse(List.of())) {
+                    int index = frame.index();
+                    int duration = frame.timeOr(metadata.defaultFrameTime());
                     if (index >= 0 && index < availableFrames && duration > 0) {
                         frames.add(new Frame(index, duration));
                     }
-                });
+                }
                 if (frames.isEmpty()) {
                     for (int index = 0; index < availableFrames; index++) {
-                        frames.add(new Frame(index, metadata.getDefaultFrameTime()));
+                        frames.add(new Frame(index, metadata.defaultFrameTime()));
                     }
                 }
                 return new AnimatedSprite(sheet, frameWidth, frameHeight, frames);
@@ -175,12 +185,13 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
 
         private static AnimationMetadataSection readMetadata(Path texturePath) throws IOException {
             Path metadataPath = Path.of(texturePath.toString() + ".mcmeta");
-            if (!Files.isRegularFile(metadataPath)) return AnimationMetadataSection.EMPTY;
+            if (!Files.isRegularFile(metadataPath)) return EMPTY_METADATA;
             JsonObject root = JsonParser.parseString(Files.readString(metadataPath)).getAsJsonObject();
             if (!root.has("animation") || !root.get("animation").isJsonObject()) {
-                return AnimationMetadataSection.EMPTY;
+                return EMPTY_METADATA;
             }
-            return AnimationMetadataSection.SERIALIZER.fromJson(root.getAsJsonObject("animation"));
+            return AnimationMetadataSection.CODEC.parse(JsonOps.INSTANCE, root.getAsJsonObject("animation"))
+                .getOrThrow(JsonParseException::new);
         }
 
         void place(int x, int y) {
@@ -208,10 +219,10 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
             int sourceY = selectedFrame / columns * frameHeight;
             for (int y = 0; y < frameHeight; y++) {
                 for (int x = 0; x < frameWidth; x++) {
-                    target.setPixelRGBA(
+                    target.setPixel(
                         targetX + x,
                         targetY + y,
-                        sheet.getPixelRGBA(sourceX + x, sourceY + y)
+                        sheet.getPixel(sourceX + x, sourceY + y)
                     );
                 }
             }

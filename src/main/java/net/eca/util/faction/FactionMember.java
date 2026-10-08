@@ -105,7 +105,7 @@ public final class FactionMember {
         return new FactionMember(
                 UUIDUtil.uuidFromIntArray(uuidArray.get()),
                 tag.getStringOr(NBT_TYPE, ""),
-                tag.getBoolean(NBT_PLAYER)
+                tag.getBooleanOr(NBT_PLAYER, false)
         );
     }
 

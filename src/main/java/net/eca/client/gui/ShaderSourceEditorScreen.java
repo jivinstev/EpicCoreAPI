@@ -108,12 +108,15 @@ public final class ShaderSourceEditorScreen extends Screen {
         diagnosticsTop = contentBottom - diagnosticsHeight;
         previewBottom = diagnosticsTop - 6;
 
-        editor = new MultiLineEditBox(
-            font, 8, CONTENT_TOP, editorRight - 12, contentBottom - CONTENT_TOP,
-            Component.translatable("gui.eca.shader_generator.source_editor.placeholder"),
-            Component.translatable("gui.eca.shader_generator.source_editor.editor"),
-            0xFFE0E0E0, true, 0xFFCFCFCF, true, true
-        );
+        editor = MultiLineEditBox.builder()
+            .setPlaceholder(Component.translatable("gui.eca.shader_generator.source_editor.placeholder"))
+            .setTextColor(0xFFE0E0E0)
+            .setShowBackground(true)
+            .setShowDecorations(true)
+            .build(
+                font, 8, CONTENT_TOP, editorRight - 12, contentBottom - CONTENT_TOP,
+                Component.translatable("gui.eca.shader_generator.source_editor.editor")
+            );
         editor.setValueListener(this::sourceChanged);
         addRenderableWidget(editor);
         loadSelectedSource();

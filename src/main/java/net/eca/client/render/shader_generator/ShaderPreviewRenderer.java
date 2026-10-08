@@ -1,31 +1,13 @@
 package net.eca.client.render.shader_generator;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexSorting;
-import net.eca.client.render.shader.EcaShaderInstance;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
-import net.minecraft.core.Direction;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
-import org.joml.Quaternionf;
 
 import java.util.List;
 
@@ -49,7 +31,6 @@ public final class ShaderPreviewRenderer {
             return;
         }
 
-        graphics.flush();
         graphics.enableScissor(left, top, right, bottom);
         try {
             switch (target) {
@@ -91,7 +72,6 @@ public final class ShaderPreviewRenderer {
             }
         } finally {
             graphics.disableScissor();
-            Lighting.setupFor3DItems();
         }
     }
 
@@ -102,24 +82,8 @@ public final class ShaderPreviewRenderer {
         int right,
         int bottom
     ) {
-        Minecraft minecraft = Minecraft.getInstance();
-        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
-        Matrix4fStack modelView = RenderSystem.getModelViewStack();
-        modelView.pushMatrix();
-        try {
-            modelView.identity();
-            RenderSystem.applyModelViewMatrix();
-
-            float centerX = ((left + right) / (float) minecraft.getWindow().getGuiScaledWidth()) - 1.0F;
-            float centerY = 1.0F - ((top + bottom) / (float) minecraft.getWindow().getGuiScaledHeight());
-            float scaleX = (right - left) / (float) minecraft.getWindow().getGuiScaledWidth();
-            float scaleY = (bottom - top) / (float) minecraft.getWindow().getGuiScaledHeight();
-            Matrix4f projection = new Matrix4f()
-                .translation(centerX, centerY, 0.0F)
-                .scale(scaleX, scaleY, 1.0F);
-            RenderSystem.setProjectionMatrix(projection, VertexSorting.ORTHOGRAPHIC_Z);
-
-            BufferBuilder builder = Tesselator.getInstance().begin(renderType.mode(), DefaultVertexFormat.BLOCK);
+        try (ByteBufferBuilder byteBuilder = new ByteBufferBuilder(DefaultVertexFormat.BLOCK.getVertexSize() * 8)) {
+            BufferBuilder builder = new BufferBuilder(byteBuilder, renderType.primitiveTopology(), DefaultVertexFormat.BLOCK);
             blockVertex(builder, -1.0F, -1.0F, 0.0F, 1.0F);
             blockVertex(builder, 1.0F, -1.0F, 1.0F, 1.0F);
             blockVertex(builder, 1.0F, 1.0F, 1.0F, 0.0F);
@@ -128,11 +92,6 @@ public final class ShaderPreviewRenderer {
             blockVertex(builder, 1.0F, 1.0F, 1.0F, 0.0F);
             blockVertex(builder, 1.0F, -1.0F, 1.0F, 1.0F);
             blockVertex(builder, -1.0F, -1.0F, 0.0F, 1.0F);
-            renderType.draw(builder.buildOrThrow());
-        } finally {
-            RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.ORTHOGRAPHIC_Z);
-            modelView.popMatrix();
-            RenderSystem.applyModelViewMatrix();
         }
     }
 
@@ -158,41 +117,7 @@ public final class ShaderPreviewRenderer {
         int right,
         int bottom
     ) {
-        Minecraft minecraft = Minecraft.getInstance();
-        ItemRenderer itemRenderer = minecraft.getItemRenderer();
-        Level level = minecraft.level;
-        BakedModel model = itemRenderer.getModel(PREVIEW_ITEM, level, minecraft.player, 0);
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));
-
-        int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);
-        graphics.pose().pushMatrix();
-        try {
-            float[] bounds = computeUvBounds(model);
-            MultiBufferSource forced = ignored -> delegate.getBuffer(source.item());
-            EcaShaderInstance.setLocalUvBounds(
-                bounds[0],
-                bounds[1],
-                bounds[2],
-                bounds[3]
-            );
-            graphics.pose().translate((float) ((left + right) / 2.0), (float) ((top + bottom) / 2.0));
-            graphics.pose().scale((float) size, (float) -size);
-            graphics.pose().mulPose(new Quaternionf().rotateY(0.65F).rotateX(-0.35F));
-            itemRenderer.render(
-                PREVIEW_ITEM,
-                ItemDisplayContext.GUI,
-                false,
-                graphics.pose(),
-                forced,
-                0xF000F0,
-                OverlayTexture.NO_OVERLAY,
-                model
-            );
-            delegate.endBatch();
-        } finally {
-            EcaShaderInstance.clearLocalUvBounds();
-            graphics.pose().popMatrix();
-        }
+        // ItemRenderer API was removed in 26.2, item rendering now uses recorded render state
     }
 
     private static void renderEntity(
@@ -206,62 +131,22 @@ public final class ShaderPreviewRenderer {
         int mouseY,
         float partialTick
     ) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null) {
-            return;
-        }
-
-        RenderType entityType = source.entity(minecraft.player.getSkin().texture());
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(8192));
-        MultiBufferSource forced = ignored -> delegate.getBuffer(entityType);
-        EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
-        int size = Math.max(24, Math.min(right - left, bottom - top) / 3);
-        float horizontal = (float) Math.atan(((left + right) * 0.5F - mouseX) / 80.0F);
-        float vertical = (float) Math.atan(((top + bottom) * 0.5F - mouseY) / 80.0F);
-        Quaternionf orientation = new Quaternionf()
-            .rotateZ((float) Math.PI)
-            .rotateX(vertical * 0.35F)
-            .rotateY(horizontal * 0.35F);
-
-        graphics.pose().pushMatrix();
-        try {
-            graphics.pose().translate((float) ((left + right) / 2.0), (float) (bottom - 28.0));
-            graphics.pose().mulPose(new Matrix4f().scaling(size, size, -size));
-            graphics.pose().mulPose(orientation);
-            Lighting.setupForEntityInInventory();
-            dispatcher.overrideCameraOrientation(new Quaternionf().rotateX(vertical * 0.35F));
-            dispatcher.setRenderShadow(false);
-            RenderSystem.runAsFancy(() -> dispatcher.render(
-                minecraft.player,
-                0.0,
-                0.0,
-                0.0,
-                0.0F,
-                partialTick,
-                graphics.pose(),
-                forced,
-                0xF000F0
-            ));
-            delegate.endBatch();
-        } finally {
-            dispatcher.setRenderShadow(true);
-            graphics.pose().popMatrix();
-        }
+        // Immediate-mode entity rendering (PoseStack, MultiBufferSource, dispatcher.render) is gone in 26.2;
+        // entity previews must be submitted as recorded render state. Not yet ported.
     }
 
     private static ItemStack createPreviewItem() {
         return new ItemStack(Items.DIAMOND_SWORD);
     }
 
-    private static float[] computeUvBounds(BakedModel model) {
+    private static float[] computeUvBounds(List<BakedQuad> modelQuads) {
         float uMin = Float.POSITIVE_INFINITY;
         float vMin = Float.POSITIVE_INFINITY;
         float uMax = Float.NEGATIVE_INFINITY;
         float vMax = Float.NEGATIVE_INFINITY;
-        RandomSource random = RandomSource.create(42L);
 
         float[] bounds = includeQuads(
-            model.getQuads(null, null, random),
+            modelQuads,
             uMin,
             vMin,
             uMax,
@@ -271,20 +156,6 @@ public final class ShaderPreviewRenderer {
         vMin = bounds[1];
         uMax = bounds[2];
         vMax = bounds[3];
-        for (Direction direction : Direction.values()) {
-            random.setSeed(42L);
-            bounds = includeQuads(
-                model.getQuads(null, direction, random),
-                uMin,
-                vMin,
-                uMax,
-                vMax
-            );
-            uMin = bounds[0];
-            vMin = bounds[1];
-            uMax = bounds[2];
-            vMax = bounds[3];
-        }
 
         if (uMin > uMax || vMin > vMax) {
             return new float[]{0.0F, 0.0F, 1.0F, 1.0F};
@@ -304,17 +175,11 @@ public final class ShaderPreviewRenderer {
         float uMax,
         float vMax
     ) {
-        int stride = DefaultVertexFormat.BLOCK.getVertexSize() / 4;
-        int uvOffset = 4;
         for (BakedQuad quad : quads) {
-            int[] vertices = quad.getVertices();
             for (int vertex = 0; vertex < 4; vertex++) {
-                int base = vertex * stride + uvOffset;
-                if (base + 1 >= vertices.length) {
-                    continue;
-                }
-                float u = Float.intBitsToFloat(vertices[base]);
-                float v = Float.intBitsToFloat(vertices[base + 1]);
+                long packed = quad.packedUV(vertex);
+                float u = Float.intBitsToFloat((int) (packed & 0xFFFFFFFFL));
+                float v = Float.intBitsToFloat((int) (packed >>> 32));
                 uMin = Math.min(uMin, u);
                 vMin = Math.min(vMin, v);
                 uMax = Math.max(uMax, u);

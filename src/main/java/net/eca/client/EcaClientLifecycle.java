@@ -15,7 +15,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 
 @EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
@@ -37,7 +37,7 @@ public final class EcaClientLifecycle {
 
     @SubscribeEvent
     public static void onRegisterReloadListeners(AddClientReloadListenersEvent event) {
-        event.addListener(ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "blender_models"), BlenderModelManager.INSTANCE);
+        event.addListener(Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "blender_models"), BlenderModelManager.INSTANCE);
     }
 
     @SubscribeEvent

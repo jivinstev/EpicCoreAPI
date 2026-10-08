@@ -1,13 +1,12 @@
 package net.eca.mixin;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
+import net.eca.client.render.SkyboxRenderSupport;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.config.EcaConfiguration;
 
@@ -17,7 +16,6 @@ import net.eca.util.entity_extension.GlobalSkyboxExtension;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 
@@ -27,17 +25,20 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
 
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
@@ -46,15 +47,16 @@ public abstract class LevelRendererMixin {
     private boolean eca$forceLoadedFogActive;
 
     @Unique
-    private float eca$savedFogStart;
+    private GpuBufferSlice eca$savedFog;
 
-    @Unique
-    private float eca$savedFogEnd;
 
     /* 本帧存在横跨云层平面的可见强加载实体。云层绘制在实体之后并吃雾色，
        远处的云挡住巨型模型时看起来不像云，而像模型被挖掉一块。 */
     @Unique
     private boolean eca$cloudsOccludeForceLoaded;
+
+    @Shadow
+    private Frustum cullingFrustum;
 
     // 云层平板厚度：花式云的四边形在 y 方向占 4 格，快速云是平面，取上界统一处理
     @Unique
@@ -96,7 +98,7 @@ public abstract class LevelRendererMixin {
     @Inject(method = "renderEntity", at = @At("HEAD"))
     private void eca$beginForceLoadedEntityRender(Entity entity, double camX, double camY, double camZ,
                                                    float partialTick, PoseStack poseStack,
-                                                   MultiBufferSource bufferSource, CallbackInfo ci) {
+                                                   SubmitNodeCollector bufferSource, CallbackInfo ci) {
         eca$forceLoadedFogActive = false;
         if (!ForceLoadingManager.shouldForceLoad(entity)) {
             return;
@@ -110,24 +112,22 @@ public abstract class LevelRendererMixin {
             return;
         }
 
-        flushEntityBuffers(minecraft);
-        eca$savedFogStart = RenderSystem.getShaderFogStart();
-        eca$savedFogEnd = RenderSystem.getShaderFogEnd();
-        RenderSystem.setShaderFogStart(Float.MAX_VALUE);
-        RenderSystem.setShaderFogEnd(Float.MAX_VALUE);
+        eca$savedFog = RenderSystem.getShaderFog();
+        RenderSystem.setShaderFog(SkyboxRenderSupport.noFog());
         eca$forceLoadedFogActive = true;
     }
 
     @Inject(method = "renderEntity", at = @At("RETURN"))
     private void eca$endForceLoadedEntityRender(Entity entity, double camX, double camY, double camZ,
                                                  float partialTick, PoseStack poseStack,
-                                                 MultiBufferSource bufferSource, CallbackInfo ci) {
+                                                 SubmitNodeCollector bufferSource, CallbackInfo ci) {
         if (!eca$forceLoadedFogActive) {
             return;
         }
-        flushEntityBuffers(Minecraft.getInstance());
-        RenderSystem.setShaderFogStart(eca$savedFogStart);
-        RenderSystem.setShaderFogEnd(eca$savedFogEnd);
+        if (eca$savedFog != null) {
+            RenderSystem.setShaderFog(eca$savedFog);
+        }
+        eca$savedFog = null;
         eca$forceLoadedFogActive = false;
     }
 
@@ -143,19 +143,19 @@ public abstract class LevelRendererMixin {
         if (!EcaConfiguration.getForceLoadingHideOccludingCloudsSafely()) {
             return;
         }
-        float cloudBottom = minecraft.level.effects().getCloudHeight();
+        float cloudBottom = minecraft.level.environmentAttributes().getValue(EnvironmentAttributes.CLOUD_HEIGHT, entity.position());
         if (Float.isNaN(cloudBottom)) {
             return;
         }
 
-        AABB box = entity.getBoundingBoxForCulling();
+        AABB box = entity.getBoundingBox();
         float cloudTop = cloudBottom + ECA_CLOUD_SLAB_THICKNESS;
         // 相机与实体的纵向跨度必须真的切过云层平板，否则视线不经过云
         if (Math.max(camY, box.maxY) <= cloudBottom || Math.min(camY, box.minY) >= cloudTop) {
             return;
         }
 
-        Frustum frustum = ((LevelRenderer) (Object) this).getFrustum();
+        Frustum frustum = this.cullingFrustum;
         if (frustum != null && !eca$isVisibleToRenderer(minecraft, entity, frustum, camX, camY, camZ)) {
             return;
         }
@@ -165,17 +165,11 @@ public abstract class LevelRendererMixin {
     @Unique
     private static boolean eca$isVisibleToRenderer(Minecraft minecraft, Entity entity, Frustum frustum,
                                                    double camX, double camY, double camZ) {
-        EntityRenderer<? super Entity> renderer = minecraft.getEntityRenderDispatcher().getRenderer(entity);
+        EntityRenderer<? super Entity, ?> renderer = minecraft.getEntityRenderDispatcher().getRenderer(entity);
         if (renderer == null) {
             return true;
         }
         return renderer.shouldRender(entity, frustum, camX, camY, camZ);
-    }
-
-    @Unique
-    private static void flushEntityBuffers(Minecraft minecraft) {
-        minecraft.renderBuffers().bufferSource().endBatch();
-        minecraft.renderBuffers().outlineBufferSource().endOutlineBatch();
     }
 
     // ==================== 全局天空盒渲染 ====================
@@ -220,36 +214,30 @@ public abstract class LevelRendererMixin {
 
     @Unique
     private static void drawTextureSkybox(PoseStack poseStack, GlobalSkyboxExtension skybox, float size, float alpha) {
-        RenderSystem.enableBlend();
-        RenderSystem.depthMask(false);
-        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
-        RenderSystem.setShaderTexture(0, skybox.texture());
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
+        RenderType renderType = SkyboxRenderSupport.textureType(skybox.texture());
 
         float uvScale = Math.max(1.0f, skybox.textureUvScale());
         int red = (int)(Mth.clamp(skybox.textureRed(), 0.0f, 1.0f) * 255.0f);
         int green = (int)(Mth.clamp(skybox.textureGreen(), 0.0f, 1.0f) * 255.0f);
         int blue = (int)(Mth.clamp(skybox.textureBlue(), 0.0f, 1.0f) * 255.0f);
-        int alphaInt = (int)(alpha * 255.0f);
+        // 1.21 里 alpha 既写进顶点色又乘进 ColorModulator（setShaderColor），26.x 的 RenderType 绘制没有可改的着色器颜色，
+        // 所以把第二次相乘折进顶点 alpha，保持 alpha² 的观感
+        int alphaInt = (int)(alpha * alpha * 255.0f);
 
-        Tesselator tesselator = Tesselator.getInstance();
-
-        for (int i = 0; i < 6; ++i) {
-            poseStack.pushPose();
-            rotateToFace(poseStack, i);
-            Matrix4f matrix = poseStack.last().pose();
-            BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-            bufferBuilder.addVertex(matrix, -size, -size, -size).setUv(0.0f, 0.0f).setColor(red, green, blue, alphaInt);
-            bufferBuilder.addVertex(matrix, -size, -size, size).setUv(0.0f, uvScale).setColor(red, green, blue, alphaInt);
-            bufferBuilder.addVertex(matrix, size, -size, size).setUv(uvScale, uvScale).setColor(red, green, blue, alphaInt);
-            bufferBuilder.addVertex(matrix, size, -size, -size).setUv(uvScale, 0.0f).setColor(red, green, blue, alphaInt);
-            BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
-            poseStack.popPose();
+        try (ByteBufferBuilder allocator = new ByteBufferBuilder(4096)) {
+            for (int i = 0; i < 6; ++i) {
+                poseStack.pushPose();
+                rotateToFace(poseStack, i);
+                Matrix4f matrix = poseStack.last().pose();
+                BufferBuilder bufferBuilder = new BufferBuilder(allocator, renderType.primitiveTopology(), renderType.format());
+                bufferBuilder.addVertex(matrix, -size, -size, -size).setUv(0.0f, 0.0f).setColor(red, green, blue, alphaInt);
+                bufferBuilder.addVertex(matrix, -size, -size, size).setUv(0.0f, uvScale).setColor(red, green, blue, alphaInt);
+                bufferBuilder.addVertex(matrix, size, -size, size).setUv(uvScale, uvScale).setColor(red, green, blue, alphaInt);
+                bufferBuilder.addVertex(matrix, size, -size, -size).setUv(uvScale, 0.0f).setColor(red, green, blue, alphaInt);
+                SkyboxRenderSupport.drawMesh(renderType, bufferBuilder.buildOrThrow(), "ECA skybox texture");
+                poseStack.popPose();
+            }
         }
-
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        RenderSystem.depthMask(true);
-        RenderSystem.disableBlend();
     }
 
     @Unique
@@ -259,11 +247,10 @@ public abstract class LevelRendererMixin {
         int segments = 32;
         int rings = 16;
 
-        Tesselator tesselator = Tesselator.getInstance();
         Matrix4f matrix = poseStack.last().pose();
 
-        renderType.setupRenderState();
-        BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+        ByteBufferBuilder allocator = new ByteBufferBuilder(65536);
+        BufferBuilder bufferBuilder = new BufferBuilder(allocator, renderType.primitiveTopology(), renderType.format());
 
         for (int ring = 0; ring < rings; ring++) {
             float phi1 = (float) Math.PI * ring / rings;
@@ -289,8 +276,9 @@ public abstract class LevelRendererMixin {
             }
         }
 
-        BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
-        renderType.clearRenderState();
+        try (allocator) {
+            SkyboxRenderSupport.drawMesh(renderType, bufferBuilder.buildOrThrow(), "ECA shader skybox");
+        }
     }
 
     @Unique

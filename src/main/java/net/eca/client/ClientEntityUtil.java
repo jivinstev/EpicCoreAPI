@@ -25,6 +25,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.entity.PartEntity;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -57,9 +58,10 @@ public final class ClientEntityUtil {
         if (entity != null) {
             return entity;
         }
-        entity = EcaContainers.rawGet(clientLevel.partEntities, entityId);
-        if (entity != null) {
-            return entity;
+        for (PartEntity<?> part : partEntities(clientLevel)) {
+            if (part != null && part.getId() == entityId) {
+                return part;
+            }
         }
         for (Entity player : EcaContainers.rawValues(clientLevel.players)) {
             if (player != null && player.getId() == entityId) return player;
@@ -88,7 +90,7 @@ public final class ClientEntityUtil {
         if (entity != null) {
             return entity;
         }
-        return findByUuid(EcaContainers.rawValues(clientLevel.partEntities), uuid);
+        return findByUuid(partEntities(clientLevel), uuid);
     }
 
     // 客户端按条件收集实体
@@ -107,8 +109,12 @@ public final class ClientEntityUtil {
         }
         addAll(result, seen, EcaContainers.rawValues(clientLevel.tickingEntities.active), filter);
         addAll(result, seen, EcaContainers.rawValues(clientLevel.players), filter);
-        addAll(result, seen, EcaContainers.rawValues(clientLevel.partEntities), filter);
+        addAll(result, seen, partEntities(clientLevel), filter);
         return result;
+    }
+
+    private static Collection<PartEntity<?>> partEntities(ClientLevel level) {
+        return level.dragonParts();
     }
 
     private static Entity findEntityInClientSectionsById(ClientLevel level, int entityId) {
@@ -347,28 +353,9 @@ public final class ClientEntityUtil {
 
     private static void clearTeleportInterpolation(Entity entity, double x, double y, double z,
                                                    float yRot, float xRot) {
-        if (entity instanceof LivingEntity) {
-            LivingEntity livingEntity = (LivingEntity) entity;
-            livingEntity.lerpSteps = 0;
-            livingEntity.lerpX = x;
-            livingEntity.lerpY = y;
-            livingEntity.lerpZ = z;
-            livingEntity.lerpYRot = yRot;
-            livingEntity.lerpXRot = xRot;
-        }
-        if (entity instanceof Boat) {
-            Boat boat = (Boat) entity;
-            boat.lerpSteps = 0;
-            boat.lerpX = x;
-            boat.lerpY = y;
-            boat.lerpZ = z;
-            boat.lerpYRot = yRot;
-            boat.lerpXRot = xRot;
-        }
-        if (entity instanceof AbstractMinecart) {
-            AbstractMinecart minecart = (AbstractMinecart) entity;
-            minecart.lerpTo(x, y, z, yRot, xRot, 0);
-        }
+        entity.setPos(x, y, z);
+        entity.setYRot(yRot);
+        entity.setXRot(xRot);
     }
 
     // 打开 ShaderGenerator 编辑屏幕
@@ -383,7 +370,7 @@ public final class ClientEntityUtil {
 
             if (entity.isMultipartEntity()) {
                 for (PartEntity<?> part : entity.getParts()) {
-                    clientLevel.partEntities.remove(part.getId());
+                    partEntities(clientLevel).remove(part);
                 }
             }
 

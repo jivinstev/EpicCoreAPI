@@ -22,18 +22,18 @@ public class GeckoLibCompat {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void onGeoCompileRenderLayers(GeoRenderEvent.Entity.CompileRenderLayers event) {
         GeoEntityRenderer geoRenderer = event.getRenderer();
-        geoRenderer.addRenderLayer(new GeoEntityExtensionLayer<>(geoRenderer, animatable -> (Entity) animatable));
+        event.addLayer(new GeoEntityExtensionLayer<>(geoRenderer, animatable -> (Entity) animatable));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void onGeoReplacedCompileRenderLayers(GeoRenderEvent.ReplacedEntity.CompileRenderLayers event) {
         GeoReplacedEntityRenderer geoRenderer = event.getRenderer();
-        geoRenderer.addRenderLayer(new GeoEntityExtensionLayer<>(geoRenderer, animatable -> geoRenderer.getCurrentEntity()));
+        event.addLayer(new GeoEntityExtensionLayer<>(geoRenderer, animatable -> geoRenderer.getCurrentEntity()));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void onGeoBlockCompileRenderLayers(GeoRenderEvent.Block.CompileRenderLayers event) {
         GeoBlockRenderer geoRenderer = event.getRenderer();
-        geoRenderer.addRenderLayer(new GeoBlockExtensionLayer<>(geoRenderer));
+        event.addLayer(new GeoBlockExtensionLayer<>(geoRenderer));
     }
 }

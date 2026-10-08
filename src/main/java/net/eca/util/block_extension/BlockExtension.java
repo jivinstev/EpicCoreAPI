@@ -5,7 +5,7 @@ import net.eca.client.render.preset.ShaderPreset;
 import net.eca.client.render.preset.ShaderPresetRegistry;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
-import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
@@ -35,7 +35,7 @@ public abstract class BlockExtension {
         return false;
     }
 
-    public boolean shouldRender(BlockState state, BlockAndTintGetter level, BlockPos pos) {
+    public boolean shouldRender(BlockState state, Level level, BlockPos pos) {
         return true;
     }
 

@@ -1,6 +1,8 @@
 package net.eca.client.render;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -29,7 +31,7 @@ public final class ShaderMaskRenderQueue {
     private ShaderMaskRenderQueue() {
     }
 
-    public static BufferBuilder acquireBuilder(VertexFormat.Mode mode, VertexFormat format) {
+    public static BufferBuilder acquireBuilder(PrimitiveTopology mode, VertexFormat format) {
         ByteBufferBuilder backing = BUILDER_POOL.pollFirst();
         if (backing == null) {
             backing = new ByteBufferBuilder(262144);
@@ -108,8 +110,12 @@ public final class ShaderMaskRenderQueue {
         EcaShaderInstance.setLocalUvBounds(uvTransform.minU(), uvTransform.minV(),
             uvTransform.scaleU(), uvTransform.scaleV());
         EcaShaderInstance.setOpacity(pass.alpha());
-        try {
-            pass.renderType().draw(renderedBuffer);
+        try (MeshData mesh = renderedBuffer;
+             GpuBuffer vertexBuffer = RenderSystem.getDevice()
+                 .createBuffer(() -> "ECA shader mask pass", GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer())) {
+            RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(mesh.drawState().primitiveTopology());
+            int indexCount = mesh.drawState().indexCount();
+            pass.renderType().prepare().drawFromBuffer(vertexBuffer, indices.getBuffer(indexCount), indices.type(), 0, 0, indexCount);
         } finally {
             EcaShaderInstance.clearColorKey();
             EcaShaderInstance.clearShaderMask();

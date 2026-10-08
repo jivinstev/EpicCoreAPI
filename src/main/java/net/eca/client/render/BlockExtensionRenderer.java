@@ -7,7 +7,8 @@ import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.block.BlockQuadOutput;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.RandomSource;
@@ -108,17 +109,14 @@ public final class BlockExtensionRenderer {
         }
     }
 
-    private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
-            return;
-        }
+    private static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
         if (level == null || SECTION_BLOCKS.isEmpty()) {
             return;
         }
 
-        Camera camera = event.getCamera();
+        Camera camera = minecraft.gameRenderer.mainCamera();
         Vec3 camPos = camera.position();
         Map<BatchKey, SpriteBatchingVertexConsumer> batches = new LinkedHashMap<>();
         Map<BlockExtension, List<ShaderMaskPass>> passCache = new HashMap<>();
@@ -160,13 +158,18 @@ public final class BlockExtensionRenderer {
     private static void renderBlock(ClientLevel level, PoseStack poseStack, Vec3 camPos, BlockPos pos,
                                     BlockState state, SpriteBatchingVertexConsumer consumer) {
         Minecraft minecraft = Minecraft.getInstance();
-        BakedModel model = minecraft.getBlockRenderer().getBlockModel(state);
-        ModelData modelData = model.getModelData(level, pos, state, ModelData.EMPTY);
+        BlockStateModel model = minecraft.getModelManager().getBlockStateModelSet().get(state);
         poseStack.pushPose();
         // RenderLevelStageEvent 的 PoseStack 只含摄像机旋转，世界坐标须自行减去摄像机位置
         poseStack.translate(pos.getX() - camPos.x, pos.getY() - camPos.y, pos.getZ() - camPos.z);
-        minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(level, model, state, pos, poseStack,
-            consumer, true, RandomSource.create(), state.getSeed(pos), 0, modelData, null);
+        BlockQuadOutput output = (x, y, z, quad, instance) -> {
+            poseStack.pushPose();
+            poseStack.translate(x, y, z);
+            consumer.putBakedQuad(poseStack.last(), quad, instance);
+            poseStack.popPose();
+        };
+        new net.minecraft.client.renderer.block.ModelBlockRenderer(true, false, minecraft.getBlockColors())
+            .tesselateBlock(output, 0.0F, 0.0F, 0.0F, level, pos, state, model, state.getSeed(pos));
         poseStack.popPose();
     }
 

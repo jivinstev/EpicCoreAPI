@@ -108,7 +108,8 @@ public final class ShaderPresetRegistry {
 
     private static Path findModPath(net.neoforged.neoforgespi.locating.IModFile modFile, String first, String... rest) {
         try {
-            return modFile.getSecureJar().getPath(first, rest);
+            String relativePath = rest.length == 0 ? first : first + "/" + String.join("/", rest);
+            return modFile.getContents().findFile(relativePath).map(Path::of).orElse(null);
         } catch (RuntimeException e) {
             return null;
         }

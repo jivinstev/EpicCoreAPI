@@ -11,7 +11,9 @@ import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Entity;
@@ -35,6 +37,11 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
                                              PoseStack poseStack, SubmitNodeCollector buffers,
                                              int packedLight, CallbackInfo ci) {
         eca$blenderReplacedBody = false;
+    }
+
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    private void eca$captureEntityId(T entity, S state, float partialTick, CallbackInfo ci) {
+        net.eca.client.render.EcaRenderStateEntities.put(state, entity.getId());
     }
 
     @SuppressWarnings("unchecked")
@@ -68,24 +75,20 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Redirect(
-        method = "render",
+        method = "submit",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V"
+            target = "Lnet/minecraft/client/renderer/entity/layers/RenderLayer;submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/EntityRenderState;FF)V"
         )
     )
     private void eca$skipVanillaLayersAfterReplacement(RenderLayer layer, PoseStack poseStack,
                                                         SubmitNodeCollector buffers, int packedLight,
-                                                        Entity layerEntity, float limbSwing,
-                                                        float limbSwingAmount, float partialTick,
-                                                        float ageInTicks, float netHeadYaw, float headPitch,
-                                                        T entity, float entityYaw, float methodPartialTick,
-                                                        PoseStack methodPoseStack,
+                                                        EntityRenderState layerState, float yRot, float xRot,
+                                                        S methodState, PoseStack methodPoseStack,
                                                         SubmitNodeCollector methodBuffers,
-                                                        int methodPackedLight) {
+                                                        CameraRenderState camera) {
         if (!eca$blenderReplacedBody) {
-            layer.render(poseStack, buffers, packedLight, layerEntity, limbSwing, limbSwingAmount,
-                partialTick, ageInTicks, netHeadYaw, headPitch);
+            layer.submit(poseStack, buffers, packedLight, layerState, yRot, xRot);
         }
     }
 }

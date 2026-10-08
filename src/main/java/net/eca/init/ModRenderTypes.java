@@ -4,6 +4,8 @@ import net.eca.EcaMod;
 import net.eca.client.render.ArcaneRenderTypes;
 import net.eca.client.render.AuroraRenderTypes;
 import net.eca.client.render.BlackHoleRenderTypes;
+import net.eca.client.render.BossBarShaderPipRenderer;
+import net.eca.client.render.BossBarShaderPipState;
 import net.eca.client.render.CosmosRenderTypes;
 import net.eca.client.render.DreamSakuraRenderTypes;
 import net.eca.client.render.ForestRenderTypes;
@@ -35,6 +37,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -50,6 +53,12 @@ public class ModRenderTypes {
     @SubscribeEvent
     public static void onRegisterPipelines(RegisterRenderPipelinesEvent event) throws IOException {
         onRegisterShaders(ShaderRegistration.fromModJar());
+    }
+
+    //自定义血条的着色器层以画中画状态提交（见 BossBarShaderPipRenderer）
+    @SubscribeEvent
+    public static void onRegisterPictureInPictureRenderers(RegisterPictureInPictureRenderersEvent event) {
+        event.register(BossBarShaderPipState.class, BossBarShaderPipRenderer::new);
     }
 
     @SubscribeEvent

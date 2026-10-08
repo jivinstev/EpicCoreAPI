@@ -1,9 +1,6 @@
 package net.eca.coremod;
 
-import cpw.mods.modlauncher.api.ITransformer;
-import cpw.mods.modlauncher.api.ITransformerVotingContext;
-import cpw.mods.modlauncher.api.TargetType;
-import cpw.mods.modlauncher.api.TransformerVoteResult;
+
 import net.eca.coremod.EarlyLogWriter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -22,7 +19,11 @@ import org.objectweb.asm.tree.VarInsnNode;
 import java.util.HashSet;
 import java.util.Set;
 
-public final class EcaCoreTransformer implements ITransformer<ClassNode> {
+public final class EcaCoreTransformer {
+
+    enum TransformerVoteResult { YES, NO, DEFER }
+
+    enum TargetType { CLASS }
 
     private static final String GET_HEALTH = "getHealth";
     private static final String GET_MAX_HEALTH = "getMaxHealth";
@@ -35,8 +36,7 @@ public final class EcaCoreTransformer implements ITransformer<ClassNode> {
     private static final String ENTITY = "net/minecraft/world/entity/Entity";
     private static final String ECA_CONTAINER = "net/eca/coremod/EcaContainers$";
 
-    @Override
-    public ClassNode transform(ClassNode classNode, ITransformerVotingContext context) {
+    public ClassNode transform(ClassNode classNode, Object context) {
         try {
             if (RuntimeExtensionBridge.hasEarlyDisplayTransformer()
                     && RuntimeExtensionBridge.EARLY_DISPLAY_TARGET.equals(classNode.name)) {
@@ -54,35 +54,31 @@ public final class EcaCoreTransformer implements ITransformer<ClassNode> {
         return classNode;
     }
 
-    @Override
-    public TransformerVoteResult castVote(ITransformerVotingContext context) {
+    public TransformerVoteResult castVote(Object context) {
         return TransformerVoteResult.YES;
     }
 
-    @Override
-    public TargetType<ClassNode> getTargetType() {
+    public TargetType getTargetType() {
         return TargetType.CLASS;
     }
 
-    @Override
-    public Set<Target<ClassNode>> targets() {
-        Set<Target<ClassNode>> targets = new HashSet<>();
-        targets.add(Target.targetClass("net.minecraft.world.entity.LivingEntity"));
-        targets.add(Target.targetClass("net.minecraft.world.entity.Entity"));
-        targets.add(Target.targetClass("net.minecraft.world.level.entity.EntityTickList"));
-        targets.add(Target.targetClass("net.minecraft.world.level.entity.EntityLookup"));
-        targets.add(Target.targetClass("net.minecraft.util.ClassInstanceMultiMap"));
-        targets.add(Target.targetClass("net.minecraft.server.level.ChunkMap"));
-        targets.add(Target.targetClass("net.minecraft.world.level.entity.PersistentEntitySectionManager"));
-        targets.add(Target.targetClass("net.minecraft.world.level.entity.EntitySectionStorage"));
-        targets.add(Target.targetClass("net.minecraft.server.level.ServerLevel"));
+    public Set<String> targets() {
+        Set<String> targets = new HashSet<>();
+        targets.add("net.minecraft.world.entity.LivingEntity");
+        targets.add("net.minecraft.world.entity.Entity");
+        targets.add("net.minecraft.world.level.entity.EntityTickList");
+        targets.add("net.minecraft.world.level.entity.EntityLookup");
+        targets.add("net.minecraft.util.ClassInstanceMultiMap");
+        targets.add("net.minecraft.server.level.ChunkMap");
+        targets.add("net.minecraft.world.level.entity.PersistentEntitySectionManager");
+        targets.add("net.minecraft.world.level.entity.EntitySectionStorage");
+        targets.add("net.minecraft.server.level.ServerLevel");
         if (RuntimeExtensionBridge.hasEarlyDisplayTransformer()) {
-            targets.add(Target.targetClass(RuntimeExtensionBridge.EARLY_DISPLAY_TARGET.replace('/', '.')));
+            targets.add(RuntimeExtensionBridge.EARLY_DISPLAY_TARGET.replace('/', '.'));
         }
         return targets;
     }
 
-    @Override
     public String[] labels() {
         return new String[]{"eca_core"};
     }

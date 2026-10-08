@@ -287,7 +287,7 @@ public final class BlenderModelRenderer {
                 ? asset.materials.get(primitive.material()) : DEFAULT_MATERIAL;
             Identifier texture = material.texture() == null ? WHITE_TEXTURE : material.texture();
             RenderType type = material.translucent()
-                ? RenderTypes.entityTranslucent(texture) : RenderTypes.entityCutoutNoCull(texture);
+                ? RenderTypes.entityTranslucent(texture) : RenderTypes.entityCutout(texture, true);
             DeformedVertices deformed = deformVertices(primitive, skinPose);
             BlendMaterialProgram program = material.program();
             VertexConsumer consumer = program == null ? buffers.getBuffer(type)

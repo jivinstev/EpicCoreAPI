@@ -365,6 +365,24 @@ public class EcaShaderInstance {
         });
     }
 
+    //基于已有 ECA 管线派生出只改固定管线状态（如混合）的变体；变体沿用同一程序与 setupRenderState 回调
+    public static RenderPipeline derivePipeline(RenderPipeline base, String name, UnaryOperator<RenderPipeline.Builder> state) {
+        Identifier program = PIPELINE_PROGRAM.get(base);
+        if (program == null) {
+            return base;
+        }
+        return PIPELINES.computeIfAbsent(base.getLocation() + "/" + name, key -> {
+            RenderPipeline derived = state.apply(base.toBuilder()
+                .withLocation(base.getLocation().withSuffix("/" + name))).build();
+            PIPELINE_PROGRAM.put(derived, program);
+            Runnable setup = PIPELINE_SETUP.get(base);
+            if (setup != null) {
+                PIPELINE_SETUP.put(derived, setup);
+            }
+            return derived;
+        });
+    }
+
     public static State state(Supplier<? extends EcaShaderInstance> shader, Runnable setup) {
         return new State(shader, setup);
     }

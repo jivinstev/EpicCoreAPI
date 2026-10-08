@@ -1,7 +1,10 @@
 package net.eca.mixin;
 
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.eca.client.render.ShaderMaskRenderQueue;
@@ -113,12 +116,18 @@ public class GameRendererPostLevelMixin {
             poseStack.pushPose();
             rotateToFace(poseStack, i);
             Matrix4f matrix = poseStack.last().pose();
-            BufferBuilder bufferBuilder = new BufferBuilder(allocator, renderType.mode(), renderType.format());
+            BufferBuilder bufferBuilder = new BufferBuilder(allocator, renderType.primitiveTopology(), renderType.format());
             bufferBuilder.addVertex(matrix, -size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, -size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
-            renderType.draw(bufferBuilder.buildOrThrow());
+            try (MeshData mesh = bufferBuilder.buildOrThrow();
+                 GpuBuffer vertexBuffer = RenderSystem.getDevice()
+                     .createBuffer(() -> "ECA post-level skybox", GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer())) {
+                RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(mesh.drawState().primitiveTopology());
+                int indexCount = mesh.drawState().indexCount();
+                renderType.prepare().drawFromBuffer(vertexBuffer, indices.getBuffer(indexCount), indices.type(), 0, 0, indexCount);
+            }
             poseStack.popPose();
         }
         }

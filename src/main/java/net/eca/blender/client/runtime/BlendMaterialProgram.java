@@ -16,7 +16,10 @@ import net.eca.blender.client.runtime.BlendNodeGraph.Value;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.MeshData;
+import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.resources.Identifier;
@@ -158,13 +161,9 @@ public final class BlendMaterialProgram implements AutoCloseable {
 
     public void load() throws IOException {
         shader = new EcaShaderInstance(provider, id, DefaultVertexFormat.ENTITY);
-        int activeImages = 0;
-        for (int i = 0; i < textures.size(); i++) {
-            if (GL20.glGetUniformLocation(shader.getId(), "Image" + i) >= 0) activeImages++;
-        }
-        int activeSamplers = activeImages;
-        if (GL20.glGetUniformLocation(shader.getId(), "Sampler1") >= 0) activeSamplers++;
-        if (GL20.glGetUniformLocation(shader.getId(), "Sampler2") >= 0) activeSamplers++;
+        // 26.x 不再暴露 GL 程序 id，无法查询活动 uniform；生成的着色器会引用全部 Image 采样器及 Sampler1/Sampler2
+        int activeImages = textures.size();
+        int activeSamplers = activeImages + 2;
         // Minecraft 1.20.1 tracks twelve texture units in GlStateManager.
         int bindingSlots = Math.min(12, GL11.glGetInteger(GL20.GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS));
         if (activeSamplers > bindingSlots || activeImages > GL11.glGetInteger(GL20.GL_MAX_TEXTURE_IMAGE_UNITS)) {
@@ -211,7 +210,16 @@ public final class BlendMaterialProgram implements AutoCloseable {
         if (buffers == null) return;
         MeshData mesh = buffers.build();
         buffers = null;
-        if (mesh != null) type.draw(mesh);
+        if (mesh == null) return;
+        try (mesh) {
+            MeshData.DrawState state = mesh.drawState();
+            PreparedRenderType prepared = type.prepare();
+            RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(state.primitiveTopology());
+            GpuBuffer indexBuffer = indices.getBuffer(state.indexCount());
+            try (GpuBuffer vertices = RenderSystem.getDevice().createBuffer(() -> "ECA blend material " + id, GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer())) {
+                prepared.drawFromBuffer(vertices, indexBuffer, indices.type(), 0, 0, state.indexCount());
+            }
+        }
     }
 
     @Override

@@ -1,10 +1,5 @@
 package net.eca.coremod;
 
-import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.api.IEnvironment;
-import cpw.mods.modlauncher.api.IModuleLayerManager;
-import cpw.mods.modlauncher.api.ITransformationService;
-import cpw.mods.modlauncher.api.ITransformer;
 import net.eca.agent.AgentLoader;
 import net.eca.agent.EcaAgent;
 import org.jetbrains.annotations.NotNull;
@@ -21,9 +16,11 @@ import java.util.*;
 /**
  * Earliest entry point via ITransformationService SPI.
  * Responsibilities: select one transformation backend and prevent dual loading.
+ * 26.x 的 FML 已移除 ModLauncher（cpw.mods.modlauncher），ITransformationService SPI 不复存在；
+ * 这里保留原有回调的形状，ModLauncher 类型以 Object 代替（同 EcaCoreTransformer）。
  */
 @SuppressWarnings("unchecked")
-public class EcaTransformationService implements ITransformationService {
+public class EcaTransformationService {
 
     private static final Class<?>[] PRELOADED = preloadAll(
         "net.eca.coremod.EcaCoreTransformer",
@@ -101,31 +98,25 @@ public class EcaTransformationService implements ITransformationService {
     private static String ecaModuleName;
     private static Path ecaJarPath;
 
-    @Override
     public @NotNull String name() {
         return SERVICE_NAME;
     }
 
-    @Override
-    public void onLoad(@NotNull IEnvironment env, @NotNull Set<String> otherServices) {
+    public void onLoad(@NotNull Object env, @NotNull Set<String> otherServices) {
     }
 
-    @Override
-    public void initialize(@NotNull IEnvironment environment) {
+    public void initialize(@NotNull Object environment) {
     }
 
-    @Override
-    public @NotNull List<Resource> beginScanning(@NotNull IEnvironment environment) {
+    public @NotNull List<Object> beginScanning(@NotNull Object environment) {
         return List.of();
     }
 
-    @Override
-    public @NotNull List<Resource> completeScan(@NotNull IModuleLayerManager layerManager) {
+    public @NotNull List<Object> completeScan(@NotNull Object layerManager) {
         return List.of();
     }
 
-    @Override
-    public @NotNull List<? extends ITransformer<?>> transformers() {
+    public @NotNull List<?> transformers() {
         if (TRANSFORMATION_BACKEND == TransformationBackend.AGENT) {
             return List.of();
         }
@@ -134,7 +125,7 @@ public class EcaTransformationService implements ITransformationService {
             return List.of();
         }
         try {
-            return List.<ITransformer<?>>of((ITransformer<?>) PRELOADED[0].getDeclaredConstructor().newInstance());
+            return List.of(PRELOADED[0].getDeclaredConstructor().newInstance());
         } catch (Throwable t) {
             log("[CoreMod] Failed to create load-time transformer: " + t.getMessage());
             return List.of();
@@ -225,7 +216,8 @@ public class EcaTransformationService implements ITransformationService {
         try {
             Unsafe unsafe = getUnsafe();
 
-            Class<?> launcherClass = Launcher.class;
+            // ModLauncher 不在编译类路径上，按名称反射查找（与下方 ModuleLayerHandler 相同）
+            Class<?> launcherClass = Class.forName("cpw.mods.modlauncher.Launcher");
             Class<?> moduleLayerHandlerClass = Class.forName(
                     "cpw.mods.modlauncher.ModuleLayerHandler");
             Class<?> layerInfoClass = Class.forName(

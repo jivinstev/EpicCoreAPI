@@ -149,11 +149,11 @@ public final class FrustumGuard {
                 player.getX(), player.getY(), player.getZ(),
                 player.xo, player.yo, player.zo,
                 player.getXRot(), player.getYRot());
-        EcaLogger.info("[FrustumGuard] player motion=({}, {}, {}) walkDist={} bob={} oBob={}",
+        EcaLogger.info("[FrustumGuard] player motion=({}, {}, {}) walkDist={}",
                 motion == null ? "null" : motion.x,
                 motion == null ? "null" : motion.y,
                 motion == null ? "null" : motion.z,
-                player.getWalkDist(), player.bob, player.oBob);
+                player.avatarState().getInterpolatedWalkDistance(1.0F));
         EcaLogger.info("[FrustumGuard] player hurtTime={} hurtDuration={} hurtDir={} health={} maxHealth={}",
                 player.hurtTime, player.hurtDuration, player.getHurtDir(),
                 player.getHealth(), player.getMaxHealth());

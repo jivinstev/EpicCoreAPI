@@ -1,57 +1,76 @@
 package net.eca.client.render.shader;
 
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.systems.CommandEncoder;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.ScissorState;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuSampler;
+import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.EcaMod;
 import net.eca.client.BossShowScreenEffectState;
 import net.eca.util.filter.FilterType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.renderer.Projection;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
+import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.PreparedRenderType;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.EventBusSubscriber;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL12;
-import org.lwjgl.opengl.GL14;
-import org.lwjgl.opengl.GL30;
+import org.joml.Vector4f;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 @SuppressWarnings("removal")
 @EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public class FilterRenderer {
 
-    private static ShaderInstance sketchShader;
-    private static ShaderInstance spotlightShader;
-    private static ShaderInstance matrixShader;
-    private static ShaderInstance rainShader;
-    private static ShaderInstance desertShader;
-    private static ShaderInstance snowShader;
-    private static ShaderInstance toxicShader;
-    private static ShaderInstance cosmosShader;
-    private static ShaderInstance bossShowEffectShader;
+    // 1.21 的 RenderLevelStageEvent.Stage 在 26.x 拆成了逐阶段的事件类，这里保留阶段枚举以复用原有的分派逻辑
+    private enum Stage {
+        AFTER_ENTITIES,
+        AFTER_CUTOUT_BLOCKS,
+        AFTER_LEVEL
+    }
+
+    private static EcaShaderInstance sketchShader;
+    private static EcaShaderInstance spotlightShader;
+    private static EcaShaderInstance matrixShader;
+    private static EcaShaderInstance rainShader;
+    private static EcaShaderInstance desertShader;
+    private static EcaShaderInstance snowShader;
+    private static EcaShaderInstance toxicShader;
+    private static EcaShaderInstance cosmosShader;
+    private static EcaShaderInstance bossShowEffectShader;
     private static long matrixStartNanos;
     private static long rainStartNanos;
     private static long desertStartNanos;
@@ -63,26 +82,35 @@ public class FilterRenderer {
     private static float bossShowFilterStrength = 1.0F;
     private static float bossShowFilterSpeed = 1.0F;
 
-    private static int copyFbo = -1;
-    private static int depthCopyTexture = -1;
-    private static int colorCopyTexture = -1;
+    // 26.x 没有可直接绑定的 FBO：主缓冲区的深度/颜色复制到自有纹理，再作为采样器供滤镜着色器读取
+    private static GpuTexture depthCopyTexture;
+    private static GpuTexture colorCopyTexture;
+    private static GpuTextureView depthCopyView;
+    private static GpuTextureView colorCopyView;
+    private static GpuFormat copyDepthFormat;
     private static int copyWidth;
     private static int copyHeight;
 
-    private static int spotlightFbo = -1;
-    private static int spotlightDepthTexture = -1;
-    private static int spotlightColorTexture = -1;
+    private static GpuTexture spotlightDepthTexture;
+    private static GpuTexture spotlightColorTexture;
+    private static GpuTextureView spotlightDepthView;
+    private static GpuTextureView spotlightColorView;
+    private static GpuFormat spotlightDepthFormat;
     private static int spotlightWidth;
     private static int spotlightHeight;
 
-    /* 宇宙滤镜专用：在实体绘制前（AFTER_CUTOUT_BLOCKS_LAYER）快照纯地形深度，
-       用于 AFTER_LEVEL 合成时区分实体像素与方块像素（阶段 AFTER_CUTOUT_BLOCKS） */
-    private static int cosmosTerrainFbo = -1;
-    private static int cosmosTerrainDepthTexture = -1;
+    /* 宇宙滤镜专用：在实体绘制前（AfterOpaqueBlocks）快照纯地形深度，
+       用于 AfterLevel 合成时区分实体像素与方块像素（阶段 AFTER_CUTOUT_BLOCKS） */
+    private static GpuTexture cosmosTerrainDepthTexture;
+    private static GpuTextureView cosmosTerrainDepthView;
+    private static GpuFormat cosmosTerrainFormat;
     private static int cosmosTerrainWidth;
     private static int cosmosTerrainHeight;
 
-    public static void registerShaders(RegisterShadersEvent event) throws IOException {
+    private static final Projection FILTER_PROJECTION = new Projection();
+    private static ProjectionMatrixBuffer filterProjectionBuffer;
+
+    public static void registerShaders(ShaderRegistration event) throws IOException {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
@@ -199,79 +227,93 @@ public class FilterRenderer {
         cosmosStartNanos = 0;
     }
 
+    // AFTER_ENTITIES：所有实体要素（含半透明）绘制完毕
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+    public static void onAfterEntities(RenderLevelStageEvent.AfterTranslucentFeatures event) {
+        onRenderLevelStage(Stage.AFTER_ENTITIES, event);
+    }
+
+    @SubscribeEvent
+    public static void onAfterCutoutBlocks(RenderLevelStageEvent.AfterOpaqueBlocks event) {
+        onRenderLevelStage(Stage.AFTER_CUTOUT_BLOCKS, event);
+    }
+
+    @SubscribeEvent
+    public static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
+        onRenderLevelStage(Stage.AFTER_LEVEL, event);
+    }
+
+    private static void onRenderLevelStage(Stage stage, RenderLevelStageEvent event) {
         if (activeFilters.isEmpty() && bossShowFilter == null) return;
 
         if (isRenderedFilter(FilterType.SPOTLIGHT) && spotlightShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+            if (stage == Stage.AFTER_ENTITIES) {
                 captureSpotlightEntity(event);
                 return;
             }
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
-                renderSpotlight(event);
+            if (stage == Stage.AFTER_LEVEL) {
+                renderSpotlight();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.MATRIX) && matrixShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (stage == Stage.AFTER_LEVEL) {
                 renderMatrix();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.RAIN) && rainShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (stage == Stage.AFTER_LEVEL) {
                 renderRain();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.DESERT) && desertShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (stage == Stage.AFTER_LEVEL) {
                 renderDesert();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.SNOW) && snowShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (stage == Stage.AFTER_LEVEL) {
                 renderSnow();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.TOXIC) && toxicShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (stage == Stage.AFTER_LEVEL) {
                 renderToxic();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.COSMOS)) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS) {
+            if (stage == Stage.AFTER_CUTOUT_BLOCKS) {
                 captureCosmosTerrainDepth();
                 return;
             }
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL && cosmosShader != null) {
+            if (stage == Stage.AFTER_LEVEL && cosmosShader != null) {
                 renderCosmos(event);
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.SKETCH) && sketchShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (stage == Stage.AFTER_LEVEL) {
                 renderSketch();
             }
         }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBossShowEffectRender(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL
-            || !BossShowScreenEffectState.hasShaderEffects()) return;
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+    public static void onBossShowEffectRender(RenderLevelStageEvent.AfterLevel event) {
+        if (!BossShowScreenEffectState.hasShaderEffects()) return;
+        float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         renderFilterPass(bossShowEffectShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
@@ -281,7 +323,12 @@ public class FilterRenderer {
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set((System.nanoTime() % 1_000_000_000_000L) / 1_000_000_000.0F);
             }
-            BossShowScreenEffectState.applyShaderUniforms(shader, partialTick);
+            BossShowScreenEffectState.applyShaderUniforms((name, value) -> {
+                EcaShaderInstance.Uniform uniform = shader.getUniform(name);
+                if (uniform != null) {
+                    uniform.set(value);
+                }
+            }, partialTick);
         });
     }
 
@@ -296,138 +343,120 @@ public class FilterRenderer {
         clearAll();
     }
 
-    private static void ensureCopyTargets(int width, int height) {
-        if (copyFbo != -1 && copyWidth == width && copyHeight == height) return;
+    private static GpuTexture createTexture(String label, GpuFormat format, int usage, int width, int height) {
+        return RenderSystem.getDevice().createTexture(() -> label, usage, format, width, height, 1, 1);
+    }
+
+    private static GpuTextureView createView(GpuTexture texture) {
+        return RenderSystem.getDevice().createTextureView(texture);
+    }
+
+    private static GpuFormat depthFormatOf(RenderTarget target) {
+        return target.getDepthTexture().getFormat();
+    }
+
+    private static void ensureCopyTargets(RenderTarget mainTarget) {
+        int width = mainTarget.width;
+        int height = mainTarget.height;
+        GpuFormat depthFormat = depthFormatOf(mainTarget);
+        if (depthCopyTexture != null && copyWidth == width && copyHeight == height && copyDepthFormat == depthFormat) return;
         destroyCopyTargets();
 
-        depthCopyTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(depthCopyTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
-
-        colorCopyTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(colorCopyTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, width, height, 0,
-                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, null);
-
-        copyFbo = GL30.glGenFramebuffers();
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, copyFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
-                GL11.GL_TEXTURE_2D, depthCopyTexture, 0);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
-                GL11.GL_TEXTURE_2D, colorCopyTexture, 0);
+        depthCopyTexture = createTexture("ECA filter depth copy", depthFormat,
+                GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, width, height);
+        depthCopyView = createView(depthCopyTexture);
+        colorCopyTexture = createTexture("ECA filter color copy", GpuFormat.RGBA8_UNORM,
+                GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, width, height);
+        colorCopyView = createView(colorCopyTexture);
 
         copyWidth = width;
         copyHeight = height;
+        copyDepthFormat = depthFormat;
     }
 
     private static void destroyCopyTargets() {
-        if (depthCopyTexture != -1) {
-            GlStateManager._deleteTexture(depthCopyTexture);
-            depthCopyTexture = -1;
+        if (depthCopyView != null) {
+            depthCopyView.close();
+            depthCopyView = null;
         }
-        if (colorCopyTexture != -1) {
-            GlStateManager._deleteTexture(colorCopyTexture);
-            colorCopyTexture = -1;
+        if (colorCopyView != null) {
+            colorCopyView.close();
+            colorCopyView = null;
         }
-        if (copyFbo != -1) {
-            GL30.glDeleteFramebuffers(copyFbo);
-            copyFbo = -1;
+        if (depthCopyTexture != null) {
+            depthCopyTexture.close();
+            depthCopyTexture = null;
+        }
+        if (colorCopyTexture != null) {
+            colorCopyTexture.close();
+            colorCopyTexture = null;
         }
     }
 
-    private static void ensureSpotlightTargets(int width, int height) {
-        if (spotlightFbo != -1 && spotlightWidth == width && spotlightHeight == height) return;
+    private static void ensureSpotlightTargets(RenderTarget mainTarget) {
+        int width = mainTarget.width;
+        int height = mainTarget.height;
+        GpuFormat depthFormat = depthFormatOf(mainTarget);
+        if (spotlightColorTexture != null && spotlightWidth == width && spotlightHeight == height
+                && spotlightDepthFormat == depthFormat) return;
         destroySpotlightTargets();
 
-        spotlightDepthTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(spotlightDepthTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
-
-        spotlightColorTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(spotlightColorTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, width, height, 0,
-                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, null);
-
-        spotlightFbo = GL30.glGenFramebuffers();
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
-                GL11.GL_TEXTURE_2D, spotlightDepthTexture, 0);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
-                GL11.GL_TEXTURE_2D, spotlightColorTexture, 0);
+        spotlightDepthTexture = createTexture("ECA spotlight depth", depthFormat,
+                GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT, width, height);
+        spotlightDepthView = createView(spotlightDepthTexture);
+        spotlightColorTexture = createTexture("ECA spotlight color", GpuFormat.RGBA8_UNORM,
+                GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING, width, height);
+        spotlightColorView = createView(spotlightColorTexture);
 
         spotlightWidth = width;
         spotlightHeight = height;
+        spotlightDepthFormat = depthFormat;
     }
 
     private static void destroySpotlightTargets() {
-        if (spotlightDepthTexture != -1) {
-            GlStateManager._deleteTexture(spotlightDepthTexture);
-            spotlightDepthTexture = -1;
+        if (spotlightDepthView != null) {
+            spotlightDepthView.close();
+            spotlightDepthView = null;
         }
-        if (spotlightColorTexture != -1) {
-            GlStateManager._deleteTexture(spotlightColorTexture);
-            spotlightColorTexture = -1;
+        if (spotlightColorView != null) {
+            spotlightColorView.close();
+            spotlightColorView = null;
         }
-        if (spotlightFbo != -1) {
-            GL30.glDeleteFramebuffers(spotlightFbo);
-            spotlightFbo = -1;
+        if (spotlightDepthTexture != null) {
+            spotlightDepthTexture.close();
+            spotlightDepthTexture = null;
+        }
+        if (spotlightColorTexture != null) {
+            spotlightColorTexture.close();
+            spotlightColorTexture = null;
         }
     }
 
-    private static void ensureCosmosTerrainTarget(int width, int height) {
-        if (cosmosTerrainFbo != -1 && cosmosTerrainWidth == width && cosmosTerrainHeight == height) return;
+    private static void ensureCosmosTerrainTarget(RenderTarget mainTarget) {
+        int width = mainTarget.width;
+        int height = mainTarget.height;
+        GpuFormat depthFormat = depthFormatOf(mainTarget);
+        if (cosmosTerrainDepthTexture != null && cosmosTerrainWidth == width && cosmosTerrainHeight == height
+                && cosmosTerrainFormat == depthFormat) return;
         destroyCosmosTerrainTarget();
 
-        cosmosTerrainDepthTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(cosmosTerrainDepthTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
+        cosmosTerrainDepthTexture = createTexture("ECA cosmos terrain depth", depthFormat,
+                GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, width, height);
+        cosmosTerrainDepthView = createView(cosmosTerrainDepthTexture);
 
-        cosmosTerrainFbo = GL30.glGenFramebuffers();
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, cosmosTerrainFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
-                GL11.GL_TEXTURE_2D, cosmosTerrainDepthTexture, 0);
-        GL11.glDrawBuffer(GL11.GL_NONE);
-        GL11.glReadBuffer(GL11.GL_NONE);
-
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
         cosmosTerrainWidth = width;
         cosmosTerrainHeight = height;
+        cosmosTerrainFormat = depthFormat;
     }
 
     private static void destroyCosmosTerrainTarget() {
-        if (cosmosTerrainDepthTexture != -1) {
-            GlStateManager._deleteTexture(cosmosTerrainDepthTexture);
-            cosmosTerrainDepthTexture = -1;
+        if (cosmosTerrainDepthView != null) {
+            cosmosTerrainDepthView.close();
+            cosmosTerrainDepthView = null;
         }
-        if (cosmosTerrainFbo != -1) {
-            GL30.glDeleteFramebuffers(cosmosTerrainFbo);
-            cosmosTerrainFbo = -1;
+        if (cosmosTerrainDepthTexture != null) {
+            cosmosTerrainDepthTexture.close();
+            cosmosTerrainDepthTexture = null;
         }
     }
 
@@ -437,14 +466,22 @@ public class FilterRenderer {
         int width = mainTarget.width;
         int height = mainTarget.height;
 
-        ensureCosmosTerrainTarget(width, height);
+        ensureCosmosTerrainTarget(mainTarget);
 
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, cosmosTerrainFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+        RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(
+                mainTarget.getDepthTexture(), cosmosTerrainDepthTexture, 0, 0, 0, 0, 0, width, height);
+    }
 
-        mainTarget.bindWrite(false);
+    // 主缓冲区的深度与颜色复制到自有纹理，之后滤镜通道才能一边读一边写回主缓冲区
+    private static void copyMainTarget(RenderTarget mainTarget) {
+        int width = mainTarget.width;
+        int height = mainTarget.height;
+
+        ensureCopyTargets(mainTarget);
+
+        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
+        encoder.copyTextureToTexture(mainTarget.getDepthTexture(), depthCopyTexture, 0, 0, 0, 0, 0, width, height);
+        encoder.copyTextureToTexture(mainTarget.getColorTexture(), colorCopyTexture, 0, 0, 0, 0, 0, width, height);
     }
 
     @SuppressWarnings("deprecation")
@@ -543,57 +580,20 @@ public class FilterRenderer {
     }
 
     @SuppressWarnings("deprecation")
-    private static void renderSpotlight(RenderLevelStageEvent event) {
+    private static void renderSpotlight() {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         int width = mainTarget.width;
         int height = mainTarget.height;
 
-        ensureCopyTargets(width, height);
+        ensureSpotlightTargets(mainTarget);
 
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, copyFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-
-        mainTarget.bindWrite(false);
-
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        RenderSystem.disableCull();
-        RenderSystem.disableBlend();
-
-        Matrix4f savedProj = RenderSystem.getProjectionMatrix();
-        Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
-
-        RenderSystem.getModelViewStack().pushMatrix();
-        try {
-            RenderSystem.getModelViewStack().identity();
-            RenderSystem.applyModelViewMatrix();
-
-            RenderSystem.setShader(() -> spotlightShader);
-            RenderSystem.setShaderTexture(0, depthCopyTexture);
-            RenderSystem.setShaderTexture(1, colorCopyTexture);
-            RenderSystem.setShaderTexture(2, spotlightColorTexture);
-            if (spotlightShader.getUniform("ScreenSize") != null) {
-                spotlightShader.getUniform("ScreenSize").set((float) width, (float) height);
+        // 原先在同一通道里额外绑定 Sampler2（聚光灯实体颜色）
+        renderFilterPass(spotlightShader, shader -> {
+            if (shader.getUniform("ScreenSize") != null) {
+                shader.getUniform("ScreenSize").set((float) width, (float) height);
             }
-            if (spotlightShader.getUniform("FilterStrength") != null) {
-                spotlightShader.getUniform("FilterStrength").set(
-                    bossShowFilter != null ? bossShowFilterStrength : 1.0F);
-            }
-
-            drawFullscreenQuad(width, height);
-        } finally {
-            RenderSystem.getModelViewStack().popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
-            RenderSystem.enableCull();
-            RenderSystem.depthMask(true);
-            RenderSystem.enableDepthTest();
-            RenderSystem.enableBlend();
-        }
+        }, List.of(new PreparedRenderType.Texture("Sampler2", spotlightColorView, nearestSampler())));
     }
 
     @SuppressWarnings("deprecation")
@@ -601,64 +601,101 @@ public class FilterRenderer {
         Minecraft mc = Minecraft.getInstance();
         Entity target = mc.crosshairPickEntity;
         RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
+        int width = mainTarget.width;
+        int height = mainTarget.height;
+
+        ensureSpotlightTargets(mainTarget);
+
+        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
+        encoder.clearColorAndDepthTextures(spotlightColorTexture, new Vector4f(0.0f, 0.0f, 0.0f, 0.0f),
+                spotlightDepthTexture, 0.0);
 
         if (target == null || target.isRemoved() || mc.level == null || target.level() != mc.level) {
-            int width = mainTarget.width;
-            int height = mainTarget.height;
-            ensureSpotlightTargets(width, height);
-            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-            GlStateManager._clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            mainTarget.bindWrite(false);
             return;
         }
 
-        int width = mainTarget.width;
-        int height = mainTarget.height;
-        ensureSpotlightTargets(width, height);
+        // 聚光灯缓冲区带着主缓冲区的深度，实体按遮挡关系只留下可见的像素
+        encoder.copyTextureToTexture(mainTarget.getDepthTexture(), spotlightDepthTexture, 0, 0, 0, 0, 0, width, height);
 
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-        GlStateManager._clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        CameraRenderState cameraState = event.getLevelRenderState().cameraRenderState;
+        Vec3 camPos = cameraState.pos;
 
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, spotlightFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
-        Vec3 camPos = event.getCamera().getPosition();
-        double x = Mth.lerp(partialTick, target.xOld, target.getX()) - camPos.x;
-        double y = Mth.lerp(partialTick, target.yOld, target.getY()) - camPos.y;
-        double z = Mth.lerp(partialTick, target.zOld, target.getZ()) - camPos.z;
-        float yRot = Mth.lerp(partialTick, target.yRotO, target.getYRot());
-
-        PoseStack poseStack = event.getPoseStack();
+        // 26.x 的实体渲染是“提取渲染状态 → 提交 → 统一绘制”，这里单独提取聚光灯实体并绘制到离屏缓冲区
         EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
-        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+        EntityRenderState renderState = dispatcher.extractEntity(target, partialTick);
+        SubmitNodeStorage storage = new SubmitNodeStorage();
+        dispatcher.submit(renderState, cameraState, renderState.x - camPos.x, renderState.y - camPos.y,
+                renderState.z - camPos.z, new PoseStack(), storage);
 
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(true);
-        dispatcher.render(target, x, y, z, yRot, partialTick, poseStack, buffer,
-                dispatcher.getPackedLightCoords(target, partialTick));
-        buffer.endBatch();
-
-        mainTarget.bindWrite(false);
+        RenderSystem.outputColorTextureOverride = spotlightColorView;
+        RenderSystem.outputDepthTextureOverride = spotlightDepthView;
+        try {
+            mc.gameRenderer.featureRenderDispatcher().renderAllFeatures(storage);
+        } finally {
+            RenderSystem.outputColorTextureOverride = null;
+            RenderSystem.outputDepthTextureOverride = null;
+        }
     }
 
-    private static void drawFullscreenQuad(int width, int height) {
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        builder.addVertex((float) (0.0f), (float) (0.0f), (float) (0.0f)).setUv(0.0f, 0.0f);
-        builder.addVertex((float) width, 0.0f, 0.0f).setUv(1.0f, 0.0f);
-        builder.addVertex((float) width, (float) height, 0.0f).setUv(1.0f, 1.0f);
-        builder.addVertex(0.0f, (float) height, 0.0f).setUv(0.0f, 1.0f);
-        BufferUploader.drawWithShader(builder.buildOrThrow());
+    private static GpuSampler nearestSampler() {
+        return RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST);
+    }
+
+    private static RenderPipeline.Builder filterPipelineState(RenderPipeline.Builder builder) {
+        return builder
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)
+                .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                .withColorTargetState(ColorTargetState.DEFAULT)
+                .withDepthStencilState(Optional.empty())
+                .withCull(false);
+    }
+
+    // 以正交投影把全屏四边形画回主缓冲区（原先靠 setShader / setShaderTexture 全局状态，现在显式组装一次绘制）
+    private static void drawFullscreenQuad(EcaShaderInstance shader, int width, int height,
+                                           List<PreparedRenderType.Texture> textures) {
+        RenderPipeline pipeline = shader.pipeline("filter", FilterRenderer::filterPipelineState);
+
+        if (filterProjectionBuffer == null) {
+            filterProjectionBuffer = new ProjectionMatrixBuffer("ECA filter");
+        }
+        GpuBufferSlice savedProjection = RenderSystem.getProjectionMatrixBuffer();
+        ProjectionType savedProjectionType = RenderSystem.getProjectionType();
+        FILTER_PROJECTION.setupOrtho(-1000.0f, 1000.0f, (float) width, (float) height, true);
+        RenderSystem.setProjectionMatrix(filterProjectionBuffer.getBuffer(FILTER_PROJECTION), ProjectionType.ORTHOGRAPHIC);
+        try (ByteBufferBuilder allocator = new ByteBufferBuilder(256)) {
+            GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(new Matrix4f(), new Matrix4f());
+            PreparedRenderType prepared = new PreparedRenderType(pipeline, OutputTarget.MAIN_TARGET, transforms,
+                    new ScissorState(), textures);
+            // uniform 取快照要在所有取值都设置完之后、绘制之前
+            EcaShaderInstance.onPrepare(pipeline, prepared);
+
+            BufferBuilder builder = new BufferBuilder(allocator, PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX);
+            builder.addVertex((float) (0.0f), (float) (0.0f), (float) (0.0f)).setUv(0.0f, 0.0f);
+            builder.addVertex((float) width, 0.0f, 0.0f).setUv(1.0f, 0.0f);
+            builder.addVertex((float) width, (float) height, 0.0f).setUv(1.0f, 1.0f);
+            builder.addVertex(0.0f, (float) height, 0.0f).setUv(0.0f, 1.0f);
+            try (MeshData mesh = builder.buildOrThrow();
+                 GpuBuffer vertexBuffer = RenderSystem.getDevice()
+                         .createBuffer(() -> "ECA filter quad", GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer())) {
+                RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(mesh.drawState().primitiveTopology());
+                int indexCount = mesh.drawState().indexCount();
+                prepared.drawFromBuffer(vertexBuffer, indices.getBuffer(indexCount), indices.type(), 0, 0, indexCount);
+            }
+        } finally {
+            if (savedProjection != null) {
+                RenderSystem.setProjectionMatrix(savedProjection, savedProjectionType);
+            }
+        }
+    }
+
+    private static void renderFilterPass(EcaShaderInstance shader, Consumer<EcaShaderInstance> uniformApplier) {
+        renderFilterPass(shader, uniformApplier, List.of());
     }
 
     @SuppressWarnings("deprecation")
-    private static void renderFilterPass(ShaderInstance shader, Consumer<ShaderInstance> uniformApplier) {
+    private static void renderFilterPass(EcaShaderInstance shader, Consumer<EcaShaderInstance> uniformApplier,
+                                         List<PreparedRenderType.Texture> extraTextures) {
         if (shader == null) {
             return;
         }
@@ -667,47 +704,22 @@ public class FilterRenderer {
         int width = mainTarget.width;
         int height = mainTarget.height;
 
-        ensureCopyTargets(width, height);
+        copyMainTarget(mainTarget);
 
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, copyFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-
-        mainTarget.bindWrite(false);
-
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        RenderSystem.disableCull();
-        RenderSystem.disableBlend();
-
-        Matrix4f savedProj = RenderSystem.getProjectionMatrix();
-        Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
-
-        RenderSystem.getModelViewStack().pushMatrix();
-        try {
-            RenderSystem.getModelViewStack().identity();
-            RenderSystem.applyModelViewMatrix();
-
-            RenderSystem.setShader(() -> shader);
-            RenderSystem.setShaderTexture(0, depthCopyTexture);
-            RenderSystem.setShaderTexture(1, colorCopyTexture);
-            uniformApplier.accept(shader);
-            if (shader.getUniform("FilterStrength") != null) {
-                shader.getUniform("FilterStrength").set(bossShowFilter != null ? bossShowFilterStrength : 1.0F);
-            }
-
-            drawFullscreenQuad(width, height);
-        } finally {
-            RenderSystem.getModelViewStack().popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
-            RenderSystem.enableCull();
-            RenderSystem.depthMask(true);
-            RenderSystem.enableDepthTest();
-            RenderSystem.enableBlend();
+        uniformApplier.accept(shader);
+        if (shader.getUniform("FilterStrength") != null) {
+            shader.getUniform("FilterStrength").set(bossShowFilter != null ? bossShowFilterStrength : 1.0F);
         }
+
+        drawFullscreenQuad(shader, width, height, filterTextures(extraTextures));
+    }
+
+    private static List<PreparedRenderType.Texture> filterTextures(List<PreparedRenderType.Texture> extraTextures) {
+        List<PreparedRenderType.Texture> textures = new java.util.ArrayList<>();
+        textures.add(new PreparedRenderType.Texture("Sampler0", depthCopyView, nearestSampler()));
+        textures.add(new PreparedRenderType.Texture("Sampler1", colorCopyView, nearestSampler()));
+        textures.addAll(extraTextures);
+        return textures;
     }
 
     @SuppressWarnings("deprecation")
@@ -716,16 +728,16 @@ public class FilterRenderer {
             cosmosStartNanos = System.nanoTime();
         }
         float time = (System.nanoTime() - cosmosStartNanos) / 1_000_000_000.0f;
+        ensureCosmosTerrainTarget(Minecraft.getInstance().gameRenderer.mainRenderTarget());
         renderWorldFilterPass(event, cosmosShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
-            RenderSystem.setShaderTexture(3, cosmosTerrainDepthTexture);
             if (shader.getUniform("ScreenSize") != null) {
                 shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
             }
-        });
+        }, List.of(new PreparedRenderType.Texture("Sampler3", cosmosTerrainDepthView, nearestSampler())));
     }
 
     private static float filterTime(float time) {
@@ -734,13 +746,15 @@ public class FilterRenderer {
 
     /* 世界空间滤镜通道：在 renderFilterPass 的基础上，额外向着色器提供逐像素世界坐标
        反算所需的数据，使效果附着在世界表面而非屏幕。任何"贴世界表面"的滤镜均可复用。
-       视图旋转取自 RenderSystem 的逆视图旋转矩阵（AFTER_LEVEL 阶段 event 的 poseStack
-       是投影栈，不可用）。着色器契约（除 Sampler0=深度、Sampler1=颜色外）：
+       视图旋转与投影取自相机渲染状态（AfterLevel 阶段事件的 poseStack 为空栈，不可用）。
+       着色器契约（除 Sampler0=深度、Sampler1=颜色外）：
          uniform mat4 InvViewProjMat  // inverse(ProjMat * ViewRotMat)，相机相对
          uniform vec3 CameraPos       // 相机世界坐标
        反算公式：worldPos = (InvViewProjMat * vec4(ndc, 1)).xyz / w + CameraPos */
     @SuppressWarnings("deprecation")
-    private static void renderWorldFilterPass(RenderLevelStageEvent event, ShaderInstance shader, Consumer<ShaderInstance> uniformApplier) {
+    private static void renderWorldFilterPass(RenderLevelStageEvent event, EcaShaderInstance shader,
+                                              Consumer<EcaShaderInstance> uniformApplier,
+                                              List<PreparedRenderType.Texture> extraTextures) {
         if (shader == null) {
             return;
         }
@@ -749,61 +763,26 @@ public class FilterRenderer {
         int width = mainTarget.width;
         int height = mainTarget.height;
 
-        ensureCopyTargets(width, height);
+        copyMainTarget(mainTarget);
 
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, copyFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-
-        mainTarget.bindWrite(false);
-
-        // 相机相对反算矩阵：AFTER_LEVEL 阶段 event.getPoseStack() 实为投影栈，不能用；
-        // 视图旋转改从 RenderSystem 的逆视图旋转矩阵还原，再与投影组合求逆
-        Matrix3f viewRot = new Matrix3f().rotation(event.getCamera().rotation()).invert();
-        Matrix4f view = new Matrix4f().set(viewRot);
-        Matrix4f invViewProj = new Matrix4f(event.getProjectionMatrix())
-                .mul(view)
+        // 相机相对反算矩阵：视图旋转即相机渲染状态里的 viewRotationMatrix，与投影组合求逆
+        CameraRenderState cameraState = event.getLevelRenderState().cameraRenderState;
+        Matrix4f invViewProj = new Matrix4f(cameraState.projectionMatrix)
+                .mul(cameraState.viewRotationMatrix)
                 .invert();
-        Vec3 cam = event.getCamera().getPosition();
+        Vec3 cam = cameraState.pos;
 
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        RenderSystem.disableCull();
-        RenderSystem.disableBlend();
-
-        Matrix4f savedProj = RenderSystem.getProjectionMatrix();
-        Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
-
-        RenderSystem.getModelViewStack().pushMatrix();
-        try {
-            RenderSystem.getModelViewStack().identity();
-            RenderSystem.applyModelViewMatrix();
-
-            RenderSystem.setShader(() -> shader);
-            RenderSystem.setShaderTexture(0, depthCopyTexture);
-            RenderSystem.setShaderTexture(1, colorCopyTexture);
-            if (shader.getUniform("InvViewProjMat") != null) {
-                shader.getUniform("InvViewProjMat").set(invViewProj);
-            }
-            if (shader.getUniform("CameraPos") != null) {
-                shader.getUniform("CameraPos").set((float) cam.x, (float) cam.y, (float) cam.z);
-            }
-            uniformApplier.accept(shader);
-            if (shader.getUniform("FilterStrength") != null) {
-                shader.getUniform("FilterStrength").set(bossShowFilter != null ? bossShowFilterStrength : 1.0F);
-            }
-
-            drawFullscreenQuad(width, height);
-        } finally {
-            RenderSystem.getModelViewStack().popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
-            RenderSystem.enableCull();
-            RenderSystem.depthMask(true);
-            RenderSystem.enableDepthTest();
-            RenderSystem.enableBlend();
+        if (shader.getUniform("InvViewProjMat") != null) {
+            shader.getUniform("InvViewProjMat").set(invViewProj);
         }
+        if (shader.getUniform("CameraPos") != null) {
+            shader.getUniform("CameraPos").set((float) cam.x, (float) cam.y, (float) cam.z);
+        }
+        uniformApplier.accept(shader);
+        if (shader.getUniform("FilterStrength") != null) {
+            shader.getUniform("FilterStrength").set(bossShowFilter != null ? bossShowFilterStrength : 1.0F);
+        }
+
+        drawFullscreenQuad(shader, width, height, filterTextures(extraTextures));
     }
 }

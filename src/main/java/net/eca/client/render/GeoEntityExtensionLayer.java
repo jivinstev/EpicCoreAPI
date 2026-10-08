@@ -1,5 +1,6 @@
 package net.eca.client.render;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -41,7 +42,7 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
 
     @Override
     public void preRender(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
-                          MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
+                          SubmitNodeCollector bufferSource, VertexConsumer buffer, float partialTick,
                           int packedLight, int packedOverlay) {
         activeExtension = findExtension(animatable);
         if (activeExtension != null) {
@@ -51,7 +52,7 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
 
     @Override
     public void render(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
-                       MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
+                       SubmitNodeCollector bufferSource, VertexConsumer buffer, float partialTick,
                        int packedLight, int packedOverlay) {
 
         EntityLayerExtension layerExtension = activeExtension;
@@ -76,7 +77,7 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
     }
 
     private void renderOverlay(PoseStack poseStack, T animatable, BakedGeoModel bakedModel,
-                               MultiBufferSource bufferSource, float partialTick, int packedLight,
+                               SubmitNodeCollector bufferSource, float partialTick, int packedLight,
                                int packedOverlay, EntityLayerExtension layerExtension) {
         Identifier texture = layerExtension.getTexture();
         List<ShaderMaskPass> shaderPasses = layerExtension.getShaderPasses();
@@ -98,11 +99,11 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
     }
 
     private void renderTexturePass(PoseStack poseStack, T animatable, BakedGeoModel bakedModel,
-                                   MultiBufferSource bufferSource, float partialTick, int light, int overlay,
+                                   SubmitNodeCollector bufferSource, float partialTick, int light, int overlay,
                                    float alpha, RenderType type, boolean oculus) {
         if (type == null) return;
         if (oculus) {
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
+            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(PrimitiveTopology.QUADS, type.format());
             this.renderer.reRender(bakedModel, poseStack, rt -> builder, animatable, type, builder,
                     partialTick, light, overlay, ARGB.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
             ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(type, 1.0f), builder, builder.buildOrThrow());
@@ -113,19 +114,17 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
     }
 
     private void renderShaderPass(PoseStack poseStack, T animatable, BakedGeoModel bakedModel,
-                                  MultiBufferSource bufferSource, float partialTick, int light, int overlay,
+                                  SubmitNodeCollector bufferSource, float partialTick, int light, int overlay,
                                   ShaderMaskPass pass, boolean oculus) {
         if (pass == null || pass.alpha() <= 0.0f) return;
         RenderType type = pass.renderType();
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
+        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(PrimitiveTopology.QUADS, type.format());
         this.renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, type, builder,
             partialTick, light, overlay, -1);
         if (oculus) {
             ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
         } else {
-            if (bufferSource instanceof MultiBufferSource.BufferSource source) {
-                source.endBatch();
-            }
+
             ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
         }
     }

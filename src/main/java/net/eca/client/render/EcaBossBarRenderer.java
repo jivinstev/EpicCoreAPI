@@ -1,25 +1,17 @@
 package net.eca.client.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.RenderPipelines;
+
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import org.joml.Matrix4f;
+import org.joml.Vector2f;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -163,7 +155,6 @@ public final class EcaBossBarRenderer {
         }
 
         if (appearance.valueText != null) {
-            graphics.flush();
             int textY = (barHeight - Minecraft.getInstance().font.lineHeight) / 2;
             graphics.centeredText(Minecraft.getInstance().font, appearance.valueText,
                     layoutWidth / 2, textY, 0xFFFFFFFF);
@@ -200,107 +191,35 @@ public final class EcaBossBarRenderer {
         if (texture == null && renderType == null) {
             return;
         }
-        EcaShaderInstance.setOpacity(alpha);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
-        try {
-            if (texture != null && renderType != null) {
-                drawTextureWithShaderMask(graphics, texture, renderType,
-                        x, y, drawWidth, drawHeight, fullWidth, fullHeight);
-            } else if (texture != null) {
-                graphics.blit(texture, x, y, 0, 0, drawWidth, drawHeight, fullWidth, fullHeight);
-            } else {
-                drawRenderType(graphics, renderType, x, y, drawWidth, drawHeight, fullWidth);
-            }
-        } finally {
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            EcaShaderInstance.clearOpacity();
+        if (texture != null) {
+            graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0.0f, 0.0f, drawWidth, drawHeight,
+                    fullWidth, fullHeight, ARGB.white(alpha));
+        }
+        if (renderType != null) {
+            submitShaderLayer(graphics, texture, renderType, x, y, drawWidth, drawHeight, fullWidth, fullHeight, alpha);
         }
     }
 
-    private static void drawTextureWithShaderMask(GuiGraphicsExtractor graphics, Identifier texture, RenderType renderType,
-                                                  int x, int y, int drawWidth, int drawHeight,
-                                                  int fullWidth, int fullHeight) {
-        graphics.flush();
-        Matrix4f matrix = graphics.pose().last().pose();
-
-        // 清除渲染区域的 alpha 通道为 0
-        RenderSystem.colorMask(false, false, false, true);
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ZERO,
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ZERO
-        );
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder clearBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        clearBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 255);
-        clearBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 255);
-        clearBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 255);
-        clearBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 255);
-        BufferUploader.drawWithShader(clearBuilder.buildOrThrow());
-        RenderSystem.colorMask(true, true, true, true);
-
-        // 渲染贴图，alpha 通道直接写入帧缓冲区
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO
-        );
-        RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        float texU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
-        float texV1 = fullHeight <= 0 ? 0.0f : (float) drawHeight / (float) fullHeight;
-        BufferBuilder texBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        texBuilder.addVertex(matrix, x, y + drawHeight, 0).setUv(0.0f, texV1);
-        texBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setUv(texU1, texV1);
-        texBuilder.addVertex(matrix, x + drawWidth, y, 0).setUv(texU1, 0.0f);
-        texBuilder.addVertex(matrix, x, y, 0).setUv(0.0f, 0.0f);
-        BufferUploader.drawWithShader(texBuilder.buildOrThrow());
-
-        // 将 alpha 缩放到 0.5，使着色器半透明叠加在贴图上
-        RenderSystem.colorMask(false, false, false, true);
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE,
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.SRC_ALPHA
-        );
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder scaleBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        scaleBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 127);
-        scaleBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 127);
-        scaleBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 127);
-        scaleBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 127);
-        BufferUploader.drawWithShader(scaleBuilder.buildOrThrow());
-        RenderSystem.colorMask(true, true, true, true);
-
-        // 渲染着色器，使用 DST_ALPHA 混合（只在贴图非透明区域显示）
-        renderType.setupRenderState();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.DST_ALPHA, GlStateManager.DestFactor.ONE_MINUS_DST_ALPHA,
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE
-        );
-        float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
-        int light = LightTexture.FULL_BRIGHT;
-        BufferBuilder shaderBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
-        shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        BufferUploader.drawWithShader(shaderBuilder.buildOrThrow());
-        renderType.clearRenderState();
-
-        RenderSystem.defaultBlendFunc();
-    }
-
-    private static void drawRenderType(GuiGraphicsExtractor graphics, RenderType renderType,
-                                       int x, int y, int width, int height, int fullWidth) {
-        float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
-        Matrix4f matrix = graphics.pose().last().pose();
-        VertexConsumer consumer = graphics.bufferSource().getBuffer(renderType);
-        int light = LightTexture.FULL_BRIGHT;
-        consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        graphics.flush();
+    /*
+     * 着色器层：1.21 在提取阶段立即用 GL 状态绘制，26.x 的 GUI 只记录状态，所以交给画中画渲染器离屏合成
+     * （见 BossBarShaderPipRenderer）。同时有贴图时，贴图先按普通方式画出，着色器只叠在其非透明像素上。
+     */
+    private static void submitShaderLayer(GuiGraphicsExtractor graphics, Identifier texture, RenderType renderType,
+                                          int x, int y, int drawWidth, int drawHeight, int fullWidth, int fullHeight,
+                                          float alpha) {
+        Vector2f topLeft = graphics.pose().transformPosition(x, y, new Vector2f());
+        Vector2f bottomRight = graphics.pose().transformPosition(x + drawWidth, y + drawHeight, new Vector2f());
+        int x0 = (int) Math.floor(topLeft.x);
+        int y0 = (int) Math.floor(topLeft.y);
+        int x1 = (int) Math.ceil(bottomRight.x);
+        int y1 = (int) Math.ceil(bottomRight.y);
+        if (x1 <= x0 || y1 <= y0) {
+            return;
+        }
+        float u1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
+        float v1 = texture == null || fullHeight <= 0 ? 1.0f : (float) drawHeight / (float) fullHeight;
+        graphics.submitPictureInPictureRenderState(new BossBarShaderPipState(x0, y0, x1, y1,
+                topLeft.x, topLeft.y, bottomRight.x, bottomRight.y,
+                texture, renderType, u1, v1, alpha, graphics.peekScissorStack()));
     }
 }

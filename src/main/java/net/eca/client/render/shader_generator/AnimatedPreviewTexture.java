@@ -48,7 +48,7 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
             }
             int availableFrames = sheet.getWidth() / frameWidth * (sheet.getHeight() / frameHeight);
             List<Frame> frames = new ArrayList<>();
-            for (AnimationFrame animationFrame : metadata.frames()) {
+            for (AnimationFrame animationFrame : metadata.frames().orElse(List.of())) {
                 int index = animationFrame.index();
                 int duration = animationFrame.timeOr(metadata.defaultFrameTime());
                 if (index >= 0 && index < availableFrames && duration > 0) {
@@ -156,7 +156,7 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
 
     private static AnimationMetadataSection readMetadata(Path texturePath) throws IOException {
         Path metadataPath = Path.of(texturePath.toString() + ".mcmeta");
-        AnimationMetadataSection empty = new AnimationMetadataSection(List.of(), Optional.empty(), Optional.empty(), 1, false);
+        AnimationMetadataSection empty = new AnimationMetadataSection(Optional.empty(), Optional.empty(), Optional.empty(), 1, false);
         if (!Files.isRegularFile(metadataPath)) return empty;
         JsonObject root = JsonParser.parseString(Files.readString(metadataPath)).getAsJsonObject();
         if (!root.has("animation") || !root.get("animation").isJsonObject()) {

@@ -39,7 +39,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollArea {
         super(
             x, y, width, height,
             Component.translatable("gui.eca.shader_generator.ai.transcript"),
-            AbstractScrollArea.ScrollbarSettings.defaultSettings(font.lineHeight * 3)
+            AbstractScrollArea.defaultSettings(font.lineHeight * 3)
         );
         this.font = font;
     }
