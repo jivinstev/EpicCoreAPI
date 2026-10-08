@@ -1,6 +1,5 @@
 package net.eca.client.gui;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.network.BossShowDeleteEditorPacket;
 import net.eca.network.BossShowExitEditorPacket;
@@ -15,7 +14,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;

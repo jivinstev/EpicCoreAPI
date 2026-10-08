@@ -1,6 +1,5 @@
 package net.eca.client.gui;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.network.BossShowSaveEditorPacket;
 import net.eca.network.NetworkHandler;

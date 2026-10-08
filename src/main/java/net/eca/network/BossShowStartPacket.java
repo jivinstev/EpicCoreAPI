@@ -1,6 +1,5 @@
 package net.eca.network;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.util.bossshow.BossShowClientState;
 import net.eca.util.bossshow.BossShowDefinition;

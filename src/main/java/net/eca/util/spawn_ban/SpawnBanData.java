@@ -1,8 +1,6 @@
 package net.eca.util.spawn_ban;
 
-import net.minecraft.core.registries.Registries;
 import net.minecraft.core.HolderLookup;
-
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;

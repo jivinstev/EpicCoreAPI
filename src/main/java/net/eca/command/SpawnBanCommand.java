@@ -1,6 +1,5 @@
 package net.eca.command;
 
-import net.minecraft.core.registries.Registries;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;

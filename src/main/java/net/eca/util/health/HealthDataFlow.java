@@ -7,7 +7,6 @@ import net.eca.util.health.report.HealthReportManager;
 
 import static net.eca.util.health.report.HealthReportText.tr;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.eca.coremod.RuntimeBytecodeProvider;
 import net.eca.util.EcaLogger;
 import net.eca.util.health.HealthDataflowAnalyzer.AnalysisResult;

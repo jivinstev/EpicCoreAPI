@@ -1,6 +1,5 @@
 package net.eca.util.bossshow;
 
-import net.minecraft.core.registries.Registries;
 
 import net.minecraft.world.phys.Vec3;
 

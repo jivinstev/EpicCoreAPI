@@ -1,6 +1,5 @@
 package net.eca.util.bossshow;
 
-import net.minecraft.core.registries.Registries;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

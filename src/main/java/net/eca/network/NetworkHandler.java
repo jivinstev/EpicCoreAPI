@@ -1,7 +1,5 @@
 package net.eca.network;
 
-import net.eca.EcaMod;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,13 +17,6 @@ import net.neoforged.neoforge.network.registration.HandlerThread;
 public class NetworkHandler {
 
     private static final String PROTOCOL_VERSION = "3";
-
-
-    private static int packetId = 0;
-
-    private static int id() {
-        return packetId++;
-    }
 
     /**
      * Register all network packets.

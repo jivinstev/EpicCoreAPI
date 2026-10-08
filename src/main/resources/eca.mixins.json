@@ -48,7 +48,8 @@
     "ServerLevelMixin",
     "TransientEntitySectionManagerMixin",
     "TransientEntitySectionManagerMixin$CallbackMixin",
-    "TrackedEntityMixin"
+    "TrackedEntityMixin",
+    "EntitySelectorAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

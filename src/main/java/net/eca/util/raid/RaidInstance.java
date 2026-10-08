@@ -5,6 +5,7 @@ import net.eca.network.RaidBossBarSyncPacket;
 import net.eca.util.EcaLogger;
 import net.eca.util.faction.FactionManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -22,8 +23,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.SpawnPlacements;
-import net.minecraft.world.level.NaturalSpawner;
+import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -217,7 +217,7 @@ public class RaidInstance {
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
             Structure targetStructure = level.registryAccess()
-                    .registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE).get(key);
+                    .registryOrThrow(Registries.STRUCTURE).get(key);
             if (targetStructure == null) return false;
             return level.structureManager().getStructureWithPieceAt(center, targetStructure).isValid();
         }
@@ -474,7 +474,7 @@ public class RaidInstance {
 
             if (!level.hasChunksAt(x - 10, z - 10, x + 10, z + 10)) continue;
             if (!level.isPositionEntityTicking(mutable)) continue;
-            boolean validGround = net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND
+            boolean validGround = SpawnPlacementTypes.ON_GROUND
                     .isSpawnPositionOk(level, mutable, type);
             boolean validSnowSurface = level.getBlockState(mutable.below()).is(Blocks.SNOW)
                     && level.getBlockState(mutable).isAir();

@@ -4,7 +4,6 @@ import net.eca.util.health.report.HealthReportText;
 
 import static net.eca.util.health.report.HealthReportText.tr;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.eca.config.EcaConfiguration;
 import net.eca.coremod.EcaTransformerManager;
 import net.eca.util.EcaLogger;
@@ -4882,7 +4881,7 @@ public final class HealthDataflowAnalyzer {
 
     private static boolean isSynchedDataSet(MethodInsnNode call) {
         return call.owner.equals("net/minecraft/network/syncher/SynchedEntityData")
-                && (call.name.equals("set") || call.name.equals("set"));
+                && call.name.equals("set");
     }
 
     private static boolean isMapPut(MethodInsnNode call) {
@@ -6270,7 +6269,7 @@ public final class HealthDataflowAnalyzer {
 
             // SynchedEntityData.get
             if (m.owner.equals("net/minecraft/network/syncher/SynchedEntityData")
-                && (m.name.equals("get") || m.name.equals("get"))
+                && m.name.equals("get")
                 && values.size() >= 2) {
                 Expr accExpr = values.get(1).expr;
                 if (accExpr instanceof Reference ref && ref.value() instanceof EntityDataAccessor<?> acc) {
@@ -6952,8 +6951,8 @@ public final class HealthDataflowAnalyzer {
     private static MapEntrySource.KeyKind detectKeyKind(Expr key) {
         if (key == EntityParamMarker.I) return MapEntrySource.KeyKind.ENTITY;
         if (key instanceof Call call && call.args().size() == 1 && call.args().get(0) == EntityParamMarker.I) {
-            if (call.name().equals("getId") || call.name().equals("getId")) return MapEntrySource.KeyKind.ENTITY_ID;
-            if (call.name().equals("getUUID") || call.name().equals("getUUID")) return MapEntrySource.KeyKind.ENTITY_UUID;
+            if (call.name().equals("getId")) return MapEntrySource.KeyKind.ENTITY_ID;
+            if (call.name().equals("getUUID")) return MapEntrySource.KeyKind.ENTITY_UUID;
         }
         return MapEntrySource.KeyKind.UNKNOWN;
     }

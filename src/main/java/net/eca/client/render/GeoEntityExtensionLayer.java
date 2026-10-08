@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FastColor;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
@@ -102,11 +103,11 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
         if (oculus) {
             BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
             this.renderer.reRender(bakedModel, poseStack, rt -> builder, animatable, type, builder,
-                    partialTick, light, overlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
+                    partialTick, light, overlay, FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
             ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(type, 1.0f), builder, builder.buildOrThrow());
         } else {
             this.renderer.reRender(bakedModel, poseStack, bufferSource, animatable, type,
-                    bufferSource.getBuffer(type), partialTick, light, overlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
+                    bufferSource.getBuffer(type), partialTick, light, overlay, FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
         }
     }
 

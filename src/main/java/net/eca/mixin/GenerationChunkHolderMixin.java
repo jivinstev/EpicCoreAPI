@@ -14,7 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.concurrent.CompletableFuture;
 
-@Mixin(value = GenerationChunkHolder.class, priority = 1024)
+// 1.21 起区块生成调度由 ChunkMap.scheduleChunkGeneration 移至 GenerationChunkHolder
+@Mixin(value =GenerationChunkHolder.class, priority = 1024)
 public abstract class GenerationChunkHolderMixin {
 
     private static final int ECA_SAFE_CHUNK_LIMIT = 1_874_999;
@@ -28,7 +29,7 @@ public abstract class GenerationChunkHolderMixin {
         ChunkPos pos = ((GenerationChunkHolder) (Object) this).getPos();
         if (Math.abs(pos.x) > ECA_SAFE_CHUNK_LIMIT || Math.abs(pos.z) > ECA_SAFE_CHUNK_LIMIT) {
             EcaLogger.warn(
-                "[ChunkMapMixin] blocked out-of-range chunk generation: {},{} status={}",
+                "[GenerationChunkHolderMixin] blocked out-of-range chunk generation: {},{} status={}",
                 pos.x,
                 pos.z,
                 status

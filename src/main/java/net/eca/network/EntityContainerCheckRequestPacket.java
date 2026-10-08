@@ -42,8 +42,7 @@ public class EntityContainerCheckRequestPacket implements CustomPacketPayload {
     }
 
     public static void handle(EntityContainerCheckRequestPacket msg, IPayloadContext context) {
-        context.enqueueWork(() ->
-                { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.apply(msg); });
+        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.apply(msg); });
     }
 
     // 客户端引用隔离在独立内部类中，实际逻辑委托给 @OnlyIn(Dist.CLIENT) 的 ClientEntityUtil

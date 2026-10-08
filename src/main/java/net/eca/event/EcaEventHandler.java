@@ -147,8 +147,6 @@ public class EcaEventHandler {
         //START 相位：抢在 ServerLevel.tick() 的 entityManager.tick() 之前校正位置
         //防止字段脏写攻击导致实体被迁移到远方 section、进而触发 pending unload 失锁
         EntityLocationManager.checkLockedEntities(serverLevel);
-        return;
-
     }
 
     @SubscribeEvent
@@ -156,9 +154,6 @@ public class EcaEventHandler {
         if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
             return;
         }
-
-        //START 相位：抢在 ServerLevel.tick() 的 entityManager.tick() 之前校正位置
-        //防止字段脏写攻击导致实体被迁移到远方 section、进而触发 pending unload 失锁
 
         EntityExtensionManager.tickDimension(serverLevel);
         ForceLoadingManager.tickDimension(serverLevel);

@@ -1,6 +1,5 @@
 package net.eca.util.bossshow;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.client.gui.BossShowEditorHomeScreen;
 import net.eca.client.BossShowScreenEffectState;

@@ -31,8 +31,7 @@ public final class ShaderGeneratorOpenPacket implements CustomPacketPayload {
     }
 
     public static void handle(ShaderGeneratorOpenPacket message, IPayloadContext context) {
-        context.enqueueWork(() ->
-                { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.open(); });
+        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.open(); });
     }
 
     // 客户端引用委托给 @OnlyIn(Dist.CLIENT) 的 ClientEntityUtil

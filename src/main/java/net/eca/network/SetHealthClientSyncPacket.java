@@ -55,8 +55,7 @@ public final class SetHealthClientSyncPacket implements CustomPacketPayload {
     }
 
     public static void handle(SetHealthClientSyncPacket msg, IPayloadContext context) {
-        context.enqueueWork(() ->
-                { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.apply(msg); });
+        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.apply(msg); });
     }
 
     // 公共包处理器不直接加载客户端队列。

@@ -2,12 +2,12 @@ package net.eca.blender.animation;
 
 import net.eca.EcaMod;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 @EventBusSubscriber(modid = EcaMod.MOD_ID)
@@ -16,7 +16,7 @@ public final class BlenderControllerEvents {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLivingTick(EntityTickEvent.Pre event) {
-        if (!(event.getEntity() instanceof net.minecraft.world.entity.LivingEntity living)) return;
+        if (!(event.getEntity() instanceof LivingEntity living)) return;
         if (living.level() instanceof ServerLevel) BlenderControllers.discover(living);
     }
 

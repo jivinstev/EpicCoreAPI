@@ -2,9 +2,12 @@ package net.eca.client.render.shader_generator;
 
 import net.eca.util.shader_generator.ShaderExportBundle;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
+import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceProvider;
@@ -107,11 +110,11 @@ final class MemoryShaderResourceProvider implements ResourceProvider {
         }
 
         @Override
-        public net.minecraft.server.packs.PackLocationInfo location() {
-            return new net.minecraft.server.packs.PackLocationInfo(
+        public PackLocationInfo location() {
+            return new PackLocationInfo(
                 "eca_shader_generator_memory",
-                net.minecraft.network.chat.Component.literal("eca_shader_generator_memory"),
-                net.minecraft.server.packs.repository.PackSource.BUILT_IN,
+                Component.literal("eca_shader_generator_memory"),
+                PackSource.BUILT_IN,
                 Optional.empty()
             );
         }

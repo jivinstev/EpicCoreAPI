@@ -1,13 +1,8 @@
 package net.eca.mixin;
 
-import net.eca.api.EcaAPI;
 import net.eca.network.EntityTeleportSyncPacket;
 import net.eca.network.NetworkHandler;
 import net.eca.util.EntityUtil.ServerTeleportConnectionBridge;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.common.ClientboundDisconnectPacket;
-import net.minecraft.network.protocol.game.ClientboundPlayerCombatKillPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.PacketUtils;
 import net.minecraft.server.level.ServerPlayer;

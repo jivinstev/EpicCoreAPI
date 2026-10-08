@@ -1,6 +1,5 @@
 package net.eca.client.gui;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.Trigger;

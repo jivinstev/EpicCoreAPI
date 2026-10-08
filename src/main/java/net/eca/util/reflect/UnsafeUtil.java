@@ -407,7 +407,7 @@ public class UnsafeUtil {
             entity.removalReason = reason;
             entity.stopRiding();
             entity.getPassengers().forEach(Entity::stopRiding);
-            // NeoForge 1.21.1: Entity.invalidateCaps() no longer exists (capabilities are no longer cached on entities), so there is nothing to invalidate here.
+            // NeoForge 1.21.1 的实体不再缓存能力（已无 invalidateCaps），此处无需失效。
             // 玩家清除不建立连接级传送状态，避免移除后遗留等待确认的坐标同步。
             if (!(entity instanceof ServerPlayer)) {
                 EntityUtil.teleport(entity, 102400, -102400, 102400);

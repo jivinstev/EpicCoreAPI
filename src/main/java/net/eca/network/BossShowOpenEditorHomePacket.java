@@ -1,6 +1,5 @@
 package net.eca.network;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.client.gui.BossShowEditorHomeScreen;
 import net.eca.util.bossshow.BossShowDefinition;

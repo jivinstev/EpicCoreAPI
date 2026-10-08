@@ -1,13 +1,10 @@
 package net.eca.mixin;
 
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.Registries;
-
 import net.eca.util.item_extension.EcaTooltipLine;
-import net.eca.ItemNbt;
 import net.eca.util.item_extension.EcaTooltipPosition;
 import net.eca.util.item_extension.ItemExtension;
 import net.eca.util.item_extension.ItemExtensionManager;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -77,8 +74,8 @@ public class ItemStackClientMixin {
         int fallback = lines.size();
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         String disabled = Component.translatable("item.disabled").getString();
-        String nbtTags = ItemNbt.hasTag(stack)
-            ? Component.translatable("item.nbt_tags", ItemNbt.getTag(stack).getAllKeys().size()).getString()
+        String nbtTags = stack.has(DataComponents.CUSTOM_DATA)
+            ? Component.translatable("item.nbt_tags", stack.get(DataComponents.CUSTOM_DATA).copyTag().getAllKeys().size()).getString()
             : null;
         for (int i = 1; i < lines.size(); i++) {
             String text = lines.get(i).getString();

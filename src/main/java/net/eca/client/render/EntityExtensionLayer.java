@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FastColor;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -74,7 +75,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
                 BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
                 this.getParentModel().renderToBuffer(
                     poseStack, builder, light, overlay,
-                    net.minecraft.util.FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
+                    FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
                 ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
                     builder, builder.buildOrThrow());
@@ -82,7 +83,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
                 VertexConsumer texConsumer = bufferSource.getBuffer(texturedLayer);
                 this.getParentModel().renderToBuffer(
                     poseStack, texConsumer, light, overlay,
-                    net.minecraft.util.FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
+                    FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
             }
         }

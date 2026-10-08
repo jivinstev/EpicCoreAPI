@@ -1,30 +1,21 @@
 package net.eca.mixin;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import net.minecraft.server.level.ChunkResult;
 import net.eca.api.EcaAPI;
-import net.eca.util.EcaLogger;
 import net.eca.util.EntityRemovalQuarantine;
 import net.eca.util.EntityUtil;
 import net.eca.util.entity_extension.ForceLoadingManager;
 import net.eca.util.reflect.UnsafeUtil;
-import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-
-import java.util.concurrent.CompletableFuture;
 
 @Mixin(value = ChunkMap.class, priority = 1024)
 public abstract class ChunkMapMixin {

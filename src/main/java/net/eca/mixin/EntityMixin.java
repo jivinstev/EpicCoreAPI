@@ -6,7 +6,6 @@ import net.eca.util.EntityUtil;
 import net.eca.util.ResurrectionManager;
 import net.eca.util.faction.FactionUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.entity.EntityInLevelCallback;

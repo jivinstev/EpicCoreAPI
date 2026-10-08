@@ -1,6 +1,5 @@
 package net.eca.util.entity_extension;
 
-import net.minecraft.core.registries.Registries;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.registries.BuiltInRegistries;

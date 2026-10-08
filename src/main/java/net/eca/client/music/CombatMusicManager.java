@@ -1,6 +1,5 @@
 package net.eca.client.music;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.EcaMod;
 import net.eca.util.entity_extension.CombatMusicExtension;
@@ -15,7 +14,6 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 

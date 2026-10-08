@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.util.FastColor;
 import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -25,7 +26,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -167,7 +167,7 @@ public final class BossShowAnchorRenderer {
         playerHeadModel.setupAnim(0f, worldYaw, 0f);
         playerHeadModel.renderToBuffer(pose, buffer.getBuffer(playerHeadRenderType),
             LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-            net.minecraft.util.FastColor.ARGB32.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
+            FastColor.ARGB32.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
         pose.popPose();
 
         renderHeadLabel(pose, buffer, wp, ordinal, camRot, font);

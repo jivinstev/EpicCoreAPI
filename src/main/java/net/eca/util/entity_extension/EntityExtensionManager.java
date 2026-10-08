@@ -1,6 +1,5 @@
 package net.eca.util.entity_extension;
 
-import net.minecraft.core.registries.Registries;
 
 import net.eca.api.RegisterEntityExtension;
 import net.eca.api.EcaAPI;
