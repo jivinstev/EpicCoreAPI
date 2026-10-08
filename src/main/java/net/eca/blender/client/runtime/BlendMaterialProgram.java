@@ -15,7 +15,8 @@ import net.eca.blender.client.runtime.BlendNodeGraph.Input;
 import net.eca.blender.client.runtime.BlendNodeGraph.Value;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.resources.Identifier;
@@ -49,7 +50,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
     private final List<BlendTimeDriver> drivers;
     private EcaShaderInstance shader;
     private RenderType type;
-    private MultiBufferSource.BufferSource buffers;
+    private BufferBuilder buffers;
     private ByteBufferBuilder byteBuffer;
 
     private BlendMaterialProgram(Identifier id, ResourceProvider provider, List<Identifier> textures,
@@ -156,7 +157,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
     }
 
     public void load() throws IOException {
-        shader = new EcaShaderInstance(provider, id, DefaultVertexFormat.NEW_ENTITY);
+        shader = new EcaShaderInstance(provider, id, DefaultVertexFormat.ENTITY);
         int activeImages = 0;
         for (int i = 0; i < textures.size(); i++) {
             if (GL20.glGetUniformLocation(shader.getId(), "Image" + i) >= 0) activeImages++;
@@ -186,7 +187,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
                 .createRenderSetup());
         if (byteBuffer != null) byteBuffer.close();
         byteBuffer = new ByteBufferBuilder(256);
-        buffers = MultiBufferSource.immediate(byteBuffer);
+        buffers = null;
     }
 
     public VertexConsumer begin(Matrix4f pose, float[] positions, float frame) throws IOException {
@@ -202,10 +203,16 @@ public final class BlendMaterialProgram implements AutoCloseable {
         shader.safeGetUniform("EcaBoundsMin").set(min[0], min[1], min[2]);
         shader.safeGetUniform("EcaBoundsSize").set(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
         for (int i = 0; i < textures.size(); i++) shader.setSampler("Image" + i, Minecraft.getInstance().getTextureManager().getTexture(textures.get(i)));
-        return buffers.getBuffer(type);
+        buffers = new BufferBuilder(byteBuffer, PrimitiveTopology.QUADS, DefaultVertexFormat.ENTITY);
+        return buffers;
     }
 
-    public void end() { buffers.endBatch(type); }
+    public void end() {
+        if (buffers == null) return;
+        MeshData mesh = buffers.build();
+        buffers = null;
+        if (mesh != null) type.draw(mesh);
+    }
 
     @Override
     public void close() {

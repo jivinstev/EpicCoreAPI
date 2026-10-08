@@ -5,7 +5,6 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.neoforged.api.distmarker.Dist;
@@ -19,9 +18,10 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
 
     // 烘焙方块的光照只经 putBulkData 的 lightmap 数组进入缓冲，没有独立的 packedLight 形参，
     // 所以发光只能在这里替换该数组。VertexConsumer 的默认实现只读不写，共享常量数组安全。
+    private static final int FULL_BRIGHT = 0xF000F0;
     private static final int[] FULL_BRIGHT_LIGHTMAP = {
-        LightTexture.FULL_BRIGHT, LightTexture.FULL_BRIGHT,
-        LightTexture.FULL_BRIGHT, LightTexture.FULL_BRIGHT
+        FULL_BRIGHT, FULL_BRIGHT,
+        FULL_BRIGHT, FULL_BRIGHT
     };
 
     private final VertexFormat format;
@@ -48,11 +48,10 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
         fallback = null;
     }
 
-    @Override
     public void putBulkData(PoseStack.Pose pose, BakedQuad quad, float[] brightness,
                             float red, float green, float blue, float alpha,
                             int[] lights, int overlay, boolean readExistingColor) {
-        builder(quad.getSprite()).putBulkData(pose, quad, brightness, red, green, blue,
+        builder(quad.sprite()).putBulkData(pose, quad, brightness, red, green, blue,
             alpha, fullBright ? FULL_BRIGHT_LIGHTMAP : lights, overlay, readExistingColor);
     }
 
@@ -68,7 +67,7 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
 
     private BufferBuilder newBuilder() {
         return new BufferBuilder(new ByteBufferBuilder(format.getVertexSize() * 256),
-            VertexFormat.Mode.QUADS, format);
+            com.mojang.blaze3d.vertex.DrawMode.QUADS, format);
     }
 
     private BufferBuilder direct() {
@@ -108,6 +107,12 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     @Override
     public VertexConsumer setNormal(float x, float y, float z) {
         direct().setNormal(x, y, z);
+        return this;
+    }
+
+    @Override
+    public VertexConsumer setLineWidth(float width) {
+        direct().setLineWidth(width);
         return this;
     }
 

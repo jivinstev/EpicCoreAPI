@@ -6,7 +6,6 @@ import cpw.mods.modlauncher.api.IModuleLayerManager;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 import net.eca.agent.AgentLoader;
-import net.eca.coremod.EarlyLogWriter;
 import net.eca.agent.EcaAgent;
 import org.jetbrains.annotations.NotNull;
 import sun.misc.Unsafe;

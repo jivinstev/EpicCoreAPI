@@ -78,7 +78,7 @@ public final class CombatMusicManager {
 
         stopCurrent(minecraft);
         currentMusic = new SimpleSoundInstance(
-            soundEvent.getLocation(),
+            soundEvent.location(),
             musicExtension.soundSource(),
             musicExtension.volume(),
             musicExtension.pitch(),

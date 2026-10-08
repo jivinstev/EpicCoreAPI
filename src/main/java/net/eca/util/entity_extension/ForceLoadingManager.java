@@ -67,7 +67,7 @@ public final class ForceLoadingManager {
         }
 
         UUID uuid = entity.getUUID();
-        ChunkPos chunkPos = new ChunkPos(entity.blockPosition());
+        ChunkPos chunkPos = new ChunkPos(entity.blockPosition().getX() >> 4, entity.blockPosition().getZ() >> 4);
 
         if (!isValidChunkPos(chunkPos)) {
             return;
@@ -96,14 +96,14 @@ public final class ForceLoadingManager {
             }
             // 延迟期间实体可能已离开或已移动到别的区块，此时这张票据不再是当前目标
             if (current != tracked || tracked.level != level
-                    || tracked.chunkPos.x != pos.x || tracked.chunkPos.z != pos.z) {
+                    || tracked.chunkPos.x() != pos.x() || tracked.chunkPos.z() != pos.z()) {
                 return;
             }
             if (tracked.hasTicket(level, pos)) {
                 return;
             }
             // 返回 false 也可能只是持久化票据已经存在，此时对应区块仍处于强加载状态
-            TICKET_CONTROLLER.forceChunk(level, uuid, pos.x, pos.z, true, true);
+            TICKET_CONTROLLER.forceChunk(level, uuid, pos.x(), pos.z(), true, true);
 
             ServerLevel previousLevel = tracked.ticketLevel;
             ChunkPos previousPos = tracked.ticketChunkPos;
@@ -111,9 +111,9 @@ public final class ForceLoadingManager {
             tracked.ticketChunkPos = pos;
             // 新票据落地后再释放旧票据，避免远离玩家时出现无票据卸载窗口
             if (previousLevel != null && previousPos != null
-                    && (previousLevel != level || previousPos.x != pos.x || previousPos.z != pos.z)) {
+                    && (previousLevel != level || previousPos.x() != pos.x() || previousPos.z() != pos.z())) {
                 TICKET_CONTROLLER.forceChunk(previousLevel, uuid,
-                        previousPos.x, previousPos.z, false, true);
+                        previousPos.x(), previousPos.z(), false, true);
             }
         });
     }
@@ -125,8 +125,8 @@ public final class ForceLoadingManager {
             return;
         }
 
-        ChunkPos current = new ChunkPos(entity.blockPosition());
-        if (current.x == tracked.chunkPos.x && current.z == tracked.chunkPos.z) {
+        ChunkPos current = new ChunkPos(entity.blockPosition().getX() >> 4, entity.blockPosition().getZ() >> 4);
+        if (current.x() == tracked.chunkPos.x() && current.z() == tracked.chunkPos.z()) {
             if (!tracked.hasTicket(level, current)) {
                 requestForceLoad(level, uuid, current);
             }
@@ -218,7 +218,7 @@ public final class ForceLoadingManager {
         UUID uuid = entity.getUUID();
         if (TRACKED.containsKey(uuid)) return;
         FORCE_LOADED_MANUAL.add(uuid);
-        ChunkPos chunkPos = new ChunkPos(entity.blockPosition());
+        ChunkPos chunkPos = new ChunkPos(entity.blockPosition().getX() >> 4, entity.blockPosition().getZ() >> 4);
         if (!isValidChunkPos(chunkPos)) return;
         TRACKED.put(uuid, new TrackedChunk(level, chunkPos));
         requestForceLoad(level, uuid, chunkPos);
@@ -313,8 +313,8 @@ public final class ForceLoadingManager {
     private static final int MAX_CHUNK_COORD = 1875000;
 
     private static boolean isValidChunkPos(ChunkPos pos) {
-        return pos.x >= -MAX_CHUNK_COORD && pos.x <= MAX_CHUNK_COORD
-                && pos.z >= -MAX_CHUNK_COORD && pos.z <= MAX_CHUNK_COORD;
+        return pos.x() >= -MAX_CHUNK_COORD && pos.x() <= MAX_CHUNK_COORD
+                && pos.z() >= -MAX_CHUNK_COORD && pos.z() <= MAX_CHUNK_COORD;
     }
 
     private static void releaseTicket(UUID uuid, TrackedChunk tracked) {
@@ -326,7 +326,7 @@ public final class ForceLoadingManager {
         tracked.pendingChunkPos = null;
         if (ticketLevel != null && ticketPos != null) {
             TICKET_CONTROLLER.forceChunk(ticketLevel, uuid,
-                    ticketPos.x, ticketPos.z, false, true);
+                    ticketPos.x(), ticketPos.z(), false, true);
         }
     }
 
@@ -354,7 +354,7 @@ public final class ForceLoadingManager {
         }
 
         private static boolean sameChunk(ChunkPos first, ChunkPos second) {
-            return first != null && second != null && first.x == second.x && first.z == second.z;
+            return first != null && second != null && first.x() == second.x() && first.z() == second.z();
         }
     }
 

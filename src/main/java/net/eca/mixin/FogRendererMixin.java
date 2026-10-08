@@ -1,7 +1,5 @@
 package net.eca.mixin;
 
-import com.mojang.blaze3d.shaders.FogShape;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.eca.util.entity_extension.EntityExtensionClientState;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
@@ -50,7 +48,6 @@ public class FogRendererMixin {
         fogRed = Mth.lerp(strength, fogRed, eca$clampColor(fog.fogRed()));
         fogGreen = Mth.lerp(strength, fogGreen, eca$clampColor(fog.fogGreen()));
         fogBlue = Mth.lerp(strength, fogBlue, eca$clampColor(fog.fogBlue()));
-        RenderSystem.clearColor(fogRed, fogGreen, fogBlue, 0.0f);
     }
 
     @Inject(method = "setupFog", at = @At("TAIL"))
@@ -71,29 +68,13 @@ public class FogRendererMixin {
         }
         float strength = strengthHolder[0];
 
-        float customStart;
-        float customEnd;
-        if (fogMode == FogRenderer.FogMode.FOG_SKY) {
-            customStart = fog.skyFogStart(renderDistance);
-            customEnd = fog.skyFogEnd(renderDistance);
-        } else {
-            customStart = fog.terrainFogStart(renderDistance);
-            customEnd = fog.terrainFogEnd(renderDistance);
+        // TODO: the RenderSystem fog setters were removed; the custom start/end
+        // must be written into the new FogData object instead.
+        float customStart = fog.terrainFogStart(renderDistance);
+        float customEnd = fog.terrainFogEnd(renderDistance);
+        if (customEnd <= customStart) {
+            customEnd = customStart + 1.0f;
         }
-
-        float baseStart = RenderSystem.getShaderFogStart();
-        float baseEnd = RenderSystem.getShaderFogEnd();
-        float start = Mth.lerp(strength, baseStart, customStart);
-        float end = Mth.lerp(strength, baseEnd, customEnd);
-
-        if (end <= start) {
-            end = start + 1.0f;
-        }
-
-        RenderSystem.setShaderFogStart(start);
-        RenderSystem.setShaderFogEnd(end);
-        FogShape shape = strength >= 0.999f ? fog.fogShape() : null;
-        RenderSystem.setShaderFogShape(shape == null ? FogShape.CYLINDER : shape);
     }
 
     @Unique

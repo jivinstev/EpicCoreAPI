@@ -122,7 +122,7 @@ final class ShaderAiAssistantScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-        if (keyCode == GLFW.GLFW_KEY_ENTER && getFocused() == prompt && !hasShiftDown()) {
+        if (keyCode == GLFW.GLFW_KEY_ENTER && getFocused() == prompt && !event.hasShiftDown()) {
             send();
             return true;
         }
@@ -227,7 +227,7 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     ShaderAiToolResult capturePreview() {
-        if (minecraft.screen != this) return parent.captureToolPreview();
+        if (minecraft.gui.screen() != this) return parent.captureToolPreview();
         return ShaderPreviewCapture.capture(
             previewLeft, previewTop, previewRight, previewBottom
         );

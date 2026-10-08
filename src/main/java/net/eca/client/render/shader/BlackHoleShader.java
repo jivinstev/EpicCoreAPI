@@ -51,8 +51,8 @@ public class BlackHoleShader {
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.gameRenderer != null && mc.gameRenderer.mainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().getYRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().getXRot());
+                    float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().yRot());
+                    float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().xRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

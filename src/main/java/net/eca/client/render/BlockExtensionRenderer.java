@@ -75,7 +75,7 @@ public final class BlockExtensionRenderer {
             return;
         }
         ChunkPos chunkPos = chunk.getPos();
-        SECTION_BLOCKS.keySet().removeIf(key -> SectionPos.x(key) == chunkPos.x && SectionPos.z(key) == chunkPos.z);
+        SECTION_BLOCKS.keySet().removeIf(key -> SectionPos.x(key) == chunkPos.x() && SectionPos.z(key) == chunkPos.z());
     }
 
     private static void scanChunk(LevelChunk chunk) {
@@ -83,7 +83,7 @@ public final class BlockExtensionRenderer {
         for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
             LevelChunkSection section = sections[sectionIndex];
             int sectionY = chunk.getSectionYFromSectionIndex(sectionIndex);
-            long sectionKey = SectionPos.asLong(chunk.getPos().x, sectionY, chunk.getPos().z);
+            long sectionKey = SectionPos.asLong(chunk.getPos().x(), sectionY, chunk.getPos().z());
             SECTION_BLOCKS.remove(sectionKey);
             if (!section.maybeHas(state -> BlockExtensionManager.getExtension(state.getBlock()) != null)) {
                 continue;

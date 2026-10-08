@@ -49,7 +49,7 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.button();
-        if (!active || !visible || button != 0 || !clicked(mouseX, mouseY)) {
+        if (!active || !visible || button != 0 || !isMouseOver(mouseX, mouseY)) {
             return false;
         }
         if (editing) {

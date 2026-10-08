@@ -1,5 +1,6 @@
 package net.eca.client.render.preset;
 
+import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;

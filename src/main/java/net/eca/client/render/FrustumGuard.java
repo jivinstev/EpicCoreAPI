@@ -89,7 +89,7 @@ public final class FrustumGuard {
                 window == null ? -1 : window.getWidth(),
                 window == null ? -1 : window.getHeight(),
                 minecraft.options == null ? "n/a" : minecraft.options.fov().get(),
-                minecraft.getTimer().getGameTimeDeltaPartialTick(false));
+                minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false));
 
         reportCamera(minecraft);
         reportPlayer(minecraft);
@@ -117,7 +117,7 @@ public final class FrustumGuard {
     private static void reportDepthFar(Minecraft minecraft) {
         GameRenderer gameRenderer = minecraft.gameRenderer;
         EcaLogger.info("[FrustumGuard] depthFar={} forceLoadingMaxRenderDistance={}",
-                gameRenderer == null ? "n/a" : gameRenderer.getDepthFar(),
+                gameRenderer == null || minecraft.options == null ? "n/a" : minecraft.options.getEffectiveRenderDistance() * 16.0F * 4.0F,
                 EcaConfiguration.getForceLoadingMaxRenderDistanceSafely());
     }
 
@@ -127,12 +127,12 @@ public final class FrustumGuard {
             return;
         }
         Vec3 pos = camera.position();
-        Entity cameraEntity = camera.getEntity();
+        Entity cameraEntity = camera.entity();
         EcaLogger.info("[FrustumGuard] camera pos=({}, {}, {}) xRot={} yRot={} entity={}",
                 pos == null ? "null" : pos.x,
                 pos == null ? "null" : pos.y,
                 pos == null ? "null" : pos.z,
-                camera.getXRot(), camera.getYRot(),
+                camera.xRot(), camera.yRot(),
                 cameraEntity == null ? "null" : cameraEntity.getClass().getName());
     }
 
@@ -153,7 +153,7 @@ public final class FrustumGuard {
                 motion == null ? "null" : motion.x,
                 motion == null ? "null" : motion.y,
                 motion == null ? "null" : motion.z,
-                player.walkDist, player.bob, player.oBob);
+                player.getWalkDist(), player.bob, player.oBob);
         EcaLogger.info("[FrustumGuard] player hurtTime={} hurtDuration={} hurtDir={} health={} maxHealth={}",
                 player.hurtTime, player.hurtDuration, player.getHurtDir(),
                 player.getHealth(), player.getMaxHealth());

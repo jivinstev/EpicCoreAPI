@@ -15,6 +15,7 @@ import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
@@ -131,7 +132,7 @@ LivingEntityMixin {
         }
 
         if (tag.contains(NBT_INVULNERABLE)) {
-            boolean invulnerable = tag.getBoolean(NBT_INVULNERABLE);
+            boolean invulnerable = tag.getBooleanOr(NBT_INVULNERABLE, false);
             entity.getEntityData().set(EntityUtil.INVULNERABLE, invulnerable);
             if (invulnerable) {
                 InvulnerableEntityManager.addInvulnerable(entity);
@@ -142,14 +143,14 @@ LivingEntityMixin {
         }
         // 锁血（新加密格式 int）
         if (tag.contains(NBT_HEALTH_LOCK_ENC)) {
-            String encrypted = tag.getStringOr(NBT_HEALTH_LOCK_ENC, "").isPresent()
+            String encrypted = tag.get(NBT_HEALTH_LOCK_ENC) instanceof StringTag
                     ? tag.getStringOr(NBT_HEALTH_LOCK_ENC, "")
                     : String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_ENC, 0));
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_VALUE, encrypted);
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_KEY,   String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_KEY, 0)));
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_CHECK, String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_CHECK, 0)));
         }
-        if (tag.contains(NBT_HEAL_BAN_VALUE, 8)) {
+        if (tag.get(NBT_HEAL_BAN_VALUE) instanceof StringTag) {
             // TODO(1.1.6): 删除此迁移；将 1.1.5 前老哨兵 "-1024.0" 归一化为空串，避免被误判为 healBan=0
             String healBan = tag.getStringOr(NBT_HEAL_BAN_VALUE, "");
             if ("-1024.0".equals(healBan)) healBan = "";
@@ -157,7 +158,7 @@ LivingEntityMixin {
         }
         // 最大血量锁定（新加密格式 int）
         if (tag.contains(NBT_MAX_HEALTH_LOCK_ENC)) {
-            String encrypted = tag.getStringOr(NBT_MAX_HEALTH_LOCK_ENC, "").isPresent()
+            String encrypted = tag.get(NBT_MAX_HEALTH_LOCK_ENC) instanceof StringTag
                     ? tag.getStringOr(NBT_MAX_HEALTH_LOCK_ENC, "")
                     : String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_ENC, 0));
             entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_VALUE, encrypted);
@@ -170,7 +171,7 @@ LivingEntityMixin {
 
         // 恢复复活追踪状态
         if (tag.contains(NBT_RESURRECTION_TRACKED)) {
-            boolean tracked = tag.getBoolean(NBT_RESURRECTION_TRACKED);
+            boolean tracked = tag.getBooleanOr(NBT_RESURRECTION_TRACKED, false);
             entity.getEntityData().set(EntityUtil.RESURRECTION_TRACKED, tracked);
             if (tracked) {
                 ResurrectionManager.add(entity);
@@ -364,8 +365,8 @@ LivingEntityMixin {
         if (!target.level().isClientSide()
                 && attacker instanceof Player player
                 && EcaConfiguration.getFactionActionBarMessagesSafely()) {
-            player.displayClientMessage(
-                    Component.translatable("message.eca.faction.cannot_attack_friendly"), true);
+            player.sendOverlayMessage(
+                    Component.translatable("message.eca.faction.cannot_attack_friendly"));
         }
     }
 

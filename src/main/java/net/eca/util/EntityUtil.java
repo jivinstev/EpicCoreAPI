@@ -939,7 +939,9 @@ public class EntityUtil {
         if (entity.level() == null || entity.level().isClientSide()) return false;
         try {
             if (EcaAPI.isInvulnerable(entity) || HealthLockManager.getLock(entity) != null) {
-                return entity.hurt(damageSource, amount);
+                float lockedBefore = getHealth(entity);
+                entity.hurt(damageSource, amount);
+                return getHealth(entity) < lockedBefore;
             }
             float before = getHealth(entity);
             entity.invulnerableTime = 0;
@@ -978,8 +980,8 @@ public class EntityUtil {
             if (credit != null) {
                 /* 时间戳写原版的硬编码 100，不用 setLastHurtByPlayer——它写的是 tickCount，
                    刚生成的实体会得到 0，掉落与经验的 > 0 判定直接落空。 */
-                entity.lastHurtByPlayer = credit;
-                entity.lastHurtByPlayerTime = 100;
+                entity.lastHurtByPlayer = net.minecraft.world.entity.EntityReference.of(credit);
+                entity.lastHurtByPlayerMemoryTime = 100;
             }
             entity.lastDamageSource = damageSource;
             entity.lastDamageStamp = entity.level().getGameTime();
@@ -1333,16 +1335,18 @@ public class EntityUtil {
         }
 
         try {
-            ChunkPos targetChunk = new ChunkPos(BlockPos.containing(x, y, z));
+            ChunkPos targetChunk = new ChunkPos(
+                    SectionPos.blockToSectionCoord(Mth.floor(x)),
+                    SectionPos.blockToSectionCoord(Mth.floor(z)));
             if (entity instanceof ServerPlayer) {
                 serverLevel.getChunkSource().addRegionTicket(
-                        TicketType.POST_TELEPORT, targetChunk, 1, entity.getId());
+                        TicketType.ENDER_PEARL, targetChunk, 1, entity.getId());
             }
-            serverLevel.getChunk(targetChunk.x, targetChunk.z);
+            serverLevel.getChunk(targetChunk.x(), targetChunk.z());
 
             Entity previousVehicle = detachFromVehicle(entity);
             if (previousVehicle != null) {
-                serverLevel.getChunkSource().broadcast(
+                serverLevel.getChunkSource().sendToTrackingPlayers(
                         previousVehicle, new ClientboundSetPassengersPacket(previousVehicle));
             }
             if (entity instanceof ServerPlayer player && player.isSleeping()) {
@@ -1437,9 +1441,11 @@ public class EntityUtil {
                     || blockZ != entity.blockPosition.getZ()) {
                 entity.blockPosition = new BlockPos(blockX, blockY, blockZ);
 
-                if (SectionPos.blockToSectionCoord(blockX) != entity.chunkPosition.x
-                        || SectionPos.blockToSectionCoord(blockZ) != entity.chunkPosition.z) {
-                    entity.chunkPosition = new ChunkPos(entity.blockPosition);
+                if (SectionPos.blockToSectionCoord(blockX) != entity.chunkPosition.x()
+                        || SectionPos.blockToSectionCoord(blockZ) != entity.chunkPosition.z()) {
+                    entity.chunkPosition = new ChunkPos(
+                            SectionPos.blockToSectionCoord(blockX),
+                            SectionPos.blockToSectionCoord(blockZ));
                 }
             }
             entity.levelCallback.onMove();

@@ -50,13 +50,13 @@ final class BossShowTimelineWidget extends AbstractWidget {
     }
 
     @Override
-    public void onClick(double mouseX, double mouseY) {
-        selectAt(mouseX, mouseY);
+    public void onClick(MouseButtonEvent event, boolean doubleClick) {
+        selectAt(event.x(), event.y());
     }
 
     @Override
-    protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
-        selectAt(mouseX, mouseY);
+    protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
+        selectAt(event.x(), event.y());
     }
 
     @Override

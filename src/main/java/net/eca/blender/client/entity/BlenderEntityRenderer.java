@@ -9,7 +9,7 @@ import net.eca.blender.client.resource.BlenderModelManager;
 import net.eca.blender.entity.BlenderEntityBinding;
 import net.eca.blender.model.BlenderRenderRequest;
 import net.eca.util.EcaLogger;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;

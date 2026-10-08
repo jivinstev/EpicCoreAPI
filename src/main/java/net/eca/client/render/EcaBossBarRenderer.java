@@ -142,8 +142,8 @@ public final class EcaBossBarRenderer {
         float renderX = (guiWidth - scaledWidth) * 0.5f;
 
         graphics.pose().pushMatrix();
-        graphics.pose().translate(renderX, y, 0.0f);
-        graphics.pose().scale(scale, scale, 1.0f);
+        graphics.pose().translate(renderX, (float) y);
+        graphics.pose().scale(scale, scale);
 
         int baseFillOffsetX = Math.max(0, (barWidth - fillTextureWidth) / 2);
         int baseFillOffsetY = Math.max(0, (barHeight - fillTextureHeight) / 2);

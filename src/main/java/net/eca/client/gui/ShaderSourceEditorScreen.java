@@ -13,6 +13,7 @@ import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
 import net.eca.util.shader_generator.ShaderSourceAssembler;
 import net.eca.util.shader_generator.ShaderSourceFile;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -110,7 +111,8 @@ public final class ShaderSourceEditorScreen extends Screen {
         editor = new MultiLineEditBox(
             font, 8, CONTENT_TOP, editorRight - 12, contentBottom - CONTENT_TOP,
             Component.translatable("gui.eca.shader_generator.source_editor.placeholder"),
-            Component.translatable("gui.eca.shader_generator.source_editor.editor")
+            Component.translatable("gui.eca.shader_generator.source_editor.editor"),
+            0xFFE0E0E0, true, 0xFFCFCFCF, true, true
         );
         editor.setValueListener(this::sourceChanged);
         addRenderableWidget(editor);
@@ -626,7 +628,7 @@ public final class ShaderSourceEditorScreen extends Screen {
         renderDiagnostics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.pose().pushMatrix();
-        graphics.pose().translate(0.0F, 0.0F, 400.0F);
+        graphics.pose().translate(0.0F, 0.0F);
         drawDropdownBackground(graphics);
         renderDropdownWidgets(graphics, mouseX, mouseY, partialTick);
         graphics.pose().popMatrix();
@@ -702,8 +704,8 @@ public final class ShaderSourceEditorScreen extends Screen {
         int start = Math.min(diagnosticsScroll, Math.max(0, lines.size() - visibleRows));
         int color = diagnosticsError ? 0xFFFF6B6B : 0xFF8FE388;
         graphics.pose().pushMatrix();
-        graphics.pose().translate(textX, diagnosticsTop + 20, 0.0F);
-        graphics.pose().scale(DIAGNOSTIC_TEXT_SCALE, DIAGNOSTIC_TEXT_SCALE, 1.0F);
+        graphics.pose().translate((float) textX, (float) (diagnosticsTop + 20));
+        graphics.pose().scale(DIAGNOSTIC_TEXT_SCALE, DIAGNOSTIC_TEXT_SCALE);
         for (int row = 0; row < visibleRows && start + row < lines.size(); row++) {
             graphics.text(
                 font,

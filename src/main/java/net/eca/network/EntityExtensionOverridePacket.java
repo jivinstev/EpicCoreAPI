@@ -212,8 +212,8 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
 
         public GlobalFogExtension toExtension() {
             FogData self = this;
-            com.mojang.blaze3d.shaders.FogShape shape = (fogShapeOrdinal >= 0 && fogShapeOrdinal < com.mojang.blaze3d.shaders.FogShape.values().length)
-                ? com.mojang.blaze3d.shaders.FogShape.values()[fogShapeOrdinal] : com.mojang.blaze3d.shaders.FogShape.CYLINDER;
+            GlobalFogExtension.FogShape shape = (fogShapeOrdinal >= 0 && fogShapeOrdinal < GlobalFogExtension.FogShape.values().length)
+                ? GlobalFogExtension.FogShape.values()[fogShapeOrdinal] : GlobalFogExtension.FogShape.CYLINDER;
             return new GlobalFogExtension() {
                 @Override public boolean enabled() { return true; }
                 @Override public boolean globalMode() { return self.globalMode; }
@@ -225,7 +225,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
                 @Override public float terrainFogEnd(float rd) { return rd * self.terrainEndFactor; }
                 @Override public float skyFogStart(float rd) { return rd * self.skyStartFactor; }
                 @Override public float skyFogEnd(float rd) { return rd * self.skyEndFactor; }
-                @Override public com.mojang.blaze3d.shaders.FogShape fogShape() { return shape; }
+                @Override public GlobalFogExtension.FogShape fogShape() { return shape; }
             };
         }
     }

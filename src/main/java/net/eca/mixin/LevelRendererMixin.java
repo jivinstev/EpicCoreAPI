@@ -19,8 +19,8 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -64,9 +64,7 @@ public abstract class LevelRendererMixin {
 
     /* 云层关闭时 renderClouds 根本不会被调用，用后复位会让标志跨帧残留，只能在帧首清零 */
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void eca$resetCloudOcclusion(DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
-                                         GameRenderer gameRenderer, LightTexture lightTexture,
-                                         Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
+    private void eca$resetCloudOcclusion(CallbackInfo ci) {
         eca$cloudsOccludeForceLoaded = false;
     }
 
@@ -75,9 +73,7 @@ public abstract class LevelRendererMixin {
        只能由帧边界回收。ReceivingLevelScreen 在 tick 里也调 isChunkCompiled，
        读到跨帧残留会让“正在加载地形”在地形就绪前提前关闭。 */
     @Inject(method = "renderLevel", at = {@At("HEAD"), @At("RETURN")})
-    private void eca$clearForceLoadedRenderContext(DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
-                                                   GameRenderer gameRenderer, LightTexture lightTexture,
-                                                   Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
+    private void eca$clearForceLoadedRenderContext(CallbackInfo ci) {
         ForceLoadingManager.clearCurrentRenderingEntity();
     }
 

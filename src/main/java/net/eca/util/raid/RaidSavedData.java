@@ -1,11 +1,12 @@
 package net.eca.util.raid;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,6 +23,12 @@ public class RaidSavedData extends SavedData {
     private static final String DATA_NAME = "eca_raids";
     private static final String NBT_RAIDS = "raids";
     private static final String NBT_NEXT_ID = "nextId";
+
+    private static final SavedDataType<RaidSavedData> TYPE = new SavedDataType<>(
+            Identifier.withDefaultNamespace(DATA_NAME),
+            RaidSavedData::new,
+            CompoundTag.CODEC.xmap(RaidSavedData::load, d -> d.save(new CompoundTag()))
+    );
 
     private final List<CompoundTag> raidTags = new ArrayList<>();
     private int nextId = 1;
@@ -42,7 +49,7 @@ public class RaidSavedData extends SavedData {
         return data;
     }
 
-        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         tag.putInt(NBT_NEXT_ID, nextId);
 
         ListTag list = new ListTag();
@@ -56,13 +63,7 @@ public class RaidSavedData extends SavedData {
     }
 
     public static RaidSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        RaidSavedData::new,
-                        (tag, registries) -> load(tag)
-                ),
-                DATA_NAME
-        );
+        return level.getDataStorage().computeIfAbsent(TYPE);
     }
 
     // 分配下一个袭击 ID

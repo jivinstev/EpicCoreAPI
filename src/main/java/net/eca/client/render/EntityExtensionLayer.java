@@ -10,21 +10,21 @@ import net.eca.util.entity_extension.EntityExtensionManager;
 import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.eca.blender.client.entity.BlenderEntityBindings;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.List;
 
-public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraft.client.model.EntityModel<T>>
+public class EntityExtensionLayer<T extends net.minecraft.client.renderer.entity.state.LivingEntityRenderState, M extends net.minecraft.client.model.EntityModel<? super T>>
     extends RenderLayer<T, M> {
 
     public EntityExtensionLayer(RenderLayerParent<T, M> renderer) {
@@ -74,7 +74,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
                 BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
                 this.getParentModel().renderToBuffer(
                     poseStack, builder, light, overlay,
-                    FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
+                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
                 ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
                     builder, builder.buildOrThrow());
@@ -82,7 +82,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
                 VertexConsumer texConsumer = bufferSource.getBuffer(texturedLayer);
                 this.getParentModel().renderToBuffer(
                     poseStack, texConsumer, light, overlay,
-                    FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
+                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
             }
         }

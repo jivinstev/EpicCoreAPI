@@ -21,7 +21,8 @@ public final class BossShowKeyBindings {
     public static final KeyMapping REC_START = new KeyMapping(
         "key.eca.bossshow.rec_start",
         KeyConflictContext.UNIVERSAL,
-        InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_J),
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_J,
         CATEGORY
     );
 
@@ -29,7 +30,8 @@ public final class BossShowKeyBindings {
     public static final KeyMapping REC_PAUSE = new KeyMapping(
         "key.eca.bossshow.rec_pause",
         KeyConflictContext.UNIVERSAL,
-        InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_I),
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_I,
         CATEGORY
     );
 

@@ -9,14 +9,13 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.object.skull.SkullModelBase;
-import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -35,6 +34,7 @@ import java.util.Map;
 @EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowAnchorRenderer {
 
+    private static final int FULL_BRIGHT = 0xF000F0;
     private static final float BEAM_HEIGHT = 6.0f;
     private static final float BEAM_HALF = 0.06f;
     private static final float BASE_HALF = 0.4f;
@@ -53,8 +53,7 @@ public final class BossShowAnchorRenderer {
     private BossShowAnchorRenderer() {}
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (!BossShowEditorState.isActive()) return;
         if (!BossShowEditorState.hasAnchor()) return;
 
@@ -66,28 +65,28 @@ public final class BossShowAnchorRenderer {
         double az = BossShowEditorState.getAnchorZ();
         float anchorYaw = BossShowEditorState.getAnchorYawDeg();
 
-        Camera cam = event.getCamera();
+        Camera cam = mc.gameRenderer.getMainCamera();
         Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
-        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+        var buffer = mc.renderBuffers().bufferSource();
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        VertexConsumer vc = buffer.getBuffer(RenderType.lines());
+        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
 
         //锚点光柱
         AABB beam = new AABB(
             ax - BEAM_HALF, ay, az - BEAM_HALF,
             ax + BEAM_HALF, ay + BEAM_HEIGHT, az + BEAM_HALF
         );
-        LevelRenderer.renderLineBox(pose, vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
+        ShapeRenderer.renderLineBox(pose.last(), vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
 
         AABB base = new AABB(
             ax - BASE_HALF, ay, az - BASE_HALF,
             ax + BASE_HALF, ay + 0.02, az + BASE_HALF
         );
-        LevelRenderer.renderLineBox(pose, vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
+        ShapeRenderer.renderLineBox(pose.last(), vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
 
         //摄像机路径折线
         List<Frame> frames = BossShowEditorState.getFrames();
@@ -95,7 +94,7 @@ public final class BossShowAnchorRenderer {
             renderCameraPath(pose, vc, frames, ax, ay, az, anchorYaw);
         }
 
-        buffer.endBatch(RenderType.lines());
+        buffer.endBatch(RenderTypes.lines());
 
         //关键帧头颅 + 顺序序号
         List<Integer> kfIndices = BossShowEditorState.getKeyframeFrameIndices();
@@ -164,10 +163,10 @@ public final class BossShowAnchorRenderer {
         pose.pushPose();
         pose.translate(wp.x, wp.y, wp.z);
         pose.scale(-1.0f, -1.0f, 1.0f);
-        playerHeadModel.setupAnim(0f, worldYaw, 0f);
+        playerHeadModel.setupAnim(new SkullModelBase.State(0f, worldYaw, 0f));
         playerHeadModel.renderToBuffer(pose, buffer.getBuffer(playerHeadRenderType),
-            LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-            FastColor.ARGB32.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
+            FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+            ARGB.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
         pose.popPose();
 
         renderHeadLabel(pose, buffer, wp, ordinal, camRot, font);
@@ -184,16 +183,14 @@ public final class BossShowAnchorRenderer {
         Matrix4f mat = pose.last().pose();
         float x = -font.width(label) / 2f;
         font.drawInBatch(label, x, 0f, 0xFFFFFFFF, true, mat, buffer,
-            Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            Font.DisplayMode.NORMAL, 0, FULL_BRIGHT);
         pose.popPose();
     }
 
     private static void ensureHeadModels(Minecraft mc) {
         if (playerHeadModel != null) return;
-        Map<SkullBlock.Type, SkullModelBase> models =
-            SkullBlockRenderer.createSkullRenderers(mc.getEntityModels());
-        playerHeadModel = models.get(SkullBlock.Types.PLAYER);
+        playerHeadModel = SkullBlockRenderer.createModel(mc.getEntityModels(), SkullBlock.Types.PLAYER);
         //translucent 渲染类型支持 alpha 混合，用 vanilla 头颅同款默认皮肤纹理
-        playerHeadRenderType = RenderType.entityTranslucent(DefaultPlayerSkin.getDefaultTexture());
+        playerHeadRenderType = RenderTypes.entityTranslucent(DefaultPlayerSkin.getDefaultTexture());
     }
 }

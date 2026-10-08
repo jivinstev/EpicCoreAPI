@@ -1,12 +1,12 @@
 package net.eca.client.render;
 
+import com.mojang.blaze3d.ProjectionType;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -47,8 +47,8 @@ public final class ShaderMaskRenderQueue {
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
                                MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
-        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix());
-        Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
+        GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
             uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform));
     }
@@ -78,29 +78,27 @@ public final class ShaderMaskRenderQueue {
         if (RenderSystem.isOnRenderThread()) {
             work.run();
         } else {
-            RenderSystem.recordRenderCall(work::run);
+            work.run();
         }
     }
 
     private static void flushEntries(List<QueuedPass> entries) {
-        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        GpuBufferSlice savedProjection = RenderSystem.getProjectionMatrixBuffer();
         try {
             for (QueuedPass entry : entries) {
                 RenderSystem.getModelViewStack().pushMatrix();
                 try {
                     RenderSystem.getModelViewStack().identity();
                     RenderSystem.getModelViewStack().mul(entry.modelView());
-                    RenderSystem.applyModelViewMatrix();
-                    RenderSystem.setProjectionMatrix(entry.projection(), VertexSorting.DISTANCE_TO_ORIGIN);
+                    RenderSystem.setProjectionMatrix(entry.projection(), ProjectionType.PERSPECTIVE);
                     draw(entry.pass(), entry.renderedBuffer(), entry.uvTransform());
                 } finally {
                     RenderSystem.getModelViewStack().popMatrix();
-                    RenderSystem.applyModelViewMatrix();
                     recycle(entry.builder());
                 }
             }
         } finally {
-            RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.DISTANCE_TO_ORIGIN);
+            RenderSystem.setProjectionMatrix(savedProjection, ProjectionType.PERSPECTIVE);
         }
     }
 
@@ -110,15 +108,9 @@ public final class ShaderMaskRenderQueue {
         EcaShaderInstance.setLocalUvBounds(uvTransform.minU(), uvTransform.minV(),
             uvTransform.scaleU(), uvTransform.scaleV());
         EcaShaderInstance.setOpacity(pass.alpha());
-        boolean stateActive = false;
         try {
-            pass.renderType().setupRenderState();
-            stateActive = true;
-            BufferUploader.drawWithShader(renderedBuffer);
+            pass.renderType().draw(renderedBuffer);
         } finally {
-            if (stateActive) {
-                pass.renderType().clearRenderState();
-            }
             EcaShaderInstance.clearColorKey();
             EcaShaderInstance.clearShaderMask();
             EcaShaderInstance.clearLocalUvBounds();
@@ -162,7 +154,7 @@ public final class ShaderMaskRenderQueue {
         BufferBuilder builder,
         MeshData renderedBuffer,
         Matrix4f modelView,
-        Matrix4f projection,
+        GpuBufferSlice projection,
         MaskUvTransform uvTransform
     ) {
     }

@@ -1,8 +1,11 @@
 package net.eca.util.entity_extension;
 
-import com.mojang.blaze3d.shaders.FogShape;
-
 public interface GlobalFogExtension {
+
+    enum FogShape {
+        SPHERE,
+        CYLINDER
+    }
 
     default boolean enabled() {
         return false;

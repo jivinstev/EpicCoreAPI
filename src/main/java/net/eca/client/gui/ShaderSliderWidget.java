@@ -77,7 +77,7 @@ public final class ShaderSliderWidget extends AbstractWidget {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.button();
-        if (!active || !visible || button != 0 || !clicked(mouseX, mouseY)) {
+        if (!active || !visible || button != 0 || !isMouseOver(mouseX, mouseY)) {
             return false;
         }
         if (editing) {
@@ -97,9 +97,9 @@ public final class ShaderSliderWidget extends AbstractWidget {
     }
 
     @Override
-    protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
+    protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
         if (!editing) {
-            consumer.accept(valueFromX(mouseX));
+            consumer.accept(valueFromX(event.x()));
         }
     }
 

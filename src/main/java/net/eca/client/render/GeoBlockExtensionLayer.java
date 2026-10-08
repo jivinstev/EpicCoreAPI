@@ -8,7 +8,7 @@ import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
 import net.eca.util.block_extension.BlockExtensionSafeAccess;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;

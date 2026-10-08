@@ -18,9 +18,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
+
+import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -72,10 +72,11 @@ public final class BossShowEditorClientEvents {
             || localPlayer.isPassenger()) {
             return;
         }
-        boolean noMovementInput = localPlayer.input.forwardImpulse == 0.0F
-            && localPlayer.input.leftImpulse == 0.0F
-            && !localPlayer.input.jumping
-            && !localPlayer.input.shiftKeyDown;
+        var moveVec = localPlayer.input.getMoveVector();
+        boolean noMovementInput = moveVec.x == 0.0F
+            && moveVec.y == 0.0F
+            && !localPlayer.input.keyPresses.jump()
+            && !localPlayer.input.keyPresses.shift();
         //只清除松键后的残余速度，避免压低正常飞行速度。
         if (noMovementInput) {
             localPlayer.setDeltaMovement(Vec3.ZERO);
@@ -121,8 +122,8 @@ public final class BossShowEditorClientEvents {
             && mc.gameRenderer != null) {
             Camera cam = mc.gameRenderer.mainCamera();
             BossShowEditorState.captureFrameFromCamera(
-                cam.position().x, cam.getPosition().y, cam.getPosition().z,
-                cam.getYRot(), cam.getXRot()
+                cam.position().x, cam.position().y, cam.position().z,
+                cam.yRot(), cam.getXRot()
             );
         }
 
@@ -154,9 +155,9 @@ public final class BossShowEditorClientEvents {
         boolean worldOperation = BossShowEditorState.isRecordingMode()
             || BossShowEditorState.isAnySelectionMode()
             || BossShowEditorState.isPoseCaptureArmed();
-        boolean validContext = minecraft.screen instanceof BossShowEditorSessionScreen
-            || minecraft.screen instanceof ConfirmScreen
-            || worldOperation && (minecraft.screen == null || minecraft.screen instanceof PauseScreen);
+        boolean validContext = minecraft.gui.screen() instanceof BossShowEditorSessionScreen
+            || minecraft.gui.screen() instanceof ConfirmScreen
+            || worldOperation && (minecraft.gui.screen() == null || minecraft.gui.screen() instanceof PauseScreen);
         if (!validContext || minecraft.getConnection() == null) return;
 
         sessionHeartbeatTicks++;
@@ -190,8 +191,8 @@ public final class BossShowEditorClientEvents {
                 if (mc.gameRenderer != null) {
                     Camera cam = mc.gameRenderer.mainCamera();
                     BossShowEditorState.commitPoseCapture(
-                        cam.position().x, cam.getPosition().y, cam.getPosition().z,
-                        cam.getYRot(), cam.getXRot());
+                        cam.position().x, cam.position().y, cam.position().z,
+                        cam.yRot(), cam.getXRot());
                 }
                 mc.setScreenAndShow(new BossShowEditorScreen());
             }
@@ -216,25 +217,24 @@ public final class BossShowEditorClientEvents {
     }
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (!BossShowEditorState.isAnySelectionMode()) return;
         Entity target = cachedHovered;
         if (target == null || target.isRemoved()) return;
 
         Minecraft mc = Minecraft.getInstance();
-        Camera cam = event.getCamera();
+        Camera cam = mc.gameRenderer.mainCamera();
         Vec3 camPos = cam.position();
 
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
-        VertexConsumer vc = buffer.getBuffer(RenderType.lines());
+        var buffer = mc.renderBuffers().bufferSource();
+        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
         AABB box = target.getBoundingBox().inflate(0.02);
-        LevelRenderer.renderLineBox(pose, vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
-        buffer.endBatch(RenderType.lines());
+        ShapeRenderer.renderLineBox(pose.last(), vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
+        buffer.endBatch(RenderTypes.lines());
 
         pose.popPose();
     }
@@ -406,7 +406,8 @@ public final class BossShowEditorClientEvents {
             eye,
             end,
             scanBox,
-            e -> e instanceof LivingEntity && e.isAlive() && e != player
+            e -> e instanceof LivingEntity && e.isAlive() && e != player,
+            0.0F
         );
     }
 }

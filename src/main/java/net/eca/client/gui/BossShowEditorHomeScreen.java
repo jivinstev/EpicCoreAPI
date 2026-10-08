@@ -185,11 +185,6 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             return this.width - 12;
         }
 
-        @Override
-        protected int getScrollbarPosition() {
-            return this.getRight() - 6;
-        }
-
         class DefEntry extends ObjectSelectionList.Entry<DefEntry> {
             private final BossShowDefinition def;
             private final Button playBtn;
@@ -215,8 +210,10 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             }
 
             @Override
-            public void render(GuiGraphicsExtractor g, int entryIdx, int top, int left, int width, int height,
-                               int mouseX, int mouseY, boolean isHovering, float partialTick) {
+            public void extractContent(GuiGraphicsExtractor g, int mouseX, int mouseY, boolean isHovering, float partialTick) {
+                int top = this.getContentY();
+                int left = this.getContentX();
+                int width = this.getContentWidth();
                 Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType());
                 String idLine = def.id().toString();
                 int contentCount = 0;

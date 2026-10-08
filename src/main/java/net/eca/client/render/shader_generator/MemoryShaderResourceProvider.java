@@ -6,7 +6,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
+import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.server.packs.resources.Resource;
@@ -105,7 +105,7 @@ final class MemoryShaderResourceProvider implements ResourceProvider {
         }
 
         @Override
-        public <T> T getMetadataSection(MetadataSectionSerializer<T> serializer) throws IOException {
+        public <T> T getMetadataSection(MetadataSectionType<T> serializer) throws IOException {
             return null;
         }
 

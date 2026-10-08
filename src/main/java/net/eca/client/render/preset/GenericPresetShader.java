@@ -24,7 +24,7 @@ final class GenericPresetShader {
 
     GenericPresetShader(Identifier id) {
         this.block = new Profile(suffixed(id, "block"), DefaultVertexFormat.BLOCK);
-        this.entity = new Profile(suffixed(id, "entity"), DefaultVertexFormat.NEW_ENTITY);
+        this.entity = new Profile(suffixed(id, "entity"), DefaultVertexFormat.ENTITY);
     }
 
     Profile block() {
@@ -99,8 +99,8 @@ final class GenericPresetShader {
                 if (cameraYawUniform != null || cameraPitchUniform != null) {
                     Minecraft mc = Minecraft.getInstance();
                     if (mc.gameRenderer != null && mc.gameRenderer.mainCamera() != null) {
-                        float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().getYRot());
-                        float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().getXRot());
+                        float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().yRot());
+                        float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().xRot());
                         if (cameraYawUniform != null) {
                             cameraYawUniform.set(yaw);
                         }

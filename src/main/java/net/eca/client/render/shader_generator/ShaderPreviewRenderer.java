@@ -10,7 +10,7 @@ import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
@@ -175,8 +175,8 @@ public final class ShaderPreviewRenderer {
                 bounds[2],
                 bounds[3]
             );
-            graphics.pose().translate((left + right) / 2.0, (top + bottom) / 2.0, 180.0);
-            graphics.pose().scale(size, -size, size);
+            graphics.pose().translate((float) ((left + right) / 2.0), (float) ((top + bottom) / 2.0));
+            graphics.pose().scale((float) size, (float) -size);
             graphics.pose().mulPose(new Quaternionf().rotateY(0.65F).rotateX(-0.35F));
             itemRenderer.render(
                 PREVIEW_ITEM,
@@ -225,7 +225,7 @@ public final class ShaderPreviewRenderer {
 
         graphics.pose().pushMatrix();
         try {
-            graphics.pose().translate((left + right) / 2.0, bottom - 28.0, 220.0);
+            graphics.pose().translate((float) ((left + right) / 2.0), (float) (bottom - 28.0));
             graphics.pose().mulPose(new Matrix4f().scaling(size, size, -size));
             graphics.pose().mulPose(orientation);
             Lighting.setupForEntityInInventory();

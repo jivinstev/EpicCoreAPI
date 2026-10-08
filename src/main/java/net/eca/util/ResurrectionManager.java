@@ -7,6 +7,10 @@ import net.eca.network.NetworkHandler;
 import net.eca.util.health.health_lock.HealthLockManager;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -426,8 +430,9 @@ public final class ResurrectionManager {
         try {
             /* 用 saveWithoutId 再自己补 id 字段：save/saveAsPassenger 在 removalReason 不可存档
                或类型无编码名时直接返回 false，正是最需要快照的时候拿不到快照。 */
-            CompoundTag tag = new CompoundTag();
-            entity.saveWithoutId(tag);
+            TagValueOutput valueOutput = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
+            entity.saveWithoutId(valueOutput);
+            CompoundTag tag = valueOutput.buildResult();
             Identifier typeId = EntityType.getKey(entity.getType());
             if (typeId == null) return;
             tag.putString("id", typeId.toString());
@@ -484,7 +489,9 @@ public final class ResurrectionManager {
         if (snapshot == null) return;
 
         try {
-            Entity rebuilt = EntityType.loadEntityRecursive(snapshot.copy(), level, loaded -> loaded);
+            Entity rebuilt = EntityType.loadEntityRecursive(
+                    TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), snapshot.copy()),
+                    level, EntitySpawnReason.LOAD, loaded -> loaded);
             if (rebuilt == null) {
                 EcaLogger.info("[ResurrectionManager] rebuild failed: type not loadable uuid={} type={}",
                         record.uuid, record.typeId);

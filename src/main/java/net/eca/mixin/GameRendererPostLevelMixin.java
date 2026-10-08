@@ -1,11 +1,8 @@
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import net.eca.client.render.ShaderMaskRenderQueue;
 import net.eca.client.render.shader.EcaShaderInstance;
@@ -111,24 +108,20 @@ public class GameRendererPostLevelMixin {
         int alphaInt = (int) (Mth.clamp(alpha, 0.0f, 1.0f) * 255.0f);
         int light = 15728880;
 
-        Tesselator tesselator = Tesselator.getInstance();
-
-        renderType.setupRenderState();
-
+        try (ByteBufferBuilder allocator = new ByteBufferBuilder(4096)) {
         for (int i = 0; i < 6; ++i) {
             poseStack.pushPose();
             rotateToFace(poseStack, i);
             Matrix4f matrix = poseStack.last().pose();
-            BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+            BufferBuilder bufferBuilder = new BufferBuilder(allocator, renderType.mode(), renderType.format());
             bufferBuilder.addVertex(matrix, -size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, -size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
-            BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
+            renderType.draw(bufferBuilder.buildOrThrow());
             poseStack.popPose();
         }
-
-        renderType.clearRenderState();
+        }
     }
 
     private static void rotateToFace(PoseStack poseStack, int face) {

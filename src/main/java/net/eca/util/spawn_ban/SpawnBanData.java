@@ -1,12 +1,13 @@
 package net.eca.util.spawn_ban;
 
-import net.minecraft.core.HolderLookup;
+import com.mojang.serialization.Codec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -21,6 +22,17 @@ public class SpawnBanData extends SavedData {
     private static final String DATA_NAME = "eca_spawn_bans";
     private static final String NBT_BANS = "bans";
 
+    // Adapter over CompoundTag.CODEC: hand-written load/save keep the on-disk format and defensive behaviour
+    private static final Codec<SpawnBanData> CODEC = CompoundTag.CODEC.xmap(
+        SpawnBanData::load,
+        data -> data.save(new CompoundTag())
+    );
+    private static final SavedDataType<SpawnBanData> TYPE = new SavedDataType<>(
+        Identifier.withDefaultNamespace(DATA_NAME),
+        SpawnBanData::new,
+        CODEC
+    );
+
     private final Map<Identifier, Integer> bans = new HashMap<>();
     private final Set<EntityType<?>> bannedTypes = Collections.newSetFromMap(new IdentityHashMap<>());
 
@@ -31,7 +43,7 @@ public class SpawnBanData extends SavedData {
     public static SpawnBanData load(CompoundTag tag) {
         SpawnBanData data = new SpawnBanData();
 
-        if (tag.contains(NBT_BANS, 10)) { // 10 = CompoundTag
+        if (tag.contains(NBT_BANS)) {
             CompoundTag bansTag = tag.getCompoundOrEmpty(NBT_BANS);
             for (String key : bansTag.keySet()) {
                 Identifier typeId = Identifier.tryParse(key);
@@ -51,7 +63,7 @@ public class SpawnBanData extends SavedData {
         return data;
     }
 
-        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         CompoundTag bansTag = new CompoundTag();
         for (Map.Entry<Identifier, Integer> entry : bans.entrySet()) {
             bansTag.putInt(entry.getKey().toString(), entry.getValue());
@@ -61,14 +73,7 @@ public class SpawnBanData extends SavedData {
     }
 
     public static SpawnBanData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
-            new SavedData.Factory<>(
-                SpawnBanData::new,
-                (tag, registries) -> load(tag),
-                null
-            ),
-            DATA_NAME
-        );
+        return level.getDataStorage().computeIfAbsent(TYPE);
     }
 
     public void addBan(Identifier typeId, EntityType<?> type, int seconds) {

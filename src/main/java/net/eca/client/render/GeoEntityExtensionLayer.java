@@ -9,11 +9,13 @@ import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
 import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import com.geckolib.renderer.base.GeoRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
@@ -26,13 +28,13 @@ import com.geckolib.renderer.layer.GeoRenderLayer;
 import java.util.function.Function;
 import java.util.List;
 
-public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderLayer<T> {
+public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRenderState> extends GeoRenderLayer<T, O, R> {
 
     private final GeoBoneVisibilityController boneVisibility = new GeoBoneVisibilityController();
     private final Function<T, Entity> entityResolver;
     private EntityLayerExtension activeExtension;
 
-    public GeoEntityExtensionLayer(GeoRenderer<T> renderer, Function<T, Entity> entityResolver) {
+    public GeoEntityExtensionLayer(GeoRenderer<T, O, R> renderer, Function<T, Entity> entityResolver) {
         super(renderer);
         this.entityResolver = entityResolver;
     }
@@ -88,7 +90,7 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
         boolean oculus = EcaShaderInstance.isOculusShadersActive();
 
         renderTexturePass(poseStack, animatable, bakedModel, bufferSource, partialTick, light, overlay,
-            alpha, texture == null ? null : RenderType.entityTranslucent(texture), oculus);
+            alpha, texture == null ? null : RenderTypes.entityTranslucent(texture), oculus);
         for (ShaderMaskPass pass : shaderPasses) {
             renderShaderPass(poseStack, animatable, bakedModel, bufferSource, partialTick,
                 light, overlay, pass, oculus);
@@ -102,11 +104,11 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
         if (oculus) {
             BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
             this.renderer.reRender(bakedModel, poseStack, rt -> builder, animatable, type, builder,
-                    partialTick, light, overlay, FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
+                    partialTick, light, overlay, ARGB.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
             ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(type, 1.0f), builder, builder.buildOrThrow());
         } else {
             this.renderer.reRender(bakedModel, poseStack, bufferSource, animatable, type,
-                    bufferSource.getBuffer(type), partialTick, light, overlay, FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
+                    bufferSource.getBuffer(type), partialTick, light, overlay, ARGB.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
         }
     }
 

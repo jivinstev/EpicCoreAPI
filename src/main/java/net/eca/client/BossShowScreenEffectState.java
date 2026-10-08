@@ -4,7 +4,7 @@ import net.eca.client.render.shader.FilterRenderer;
 import net.eca.util.bossshow.BossShowEffectCue;
 import net.eca.util.bossshow.Curve;
 import net.eca.util.filter.FilterType;
-import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.renderer.CompiledShaderProgram;
 import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ public final class BossShowScreenEffectState {
         return false;
     }
 
-    public static void applyShaderUniforms(ShaderInstance shader, float partialTick) {
+    public static void applyShaderUniforms(CompiledShaderProgram shader, float partialTick) {
         set(shader, "ChromaticStrength", combined("chromatic_aberration", "strength", partialTick, 0.0F));
         set(shader, "ChromaticAngle", latest("chromatic_aberration", "angle", 0.0F));
         set(shader, "ChromaticPulseAmount", latest("chromatic_aberration", "pulse_amount", 0.0F));
@@ -162,7 +162,7 @@ public final class BossShowScreenEffectState {
         FilterRenderer.clearBossShowFilter();
     }
 
-    private static void set(ShaderInstance shader, String name, float value) {
+    private static void set(CompiledShaderProgram shader, String name, float value) {
         if (shader.getUniform(name) != null) shader.getUniform(name).set(value);
     }
 

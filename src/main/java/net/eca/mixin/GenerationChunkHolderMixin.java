@@ -27,11 +27,11 @@ public abstract class GenerationChunkHolderMixin {
         CallbackInfoReturnable<CompletableFuture<ChunkResult<ChunkAccess>>> cir
     ) {
         ChunkPos pos = ((GenerationChunkHolder) (Object) this).getPos();
-        if (Math.abs(pos.x) > ECA_SAFE_CHUNK_LIMIT || Math.abs(pos.z) > ECA_SAFE_CHUNK_LIMIT) {
+        if (Math.abs(pos.x()) > ECA_SAFE_CHUNK_LIMIT || Math.abs(pos.z()) > ECA_SAFE_CHUNK_LIMIT) {
             EcaLogger.warn(
                 "[GenerationChunkHolderMixin] blocked out-of-range chunk generation: {},{} status={}",
-                pos.x,
-                pos.z,
+                pos.x(),
+                pos.z(),
                 status
             );
             cir.setReturnValue(GenerationChunkHolder.UNLOADED_CHUNK_FUTURE);

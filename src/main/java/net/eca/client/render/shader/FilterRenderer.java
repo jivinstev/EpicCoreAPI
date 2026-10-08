@@ -14,7 +14,7 @@ import net.eca.EcaMod;
 import net.eca.client.BossShowScreenEffectState;
 import net.eca.util.filter.FilterType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.resources.Identifier;
@@ -452,7 +452,7 @@ public class FilterRenderer {
         renderFilterPass(sketchShader, shader -> {
             if (shader.getUniform("ScreenSize") != null) {
                 Minecraft mc = Minecraft.getInstance();
-                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.getMainRenderTarget().height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
         });
     }
@@ -466,7 +466,7 @@ public class FilterRenderer {
         renderFilterPass(matrixShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.getMainRenderTarget().height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -483,7 +483,7 @@ public class FilterRenderer {
         renderFilterPass(rainShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.getMainRenderTarget().height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -500,7 +500,7 @@ public class FilterRenderer {
         renderFilterPass(desertShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.getMainRenderTarget().height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -517,7 +517,7 @@ public class FilterRenderer {
         renderFilterPass(snowShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.getMainRenderTarget().height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -534,7 +534,7 @@ public class FilterRenderer {
         renderFilterPass(toxicShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.getMainRenderTarget().height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -608,7 +608,7 @@ public class FilterRenderer {
             ensureSpotlightTargets(width, height);
             GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
             GlStateManager._clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, false);
+            GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             mainTarget.bindWrite(false);
             return;
         }
@@ -619,7 +619,7 @@ public class FilterRenderer {
 
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
         GlStateManager._clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, false);
+        GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 
         GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
         GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, spotlightFbo);
@@ -720,7 +720,7 @@ public class FilterRenderer {
             Minecraft mc = Minecraft.getInstance();
             RenderSystem.setShaderTexture(3, cosmosTerrainDepthTexture);
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.getMainRenderTarget().height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));

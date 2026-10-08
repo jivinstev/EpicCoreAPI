@@ -1,7 +1,6 @@
 package net.eca.event;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import org.joml.Matrix3x2fStack;
 import net.eca.util.bossshow.BossShowClientState;
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.BossShowPose;
@@ -48,13 +47,11 @@ public final class BossShowClientEvents {
         if (BossShowClientState.isCinematic()) {
             int bar = (int) (height * 0.12f);
             if (bar > 0) {
-                PoseStack pose = gui.pose();
-                pose.pushPose();
-                RenderSystem.enableBlend();
+                Matrix3x2fStack pose = gui.pose();
+                pose.pushMatrix();
                 gui.fill(0, 0, width, bar, 0xFF000000);
                 gui.fill(0, height - bar, width, height, 0xFF000000);
-                RenderSystem.disableBlend();
-                pose.popPose();
+                pose.popMatrix();
             }
         }
 

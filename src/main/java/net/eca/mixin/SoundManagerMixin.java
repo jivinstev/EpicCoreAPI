@@ -18,7 +18,7 @@ public class SoundManagerMixin {
         if (soundInstance == null) {
             return;
         }
-        if (CombatMusicManager.shouldBlockMusic(soundInstance.getLocation(), soundInstance.getSource())) {
+        if (CombatMusicManager.shouldBlockMusic(soundInstance.getIdentifier(), soundInstance.getSource())) {
             ci.cancel();
         }
     }
@@ -28,7 +28,7 @@ public class SoundManagerMixin {
         if (soundInstance == null) {
             return;
         }
-        if (CombatMusicManager.shouldBlockMusic(soundInstance.getLocation(), soundInstance.getSource())) {
+        if (CombatMusicManager.shouldBlockMusic(soundInstance.getIdentifier(), soundInstance.getSource())) {
             ci.cancel();
         }
     }

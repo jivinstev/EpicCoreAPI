@@ -11,8 +11,8 @@ import com.mojang.math.Axis;
 import net.eca.util.EcaLogger;
 import net.eca.blender.model.BlenderRenderRequest;
 import net.eca.blender.animation.BlenderPlaybackState;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
@@ -36,11 +36,17 @@ public final class BlenderModelRenderer {
         new BlenderModelAsset.Material(1.0f, 1.0f, 1.0f, 1.0f, null, false);
     private static final Set<Identifier> LOGGED_MODEL_FAILURES = ConcurrentHashMap.newKeySet();
 
+    /** Replacement for the removed MultiBufferSource: supplies a vertex consumer for a render type. */
+    @FunctionalInterface
+    public interface BufferProvider {
+        VertexConsumer getBuffer(RenderType type);
+    }
+
     private BlenderModelRenderer() {
     }
 
     public static boolean render(BlenderRenderRequest request, PoseStack poseStack,
-                                 MultiBufferSource buffers, int packedLight, int packedOverlay) {
+                                 BufferProvider buffers, int packedLight, int packedOverlay) {
         try {
             return renderSafely(request, poseStack, buffers, packedLight, packedOverlay);
         } catch (Throwable throwable) {
@@ -52,7 +58,7 @@ public final class BlenderModelRenderer {
     }
 
     private static boolean renderSafely(BlenderRenderRequest request, PoseStack poseStack,
-                                        MultiBufferSource buffers, int packedLight, int packedOverlay) throws IOException {
+                                        BufferProvider buffers, int packedLight, int packedOverlay) throws IOException {
         if (request == null) return false;
         BlenderModelAsset asset = BlenderModelManager.INSTANCE.get(request.modelId());
         if (asset == null) return false;
@@ -178,7 +184,7 @@ public final class BlenderModelRenderer {
     private static void renderNode(BlenderModelAsset asset, int nodeIndex,
                                    Map<Integer, AnimatedTransform> animated, Matrix4f[] globalTransforms,
                                    PoseStack poseStack,
-                                   MultiBufferSource buffers, int packedLight, int overlay) throws IOException {
+                                   BufferProvider buffers, int packedLight, int overlay) throws IOException {
         if (nodeIndex < 0 || nodeIndex >= asset.nodes.size()) {
             return;
         }
@@ -274,14 +280,14 @@ public final class BlenderModelRenderer {
 
     private static void renderMesh(BlenderModelAsset asset, BlenderModelAsset.Mesh mesh, SkinPose skinPose,
                                    PoseStack poseStack,
-                                   MultiBufferSource buffers, int packedLight, int overlay) throws IOException {
+                                   BufferProvider buffers, int packedLight, int overlay) throws IOException {
         for (BlenderModelAsset.Primitive primitive : mesh.primitives()) {
             BlenderModelAsset.Material material = primitive.material() >= 0
                 && primitive.material() < asset.materials.size()
                 ? asset.materials.get(primitive.material()) : DEFAULT_MATERIAL;
             Identifier texture = material.texture() == null ? WHITE_TEXTURE : material.texture();
             RenderType type = material.translucent()
-                ? RenderType.entityTranslucent(texture) : RenderType.entityCutoutNoCull(texture);
+                ? RenderTypes.entityTranslucent(texture) : RenderTypes.entityCutoutNoCull(texture);
             DeformedVertices deformed = deformVertices(primitive, skinPose);
             BlendMaterialProgram program = material.program();
             VertexConsumer consumer = program == null ? buffers.getBuffer(type)

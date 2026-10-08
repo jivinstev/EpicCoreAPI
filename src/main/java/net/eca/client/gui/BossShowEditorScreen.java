@@ -516,7 +516,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
             return super.keyPressed(event);
         }
-        if (hasControlDown()) {
+        if (event.hasControlDown()) {
             if (keyCode == GLFW.GLFW_KEY_Z) { undo(); return true; }
             if (keyCode == GLFW.GLFW_KEY_Y) { redo(); return true; }
             if (keyCode == GLFW.GLFW_KEY_C) { BossShowEditorState.copyRange(); closeContextMenu(); return true; }
@@ -527,7 +527,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
                 if (BossShowEditorState.pasteAtPlayhead()) syncFromState(); closeContextMenu(); return true;
             }
         } else {
-            int step = hasShiftDown() ? 10 : 1;
+            int step = event.hasShiftDown() ? 10 : 1;
             if (keyCode == GLFW.GLFW_KEY_SPACE) { togglePreviewFromShortcut(); return true; }
             if (keyCode == GLFW.GLFW_KEY_LEFT) { BossShowEditorState.movePlayheadBy(-step); syncFromState(); return true; }
             if (keyCode == GLFW.GLFW_KEY_RIGHT) { BossShowEditorState.movePlayheadBy(step); syncFromState(); return true; }
@@ -615,13 +615,13 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         drawTimelineHandle(g, timelineY, mouseX, mouseY);
         if (openDropdown >= 0) {
             g.pose().pushMatrix();
-            g.pose().translate(0.0F, 0.0F, 400.0F);
+            g.pose().translate(0.0F, 0.0F);
             drawDropdown(g, mouseX, mouseY, partialTick);
             g.pose().popMatrix();
         }
         if (contextMenuOpen) {
             g.pose().pushMatrix();
-            g.pose().translate(0.0F, 0.0F, 500.0F);
+            g.pose().translate(0.0F, 0.0F);
             renderContextMenu(g, mouseX, mouseY);
             g.pose().popMatrix();
         }

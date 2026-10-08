@@ -3,6 +3,8 @@ package net.eca.client.render.shader_generator;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.client.resources.metadata.animation.AnimationFrame;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
@@ -13,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 final class AnimatedPreviewTexture implements PreviewAnimation {
 
@@ -45,14 +48,16 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
             }
             int availableFrames = sheet.getWidth() / frameWidth * (sheet.getHeight() / frameHeight);
             List<Frame> frames = new ArrayList<>();
-            metadata.forEachFrame((index, duration) -> {
+            for (AnimationFrame animationFrame : metadata.frames()) {
+                int index = animationFrame.index();
+                int duration = animationFrame.timeOr(metadata.defaultFrameTime());
                 if (index >= 0 && index < availableFrames && duration > 0) {
                     frames.add(new Frame(index, duration));
                 }
-            });
+            }
             if (frames.isEmpty()) {
                 for (int index = 0; index < availableFrames; index++) {
-                    frames.add(new Frame(index, metadata.getDefaultFrameTime()));
+                    frames.add(new Frame(index, metadata.defaultFrameTime()));
                 }
             }
             return new AnimatedPreviewTexture(
@@ -60,7 +65,7 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
                 frameWidth,
                 frameHeight,
                 frames,
-                metadata.isInterpolatedFrames()
+                metadata.interpolatedFrames()
             );
         } catch (IOException | RuntimeException exception) {
             sheet.close();
@@ -77,7 +82,7 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
     ) {
         this.sheet = sheet;
         this.currentImage = new NativeImage(frameWidth, frameHeight, false);
-        this.texture = new DynamicTexture(currentImage);
+        this.texture = new DynamicTexture(() -> "eca_shader_preview", currentImage);
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
         this.columns = sheet.getWidth() / frameWidth;
@@ -124,15 +129,15 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
         int nextY = next.index() / columns * frameHeight;
         for (int y = 0; y < frameHeight; y++) {
             for (int x = 0; x < frameWidth; x++) {
-                int currentColor = sheet.getPixelRGBA(currentX + x, currentY + y);
+                int currentColor = sheet.getPixel(currentX + x, currentY + y);
                 int color = interpolate && current.index() != next.index()
                     ? interpolateColor(
                         currentColor,
-                        sheet.getPixelRGBA(nextX + x, nextY + y),
+                        sheet.getPixel(nextX + x, nextY + y),
                         progress
                     )
                     : currentColor;
-                currentImage.setPixelRGBA(x, y, color);
+                currentImage.setPixel(x, y, color);
             }
         }
     }
@@ -151,12 +156,15 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
 
     private static AnimationMetadataSection readMetadata(Path texturePath) throws IOException {
         Path metadataPath = Path.of(texturePath.toString() + ".mcmeta");
-        if (!Files.isRegularFile(metadataPath)) return AnimationMetadataSection.EMPTY;
+        AnimationMetadataSection empty = new AnimationMetadataSection(List.of(), Optional.empty(), Optional.empty(), 1, false);
+        if (!Files.isRegularFile(metadataPath)) return empty;
         JsonObject root = JsonParser.parseString(Files.readString(metadataPath)).getAsJsonObject();
         if (!root.has("animation") || !root.get("animation").isJsonObject()) {
-            return AnimationMetadataSection.EMPTY;
+            return empty;
         }
-        return AnimationMetadataSection.SERIALIZER.fromJson(root.getAsJsonObject("animation"));
+        return AnimationMetadataSection.CODEC
+            .parse(JsonOps.INSTANCE, root.getAsJsonObject("animation"))
+            .getOrThrow(IOException::new);
     }
 
     @Override

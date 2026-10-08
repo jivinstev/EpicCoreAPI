@@ -5,28 +5,27 @@ import net.eca.blender.entity.BlenderEntityBinding;
 import net.eca.blender.client.entity.BlenderEntityBindings;
 import net.eca.blender.client.entity.BlenderEntityRenderer;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-public final class BlenderModelLayer<T extends LivingEntity, M extends EntityModel<T>> extends RenderLayer<T, M> {
-    public BlenderModelLayer(RenderLayerParent<T, M> renderer) {
+public final class BlenderModelLayer<S extends LivingEntityRenderState, M extends EntityModel<? super S>> extends RenderLayer<S, M> {
+    public BlenderModelLayer(RenderLayerParent<S, M> renderer) {
         super(renderer);
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource buffers, int packedLight, T entity,
-                       float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
-                       float netHeadYaw, float headPitch) {
-        BlenderEntityBinding model = BlenderEntityBindings.resolve(entity);
+    public void submit(PoseStack poseStack, SubmitNodeCollector collector, int packedLight, S state,
+                       float yRot, float xRot) {
+        BlenderEntityBinding model = BlenderEntityBindings.resolve(state);
         if (model == null || BlenderEntityBindings.replacesBody(model)) {
             return;
         }
-        int overlay = LivingEntityRenderer.getOverlayCoords(entity, 0.0f);
-        BlenderEntityRenderer.render(entity, model, poseStack, buffers, packedLight, overlay, partialTick);
+        int overlay = LivingEntityRenderer.getOverlayCoords(state, 0.0f);
+        BlenderEntityRenderer.render(state, model, poseStack, collector, packedLight, overlay);
     }
 }

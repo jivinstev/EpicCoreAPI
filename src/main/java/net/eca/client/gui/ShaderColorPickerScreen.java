@@ -5,6 +5,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.awt.Color;
@@ -135,13 +136,13 @@ public final class ShaderColorPickerScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
-            update(mouseX, mouseY);
+        public void onClick(MouseButtonEvent event, boolean doubleClick) {
+            update(event.x(), event.y());
         }
 
         @Override
-        protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
-            update(mouseX, mouseY);
+        protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
+            update(event.x(), event.y());
         }
 
         private void update(double mouseX, double mouseY) {
@@ -187,13 +188,13 @@ public final class ShaderColorPickerScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
-            update(mouseY);
+        public void onClick(MouseButtonEvent event, boolean doubleClick) {
+            update(event.y());
         }
 
         @Override
-        protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
-            update(mouseY);
+        protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
+            update(event.y());
         }
 
         private void update(double mouseY) {

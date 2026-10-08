@@ -3,7 +3,6 @@ package net.eca.util.bossshow;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -40,7 +39,7 @@ public final class BossShowHistory {
             if (target == null) return false;
             CompoundTag root = target.getPersistentData().getCompoundOrEmpty(ECA_ROOT);
             CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
-            ListTag uuids = seenMap.getList(cutsceneId.toString(), Tag.TAG_STRING);
+            ListTag uuids = seenMap.getListOrEmpty(cutsceneId.toString());
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {
                 if (pidStr.equals(uuids.getStringOr(i, ""))) return true;
@@ -69,7 +68,7 @@ public final class BossShowHistory {
             CompoundTag persistent = target.getPersistentData();
             CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
             CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
-            ListTag uuids = seenMap.getList(cutsceneId.toString(), Tag.TAG_STRING);
+            ListTag uuids = seenMap.getListOrEmpty(cutsceneId.toString());
 
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {

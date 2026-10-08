@@ -98,12 +98,20 @@ public final class ShaderPresetRegistry {
         ModList.get().forEachModFile(modFile -> {
             for (var modInfo : modFile.getModInfos()) {
                 String modid = modInfo.getModId();
-                Path canonical = modFile.findResource("assets", modid, "eca", "shader_presets");
+                Path canonical = findModPath(modFile, "assets", modid, "eca", "shader_presets");
                 scanModPresetDirectory(canonical, canonical, modid);
-                Path legacy = modFile.findResource("assets", modid, "shaders", "core");
+                Path legacy = findModPath(modFile, "assets", modid, "shaders", "core");
                 scanModPresetDirectory(legacy, legacy, modid);
             }
         });
+    }
+
+    private static Path findModPath(net.neoforged.neoforgespi.locating.IModFile modFile, String first, String... rest) {
+        try {
+            return modFile.getSecureJar().getPath(first, rest);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     private static void scanModPresetDirectory(Path root, Path current, String namespace) {

@@ -20,7 +20,7 @@ public class DistanceManagerMixin {
 
     @Inject(method = "removePlayer", at = @At("HEAD"), cancellable = true)
     private void eca$guardRemovePlayer(SectionPos sectionPos, ServerPlayer player, CallbackInfo ci) {
-        long chunkKey = sectionPos.chunk().toLong();
+        long chunkKey = net.minecraft.world.level.ChunkPos.asLong(sectionPos.x(), sectionPos.z());
         ObjectSet<ServerPlayer> objectSet = this.playersPerChunk.get(chunkKey);
         if (objectSet == null) {
             ci.cancel();

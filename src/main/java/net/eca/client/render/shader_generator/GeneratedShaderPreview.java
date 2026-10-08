@@ -1,6 +1,6 @@
 package net.eca.client.render.shader_generator;
 
-import com.mojang.blaze3d.opengl.Uniform;
+import net.eca.client.render.shader.EcaShaderInstance.Uniform;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.DepthStencilState;
@@ -19,7 +19,7 @@ import net.eca.util.shader_generator.ShaderTargetProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
-import net.minecraft.client.renderer.ShaderInstance;
+
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -42,8 +42,8 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
 
     private static final AtomicLong TEXTURE_REVISION = new AtomicLong();
     private final Component displayName;
-    private final ShaderInstance blockShader;
-    private final ShaderInstance entityShader;
+    private final EcaShaderInstance blockShader;
+    private final EcaShaderInstance entityShader;
     private final UniformSet blockUniforms;
     private final UniformSet entityUniforms;
     private final RenderType bossBar;
@@ -58,8 +58,8 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
 
     private GeneratedShaderPreview(
         Component displayName,
-        ShaderInstance blockShader,
-        ShaderInstance entityShader,
+        EcaShaderInstance blockShader,
+        EcaShaderInstance entityShader,
         List<Identifier> importedTextures,
         Identifier blockPreviewTexture,
         Map<String, float[]> uniformArrays,
@@ -86,7 +86,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         EcaShaderInstance.State itemState = shaderState(
             entityShader,
             entityUniforms,
-            maskBinding(entityShader, maskSamplerName, InventoryMenu.BLOCK_ATLAS)
+            maskBinding(entityShader, maskSamplerName, TextureAtlas.LOCATION_BLOCKS)
         );
         String name = "eca_shader_generator_" + Integer.toHexString(System.identityHashCode(this));
         this.bossBar = createBossBar(name, blockState, blockPreviewTexture);
@@ -139,8 +139,8 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             Minecraft.getInstance().getResourceManager(),
             dependencies.resources()
         );
-        ShaderInstance blockShader = null;
-        ShaderInstance entityShader = null;
+        EcaShaderInstance blockShader = null;
+        EcaShaderInstance entityShader = null;
         List<Identifier> textures = new ArrayList<>();
         List<PreviewAnimation> animations = new ArrayList<>();
         try {
@@ -152,7 +152,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             entityShader = EcaShaderInstance.create(
                 provider,
                 Identifier.fromNamespaceAndPath(namespace, path + "_entity"),
-                DefaultVertexFormat.NEW_ENTITY
+                DefaultVertexFormat.ENTITY
             );
             ImportedTextureBindings importedBindings = bindImportedTextures(
                 blockShader,
@@ -233,8 +233,8 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     }
 
     private static ImportedTextureBindings bindImportedTextures(
-        ShaderInstance blockShader,
-        ShaderInstance entityShader,
+        EcaShaderInstance blockShader,
+        EcaShaderInstance entityShader,
         Map<String, Path> texturePaths
     ) throws IOException {
         List<Identifier> registered = new ArrayList<>();
@@ -249,10 +249,11 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
                 AnimatedPreviewTexture animation = AnimatedPreviewTexture.create(entry.getValue());
                 animations.add(animation);
                 DynamicTexture texture = animation.texture();
-                Identifier location = textureManager.register(
-                    "eca_shader_generator/" + revision + "/" + entry.getKey().toLowerCase(),
-                    texture
+                Identifier location = Identifier.fromNamespaceAndPath(
+                    "eca",
+                    "shader_generator/" + revision + "/" + entry.getKey().toLowerCase()
                 );
+                textureManager.register(location, texture);
                 registered.add(location);
                 blockShader.setSampler(entry.getKey(), texture);
                 entityShader.setSampler(entry.getKey(), texture);
@@ -268,19 +269,19 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     }
 
     private static EcaShaderInstance.State shaderState(
-        ShaderInstance shader,
+        EcaShaderInstance shader,
         UniformSet uniforms,
         Runnable beforeShaderSetup
     ) {
         return EcaShaderInstance.state(() -> shader, () -> {
 beforeShaderSetup.run();
-                super.setupRenderState();
+
                 uniforms.apply();
 });
     }
 
     private static Runnable maskBinding(
-        ShaderInstance shader,
+        EcaShaderInstance shader,
         String samplerName,
         Identifier texture
     ) {
@@ -385,7 +386,7 @@ beforeShaderSetup.run();
         private final List<PreviewAnimation> previewAnimations;
 
         private UniformSet(
-            ShaderInstance shader,
+            EcaShaderInstance shader,
             Map<String, float[]> uniformArrays,
             List<PreviewAnimation> previewAnimations
         ) {
@@ -420,12 +421,12 @@ beforeShaderSetup.run();
             if (minecraft.gameRenderer != null && minecraft.gameRenderer.mainCamera() != null) {
                 if (cameraYaw != null) {
                     cameraYaw.set((float) Math.toRadians(
-                        minecraft.gameRenderer.mainCamera().getYRot()
+                        minecraft.gameRenderer.mainCamera().yRot()
                     ));
                 }
                 if (cameraPitch != null) {
                     cameraPitch.set((float) Math.toRadians(
-                        minecraft.gameRenderer.mainCamera().getXRot()
+                        minecraft.gameRenderer.mainCamera().xRot()
                     ));
                 }
             }
@@ -436,7 +437,7 @@ beforeShaderSetup.run();
             importedArrays.forEach((uniform, values) -> uniform.set(values));
         }
 
-        private static Uniform firstUniform(ShaderInstance shader, String... names) {
+        private static Uniform firstUniform(EcaShaderInstance shader, String... names) {
             for (String name : names) {
                 Uniform uniform = shader.getUniform(name);
                 if (uniform != null) return uniform;
@@ -447,19 +448,20 @@ beforeShaderSetup.run();
     }
 
     private static PreviewTextureBindings bindPreviewTextures(
-        ShaderInstance blockShader,
-        ShaderInstance entityShader,
+        EcaShaderInstance blockShader,
+        EcaShaderInstance entityShader,
         Dependencies dependencies,
         List<Identifier> registered
     ) throws IOException {
         TextureManager textureManager = Minecraft.getInstance().getTextureManager();
         long revision = TEXTURE_REVISION.incrementAndGet();
         NativeImage whiteImage = new NativeImage(1, 1, false);
-        whiteImage.setPixelRGBA(0, 0, 0xFFFFFFFF);
-        DynamicTexture whiteTexture = new DynamicTexture(whiteImage);
-        Identifier whiteLocation = textureManager.register(
-            "eca_shader_generator/" + revision + "/preview_white", whiteTexture
+        whiteImage.setPixelABGR(0, 0, 0xFFFFFFFF);
+        DynamicTexture whiteTexture = new DynamicTexture(() -> "eca_preview_white", whiteImage);
+        Identifier whiteLocation = Identifier.fromNamespaceAndPath(
+            "eca", "shader_generator/" + revision + "/preview_white"
         );
+        textureManager.register(whiteLocation, whiteTexture);
         registered.add(whiteLocation);
         for (String sampler : dependencies.samplers()) {
             if ("Sampler0".equals(sampler)) continue;
@@ -475,9 +477,10 @@ beforeShaderSetup.run();
                 AnimatedPreviewAtlas atlas = AnimatedPreviewAtlas.create(binding.spritePaths());
                 animatedAtlases.add(atlas);
                 DynamicTexture texture = atlas.texture();
-                Identifier location = textureManager.register(
-                    "eca_shader_generator/" + revision + "/atlas_" + registered.size(), texture
+                Identifier location = Identifier.fromNamespaceAndPath(
+                    "eca", "shader_generator/" + revision + "/atlas_" + registered.size()
                 );
+                textureManager.register(location, texture);
                 registered.add(location);
                 blockShader.setSampler(binding.samplerName(), texture);
                 entityShader.setSampler(binding.samplerName(), texture);

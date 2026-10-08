@@ -92,11 +92,11 @@ public final class BossShowManager {
         ModList.get().forEachModFile(modFile -> {
             for (IModInfo modInfo : modFile.getModInfos()) {
                 String modid = modInfo.getModId();
-                Path legacyDir = modFile.findResource("data", modid, "bossshow");
+                Path legacyDir = findModResource(modFile, "data/" + modid + "/bossshow");
                 if (legacyDir != null && Files.isDirectory(legacyDir)) {
                     count[0] += scanModDataDirectory(legacyDir, legacyDir, modid);
                 }
-                Path canonicalDir = modFile.findResource("data", modid, "eca", "bossshow");
+                Path canonicalDir = findModResource(modFile, "data/" + modid + "/eca/bossshow");
                 if (canonicalDir != null && Files.isDirectory(canonicalDir)) {
                     count[0] += scanModDataDirectory(canonicalDir, canonicalDir, modid);
                 }
@@ -104,6 +104,15 @@ public final class BossShowManager {
         });
         if (count[0] > 0) {
             EcaLogger.info("Loaded {} BossShow definition(s) from mod data", count[0]);
+        }
+    }
+
+    //IModFile 不再提供 findResource，改用 JarContents.findFile
+    private static Path findModResource(net.neoforged.neoforgespi.locating.IModFile modFile, String relativePath) {
+        try {
+            return modFile.getContents().findFile(relativePath).map(Path::of).orElse(null);
+        } catch (Throwable t) {
+            return null;
         }
     }
 

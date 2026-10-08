@@ -3,9 +3,10 @@ package net.eca.util.faction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,6 +25,13 @@ public class FactionSavedData extends SavedData {
     private static final String DATA_NAME = "eca_factions";
     private static final String NBT_FACTIONS = "factions";
 
+    // 编解码器为 CompoundTag 的适配层：保留手写的容错 load/save，磁盘格式不变
+    private static final SavedDataType<FactionSavedData> TYPE = new SavedDataType<>(
+        Identifier.withDefaultNamespace(DATA_NAME),
+        FactionSavedData::new,
+        CompoundTag.CODEC.xmap(tag -> load(tag, null), d -> d.save(new CompoundTag()))
+    );
+
     static final String NBT_DISPLAY_NAME = "displayName";
     static final String NBT_COLOR        = "color";
     static final String NBT_DEFAULT_REL  = "defaultRelation";
@@ -40,7 +48,7 @@ public class FactionSavedData extends SavedData {
 
     public static FactionSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         FactionSavedData data = new FactionSavedData();
-        if (tag.getCompoundOrEmpty(NBT_FACTIONS).isPresent()) {
+        if (tag.contains(NBT_FACTIONS)) {
             CompoundTag factionsTag = tag.getCompoundOrEmpty(NBT_FACTIONS);
             for (String factionId : factionsTag.keySet()) {
                 CompoundTag factionTag = factionsTag.getCompoundOrEmpty(factionId);
@@ -52,7 +60,7 @@ public class FactionSavedData extends SavedData {
         return data;
     }
 
-        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         CompoundTag factionsTag = new CompoundTag();
         for (Map.Entry<String, CompoundTag> entry : factionTags.entrySet()) {
             factionsTag.put(entry.getKey(), entry.getValue().copy());
@@ -64,10 +72,7 @@ public class FactionSavedData extends SavedData {
     }
 
     public static FactionSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
-            new SavedData.Factory<>(FactionSavedData::new, FactionSavedData::load, null),
-            DATA_NAME
-        );
+        return level.getDataStorage().computeIfAbsent(TYPE);
     }
 
     // ==================== 阵营序列化 ====================
@@ -123,7 +128,7 @@ public class FactionSavedData extends SavedData {
 
         Faction faction = new Faction(id, tag.getStringOr(NBT_DISPLAY_NAME, ""), tag.getIntOr(NBT_COLOR, 0), defaultRel);
 
-        if (tag.getCompoundOrEmpty(NBT_RELATIONS).isPresent()) {
+        if (tag.contains(NBT_RELATIONS)) {
             CompoundTag relTag = tag.getCompoundOrEmpty(NBT_RELATIONS);
             for (String otherId : relTag.keySet()) {
                 try {
@@ -134,11 +139,11 @@ public class FactionSavedData extends SavedData {
             }
         }
 
-        if (tag.getCompoundOrEmpty(NBT_LEADER).isPresent()) {
+        if (tag.contains(NBT_LEADER)) {
             faction.setLeader(FactionMember.load(tag.getCompoundOrEmpty(NBT_LEADER)));
         }
 
-        if (tag.contains(NBT_MEMBERS, Tag.TAG_LIST)) {
+        if (tag.contains(NBT_MEMBERS)) {
             ListTag memberList = tag.getListOrEmpty(NBT_MEMBERS);
             for (int i = 0; i < memberList.size(); i++) {
                 FactionMember member = FactionMember.load(memberList.getCompoundOrEmpty(i));

@@ -94,8 +94,9 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
             for (BlenderModelAsset.TextureData texture : entry.getValue().textures) {
                 try (ByteArrayInputStream input = new ByteArrayInputStream(texture.bytes())) {
                     NativeImage image = NativeImage.read(input);
-                    textureManager.register(texture.identifier(), new DynamicTexture(image));
-                    dynamicTextures.add(texture.identifier());
+                    Identifier textureId = texture.location();
+                    textureManager.register(textureId, new DynamicTexture(() -> "eca_blender_" + textureId, image));
+                    dynamicTextures.add(textureId);
                 } catch (Exception exception) {
                     EcaLogger.error("Failed to create texture for Blender model " + entry.getKey(), exception);
                     valid = false;
@@ -116,7 +117,7 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
             if (!valid) {
                 closePrograms(entry.getValue());
                 for (BlenderModelAsset.TextureData texture : entry.getValue().textures) {
-                    if (dynamicTextures.remove(texture.identifier())) textureManager.release(texture.identifier());
+                    if (dynamicTextures.remove(texture.location())) textureManager.release(texture.location());
                 }
             }
         }

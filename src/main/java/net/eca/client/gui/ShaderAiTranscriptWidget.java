@@ -4,7 +4,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.AbstractScrollWidget;
+import net.minecraft.client.gui.components.AbstractScrollArea;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
@@ -20,8 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
+final class ShaderAiTranscriptWidget extends AbstractScrollArea {
 
+    private static final int INNER_PADDING = 4;
     private static final Pattern TABLE_SEPARATOR = Pattern.compile(":?-{3,}:?");
     private static final int CARD_GAP = 6;
     private static final int CARD_PADDING = 6;
@@ -37,19 +38,33 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
     ShaderAiTranscriptWidget(Font font, int x, int y, int width, int height) {
         super(
             x, y, width, height,
-            Component.translatable("gui.eca.shader_generator.ai.transcript")
+            Component.translatable("gui.eca.shader_generator.ai.transcript"),
+            AbstractScrollArea.ScrollbarSettings.defaultSettings(font.lineHeight * 3)
         );
         this.font = font;
+    }
+
+    private int innerPadding() {
+        return INNER_PADDING;
+    }
+
+    private int totalInnerPadding() {
+        return INNER_PADDING * 2;
+    }
+
+    private boolean withinContentAreaPoint(double mouseX, double mouseY) {
+        return mouseX >= getX() && mouseX < getX() + getWidth()
+            && mouseY >= getY() && mouseY < getY() + getHeight();
     }
 
     void setMessages(List<ShaderAiSession.Message> updated) {
         List<ShaderAiSession.Message> safe = updated == null ? List.of() : List.copyOf(updated);
         if (safe.equals(messages)) return;
         boolean followBottom = messages.isEmpty()
-            || getMaxScrollAmount() - scrollAmount() <= font.lineHeight * 2.0D;
+            || maxScrollAmount() - scrollAmount() <= font.lineHeight * 2.0D;
         messages = safe;
         rebuildLayout();
-        if (followBottom) setScrollAmount(getMaxScrollAmount());
+        if (followBottom) setScrollAmount(maxScrollAmount());
     }
 
     private void rebuildLayout() {
@@ -305,13 +320,8 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
     }
 
     @Override
-    protected int getInnerHeight() {
+    protected int contentHeight() {
         return innerHeight;
-    }
-
-    @Override
-    protected double scrollRate() {
-        return font.lineHeight * 3.0D;
     }
 
     @Override
@@ -426,12 +436,22 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
     }
 
     @Override
-    protected void renderContents(
+    protected void extractWidgetRenderState(
         GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
     ) {
+        graphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(0.0F, (float) -scrollAmount());
+        renderContents(graphics);
+        graphics.pose().popMatrix();
+        graphics.disableScissor();
+        extractScrollbar(graphics, mouseX, mouseY);
+    }
+
+    private void renderContents(GuiGraphicsExtractor graphics) {
         int cardX = getX() + innerPadding() + 1;
         int cardWidth = Math.max(80, getWidth() - totalInnerPadding() - 4);
         for (MessageLayout layout : layouts) {

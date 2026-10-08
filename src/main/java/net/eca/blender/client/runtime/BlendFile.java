@@ -306,7 +306,7 @@ final class BlendFile {
         long delta = original - candidate.original;
         return delta >= 0 && delta < candidate.length ? candidate : null;
     }
-    private long pointer(int offset) { return pointerSize == 8 ? bytes.getLongOr(offset, 0L) : Integer.toUnsignedLong(bytes.getIntOr(offset, 0)); }
+    private long pointer(int offset) { return pointerSize == 8 ? bytes.getLong(offset) : Integer.toUnsignedLong(bytes.getInt(offset)); }
     private String ascii(int offset, int length) { return new String(bytes.array(), offset, length, StandardCharsets.US_ASCII); }
 
     private String cstring(int start, int end) throws IOException {
@@ -398,8 +398,8 @@ final class BlendFile {
             return switch (field.length) {
                 case 1 -> bytes.get(at);
                 case 2 -> bytes.getShort(at);
-                case 4 -> bytes.getIntOr(at, 0);
-                case 8 -> bytes.getLongOr(at, 0L);
+                case 4 -> bytes.getInt(at);
+                case 8 -> bytes.getLong(at);
                 default -> throw new IOException("Invalid integer width for " + name);
             };
         }
@@ -409,7 +409,7 @@ final class BlendFile {
             require(!field.pointer && count >= 0 && count <= field.length / 4, "Invalid float array " + name);
             float[] result = new float[count];
             for (int i = 0; i < count; i++) {
-                result[i] = bytes.getFloatOr(offset + field.offset + i * 4, 0.0F);
+                result[i] = bytes.getFloat(offset + field.offset + i * 4);
                 require(Float.isFinite(result[i]), "Non-finite value in " + struct.name + "." + name);
             }
             return result;

@@ -392,7 +392,7 @@ public class HealthLockManager {
     }
 
     private static Float readNbtDecrypt(CompoundTag data, String encKey, String keyKey, String checkKey) {
-        String encryptedValue = data.getStringOr(encKey, "").isPresent()
+        String encryptedValue = !data.getStringOr(encKey, "").isEmpty()
                 ? data.getStringOr(encKey, "") : String.valueOf(data.getIntOr(encKey, 0));
         int encrypted   = parseEncryptedPayload(encryptedValue);
         int key         = data.getIntOr(keyKey, 0);

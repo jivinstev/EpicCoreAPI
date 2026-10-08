@@ -577,7 +577,8 @@ public class FactionManager {
      */
     private static String resolveOwnerFaction(Entity entity) {
         if (!(entity instanceof TamableAnimal pet)) return null;
-        UUID ownerUuid = pet.getOwnerUUID();
+        net.minecraft.world.entity.EntityReference<LivingEntity> ownerRef = pet.getOwnerReference();
+        UUID ownerUuid = ownerRef == null ? null : ownerRef.getUUID();
         if (ownerUuid == null) return null;
         String ownerFaction = MEMBER_INDEX.get(ownerUuid);
         return (ownerFaction != null && !ownerFaction.isEmpty()) ? ownerFaction : null;

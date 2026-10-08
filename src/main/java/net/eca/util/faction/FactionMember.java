@@ -1,12 +1,14 @@
 package net.eca.util.faction;
 
 
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -85,7 +87,7 @@ public final class FactionMember {
      * @return the same tag, for chaining
      */
     public CompoundTag save(CompoundTag tag) {
-        tag.putUUID(NBT_UUID, uuid);
+        tag.putIntArray(NBT_UUID, UUIDUtil.uuidToIntArray(uuid));
         tag.putString(NBT_TYPE, typeId);
         tag.putBoolean(NBT_PLAYER, player);
         return tag;
@@ -97,9 +99,11 @@ public final class FactionMember {
      * @return the member record, or null if the tag carries no valid UUID
      */
     public static FactionMember load(CompoundTag tag) {
-        if (tag == null || !tag.hasUUID(NBT_UUID)) return null;
+        if (tag == null) return null;
+        Optional<int[]> uuidArray = tag.getIntArray(NBT_UUID);
+        if (uuidArray.isEmpty() || uuidArray.get().length != 4) return null;
         return new FactionMember(
-                tag.getUUID(NBT_UUID),
+                UUIDUtil.uuidFromIntArray(uuidArray.get()),
                 tag.getStringOr(NBT_TYPE, ""),
                 tag.getBoolean(NBT_PLAYER)
         );

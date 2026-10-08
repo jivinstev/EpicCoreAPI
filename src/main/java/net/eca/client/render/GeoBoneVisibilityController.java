@@ -39,39 +39,39 @@ final class GeoBoneVisibilityController {
         for (Map.Entry<GeoBone, BoneVisibility> entry : originalVisibility.entrySet()) {
             GeoBone bone = entry.getKey();
             BoneVisibility visibility = entry.getValue();
-            bone.setHidden(visibility.hidden());
-            bone.setChildrenHidden(visibility.childrenHidden());
+            bone.hidden(visibility.hidden());
+            bone.hidingChildren(visibility.childrenHidden());
         }
         originalVisibility.clear();
     }
 
     private void capture(GeoBone bone) {
-        originalVisibility.putIfAbsent(bone, new BoneVisibility(bone.isHidden(), bone.isHidingChildren()));
-        for (GeoBone child : bone.getChildBones()) {
+        originalVisibility.putIfAbsent(bone, new BoneVisibility(bone.hidden(), bone.hidingChildren()));
+        for (GeoBone child : bone.children()) {
             capture(child);
         }
     }
 
     private void hideConfiguredBones(GeoBone bone, Set<String> hiddenBones) {
-        if (hiddenBones != null && hiddenBones.contains(bone.getName())) {
-            bone.setHidden(true);
+        if (hiddenBones != null && hiddenBones.contains(bone.name())) {
+            bone.hidden(true);
             return;
         }
-        for (GeoBone child : bone.getChildBones()) {
+        for (GeoBone child : bone.children()) {
             hideConfiguredBones(child, hiddenBones);
         }
     }
 
     private boolean hideOutsideOverlayRoots(GeoBone bone, Set<String> roots, boolean included) {
-        boolean renderThisBranch = included || roots.contains(bone.getName());
+        boolean renderThisBranch = included || roots.contains(bone.name());
         boolean hasIncludedDescendant = false;
 
-        for (GeoBone child : bone.getChildBones()) {
+        for (GeoBone child : bone.children()) {
             hasIncludedDescendant |= hideOutsideOverlayRoots(child, roots, renderThisBranch);
         }
 
         if (!renderThisBranch && !hasIncludedDescendant) {
-            bone.setHidden(true);
+            bone.hidden(true);
         }
         return renderThisBranch || hasIncludedDescendant;
     }

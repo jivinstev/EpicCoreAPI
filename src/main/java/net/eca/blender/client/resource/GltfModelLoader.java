@@ -410,7 +410,7 @@ final class GltfModelLoader {
             values[i] = switch (componentType) {
                 case 5121 -> Byte.toUnsignedInt(binary.get(offset));
                 case 5123 -> Short.toUnsignedInt(binary.getShort(offset));
-                case 5125 -> binary.getIntOr(offset, 0);
+                case 5125 -> binary.getInt(offset);
                 default -> throw new IOException("Unsupported index component type " + componentType);
             };
         }
@@ -494,8 +494,8 @@ final class GltfModelLoader {
             case 5121 -> normalized ? Byte.toUnsignedInt(binary.get(offset)) / 255.0f : Byte.toUnsignedInt(binary.get(offset));
             case 5122 -> normalized ? Math.max(binary.getShort(offset) / 32767.0f, -1.0f) : binary.getShort(offset);
             case 5123 -> normalized ? Short.toUnsignedInt(binary.getShort(offset)) / 65535.0f : Short.toUnsignedInt(binary.getShort(offset));
-            case 5125 -> normalized ? Integer.toUnsignedLong(binary.getIntOr(offset, 0)) / 4294967295.0f : binary.getIntOr(offset, 0);
-            case 5126 -> binary.getFloatOr(offset, 0.0F);
+            case 5125 -> normalized ? Integer.toUnsignedLong(binary.getInt(offset)) / 4294967295.0f : binary.getInt(offset);
+            case 5126 -> binary.getFloat(offset);
             default -> throw new IOException("Unsupported accessor component type " + type);
         };
     }

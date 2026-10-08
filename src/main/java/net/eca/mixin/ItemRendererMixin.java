@@ -6,7 +6,7 @@ import net.eca.client.render.ShaderMaskRenderQueue;
 import net.eca.client.render.SpriteBatchingVertexConsumer;
 import net.eca.util.item_extension.ItemExtension;
 import net.eca.util.item_extension.ItemExtensionManager;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.world.item.ItemDisplayContext;

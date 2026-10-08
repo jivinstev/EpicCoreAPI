@@ -8,7 +8,7 @@ import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
 import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.FallingBlockRenderer;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;

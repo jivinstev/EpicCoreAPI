@@ -3,7 +3,7 @@ package net.eca.client.render.blender;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.eca.blender.client.entity.BlenderEntityRenderer;
 import net.eca.util.entity_extension.BlenderModelExtension;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;

@@ -121,11 +121,9 @@ final class ShaderAiSettingsScreen extends Screen {
         ).bounds(fieldLeft + fieldWidth - 72, apiKeyField.getY(), 72, FIELD_HEIGHT).build(), currentRow);
         apiKeyEnvField = textField(row++, 256);
         timeoutField = textField(row++, 3);
-        timeoutField.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
+        digitsOnly(timeoutField);
         maxToolRoundsField = textField(row++, 2);
-        maxToolRoundsField.setFilter(
-            value -> value.isEmpty() || value.chars().allMatch(Character::isDigit)
-        );
+        digitsOnly(maxToolRoundsField);
         maxToolRoundsField.setValue(Integer.toString(originalAssistant.maxToolRounds()));
 
         autoApplyButton = booleanButton(row++, () -> {
@@ -225,8 +223,19 @@ final class ShaderAiSettingsScreen extends Screen {
         apiKeyVisibilityButton.setMessage(apiKeyVisibilityLabel());
     }
 
+    private static void digitsOnly(EditBox field) {
+        field.setResponder(value -> {
+            if (!value.isEmpty() && !value.chars().allMatch(Character::isDigit)) {
+                field.setValue(value.chars()
+                    .filter(Character::isDigit)
+                    .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                    .toString());
+            }
+        });
+    }
+
     private void updateApiKeyFormatter() {
-        apiKeyField.setFormatter((value, offset) -> FormattedCharSequence.forward(
+        apiKeyField.addFormatter((value, offset) -> FormattedCharSequence.forward(
             showApiKey ? value : "•".repeat(value.length()),
             Style.EMPTY
         ));

@@ -6,6 +6,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
 
@@ -13,7 +15,7 @@ final class ShaderPreviewCapture {
 
     static ShaderAiToolResult capture(int left, int top, int right, int bottom) {
         Minecraft minecraft = Minecraft.getInstance();
-        NativeImage screenshot = Screenshot.takeScreenshot(minecraft.gameRenderer.mainRenderTarget());
+        NativeImage screenshot = Screenshot.takeScreenshot(minecraft.getMainRenderTarget());
         try {
             double scale = minecraft.getWindow().getGuiScale();
             int pixelLeft = clamp(
@@ -35,14 +37,22 @@ final class ShaderPreviewCapture {
             )) {
                 for (int y = 0; y < crop.getHeight(); y++) {
                     for (int x = 0; x < crop.getWidth(); x++) {
-                        crop.setPixelRGBA(
+                        crop.setPixel(
                             x,
                             y,
-                            screenshot.getPixelRGBA(pixelLeft + x, pixelTop + y)
+                            screenshot.getPixel(pixelLeft + x, pixelTop + y)
                         );
                     }
                 }
-                String image = Base64.getEncoder().encodeToString(crop.asByteArray());
+                Path temp = Files.createTempFile("eca_preview", ".png");
+                byte[] bytes;
+                try {
+                    crop.writeToFile(temp);
+                    bytes = Files.readAllBytes(temp);
+                } finally {
+                    Files.deleteIfExists(temp);
+                }
+                String image = Base64.getEncoder().encodeToString(bytes);
                 return new ShaderAiToolResult(
                     "Captured the current ECA preview",
                     List.of(image)

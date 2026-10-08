@@ -1720,7 +1720,7 @@ public final class ShaderGeneratorScreen extends Screen {
 
     private void openEffectDetails(ShaderModuleDefinition definition) {
         minecraft.setScreenAndShow(new ShaderEffectDetailsScreen(
-            minecraft.screen,
+            minecraft.gui.screen(),
             this,
             definition,
             currentProjectRef(),
@@ -2629,7 +2629,7 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     ShaderAiToolResult captureToolPreview() {
-        Screen current = minecraft.screen;
+        Screen current = minecraft.gui.screen();
         if (current instanceof ShaderAiAssistantScreen assistant) {
             return assistant.capturePreview();
         }
@@ -3249,7 +3249,7 @@ public final class ShaderGeneratorScreen extends Screen {
 
         /* 5. 独立深度层确保下拉菜单覆盖已经写入深度缓冲的普通控件 */
         g.pose().pushMatrix();
-        g.pose().translate(0.0F, 0.0F, 400.0F);
+        g.pose().translate(0.0F, 0.0F);
         drawDropdownBackground(g);
         renderDropdownWidgets(g, mx, my, pt);
         g.pose().popMatrix();
@@ -3354,8 +3354,8 @@ public final class ShaderGeneratorScreen extends Screen {
         }
         ElementScreenTransform box = elementScreenTransform(element, preview);
         g.pose().pushMatrix();
-        g.pose().translate((float) box.centerX(), (float) box.centerY(), 0.0F);
-        g.pose().mulPose(new Quaternionf().rotateZ((float) box.rotationRadians()));
+        g.pose().translate((float) box.centerX(), (float) box.centerY());
+        g.pose().rotate((float) box.rotationRadians());
         int left = (int) Math.round(-box.radiusX());
         int top = (int) Math.round(-box.radiusY());
         int width = Math.max(1, (int) Math.round(box.radiusX() * 2.0D));
@@ -3869,7 +3869,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
+        public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
             action.run();
         }
 
@@ -3917,7 +3917,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
+        public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
             action.run();
         }
 
@@ -3971,7 +3971,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
+        public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
             action.run();
         }
 
