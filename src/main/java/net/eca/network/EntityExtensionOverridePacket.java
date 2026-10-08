@@ -85,7 +85,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
     // ==================== 编解码 ====================
 
     public static void encode(EntityExtensionOverridePacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.dimensionId);
+        buf.writeIdentifier(msg.dimensionId);
 
         buf.writeByte(msg.fogAction);
         if (msg.fogAction == ACTION_SET && msg.fogData != null) {
@@ -104,7 +104,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
     }
 
     public static EntityExtensionOverridePacket decode(FriendlyByteBuf buf) {
-        Identifier dimensionId = buf.readResourceLocation();
+        Identifier dimensionId = buf.readIdentifier();
 
         byte fogAction = buf.readByte();
         FogData fogData = (fogAction == ACTION_SET) ? FogData.read(buf) : null;
@@ -262,12 +262,12 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
             buf.writeBoolean(enableTexture);
             buf.writeBoolean(texture != null);
             if (texture != null) {
-                buf.writeResourceLocation(texture);
+                buf.writeIdentifier(texture);
             }
             buf.writeBoolean(enableShader);
             buf.writeBoolean(shaderPresetId != null);
             if (shaderPresetId != null) {
-                buf.writeResourceLocation(shaderPresetId);
+                buf.writeIdentifier(shaderPresetId);
             }
             buf.writeFloat(alpha);
             buf.writeFloat(size);
@@ -279,9 +279,9 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
 
         public static SkyboxData read(FriendlyByteBuf buf) {
             boolean enableTexture = buf.readBoolean();
-            Identifier texture = buf.readBoolean() ? buf.readResourceLocation() : null;
+            Identifier texture = buf.readBoolean() ? buf.readIdentifier() : null;
             boolean enableShader = buf.readBoolean();
-            Identifier shaderPresetId = buf.readBoolean() ? buf.readResourceLocation() : null;
+            Identifier shaderPresetId = buf.readBoolean() ? buf.readIdentifier() : null;
             float alpha = buf.readFloat();
             float size = buf.readFloat();
             float textureUvScale = buf.readFloat();
@@ -344,7 +344,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
         public void write(FriendlyByteBuf buf) {
             buf.writeBoolean(soundEventId != null);
             if (soundEventId != null) {
-                buf.writeResourceLocation(soundEventId);
+                buf.writeIdentifier(soundEventId);
             }
             buf.writeByte(soundSourceOrdinal);
             buf.writeFloat(volume);
@@ -354,7 +354,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
         }
 
         public static MusicData read(FriendlyByteBuf buf) {
-            Identifier soundEventId = buf.readBoolean() ? buf.readResourceLocation() : null;
+            Identifier soundEventId = buf.readBoolean() ? buf.readIdentifier() : null;
             int soundSourceOrdinal = buf.readByte();
             float volume = buf.readFloat();
             float pitch = buf.readFloat();

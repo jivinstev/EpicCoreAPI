@@ -36,7 +36,7 @@ public class EntityExtensionBossEventTypePacket implements CustomPacketPayload {
         buffer.writeUUID(message.bossEventId);
         buffer.writeBoolean(message.typeId != null);
         if (message.typeId != null) {
-            buffer.writeResourceLocation(message.typeId);
+            buffer.writeIdentifier(message.typeId);
         }
         buffer.writeBoolean(message.entityUuid != null);
         if (message.entityUuid != null) {
@@ -47,7 +47,7 @@ public class EntityExtensionBossEventTypePacket implements CustomPacketPayload {
     public static EntityExtensionBossEventTypePacket decode(FriendlyByteBuf buffer) {
         UUID bossEventId = buffer.readUUID();
         boolean hasType = buffer.readBoolean();
-        Identifier typeId = hasType ? buffer.readResourceLocation() : null;
+        Identifier typeId = hasType ? buffer.readIdentifier() : null;
         boolean hasEntityUuid = buffer.readBoolean();
         UUID entityUuid = hasEntityUuid ? buffer.readUUID() : null;
         return new EntityExtensionBossEventTypePacket(bossEventId, typeId, entityUuid);

@@ -90,7 +90,7 @@ public class BossShowStartPacket implements CustomPacketPayload {
     }
 
     public static void encode(BossShowStartPacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.cutsceneId);
+        buf.writeIdentifier(msg.cutsceneId);
         BossShowNetCodec.writeNullableRL(buf, msg.targetTypeId);
         buf.writeUUID(msg.targetUuid);
         buf.writeDouble(msg.anchorX);
@@ -107,7 +107,7 @@ public class BossShowStartPacket implements CustomPacketPayload {
     }
 
     public static BossShowStartPacket decode(FriendlyByteBuf buf) {
-        Identifier cutsceneId = buf.readResourceLocation();
+        Identifier cutsceneId = buf.readIdentifier();
         Identifier typeId = BossShowNetCodec.readNullableRL(buf);
         UUID uuid = buf.readUUID();
         double ax = buf.readDouble();

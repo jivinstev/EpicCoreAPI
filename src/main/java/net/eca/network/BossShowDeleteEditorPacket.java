@@ -33,11 +33,11 @@ public class BossShowDeleteEditorPacket implements CustomPacketPayload {
     public Identifier id() { return id; }
 
     public static void encode(BossShowDeleteEditorPacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.id);
+        buf.writeIdentifier(msg.id);
     }
 
     public static BossShowDeleteEditorPacket decode(FriendlyByteBuf buf) {
-        return new BossShowDeleteEditorPacket(buf.readResourceLocation());
+        return new BossShowDeleteEditorPacket(buf.readIdentifier());
     }
 
     public static void handle(BossShowDeleteEditorPacket msg, IPayloadContext ctx) {

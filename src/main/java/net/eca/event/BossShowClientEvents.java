@@ -22,7 +22,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 //客户端事件处理：tick 推进、HUD 隐藏、Letterbox、PauseScreen 拦截
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowClientEvents {
 
     private BossShowClientEvents() {}
@@ -74,7 +74,7 @@ public final class BossShowClientEvents {
         //字幕位于下方黑边上沿内侧
         int barHeight = (int) (height * 0.12f);
         int y = height - barHeight + (barHeight - font.lineHeight) / 2;
-        gui.drawCenteredString(font, subtitle, width / 2, y, color);
+        gui.centeredText(font, subtitle, width / 2, y, color);
     }
 
     //相机角度最终锁定（防止其它 mod 的 ViewportEvent 订阅者覆写我们）

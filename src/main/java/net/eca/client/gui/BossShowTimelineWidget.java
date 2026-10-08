@@ -161,7 +161,7 @@ final class BossShowTimelineWidget extends AbstractWidget {
         }
         drawRangeMarker(g, font, BossShowEditorState.getInPoint(), "I", 0xFF55D68A, -7);
         drawRangeMarker(g, font, BossShowEditorState.getOutPoint(), "O", 0xFFFF6B6B, 3);
-        g.renderOutline(left, top, getWidth(), getHeight(), 0xFF454A58);
+        g.outline(left, top, getWidth(), getHeight(), 0xFF454A58);
     }
 
     private void drawRangeMarker(GuiGraphicsExtractor g, Font font, int tick, String label, int color, int labelOffset) {

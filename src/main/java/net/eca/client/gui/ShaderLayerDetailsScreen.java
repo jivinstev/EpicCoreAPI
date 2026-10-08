@@ -138,13 +138,13 @@ public final class ShaderLayerDetailsScreen extends Screen {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 150;
         int top = height / 2 - 86;
-        graphics.drawCenteredString(font, title, width / 2, top, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, top, 0xFFFFFFFF);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         /* 颜色矩形和文本在按钮上层绘制，避免被遮挡 */
         graphics.fill(left + 8, top + 58, left + 44, top + 70, colorArgb());
-        graphics.renderOutline(left + 8, top + 58, 36, 12, 0xFFFFFFFF);
+        graphics.outline(left + 8, top + 58, 36, 12, 0xFFFFFFFF);
         if (imagePath != null) {
-            graphics.drawCenteredString(font, imagePath, width / 2, top + 108, 0xFFCDD1D7);
+            graphics.centeredText(font, imagePath, width / 2, top + 108, 0xFFCDD1D7);
         }
     }
 

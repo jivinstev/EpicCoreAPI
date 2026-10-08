@@ -33,7 +33,7 @@ public class SpawnBanData extends SavedData {
 
         if (tag.contains(NBT_BANS, 10)) { // 10 = CompoundTag
             CompoundTag bansTag = tag.getCompoundOrEmpty(NBT_BANS);
-            for (String key : bansTag.getAllKeys()) {
+            for (String key : bansTag.keySet()) {
                 Identifier typeId = Identifier.tryParse(key);
                 if (typeId != null) {
                     int seconds = bansTag.getIntOr(key, 0);

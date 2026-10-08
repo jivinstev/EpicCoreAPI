@@ -141,7 +141,7 @@ public final class EcaBossBarRenderer {
         float scaledWidth = layoutWidth * scale;
         float renderX = (guiWidth - scaledWidth) * 0.5f;
 
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         graphics.pose().translate(renderX, y, 0.0f);
         graphics.pose().scale(scale, scale, 1.0f);
 
@@ -165,11 +165,11 @@ public final class EcaBossBarRenderer {
         if (appearance.valueText != null) {
             graphics.flush();
             int textY = (barHeight - Minecraft.getInstance().font.lineHeight) / 2;
-            graphics.drawCenteredString(Minecraft.getInstance().font, appearance.valueText,
+            graphics.centeredText(Minecraft.getInstance().font, appearance.valueText,
                     layoutWidth / 2, textY, 0xFFFFFFFF);
         }
 
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
         return true;
     }
 

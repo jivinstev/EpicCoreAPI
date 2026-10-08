@@ -19,11 +19,11 @@ public final class BossShowNetCodec {
 
     public static void writeNullableRL(FriendlyByteBuf buf, Identifier rl) {
         buf.writeBoolean(rl != null);
-        if (rl != null) buf.writeResourceLocation(rl);
+        if (rl != null) buf.writeIdentifier(rl);
     }
 
     public static Identifier readNullableRL(FriendlyByteBuf buf) {
-        return buf.readBoolean() ? buf.readResourceLocation() : null;
+        return buf.readBoolean() ? buf.readIdentifier() : null;
     }
 
     public static void writeFrames(FriendlyByteBuf buf, List<Frame> frames) {

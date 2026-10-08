@@ -190,10 +190,10 @@ public final class ShaderEffectDetailsScreen extends Screen {
         int left = (width - PANEL_WIDTH) / 2;
         /* 颜色色块：紧跟在标题下方，与颜色按钮的 y=44（或含导入则 y=70）对齐 */
         int swatchY = effect.definition().id().equals("image_element") ? 70 : 44;
-        graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, 18, 0xFFFFFFFF);
         int color = colorArgb();
         graphics.fill(left + 8, swatchY + 4, left + 44, swatchY + 16, color);
-        graphics.renderOutline(left + 8, swatchY + 4, 36, 12, 0xFFFFFFFF);
+        graphics.outline(left + 8, swatchY + 4, 36, 12, 0xFFFFFFFF);
 
         /* 参数标签：与 init 中 rowY + (index - scroll) * 22 对应 */
         int paramBaseY = swatchY + 26;
@@ -201,7 +201,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
         for (int index = scroll; index < end; index++) {
             ShaderModuleDefinition.Parameter parameter = visibleParameters.get(index);
             int y = paramBaseY + (index - scroll) * 22;
-            graphics.drawString(
+            graphics.text(
                 font,
                 Component.translatable(parameter.displayName()),
                 left,

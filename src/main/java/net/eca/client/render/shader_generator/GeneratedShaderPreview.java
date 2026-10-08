@@ -428,15 +428,15 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             } else if (legacyTime != null) {
                 legacyTime.set((System.currentTimeMillis() % 1000000L) / 100.0F);
             }
-            if (minecraft.gameRenderer != null && minecraft.gameRenderer.getMainCamera() != null) {
+            if (minecraft.gameRenderer != null && minecraft.gameRenderer.mainCamera() != null) {
                 if (cameraYaw != null) {
                     cameraYaw.set((float) Math.toRadians(
-                        minecraft.gameRenderer.getMainCamera().getYRot()
+                        minecraft.gameRenderer.mainCamera().getYRot()
                     ));
                 }
                 if (cameraPitch != null) {
                     cameraPitch.set((float) Math.toRadians(
-                        minecraft.gameRenderer.getMainCamera().getXRot()
+                        minecraft.gameRenderer.mainCamera().getXRot()
                     ));
                 }
             }

@@ -24,7 +24,7 @@ public final class BossShowEditorSessionManager {
     //重复打开编辑器时保留第一次进入前的模式，避免旁观模式覆盖原快照。
     public static void begin(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
-        if (!persistent.getCompound(NBT_ROOT).isPresent()) {
+        if (!persistent.getCompoundOrEmpty(NBT_ROOT).isPresent()) {
             CompoundTag root = new CompoundTag();
             root.putString(NBT_PREV_GAMEMODE, player.gameMode.getGameModeForPlayer().getName());
             persistent.put(NBT_ROOT, root);
@@ -36,14 +36,14 @@ public final class BossShowEditorSessionManager {
     }
 
     public static boolean isActive(ServerPlayer player) {
-        return player.getPersistentData().getCompound(NBT_ROOT).isPresent();
+        return player.getPersistentData().getCompoundOrEmpty(NBT_ROOT).isPresent();
     }
 
     //先清除会话标记再切换模式，使重复退出保持幂等。
     public static boolean end(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
         LAST_HEARTBEAT.remove(player.getUUID());
-        if (!persistent.getCompound(NBT_ROOT).isPresent()) return false;
+        if (!persistent.getCompoundOrEmpty(NBT_ROOT).isPresent()) return false;
 
         CompoundTag root = persistent.getCompoundOrEmpty(NBT_ROOT);
         GameType previous = GameType.byName(root.getStringOr(NBT_PREV_GAMEMODE, ""), GameType.SURVIVAL);

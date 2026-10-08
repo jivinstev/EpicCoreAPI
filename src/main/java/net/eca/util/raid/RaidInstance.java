@@ -632,7 +632,7 @@ public class RaidInstance {
 
     private ServerBossEvent getBossEvent(RaidDefinition def) {
         if (bossEvent == null) {
-            bossEvent = new ServerBossEvent(java.util.UUID.randomUUID(),Component.translatable(def.getDisplayName()),
+            bossEvent = new ServerBossEvent(java.util.UUID.randomUUID(),java.util.UUID.randomUUID(),Component.translatable(def.getDisplayName()),
                     def.getBossBarColor(), BossEvent.BossBarOverlay.NOTCHED_10);
         }
         return bossEvent;

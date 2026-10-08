@@ -377,10 +377,10 @@ final class ShaderAiSettingsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0xFF111315);
         graphics.fill(left - 8, top - 4, left + dialogWidth + 8, height - 4, 0xFF202225);
-        graphics.renderOutline(
+        graphics.outline(
             left - 8, top - 4, dialogWidth + 16, height - top, 0xFF60656D
         );
-        graphics.drawCenteredString(font, title, width / 2, top, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, top, 0xFFFFFFFF);
         drawVisibleLabel(graphics, 0, "gui.eca.shader_generator.ai.profile");
         drawVisibleLabel(graphics, 1, "gui.eca.shader_generator.ai.protocol");
         drawVisibleLabel(graphics, 2, "gui.eca.shader_generator.ai.base_url");
@@ -391,7 +391,7 @@ final class ShaderAiSettingsScreen extends Screen {
         drawVisibleLabel(graphics, 7, "gui.eca.shader_generator.ai.max_tool_rounds");
         drawScrollbar(graphics);
         if (!status.getString().isBlank()) {
-            graphics.drawCenteredString(
+            graphics.centeredText(
                 font, status, width / 2, footerTop - 13,
                 statusError ? 0xFFFF6B6B : 0xFF8FE388
             );
@@ -401,7 +401,7 @@ final class ShaderAiSettingsScreen extends Screen {
 
     private void drawVisibleLabel(GuiGraphicsExtractor graphics, int row, String key) {
         if (row < scrollRow || row >= scrollRow + visibleRows()) return;
-        graphics.drawString(
+        graphics.text(
             font,
             Component.translatable(key),
             left + 8,

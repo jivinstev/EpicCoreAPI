@@ -109,7 +109,7 @@ public abstract class LevelRendererMixin {
 
         eca$markCloudOcclusion(minecraft, entity, camX, camY, camZ);
 
-        Camera camera = minecraft.gameRenderer.getMainCamera();
+        Camera camera = minecraft.gameRenderer.mainCamera();
         if (camera == null || camera.getFluidInCamera() != FogType.NONE) {
             return;
         }

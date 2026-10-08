@@ -522,19 +522,19 @@ public final class ShaderSourceEditorScreen extends Screen {
             closeDropdown();
             return true;
         }
-        if (Screen.hasControlDown() && keyCode == GLFW.GLFW_KEY_Z) {
+        if (Minecraft.getInstance().hasControlDown() && keyCode == GLFW.GLFW_KEY_Z) {
             restoreHistory(undo, redo);
             return true;
         }
-        if (Screen.hasControlDown() && keyCode == GLFW.GLFW_KEY_Y) {
+        if (Minecraft.getInstance().hasControlDown() && keyCode == GLFW.GLFW_KEY_Y) {
             restoreHistory(redo, undo);
             return true;
         }
-        if (Screen.hasControlDown() && keyCode == GLFW.GLFW_KEY_S) {
+        if (Minecraft.getInstance().hasControlDown() && keyCode == GLFW.GLFW_KEY_S) {
             save();
             return true;
         }
-        if (Screen.hasControlDown() && keyCode == GLFW.GLFW_KEY_ENTER) {
+        if (Minecraft.getInstance().hasControlDown() && keyCode == GLFW.GLFW_KEY_ENTER) {
             compile(true);
             return true;
         }
@@ -619,18 +619,18 @@ public final class ShaderSourceEditorScreen extends Screen {
         );
         renderDiagnostics(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         graphics.pose().translate(0.0F, 0.0F, 400.0F);
         drawDropdownBackground(graphics);
         renderDropdownWidgets(graphics, mouseX, mouseY, partialTick);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
     private void drawDropdownBackground(GuiGraphicsExtractor graphics) {
         DropdownBounds bounds = dropdownBounds();
         if (bounds == null) return;
         graphics.fill(bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), DROPDOWN_BACKGROUND);
-        graphics.renderOutline(
+        graphics.outline(
             bounds.left(),
             bounds.top(),
             bounds.right() - bounds.left(),
@@ -683,7 +683,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     private void renderDiagnostics(GuiGraphicsExtractor graphics) {
         int textX = previewLeft + 6;
         int textWidth = Math.max(20, width - previewLeft - 22);
-        graphics.drawString(
+        graphics.text(
             font,
             Component.translatable("gui.eca.shader_generator.source_editor.diagnostics"),
             textX,
@@ -695,11 +695,11 @@ public final class ShaderSourceEditorScreen extends Screen {
         int visibleRows = diagnosticsVisibleRows();
         int start = Math.min(diagnosticsScroll, Math.max(0, lines.size() - visibleRows));
         int color = diagnosticsError ? 0xFFFF6B6B : 0xFF8FE388;
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         graphics.pose().translate(textX, diagnosticsTop + 20, 0.0F);
         graphics.pose().scale(DIAGNOSTIC_TEXT_SCALE, DIAGNOSTIC_TEXT_SCALE, 1.0F);
         for (int row = 0; row < visibleRows && start + row < lines.size(); row++) {
-            graphics.drawString(
+            graphics.text(
                 font,
                 lines.get(start + row),
                 0,
@@ -708,7 +708,7 @@ public final class ShaderSourceEditorScreen extends Screen {
                 false
             );
         }
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
     private int diagnosticsVisibleRows() {

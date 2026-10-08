@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 //编辑器可视化：锚点光柱 + 摄像机路径折线 + 关键帧头颅
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowAnchorRenderer {
 
     private static final float BEAM_HEIGHT = 6.0f;
@@ -67,7 +67,7 @@ public final class BossShowAnchorRenderer {
         float anchorYaw = BossShowEditorState.getAnchorYawDeg();
 
         Camera cam = event.getCamera();
-        Vec3 camPos = cam.getPosition();
+        Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
 

@@ -37,7 +37,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import java.io.IOException;
 
 @SuppressWarnings("removal")
-@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public class ModRenderTypes {
 
     @SubscribeEvent

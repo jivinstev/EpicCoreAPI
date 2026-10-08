@@ -114,7 +114,7 @@ public class FogRendererMixin {
 
     @Unique
     private static GlobalFogExtension eca$resolveLocalFogContext(ClientLevel level, Camera camera, float[] strengthHolder) {
-        Vec3 cameraPos = camera.getPosition();
+        Vec3 cameraPos = camera.position();
         if (cameraPos == null) {
             return null;
         }

@@ -122,11 +122,11 @@ public final class FrustumGuard {
     }
 
     private static void reportCamera(Minecraft minecraft) {
-        Camera camera = minecraft.gameRenderer == null ? null : minecraft.gameRenderer.getMainCamera();
+        Camera camera = minecraft.gameRenderer == null ? null : minecraft.gameRenderer.mainCamera();
         if (camera == null) {
             return;
         }
-        Vec3 pos = camera.getPosition();
+        Vec3 pos = camera.position();
         Entity cameraEntity = camera.getEntity();
         EcaLogger.info("[FrustumGuard] camera pos=({}, {}, {}) xRot={} yRot={} entity={}",
                 pos == null ? "null" : pos.x,

@@ -90,11 +90,11 @@ public final class ShaderColorPickerScreen extends Screen {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 104;
         int top = height / 2 - PICKER_SIZE / 2;
-        graphics.drawCenteredString(font, title, width / 2, top - 16, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, top - 16, 0xFFFFFFFF);
         int color = currentArgb();
         graphics.fill(left + PICKER_SIZE + 32, top, left + PICKER_SIZE + 96, top + 56, color);
-        graphics.renderOutline(left + PICKER_SIZE + 32, top, 64, 56, 0xFFFFFFFF);
-        graphics.drawCenteredString(
+        graphics.outline(left + PICKER_SIZE + 32, top, 64, 56, 0xFFFFFFFF);
+        graphics.centeredText(
             font,
             String.format("#%06X", color & 0xFFFFFF),
             left + PICKER_SIZE + 64,
@@ -170,7 +170,7 @@ public final class ShaderColorPickerScreen extends Screen {
             }
             int markerX = getX() + Math.round(saturation * width);
             int markerY = getY() + Math.round((1.0F - brightness) * height);
-            graphics.renderOutline(markerX - 2, markerY - 2, 5, 5, 0xFFFFFFFF);
+            graphics.outline(markerX - 2, markerY - 2, 5, 5, 0xFFFFFFFF);
         }
 
         @Override
@@ -218,7 +218,7 @@ public final class ShaderColorPickerScreen extends Screen {
                 );
             }
             int markerY = getY() + Math.round(hue * height);
-            graphics.renderOutline(getX() - 1, markerY - 1, width + 2, 3, 0xFFFFFFFF);
+            graphics.outline(getX() - 1, markerY - 1, width + 2, 3, 0xFFFFFFFF);
         }
 
         @Override

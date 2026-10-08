@@ -165,7 +165,7 @@ public final class ShaderPreviewRenderer {
         MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));
 
         int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         try {
             float[] bounds = computeUvBounds(model);
             MultiBufferSource forced = ignored -> delegate.getBuffer(source.item());
@@ -191,7 +191,7 @@ public final class ShaderPreviewRenderer {
             delegate.endBatch();
         } finally {
             EcaShaderInstance.clearLocalUvBounds();
-            graphics.pose().popPose();
+            graphics.pose().popMatrix();
         }
     }
 
@@ -223,7 +223,7 @@ public final class ShaderPreviewRenderer {
             .rotateX(vertical * 0.35F)
             .rotateY(horizontal * 0.35F);
 
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         try {
             graphics.pose().translate((left + right) / 2.0, bottom - 28.0, 220.0);
             graphics.pose().mulPose(new Matrix4f().scaling(size, size, -size));
@@ -245,7 +245,7 @@ public final class ShaderPreviewRenderer {
             delegate.endBatch();
         } finally {
             dispatcher.setRenderShadow(true);
-            graphics.pose().popPose();
+            graphics.pose().popMatrix();
         }
     }
 

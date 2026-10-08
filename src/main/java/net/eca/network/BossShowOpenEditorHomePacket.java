@@ -47,7 +47,7 @@ public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
     public static void encode(BossShowOpenEditorHomePacket msg, FriendlyByteBuf buf) {
         buf.writeVarInt(msg.definitions.size());
         for (BossShowDefinition def : msg.definitions) {
-            buf.writeResourceLocation(def.id());
+            buf.writeIdentifier(def.id());
             Identifier typeId = def.targetType() != null
                 ? BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType())
                 : null;
@@ -67,7 +67,7 @@ public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
         int n = buf.readVarInt();
         List<BossShowDefinition> defs = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
-            Identifier id = buf.readResourceLocation();
+            Identifier id = buf.readIdentifier();
             Identifier typeId = BossShowNetCodec.readNullableRL(buf);
             Trigger trig = BossShowNetCodec.readTrigger(buf);
             boolean cine = buf.readBoolean();

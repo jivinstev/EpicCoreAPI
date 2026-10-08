@@ -72,9 +72,9 @@ public final class ShaderProjectSelectionScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, 18, 0xFFFFFFFF);
         if (projects.isEmpty()) {
-            graphics.drawCenteredString(
+            graphics.centeredText(
                 font,
                 Component.translatable("gui.eca.shader_generator.project.none"),
                 width / 2,

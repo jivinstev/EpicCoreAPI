@@ -46,7 +46,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.UUID;
 
 //BossShow 编辑器：实体选择 + 录制状态机
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowEditorClientEvents {
 
     private static Entity cachedHovered = null;
@@ -119,9 +119,9 @@ public final class BossShowEditorClientEvents {
             && BossShowEditorState.isActivelyRecording()
             && BossShowEditorState.hasAnchor()
             && mc.gameRenderer != null) {
-            Camera cam = mc.gameRenderer.getMainCamera();
+            Camera cam = mc.gameRenderer.mainCamera();
             BossShowEditorState.captureFrameFromCamera(
-                cam.getPosition().x, cam.getPosition().y, cam.getPosition().z,
+                cam.position().x, cam.getPosition().y, cam.getPosition().z,
                 cam.getYRot(), cam.getXRot()
             );
         }
@@ -188,9 +188,9 @@ public final class BossShowEditorClientEvents {
             }
             if (event.getKey() == GLFW.GLFW_KEY_ENTER || event.getKey() == GLFW.GLFW_KEY_KP_ENTER) {
                 if (mc.gameRenderer != null) {
-                    Camera cam = mc.gameRenderer.getMainCamera();
+                    Camera cam = mc.gameRenderer.mainCamera();
                     BossShowEditorState.commitPoseCapture(
-                        cam.getPosition().x, cam.getPosition().y, cam.getPosition().z,
+                        cam.position().x, cam.getPosition().y, cam.getPosition().z,
                         cam.getYRot(), cam.getXRot());
                 }
                 mc.setScreenAndShow(new BossShowEditorScreen());
@@ -224,7 +224,7 @@ public final class BossShowEditorClientEvents {
 
         Minecraft mc = Minecraft.getInstance();
         Camera cam = event.getCamera();
-        Vec3 camPos = cam.getPosition();
+        Vec3 camPos = cam.position();
 
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
@@ -347,7 +347,7 @@ public final class BossShowEditorClientEvents {
         if (mc.gui.screen() != null) return;
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        event.getGuiGraphics().drawCenteredString(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
+        event.getGuiGraphics().centeredText(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
     }
 
     @SubscribeEvent

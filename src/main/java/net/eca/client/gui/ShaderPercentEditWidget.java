@@ -140,7 +140,7 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
         if (isHoveredOrFocused()) {
             graphics.fill(getX(), getY(), getX() + width, getY() + height, 0x33FFFFFF);
         }
-        graphics.drawCenteredString(
+        graphics.centeredText(
             Minecraft.getInstance().font,
             labelFormatter.format(value()),
             getX() + width / 2,

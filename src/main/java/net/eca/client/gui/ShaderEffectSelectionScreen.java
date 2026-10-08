@@ -127,8 +127,8 @@ public final class ShaderEffectSelectionScreen extends Screen {
         Component heading = selectedCategory == null
             ? title
             : Component.translatable(selectedCategory.translationKey());
-        graphics.drawCenteredString(font, heading, width / 2, 18, 0xFFFFFFFF);
-        graphics.drawCenteredString(
+        graphics.centeredText(font, heading, width / 2, 18, 0xFFFFFFFF);
+        graphics.centeredText(
             font,
             Component.translatable(selectedCategory == null
                 ? "gui.eca.shader_generator.effects.category_description"
@@ -138,7 +138,7 @@ public final class ShaderEffectSelectionScreen extends Screen {
             0xFF9DA3AC
         );
         if (selectedCategory != null && categoryEffects().isEmpty()) {
-            graphics.drawCenteredString(
+            graphics.centeredText(
                 font,
                 Component.translatable("gui.eca.shader_generator.effects.empty_category"),
                 width / 2,

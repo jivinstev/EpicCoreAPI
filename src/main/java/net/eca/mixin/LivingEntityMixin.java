@@ -142,7 +142,7 @@ LivingEntityMixin {
         }
         // 锁血（新加密格式 int）
         if (tag.contains(NBT_HEALTH_LOCK_ENC)) {
-            String encrypted = tag.getString(NBT_HEALTH_LOCK_ENC).isPresent()
+            String encrypted = tag.getStringOr(NBT_HEALTH_LOCK_ENC, "").isPresent()
                     ? tag.getStringOr(NBT_HEALTH_LOCK_ENC, "")
                     : String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_ENC, 0));
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_VALUE, encrypted);
@@ -157,7 +157,7 @@ LivingEntityMixin {
         }
         // 最大血量锁定（新加密格式 int）
         if (tag.contains(NBT_MAX_HEALTH_LOCK_ENC)) {
-            String encrypted = tag.getString(NBT_MAX_HEALTH_LOCK_ENC).isPresent()
+            String encrypted = tag.getStringOr(NBT_MAX_HEALTH_LOCK_ENC, "").isPresent()
                     ? tag.getStringOr(NBT_MAX_HEALTH_LOCK_ENC, "")
                     : String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_ENC, 0));
             entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_VALUE, encrypted);

@@ -594,7 +594,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         g.fill(0, 0, this.width, TOP_HEIGHT, 0xEE171922);
         g.fill(0, inspectorY, this.width, timelineY, 0xCC171A22);
         g.fill(0, timelineY - 1, this.width, this.height, 0xEE0E1016);
-        g.renderOutline(6, TOP_HEIGHT + 2, this.width - 12, previewBottom - TOP_HEIGHT - 2, 0x553F4657);
+        g.outline(6, TOP_HEIGHT + 2, this.width - 12, previewBottom - TOP_HEIGHT - 2, 0x553F4657);
         Component dirty = Component.translatable(BossShowEditorState.isDirty()
             ? "gui.eca.bossshow.editor.unsaved" : "gui.eca.bossshow.editor.clean");
         g.text(this.font, Component.translatable("gui.eca.bossshow.editor.tick",
@@ -605,16 +605,16 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         super.render(g, mouseX, mouseY, partialTick);
         drawTimelineHandle(g, timelineY, mouseX, mouseY);
         if (openDropdown >= 0) {
-            g.pose().pushPose();
+            g.pose().pushMatrix();
             g.pose().translate(0.0F, 0.0F, 400.0F);
             drawDropdown(g, mouseX, mouseY, partialTick);
-            g.pose().popPose();
+            g.pose().popMatrix();
         }
         if (contextMenuOpen) {
-            g.pose().pushPose();
+            g.pose().pushMatrix();
             g.pose().translate(0.0F, 0.0F, 500.0F);
             renderContextMenu(g, mouseX, mouseY);
-            g.pose().popPose();
+            g.pose().popMatrix();
         }
     }
 
@@ -633,7 +633,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
         }
         g.fill(left, top, right, bottom, 0xFF2C2F39);
-        g.renderOutline(left, top, right - left, bottom - top, 0xFF555B6A);
+        g.outline(left, top, right - left, bottom - top, 0xFF555B6A);
         for (int i = dropdownFirstWidgetIndex; i <= dropdownLastWidgetIndex && i < kids.size(); i++) {
             if (kids.get(i) instanceof AbstractWidget w) w.render(g, mouseX, mouseY, partialTick);
         }
@@ -827,7 +827,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     private void drawContextEntries(GuiGraphicsExtractor g, int x, int y, List<ContextEntry> entries, int hoveredIndex) {
         int height = entries.size() * CONTEXT_ROW_HEIGHT + 4;
         g.fill(x, y, x + CONTEXT_WIDTH, y + height, 0xFF2C2F39);
-        g.renderOutline(x, y, CONTEXT_WIDTH, height, 0xFF555B6A);
+        g.outline(x, y, CONTEXT_WIDTH, height, 0xFF555B6A);
         for (int i = 0; i < entries.size(); i++) {
             ContextEntry entry = entries.get(i);
             int rowY = y + 2 + i * CONTEXT_ROW_HEIGHT;
@@ -895,7 +895,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         boolean hovered = isOverTimelineHandle(mouseX, mouseY);
         g.fill(8, timelineY - 2, this.width - 8, timelineY, 0xFF454A58);
         g.fill(left, top, left + 48, top + 12, hovered || resizingTimeline ? 0xFF555B6A : 0xFF303541);
-        g.renderOutline(left, top, 48, 12, 0xFF747B8D);
+        g.outline(left, top, 48, 12, 0xFF747B8D);
         g.centeredText(this.font, timelineCollapsed ? "▲" : "▼", this.width / 2, top + 2, 0xFFE1E5EE);
     }
 

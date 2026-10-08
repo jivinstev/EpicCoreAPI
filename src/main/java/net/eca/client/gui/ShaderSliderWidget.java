@@ -179,8 +179,8 @@ public final class ShaderSliderWidget extends AbstractWidget {
             graphics.fill(getX(), getY(), getX() + fillWidth, getY() + height, TRACK_FILL);
         }
         int border = isHoveredOrFocused() ? 0xFFFFFFFF : BORDER;
-        graphics.renderOutline(getX(), getY(), width, height, border);
-        graphics.drawString(
+        graphics.outline(getX(), getY(), width, height, border);
+        graphics.text(
             Minecraft.getInstance().font,
             formatter.format(value()),
             getX() + 4,

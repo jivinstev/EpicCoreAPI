@@ -72,7 +72,7 @@ public class BossShowSaveEditorPacket implements CustomPacketPayload {
     }
 
     public static void encode(BossShowSaveEditorPacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.cutsceneId);
+        buf.writeIdentifier(msg.cutsceneId);
         BossShowNetCodec.writeNullableRL(buf, msg.targetTypeId);
         BossShowNetCodec.writeTrigger(buf, msg.trigger);
         buf.writeBoolean(msg.cinematic);
@@ -85,7 +85,7 @@ public class BossShowSaveEditorPacket implements CustomPacketPayload {
     }
 
     public static BossShowSaveEditorPacket decode(FriendlyByteBuf buf) {
-        Identifier cutsceneId = buf.readResourceLocation();
+        Identifier cutsceneId = buf.readIdentifier();
         Identifier typeId = BossShowNetCodec.readNullableRL(buf);
         Trigger trigger = BossShowNetCodec.readTrigger(buf);
         boolean cine = buf.readBoolean();

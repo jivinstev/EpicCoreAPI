@@ -115,7 +115,7 @@ public final class BossShowPlaybackTracker {
 
     // 登录时残留标记说明上次播放未正常结束，必须恢复进入播放前的模式。
     public static void recoverStaleSession(ServerPlayer viewer) {
-        if (viewer != null && viewer.getPersistentData().getCompound(NBT_PLAYBACK_MODE).isPresent()) {
+        if (viewer != null && viewer.getPersistentData().getCompoundOrEmpty(NBT_PLAYBACK_MODE).isPresent()) {
             restorePlaybackMode(viewer);
         }
     }
@@ -247,7 +247,7 @@ public final class BossShowPlaybackTracker {
     // 播放模式使用独立快照，使编辑器内试播结束后仍回到编辑器的旁观状态。
     private static boolean enterPlaybackMode(ServerPlayer viewer) {
         CompoundTag persistent = viewer.getPersistentData();
-        boolean createdSnapshot = !persistent.getCompound(NBT_PLAYBACK_MODE).isPresent();
+        boolean createdSnapshot = !persistent.getCompoundOrEmpty(NBT_PLAYBACK_MODE).isPresent();
         if (createdSnapshot) {
             CompoundTag root = new CompoundTag();
             root.putString(NBT_PREVIOUS_GAME_MODE, viewer.gameMode.getGameModeForPlayer().getName());
@@ -270,7 +270,7 @@ public final class BossShowPlaybackTracker {
     private static void restorePlaybackMode(ServerPlayer viewer) {
         if (viewer == null) return;
         CompoundTag persistent = viewer.getPersistentData();
-        if (!persistent.getCompound(NBT_PLAYBACK_MODE).isPresent()) return;
+        if (!persistent.getCompoundOrEmpty(NBT_PLAYBACK_MODE).isPresent()) return;
 
         CompoundTag root = persistent.getCompoundOrEmpty(NBT_PLAYBACK_MODE);
         GameType previous = GameType.byName(

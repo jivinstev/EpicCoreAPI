@@ -44,12 +44,12 @@ public class BossShowPlaySelectionPacket implements CustomPacketPayload {
     }
 
     public static void encode(BossShowPlaySelectionPacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.defId);
+        buf.writeIdentifier(msg.defId);
         buf.writeUUID(msg.targetUuid);
     }
 
     public static BossShowPlaySelectionPacket decode(FriendlyByteBuf buf) {
-        return new BossShowPlaySelectionPacket(buf.readResourceLocation(), buf.readUUID());
+        return new BossShowPlaySelectionPacket(buf.readIdentifier(), buf.readUUID());
     }
 
     public static void handle(BossShowPlaySelectionPacket msg, IPayloadContext ctx) {

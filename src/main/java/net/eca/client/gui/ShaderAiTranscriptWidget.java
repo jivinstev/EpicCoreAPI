@@ -353,7 +353,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_C && Screen.hasControlDown() && hasSelection()) {
+        if (keyCode == GLFW.GLFW_KEY_C && Minecraft.getInstance().hasControlDown() && hasSelection()) {
             Minecraft.getInstance().keyboardHandler.setClipboard(selectedText());
             return true;
         }
@@ -443,8 +443,8 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
                 case STATUS -> 0xFF806C42;
             };
             graphics.fill(cardX, top, cardX + cardWidth, top + layout.height, background);
-            graphics.renderOutline(cardX, top, cardWidth, layout.height, border);
-            graphics.drawString(
+            graphics.outline(cardX, top, cardWidth, layout.height, border);
+            graphics.text(
                 font,
                 roleLabel(layout.role),
                 cardX + CARD_PADDING,
@@ -544,7 +544,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
 
         @Override
         public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
-            graphics.drawString(font, text, baseX + x, baseY + y, color, false);
+            graphics.text(font, text, baseX + x, baseY + y, color, false);
         }
     }
 
@@ -562,7 +562,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
 
         @Override
         public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
-            graphics.renderOutline(baseX + x, baseY + y, width, height, color);
+            graphics.outline(baseX + x, baseY + y, width, height, color);
         }
     }
 

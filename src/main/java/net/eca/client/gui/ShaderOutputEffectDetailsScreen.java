@@ -122,12 +122,12 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - PANEL_WIDTH) / 2;
-        graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, 18, 0xFFFFFFFF);
         int baseY = 70;
         int end = Math.min(parameters.size(), scroll + visibleRows);
         for (int index = scroll; index < end; index++) {
             ShaderModuleDefinition.Parameter parameter = parameters.get(index);
-            graphics.drawString(font, Component.translatable(parameter.displayName()), left,
+            graphics.text(font, Component.translatable(parameter.displayName()), left,
                 baseY + (index - scroll) * 22, 0xFFC7CBD1, false);
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);

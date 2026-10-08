@@ -74,7 +74,7 @@ public class ItemStackClientMixin {
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         String disabled = Component.translatable("item.disabled").getString();
         String nbtTags = stack.has(DataComponents.CUSTOM_DATA)
-            ? Component.translatable("item.nbt_tags", stack.get(DataComponents.CUSTOM_DATA).copyTag().getAllKeys().size()).getString()
+            ? Component.translatable("item.nbt_tags", stack.get(DataComponents.CUSTOM_DATA).copyTag().keySet().size()).getString()
             : null;
         for (int i = 1; i < lines.size(); i++) {
             String text = lines.get(i).getString();

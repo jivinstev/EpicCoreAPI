@@ -3237,11 +3237,11 @@ public final class ShaderGeneratorScreen extends Screen {
         super.render(g, mx, my, pt);
 
         /* 5. 独立深度层确保下拉菜单覆盖已经写入深度缓冲的普通控件 */
-        g.pose().pushPose();
+        g.pose().pushMatrix();
         g.pose().translate(0.0F, 0.0F, 400.0F);
         drawDropdownBackground(g);
         renderDropdownWidgets(g, mx, my, pt);
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     /* 检查器 chrome 与文本标签；交互控件由 super.render 绘制 */
@@ -3265,7 +3265,7 @@ public final class ShaderGeneratorScreen extends Screen {
                 g.fill(row.x(), row.y(), row.x() + row.width(), row.y() + row.height(), background);
                 g.fill(row.x(), row.y(), row.x() + 4, row.y() + row.height(), row.color());
                 if (selected) {
-                    g.renderOutline(row.x(), row.y(), row.width(), row.height(), 0xFFE6E9ED);
+                    g.outline(row.x(), row.y(), row.width(), row.height(), 0xFFE6E9ED);
                 }
             }
         }
@@ -3342,14 +3342,14 @@ public final class ShaderGeneratorScreen extends Screen {
             return;
         }
         ElementScreenTransform box = elementScreenTransform(element, preview);
-        g.pose().pushPose();
+        g.pose().pushMatrix();
         g.pose().translate((float) box.centerX(), (float) box.centerY(), 0.0F);
         g.pose().mulPose(new Quaternionf().rotateZ((float) box.rotationRadians()));
         int left = (int) Math.round(-box.radiusX());
         int top = (int) Math.round(-box.radiusY());
         int width = Math.max(1, (int) Math.round(box.radiusX() * 2.0D));
         int height = Math.max(1, (int) Math.round(box.radiusY() * 2.0D));
-        g.renderOutline(left, top, width, height, 0xFFE6E9ED);
+        g.outline(left, top, width, height, 0xFFE6E9ED);
 
         drawHandle(g, left, top);
         drawHandle(g, left + width, top);
@@ -3358,7 +3358,7 @@ public final class ShaderGeneratorScreen extends Screen {
         int handleY = top - CANVAS_ROTATE_HANDLE_OFFSET;
         g.fill(0, handleY, 1, top, 0xFFE6E9ED);
         drawHandle(g, 0, handleY, 0xFF4D8DFF);
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     /* 元素选框在屏幕空间的矩形，绘制与手柄命中共用以保证几何一致 */
@@ -3687,7 +3687,7 @@ public final class ShaderGeneratorScreen extends Screen {
             graphics.fill(row.x(), row.y(), row.x() + row.width(), row.y() + row.height(), background);
             graphics.fill(row.x(), row.y(), row.x() + 4, row.y() + row.height(), row.color());
             if (selected) {
-                graphics.renderOutline(
+                graphics.outline(
                     row.x(),
                     row.y(),
                     row.width(),
@@ -3707,7 +3707,7 @@ public final class ShaderGeneratorScreen extends Screen {
         if (project.outputEffects().isEmpty()
                 && outputEffectListBottom - outputEffectListTop >= font.lineHeight + 2) {
             int x = this.width - RIGHT_WIDTH + 8;
-            graphics.drawCenteredString(this.font,
+            graphics.centeredText(this.font,
                 Component.translatable("gui.eca.shader_generator.output_effect.empty"),
                 x + (RIGHT_WIDTH - 16) / 2, outputEffectListTop + 6, 0xFF9DA3AC);
         }
@@ -3871,9 +3871,9 @@ public final class ShaderGeneratorScreen extends Screen {
         ) {
             int border = isHoveredOrFocused() ? 0xFFFFFFFF : 0xFF8B9098;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, 0x55212428);
-            graphics.renderOutline(getX(), getY(), width, height, border);
+            graphics.outline(getX(), getY(), width, height, border);
             if (checked) {
-                graphics.drawCenteredString(
+                graphics.centeredText(
                     Minecraft.getInstance().font,
                     "◉",
                     getX() + width / 2,
@@ -3924,7 +3924,7 @@ public final class ShaderGeneratorScreen extends Screen {
                 getMessage().getString(),
                 width - 8
             );
-            graphics.drawString(
+            graphics.text(
                 Minecraft.getInstance().font,
                 name,
                 getX() + 5,
@@ -3976,11 +3976,11 @@ public final class ShaderGeneratorScreen extends Screen {
             if (width < 50) {
                 /* 窄控件仅显示色块，不绘制 hex 文本，避免与相邻图层名重叠 */
                 graphics.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, color);
-                graphics.renderOutline(getX(), getY(), width, height, border);
+                graphics.outline(getX(), getY(), width, height, border);
             } else {
                 graphics.fill(getX() + 2, getY() + 2, getX() + 28, getY() + height - 2, color);
-                graphics.renderOutline(getX(), getY(), width, height, border);
-                graphics.drawString(
+                graphics.outline(getX(), getY(), width, height, border);
+                graphics.text(
                     Minecraft.getInstance().font,
                     String.format("#%06X", color & 0xFFFFFF),
                     getX() + 32,

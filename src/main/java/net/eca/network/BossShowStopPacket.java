@@ -33,12 +33,12 @@ public class BossShowStopPacket implements CustomPacketPayload {
     }
 
     public static void encode(BossShowStopPacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.cutsceneId);
+        buf.writeIdentifier(msg.cutsceneId);
         buf.writeBoolean(msg.skipped);
     }
 
     public static BossShowStopPacket decode(FriendlyByteBuf buf) {
-        return new BossShowStopPacket(buf.readResourceLocation(), buf.readBoolean());
+        return new BossShowStopPacket(buf.readIdentifier(), buf.readBoolean());
     }
 
     public static void handle(BossShowStopPacket msg, IPayloadContext ctx) {

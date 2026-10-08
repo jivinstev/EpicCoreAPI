@@ -52,9 +52,9 @@ public class AuroraShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().getYRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().getXRot());
+                if (mc.gameRenderer != null && mc.gameRenderer.mainCamera() != null) {
+                    float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().getYRot());
+                    float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().getXRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

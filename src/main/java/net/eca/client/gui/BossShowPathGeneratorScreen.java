@@ -222,28 +222,28 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
         updateDerivedTiming();
         int center = this.width / 2;
         int labelX = center - 150;
-        graphics.drawCenteredString(this.font, this.title, center, 18, 0xFFFFFF);
-        graphics.drawCenteredString(this.font,
+        graphics.centeredText(this.font, this.title, center, 18, 0xFFFFFF);
+        graphics.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.editor.path.start",
                 startTick), center, 34, 0xAAAAAA);
-        graphics.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.path.forward"),
+        graphics.text(this.font, Component.translatable("gui.eca.bossshow.editor.path.forward"),
             labelX, 44, 0xCCCCCC, false);
-        graphics.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.path.right"),
+        graphics.text(this.font, Component.translatable("gui.eca.bossshow.editor.path.right"),
             center + 10, 44, 0xCCCCCC, false);
-        graphics.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.path.up"),
+        graphics.text(this.font, Component.translatable("gui.eca.bossshow.editor.path.up"),
             labelX, 78, 0xCCCCCC, false);
-        graphics.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.path.yaw_change"),
+        graphics.text(this.font, Component.translatable("gui.eca.bossshow.editor.path.yaw_change"),
             center + 10, 78, 0xCCCCCC, false);
-        graphics.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.path.pitch_change"),
+        graphics.text(this.font, Component.translatable("gui.eca.bossshow.editor.path.pitch_change"),
             labelX, 112, 0xCCCCCC, false);
-        graphics.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.path.duration"),
+        graphics.text(this.font, Component.translatable("gui.eca.bossshow.editor.path.duration"),
             center + 10, 112, 0xCCCCCC, false);
-        graphics.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.path.speed"),
+        graphics.text(this.font, Component.translatable("gui.eca.bossshow.editor.path.speed"),
             labelX, 146, 0xCCCCCC, false);
-        graphics.drawCenteredString(this.font,
+        graphics.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.editor.path.hint"), center, 204, 0xAAAAAA);
         if (!error.getString().isEmpty()) {
-            graphics.drawCenteredString(this.font, error, center, this.height - 38, 0xFF5555);
+            graphics.centeredText(this.font, error, center, this.height - 38, 0xFF5555);
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }

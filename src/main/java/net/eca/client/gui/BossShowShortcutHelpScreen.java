@@ -51,7 +51,7 @@ final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorS
         int top = 18;
         int bottom = Math.min(this.height - 44, top + 26 + SHORTCUT_KEYS.size() * 17);
         g.fill(left, top, left + panelWidth, bottom, 0xE8171A22);
-        g.renderOutline(left, top, panelWidth, bottom - top, 0xFF555B6A);
+        g.outline(left, top, panelWidth, bottom - top, 0xFF555B6A);
         g.centeredText(this.font, this.title, this.width / 2, top + 8, 0xFFFFFFFF);
         int y = top + 26;
         for (String key : SHORTCUT_KEYS) {

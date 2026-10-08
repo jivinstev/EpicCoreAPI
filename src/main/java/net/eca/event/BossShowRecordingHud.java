@@ -11,7 +11,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 //BossShow 录制模式 HUD：顶部时间轴与帧数
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowRecordingHud {
 
     private static final double MIN_WINDOW_SECONDS = 30.0;

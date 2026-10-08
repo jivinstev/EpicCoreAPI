@@ -203,8 +203,8 @@ final class ShaderAiAssistantScreen extends Screen {
         );
         graphics.disableScissor();
         graphics.fill(panelRight - 1, 0, panelRight, height, 0xFF60656D);
-        graphics.drawCenteredString(font, title, panelRight / 2, 9, 0xFFFFFFFF);
-        graphics.drawCenteredString(
+        graphics.centeredText(font, title, panelRight / 2, 9, 0xFFFFFFFF);
+        graphics.centeredText(
             font,
             Component.translatable("gui.eca.shader_generator.ai.preview"),
             previewLeft + (previewRight - previewLeft) / 2,

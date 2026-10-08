@@ -11,7 +11,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 //客户端事件处理：断开连接时清空实体扩展客户端状态，防止单人模式下静态状态跨存档残留
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class EcaClientEventHandler {
 
     private EcaClientEventHandler() {}

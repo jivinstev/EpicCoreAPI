@@ -30,17 +30,17 @@ public class EntityExtensionActiveTypePacket implements CustomPacketPayload {
     }
 
     public static void encode(EntityExtensionActiveTypePacket message, FriendlyByteBuf buffer) {
-        buffer.writeResourceLocation(message.dimensionId);
+        buffer.writeIdentifier(message.dimensionId);
         buffer.writeBoolean(message.typeId != null);
         if (message.typeId != null) {
-            buffer.writeResourceLocation(message.typeId);
+            buffer.writeIdentifier(message.typeId);
         }
     }
 
     public static EntityExtensionActiveTypePacket decode(FriendlyByteBuf buffer) {
-        Identifier dimensionId = buffer.readResourceLocation();
+        Identifier dimensionId = buffer.readIdentifier();
         boolean hasType = buffer.readBoolean();
-        Identifier typeId = hasType ? buffer.readResourceLocation() : null;
+        Identifier typeId = hasType ? buffer.readIdentifier() : null;
         return new EntityExtensionActiveTypePacket(dimensionId, typeId);
     }
 

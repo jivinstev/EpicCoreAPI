@@ -120,8 +120,8 @@ final class ShaderMcpScreen extends Screen {
         graphics.fill(0, 0, width, 26, 0xFF17191C);
         graphics.fill(0, 26, panelRight, height, 0xFF1A1C20);
         graphics.fill(panelRight - 1, 0, panelRight, height, 0xFF60656D);
-        graphics.drawCenteredString(font, title, panelRight / 2, 9, 0xFFFFFFFF);
-        graphics.drawString(
+        graphics.centeredText(font, title, panelRight / 2, 9, 0xFFFFFFFF);
+        graphics.text(
             font,
             Component.translatable("gui.eca.shader_generator.mcp.port"),
             PADDING,
@@ -136,11 +136,11 @@ final class ShaderMcpScreen extends Screen {
         Component state = Component.translatable(projectScreen.isMcpRunning()
             ? "gui.eca.shader_generator.mcp.state_running"
             : "gui.eca.shader_generator.mcp.state_stopped");
-        graphics.drawString(font, state, PADDING, textY, stateColor, false);
+        graphics.text(font, state, PADDING, textY, stateColor, false);
         textY += 16;
-        graphics.drawString(font, projectScreen.mcpEndpoint(), PADDING, textY, normalColor, false);
+        graphics.text(font, projectScreen.mcpEndpoint(), PADDING, textY, normalColor, false);
         textY += 16;
-        graphics.drawString(
+        graphics.text(
             font,
             Component.translatable(
                 "gui.eca.shader_generator.mcp.tool_count",
@@ -152,7 +152,7 @@ final class ShaderMcpScreen extends Screen {
             false
         );
         textY += 16;
-        graphics.drawString(
+        graphics.text(
             font,
             Component.translatable("gui.eca.shader_generator.mcp.loopback_only"),
             PADDING,
@@ -163,7 +163,7 @@ final class ShaderMcpScreen extends Screen {
         textY += 22;
 
         List<ShaderMcpSessionInfo> sessions = projectScreen.mcpSessions();
-        graphics.drawString(
+        graphics.text(
             font,
             Component.translatable("gui.eca.shader_generator.mcp.clients", sessions.size()),
             PADDING,
@@ -173,7 +173,7 @@ final class ShaderMcpScreen extends Screen {
         );
         textY += 15;
         if (sessions.isEmpty()) {
-            graphics.drawString(
+            graphics.text(
                 font,
                 Component.translatable("gui.eca.shader_generator.mcp.no_clients"),
                 PADDING + 6,
@@ -188,7 +188,7 @@ final class ShaderMcpScreen extends Screen {
                 int top = textY + index * 42;
                 graphics.fill(PADDING, top, panelRight - PADDING, top + 36, 0xFF24272C);
                 String title = session.clientName() + " " + session.clientVersion();
-                graphics.drawString(font, title, PADDING + 6, top + 5, 0xFF68DCE8, false);
+                graphics.text(font, title, PADDING + 6, top + 5, 0xFF68DCE8, false);
                 long idleSeconds = Math.max(
                     0L,
                     (System.currentTimeMillis() - session.lastActivity()) / 1000L
@@ -197,11 +197,11 @@ final class ShaderMcpScreen extends Screen {
                     + "  " + Component.translatable(
                         "gui.eca.shader_generator.mcp.last_active", idleSeconds
                     ).getString();
-                graphics.drawString(font, detail, PADDING + 6, top + 19, 0xFFAAB0B8, false);
+                graphics.text(font, detail, PADDING + 6, top + 19, 0xFFAAB0B8, false);
             }
         }
 
-        graphics.drawString(
+        graphics.text(
             font,
             status,
             PADDING,
@@ -230,7 +230,7 @@ final class ShaderMcpScreen extends Screen {
             partialTick
         );
         graphics.disableScissor();
-        graphics.drawCenteredString(
+        graphics.centeredText(
             font,
             Component.translatable("gui.eca.shader_generator.ai.preview"),
             previewLeft + (previewRight - previewLeft) / 2,

@@ -93,16 +93,16 @@ public final class ShaderProjectDetailsScreen extends Screen {
         int left = (width - DIALOG_WIDTH) / 2;
         int top = height / 2 - 72;
         graphics.fill(left, top, left + DIALOG_WIDTH, top + 144, 0xFF202225);
-        graphics.renderOutline(left, top, DIALOG_WIDTH, 144, 0xFF60656D);
-        graphics.drawCenteredString(font, title, width / 2, top + 10, 0xFFFFFFFF);
-        graphics.drawString(font,
+        graphics.outline(left, top, DIALOG_WIDTH, 144, 0xFF60656D);
+        graphics.centeredText(font, title, width / 2, top + 10, 0xFFFFFFFF);
+        graphics.text(font,
             Component.translatable("gui.eca.shader_generator.project.mod_id_prompt"),
             left + 16, top + 20, 0xFFC7CBD1, false);
-        graphics.drawString(font,
+        graphics.text(font,
             Component.translatable("gui.eca.shader_generator.project.shader_name_prompt"),
             left + 16, top + 64, 0xFFC7CBD1, false);
         if (error != null) {
-            graphics.drawCenteredString(font, error, width / 2, top + 100, 0xFFFF6B6B);
+            graphics.centeredText(font, error, width / 2, top + 100, 0xFFFF6B6B);
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }

@@ -12,7 +12,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import org.lwjgl.glfw.GLFW;
 
 //ECA 客户端按键绑定注册
-@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public final class BossShowKeyBindings {
 
     public static final String CATEGORY = "key.categories.eca";
