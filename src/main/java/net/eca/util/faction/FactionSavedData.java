@@ -38,7 +38,7 @@ public class FactionSavedData extends SavedData {
 
     public FactionSavedData() {}
 
-    public static FactionSavedData load(CompoundTag tag) {
+    public static FactionSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         FactionSavedData data = new FactionSavedData();
         if (tag.contains(NBT_FACTIONS, Tag.TAG_COMPOUND)) {
             CompoundTag factionsTag = tag.getCompound(NBT_FACTIONS);
@@ -66,8 +66,7 @@ public class FactionSavedData extends SavedData {
 
     public static FactionSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
-            FactionSavedData::load,
-            FactionSavedData::new,
+            new SavedData.Factory<>(FactionSavedData::new, FactionSavedData::load, null),
             DATA_NAME
         );
     }

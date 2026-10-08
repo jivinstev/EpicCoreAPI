@@ -511,7 +511,6 @@ public final class ShaderSourceEditorScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        if (editor != null) editor.tick();
         if (compilePending && System.currentTimeMillis() - lastEditMs >= COMPILE_DELAY_MS) {
             compile(false);
         }

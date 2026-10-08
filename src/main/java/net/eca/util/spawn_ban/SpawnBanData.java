@@ -65,8 +65,11 @@ public class SpawnBanData extends SavedData {
 
     public static SpawnBanData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
-            SpawnBanData::load,
-            SpawnBanData::new,
+            new SavedData.Factory<>(
+                SpawnBanData::new,
+                (tag, registries) -> load(tag),
+                null
+            ),
             DATA_NAME
         );
     }

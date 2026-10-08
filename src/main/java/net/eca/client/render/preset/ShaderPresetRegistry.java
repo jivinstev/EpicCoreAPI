@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.fml.ModList;
-import net.minecraftforge.forgespi.language.IModInfo;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -54,7 +53,7 @@ public final class ShaderPresetRegistry {
     /* 扫描 @RegisterShaderPreset 注解：读 value() 得到预设 id，作为 MCR 可发现的清单条目 */
     private static void scanAnnotations() {
         ModList.get().forEachModFile(modFile -> {
-            for (IModInfo modInfo : modFile.getModInfos()) {
+            for (var modInfo : modFile.getModInfos()) {
                 modFile.getScanResult().getAnnotations().forEach(annotationData -> {
                     if (RegisterShaderPreset.class.getName().equals(annotationData.annotationType().getClassName())) {
                         String idStr = (String) annotationData.annotationData().get("value");
@@ -98,7 +97,7 @@ public final class ShaderPresetRegistry {
     /* 新目录优先注册；旧 shaders/core 仅在没有同 id 新资源时提供兼容。 */
     private static void scanModPresets() {
         ModList.get().forEachModFile(modFile -> {
-            for (IModInfo modInfo : modFile.getModInfos()) {
+            for (var modInfo : modFile.getModInfos()) {
                 String modid = modInfo.getModId();
                 Path canonical = modFile.findResource("assets", modid, "eca", "shader_presets");
                 scanModPresetDirectory(canonical, canonical, modid);

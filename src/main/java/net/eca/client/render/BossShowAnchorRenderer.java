@@ -24,6 +24,7 @@ import org.joml.Quaternionf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 
 import java.util.ArrayList;
@@ -133,7 +134,7 @@ public final class BossShowAnchorRenderer {
         if (vertices.size() < 2) return;
 
         var poseMatrix = pose.last().pose();
-        var normalMatrix = pose.last().normal();
+        var lastPose = pose.last();
 
         for (int i = 0; i < vertices.size() - 1; i++) {
             Vec3 p1 = vertices.get(i);
@@ -144,10 +145,10 @@ public final class BossShowAnchorRenderer {
             float nz = (float) dir.z;
             vc.addVertex(poseMatrix, (float) p1.x, (float) p1.y, (float) p1.z)
                 .setColor(PATH_R, PATH_G, PATH_B, PATH_A)
-                .normal(normalMatrix, nx, ny, nz);
+                .setNormal(lastPose, nx, ny, nz);
             vc.addVertex(poseMatrix, (float) p2.x, (float) p2.y, (float) p2.z)
                 .setColor(PATH_R, PATH_G, PATH_B, PATH_A)
-                .normal(normalMatrix, nx, ny, nz);
+                .setNormal(lastPose, nx, ny, nz);
         }
     }
 
@@ -165,7 +166,8 @@ public final class BossShowAnchorRenderer {
         pose.scale(-1.0f, -1.0f, 1.0f);
         playerHeadModel.setupAnim(0f, worldYaw, 0f);
         playerHeadModel.renderToBuffer(pose, buffer.getBuffer(playerHeadRenderType),
-            LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, HEAD_ALPHA);
+            LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+            net.minecraft.util.FastColor.ARGB32.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
         pose.popPose();
 
         renderHeadLabel(pose, buffer, wp, ordinal, camRot, font);
@@ -192,6 +194,6 @@ public final class BossShowAnchorRenderer {
             SkullBlockRenderer.createSkullRenderers(mc.getEntityModels());
         playerHeadModel = models.get(SkullBlock.Types.PLAYER);
         //translucent 渲染类型支持 alpha 混合，用 vanilla 头颅同款默认皮肤纹理
-        playerHeadRenderType = RenderType.entityTranslucent(DefaultPlayerSkin.getDefaultSkin());
+        playerHeadRenderType = RenderType.entityTranslucent(DefaultPlayerSkin.getDefaultTexture());
     }
 }

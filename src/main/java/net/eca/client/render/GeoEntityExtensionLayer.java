@@ -100,11 +100,10 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
                                    float alpha, RenderType type, boolean oculus) {
         if (type == null) return;
         if (oculus) {
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
-            builder.begin(VertexFormat.Mode.QUADS, type.format());
+            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
             this.renderer.reRender(bakedModel, poseStack, rt -> builder, animatable, type, builder,
                     partialTick, light, overlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
-            ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(type, 1.0f), builder, builder.end());
+            ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(type, 1.0f), builder, builder.buildOrThrow());
         } else {
             this.renderer.reRender(bakedModel, poseStack, bufferSource, animatable, type,
                     bufferSource.getBuffer(type), partialTick, light, overlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
@@ -116,17 +115,16 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
                                   ShaderMaskPass pass, boolean oculus) {
         if (pass == null || pass.alpha() <= 0.0f) return;
         RenderType type = pass.renderType();
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
-        builder.begin(VertexFormat.Mode.QUADS, type.format());
+        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
         this.renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, type, builder,
             partialTick, light, overlay, -1);
         if (oculus) {
-            ShaderMaskRenderQueue.enqueue(pass, builder, builder.end());
+            ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
         } else {
             if (bufferSource instanceof MultiBufferSource.BufferSource source) {
                 source.endBatch();
             }
-            ShaderMaskRenderQueue.drawNow(pass, builder, builder.end());
+            ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
         }
     }
 }

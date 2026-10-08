@@ -50,10 +50,10 @@ public abstract class ItemRendererMixin {
             renderer.renderModelLists(model, stack, combinedLight, combinedOverlay, poseStack, consumer);
             consumer.finish(batch -> {
                 if (queued) {
-                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().end(),
+                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
                         batch.uvTransform());
                 } else {
-                    ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().end(),
+                    ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
                         batch.uvTransform());
                 }
             });

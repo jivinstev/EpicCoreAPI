@@ -2,7 +2,7 @@ package net.eca.blender.client.runtime;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -46,6 +46,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
     private EcaShaderInstance shader;
     private RenderType type;
     private MultiBufferSource.BufferSource buffers;
+    private ByteBufferBuilder byteBuffer;
 
     private BlendMaterialProgram(ResourceLocation id, ResourceProvider provider, List<ResourceLocation> textures,
                                  List<BlendTimeDriver> drivers) {
@@ -172,7 +173,9 @@ public final class BlendMaterialProgram implements AutoCloseable {
                 .setLightmapState(RenderType.LIGHTMAP).setOverlayState(RenderType.OVERLAY)
                 .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST).setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true));
-        buffers = MultiBufferSource.immediate(new BufferBuilder(256));
+        if (byteBuffer != null) byteBuffer.close();
+        byteBuffer = new ByteBufferBuilder(256);
+        buffers = MultiBufferSource.immediate(byteBuffer);
     }
 
     public VertexConsumer begin(Matrix4f pose, float[] positions, float frame) throws IOException {
@@ -199,6 +202,8 @@ public final class BlendMaterialProgram implements AutoCloseable {
         shader = null;
         type = null;
         buffers = null;
+        if (byteBuffer != null) byteBuffer.close();
+        byteBuffer = null;
     }
 
     private static String json(ResourceLocation id, int imageCount, int driverCount) {

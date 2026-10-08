@@ -13,7 +13,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.neoforged.fml.ModList;
-import net.minecraftforge.forgespi.language.IModInfo;
+import net.neoforged.neoforgespi.language.IModInfo;
+import net.minecraft.core.registries.Registries;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -205,7 +206,11 @@ public class RaidManager {
     private static BlockPos resolveCenter(ServerLevel level, RaidDefinition def, BlockPos pos) {
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
-            StructureStart start = level.structureManager().getStructureWithPieceAt(pos, key);
+            Structure structure = level.registryAccess().registryOrThrow(Registries.STRUCTURE).get(key);
+            if (structure == null) {
+                return null;
+            }
+            StructureStart start = level.structureManager().getStructureWithPieceAt(pos, structure);
             return start.isValid() ? start.getBoundingBox().getCenter() : null;
         }
         TagKey<Structure> tag = def.getTargetStructureTag();

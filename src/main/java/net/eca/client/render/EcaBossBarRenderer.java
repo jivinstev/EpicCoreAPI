@@ -232,13 +232,12 @@ public final class EcaBossBarRenderer {
                 GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ZERO
         );
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder clearBuilder = Tesselator.getInstance().getBuilder();
-        clearBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder clearBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         clearBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 255);
-        BufferUploader.drawWithShader(clearBuilder.end());
+        BufferUploader.drawWithShader(clearBuilder.buildOrThrow());
         RenderSystem.colorMask(true, true, true, true);
 
         // 渲染贴图，alpha 通道直接写入帧缓冲区
@@ -251,13 +250,12 @@ public final class EcaBossBarRenderer {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         float texU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         float texV1 = fullHeight <= 0 ? 0.0f : (float) drawHeight / (float) fullHeight;
-        BufferBuilder texBuilder = Tesselator.getInstance().getBuilder();
-        texBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder texBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         texBuilder.addVertex(matrix, x, y + drawHeight, 0).setUv(0.0f, texV1);
         texBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setUv(texU1, texV1);
         texBuilder.addVertex(matrix, x + drawWidth, y, 0).setUv(texU1, 0.0f);
         texBuilder.addVertex(matrix, x, y, 0).setUv(0.0f, 0.0f);
-        BufferUploader.drawWithShader(texBuilder.end());
+        BufferUploader.drawWithShader(texBuilder.buildOrThrow());
 
         // 将 alpha 缩放到 0.5，使着色器半透明叠加在贴图上
         RenderSystem.colorMask(false, false, false, true);
@@ -267,13 +265,12 @@ public final class EcaBossBarRenderer {
                 GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.SRC_ALPHA
         );
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder scaleBuilder = Tesselator.getInstance().getBuilder();
-        scaleBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder scaleBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         scaleBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 127);
-        BufferUploader.drawWithShader(scaleBuilder.end());
+        BufferUploader.drawWithShader(scaleBuilder.buildOrThrow());
         RenderSystem.colorMask(true, true, true, true);
 
         // 渲染着色器，使用 DST_ALPHA 混合（只在贴图非透明区域显示）
@@ -284,13 +281,12 @@ public final class EcaBossBarRenderer {
         );
         float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         int light = LightTexture.FULL_BRIGHT;
-        BufferBuilder shaderBuilder = Tesselator.getInstance().getBuilder();
-        shaderBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+        BufferBuilder shaderBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
         shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        BufferUploader.drawWithShader(shaderBuilder.end());
+        BufferUploader.drawWithShader(shaderBuilder.buildOrThrow());
         renderType.clearRenderState();
 
         RenderSystem.defaultBlendFunc();

@@ -89,7 +89,7 @@ public final class FrustumGuard {
                 window == null ? -1 : window.getWidth(),
                 window == null ? -1 : window.getHeight(),
                 minecraft.options == null ? "n/a" : minecraft.options.fov().get(),
-                minecraft.getFrameTime());
+                minecraft.getTimer().getGameTimeDeltaPartialTick(false));
 
         reportCamera(minecraft);
         reportPlayer(minecraft);

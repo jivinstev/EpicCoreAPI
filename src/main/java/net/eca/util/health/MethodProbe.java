@@ -2208,10 +2208,10 @@ public final class MethodProbe {
         @SuppressWarnings("rawtypes")
         private static SynchedDataState capture(LivingEntity entity) {
             Map<Integer, Object> values = new LinkedHashMap<>();
-            Int2ObjectMap<?> items = (Int2ObjectMap<?>) entity.getEntityData().itemsById;
-            for (Int2ObjectMap.Entry<?> entry : items.int2ObjectEntrySet()) {
-                SynchedEntityData.DataItem item = (SynchedEntityData.DataItem) entry.getValue();
-                if (item != null) values.put(entry.getIntKey(), item.value);
+            SynchedEntityData.DataItem<?>[] items = entity.getEntityData().itemsById;
+            for (int id = 0; id < items.length; id++) {
+                SynchedEntityData.DataItem<?> item = items[id];
+                if (item != null) values.put(id, item.getValue());
             }
             return new SynchedDataState(values);
         }

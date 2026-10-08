@@ -3,6 +3,7 @@ package net.eca.client.render.shader_generator;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
@@ -24,6 +25,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fStack;
 import org.joml.Quaternionf;
 
 import java.util.List;
@@ -103,10 +105,10 @@ public final class ShaderPreviewRenderer {
     ) {
         Minecraft minecraft = Minecraft.getInstance();
         Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
-        PoseStack modelView = RenderSystem.getModelViewStack();
-        modelView.pushPose();
+        Matrix4fStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
         try {
-            modelView.setIdentity();
+            modelView.identity();
             RenderSystem.applyModelViewMatrix();
 
             float centerX = ((left + right) / (float) minecraft.getWindow().getGuiScaledWidth()) - 1.0F;
@@ -118,8 +120,7 @@ public final class ShaderPreviewRenderer {
                 .scale(scaleX, scaleY, 1.0F);
             RenderSystem.setProjectionMatrix(projection, VertexSorting.ORTHOGRAPHIC_Z);
 
-            BufferBuilder builder = Tesselator.getInstance().getBuilder();
-            builder.begin(renderType.mode(), DefaultVertexFormat.BLOCK);
+            BufferBuilder builder = Tesselator.getInstance().begin(renderType.mode(), DefaultVertexFormat.BLOCK);
             blockVertex(builder, -1.0F, -1.0F, 0.0F, 1.0F);
             blockVertex(builder, 1.0F, -1.0F, 1.0F, 1.0F);
             blockVertex(builder, 1.0F, 1.0F, 1.0F, 0.0F);
@@ -128,10 +129,10 @@ public final class ShaderPreviewRenderer {
             blockVertex(builder, 1.0F, 1.0F, 1.0F, 0.0F);
             blockVertex(builder, 1.0F, -1.0F, 1.0F, 1.0F);
             blockVertex(builder, -1.0F, -1.0F, 0.0F, 1.0F);
-            renderType.end(builder, VertexSorting.ORTHOGRAPHIC_Z);
+            renderType.draw(builder.buildOrThrow());
         } finally {
             RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.ORTHOGRAPHIC_Z);
-            modelView.popPose();
+            modelView.popMatrix();
             RenderSystem.applyModelViewMatrix();
         }
     }
@@ -162,7 +163,7 @@ public final class ShaderPreviewRenderer {
         ItemRenderer itemRenderer = minecraft.getItemRenderer();
         Level level = minecraft.level;
         BakedModel model = itemRenderer.getModel(PREVIEW_ITEM, level, minecraft.player, 0);
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new BufferBuilder(4096));
+        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));
 
         int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);
         graphics.pose().pushPose();
@@ -211,8 +212,8 @@ public final class ShaderPreviewRenderer {
             return;
         }
 
-        RenderType entityType = source.entity(minecraft.player.getSkinTextureLocation());
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new BufferBuilder(8192));
+        RenderType entityType = source.entity(minecraft.player.getSkin().texture());
+        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(8192));
         MultiBufferSource forced = ignored -> delegate.getBuffer(entityType);
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
         int size = Math.max(24, Math.min(right - left, bottom - top) / 3);
@@ -226,7 +227,7 @@ public final class ShaderPreviewRenderer {
         graphics.pose().pushPose();
         try {
             graphics.pose().translate((left + right) / 2.0, bottom - 28.0, 220.0);
-            graphics.pose().mulPoseMatrix(new Matrix4f().scaling(size, size, -size));
+            graphics.pose().mulPose(new Matrix4f().scaling(size, size, -size));
             graphics.pose().mulPose(orientation);
             Lighting.setupForEntityInInventory();
             dispatcher.overrideCameraOrientation(new Quaternionf().rotateX(vertical * 0.35F));
@@ -304,7 +305,7 @@ public final class ShaderPreviewRenderer {
         float uMax,
         float vMax
     ) {
-        int stride = DefaultVertexFormat.BLOCK.getIntegerSize();
+        int stride = DefaultVertexFormat.BLOCK.getVertexSize() / 4;
         int uvOffset = 4;
         for (BakedQuad quad : quads) {
             int[] vertices = quad.getVertices();

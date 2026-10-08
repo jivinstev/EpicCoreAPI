@@ -234,18 +234,17 @@ public abstract class LevelRendererMixin {
         int alphaInt = (int)(alpha * 255.0f);
 
         Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder bufferBuilder = tesselator.getBuilder();
 
         for (int i = 0; i < 6; ++i) {
             poseStack.pushPose();
             rotateToFace(poseStack, i);
             Matrix4f matrix = poseStack.last().pose();
-            bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             bufferBuilder.addVertex(matrix, -size, -size, -size).setUv(0.0f, 0.0f).setColor(red, green, blue, alphaInt);
             bufferBuilder.addVertex(matrix, -size, -size, size).setUv(0.0f, uvScale).setColor(red, green, blue, alphaInt);
             bufferBuilder.addVertex(matrix, size, -size, size).setUv(uvScale, uvScale).setColor(red, green, blue, alphaInt);
             bufferBuilder.addVertex(matrix, size, -size, -size).setUv(uvScale, 0.0f).setColor(red, green, blue, alphaInt);
-            BufferUploader.drawWithShader(bufferBuilder.end());
+            BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
             poseStack.popPose();
         }
 
@@ -262,11 +261,10 @@ public abstract class LevelRendererMixin {
         int rings = 16;
 
         Tesselator tesselator = Tesselator.getInstance();
-        BufferBuilder bufferBuilder = tesselator.getBuilder();
         Matrix4f matrix = poseStack.last().pose();
 
         renderType.setupRenderState();
-        bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+        BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
 
         for (int ring = 0; ring < rings; ring++) {
             float phi1 = (float) Math.PI * ring / rings;
@@ -292,7 +290,7 @@ public abstract class LevelRendererMixin {
             }
         }
 
-        BufferUploader.drawWithShader(bufferBuilder.end());
+        BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
         renderType.clearRenderState();
     }
 

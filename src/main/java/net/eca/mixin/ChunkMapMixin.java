@@ -1,7 +1,7 @@
 package net.eca.mixin;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import com.mojang.datafixers.util.Either;
+import net.minecraft.server.level.ChunkResult;
 import net.eca.api.EcaAPI;
 import net.eca.util.EcaLogger;
 import net.eca.util.EntityRemovalQuarantine;
@@ -15,7 +15,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -58,7 +58,7 @@ public abstract class ChunkMapMixin {
     private void eca$guardChunkGeneration(
         ChunkHolder holder,
         ChunkStatus status,
-        CallbackInfoReturnable<CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>>> cir
+        CallbackInfoReturnable<CompletableFuture<ChunkResult<ChunkAccess>>> cir
     ) {
         ChunkPos pos = holder.getPos();
         if (Math.abs(pos.x) > ECA_SAFE_CHUNK_LIMIT || Math.abs(pos.z) > ECA_SAFE_CHUNK_LIMIT) {

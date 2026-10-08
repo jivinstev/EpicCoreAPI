@@ -25,7 +25,6 @@
     "FallingBlockRendererMixin"
   ],
   "mixins": [
-    "CapabilityDispatcherMixin",
     "ChunkMapMixin",
     "ClassInstanceMultiMapMixin",
     "ConnectionMixin",

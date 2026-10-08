@@ -1,5 +1,6 @@
 package net.eca.mixin;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 
 import net.eca.util.item_extension.EcaTooltipLine;
@@ -31,7 +32,7 @@ public class ItemStackClientMixin {
     @Inject(method = "getHoverName", at = @At("RETURN"), cancellable = true)
     private void eca$overrideItemName(CallbackInfoReturnable<Component> callback) {
         ItemStack stack = (ItemStack) (Object) this;
-        if (stack.hasCustomHoverName()) return;
+        if (stack.has(DataComponents.CUSTOM_NAME)) return;
         ItemExtension extension = ItemExtensionManager.getExtension(stack.getItem());
         if (extension == null || !extension.enabled()) return;
         MutableComponent name = extension.getItemName(stack);

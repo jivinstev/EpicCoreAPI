@@ -715,20 +715,21 @@ public final class HealthDataflowAnalyzer {
         public final EntityDataAccessor<?> accessor;
 
         public SynchedDataSource(EntityDataAccessor<?> accessor, Class<?> valueType) {
-            super(valueType, "SD:" + accessor.getId());
+            super(valueType, "SD:" + accessor.id());
             this.accessor = accessor;
         }
 
         @SuppressWarnings("rawtypes")
         @Override public Object read(LivingEntity entity) {
             try {
-                Int2ObjectMap<?> map = (Int2ObjectMap<?>) entity.getEntityData().itemsById;
-                SynchedEntityData.DataItem item = (SynchedEntityData.DataItem) map.get(accessor.getId());
+                SynchedEntityData.DataItem<?>[] items = entity.getEntityData().itemsById;
+                int slot = accessor.id();
+                SynchedEntityData.DataItem item = slot >= 0 && slot < items.length ? items[slot] : null;
                 return item == null ? null : item.value;
             } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
         }
 
-        @Override protected String buildCanonicalKey() { return "SD:" + accessor.getId(); }
+        @Override protected String buildCanonicalKey() { return "SD:" + accessor.id(); }
     }
 
     //在某个容器对象上做 .get(key)。ownerClassInternal 非空时启用兄弟表联写,对抗影子表回滚
@@ -4362,10 +4363,8 @@ public final class HealthDataflowAnalyzer {
     private static boolean isNbtPut(MethodInsnNode call) {
         if (!call.owner.equals("net/minecraft/nbt/CompoundTag")) return false;
         return switch (call.name) {
-            case "putBoolean", "putBoolean", "putByte", "putByte",
-                    "putShort", "putShort", "putInt", "putInt",
-                    "putLong", "putLong", "putFloat", "putFloat",
-                    "putDouble", "putDouble", "putString", "putString" -> true;
+            case "putBoolean", "putByte", "putShort", "putInt",
+                    "putLong", "putFloat", "putDouble", "putString" -> true;
             default -> false;
         };
     }

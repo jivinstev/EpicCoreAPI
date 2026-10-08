@@ -28,6 +28,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
@@ -271,7 +272,7 @@ public class FilterRenderer {
     public static void onBossShowEffectRender(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL
             || !BossShowScreenEffectState.hasShaderEffects()) return;
-        float partialTick = (float) event.getPartialTick();
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         renderFilterPass(bossShowEffectShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
@@ -567,9 +568,9 @@ public class FilterRenderer {
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
         RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
 
-        RenderSystem.getModelViewStack().pushPose();
+        RenderSystem.getModelViewStack().pushMatrix();
         try {
-            RenderSystem.getModelViewStack().setIdentity();
+            RenderSystem.getModelViewStack().identity();
             RenderSystem.applyModelViewMatrix();
 
             RenderSystem.setShader(() -> spotlightShader);
@@ -586,7 +587,7 @@ public class FilterRenderer {
 
             drawFullscreenQuad(width, height);
         } finally {
-            RenderSystem.getModelViewStack().popPose();
+            RenderSystem.getModelViewStack().popMatrix();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
             RenderSystem.enableCull();
@@ -628,7 +629,7 @@ public class FilterRenderer {
 
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
 
-        float partialTick = (float) event.getPartialTick();
+        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         Vec3 camPos = event.getCamera().getPosition();
         double x = Mth.lerp(partialTick, target.xOld, target.getX()) - camPos.x;
         double y = Mth.lerp(partialTick, target.yOld, target.getY()) - camPos.y;
@@ -649,13 +650,12 @@ public class FilterRenderer {
     }
 
     private static void drawFullscreenQuad(int width, int height) {
-        BufferBuilder builder = Tesselator.getInstance().getBuilder();
-        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         builder.addVertex((float) (0.0f), (float) (0.0f), (float) (0.0f)).setUv(0.0f, 0.0f);
         builder.addVertex((float) width, 0.0f, 0.0f).setUv(1.0f, 0.0f);
         builder.addVertex((float) width, (float) height, 0.0f).setUv(1.0f, 1.0f);
         builder.addVertex(0.0f, (float) height, 0.0f).setUv(0.0f, 1.0f);
-        BufferUploader.drawWithShader(builder.end());
+        BufferUploader.drawWithShader(builder.buildOrThrow());
     }
 
     @SuppressWarnings("deprecation")
@@ -686,9 +686,9 @@ public class FilterRenderer {
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
         RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
 
-        RenderSystem.getModelViewStack().pushPose();
+        RenderSystem.getModelViewStack().pushMatrix();
         try {
-            RenderSystem.getModelViewStack().setIdentity();
+            RenderSystem.getModelViewStack().identity();
             RenderSystem.applyModelViewMatrix();
 
             RenderSystem.setShader(() -> shader);
@@ -701,7 +701,7 @@ public class FilterRenderer {
 
             drawFullscreenQuad(width, height);
         } finally {
-            RenderSystem.getModelViewStack().popPose();
+            RenderSystem.getModelViewStack().popMatrix();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
             RenderSystem.enableCull();
@@ -761,7 +761,7 @@ public class FilterRenderer {
 
         // 相机相对反算矩阵：AFTER_LEVEL 阶段 event.getPoseStack() 实为投影栈，不能用；
         // 视图旋转改从 RenderSystem 的逆视图旋转矩阵还原，再与投影组合求逆
-        Matrix3f viewRot = new Matrix3f(RenderSystem.getInverseViewRotationMatrix()).invert();
+        Matrix3f viewRot = new Matrix3f().rotation(event.getCamera().rotation()).invert();
         Matrix4f view = new Matrix4f().set(viewRot);
         Matrix4f invViewProj = new Matrix4f(event.getProjectionMatrix())
                 .mul(view)
@@ -777,9 +777,9 @@ public class FilterRenderer {
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
         RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
 
-        RenderSystem.getModelViewStack().pushPose();
+        RenderSystem.getModelViewStack().pushMatrix();
         try {
-            RenderSystem.getModelViewStack().setIdentity();
+            RenderSystem.getModelViewStack().identity();
             RenderSystem.applyModelViewMatrix();
 
             RenderSystem.setShader(() -> shader);
@@ -798,7 +798,7 @@ public class FilterRenderer {
 
             drawFullscreenQuad(width, height);
         } finally {
-            RenderSystem.getModelViewStack().popPose();
+            RenderSystem.getModelViewStack().popMatrix();
             RenderSystem.applyModelViewMatrix();
             RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
             RenderSystem.enableCull();

@@ -111,7 +111,6 @@ final class ShaderAiAssistantScreen extends Screen {
 
     @Override
     public void tick() {
-        prompt.tick();
         transcript.setMessages(session.messages());
         boolean busy = session.busy();
         sendButton.active = !busy;

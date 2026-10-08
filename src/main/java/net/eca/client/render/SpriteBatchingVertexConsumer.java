@@ -1,6 +1,7 @@
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -67,9 +68,8 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     }
 
     private BufferBuilder newBuilder() {
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
-        builder.begin(VertexFormat.Mode.QUADS, format);
-        return builder;
+        return new BufferBuilder(new ByteBufferBuilder(format.getVertexSize() * 256),
+            VertexFormat.Mode.QUADS, format);
     }
 
     private BufferBuilder direct() {

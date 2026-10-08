@@ -820,7 +820,7 @@ public class EntityUtil {
         float protocolValue = EcaSetHealthManager.readAnalyzedHealth(entity);
         if (Float.isFinite(protocolValue)) return protocolValue;
         try {
-            SynchedEntityData.DataItem dataItem = getDataItem(entity.entityData, LivingEntity.DATA_HEALTH_ID.getId());
+            SynchedEntityData.DataItem dataItem = getDataItem(entity.entityData, LivingEntity.DATA_HEALTH_ID.id());
             return dataItem != null && dataItem.value instanceof Float value ? value : Float.NaN;
         } catch (Exception e) {
             EcaLogger.info("[HealthRead] Failed to read synchronized health: {}", e.toString());
@@ -832,8 +832,9 @@ public class EntityUtil {
     @SuppressWarnings("rawtypes")
     private static SynchedEntityData.DataItem getDataItem(SynchedEntityData entityData, int id) {
         try {
-            Int2ObjectMap<?> itemsById = (Int2ObjectMap<?>) entityData.itemsById;
-            return (SynchedEntityData.DataItem) itemsById.get(id);
+            SynchedEntityData.DataItem<?>[] itemsById = entityData.itemsById;
+            if (id < 0 || id >= itemsById.length) return null;
+            return (SynchedEntityData.DataItem) itemsById[id];
         } catch (Exception e) {
             return null;
         }
@@ -909,7 +910,7 @@ public class EntityUtil {
     public static void setBasicHealth(LivingEntity entity, float expectedHealth) {
         try {
             SynchedEntityData entityData = entity.getEntityData();
-            SynchedEntityData.DataItem dataItem = getDataItem(entityData, LivingEntity.DATA_HEALTH_ID.getId());
+            SynchedEntityData.DataItem dataItem = getDataItem(entityData, LivingEntity.DATA_HEALTH_ID.id());
             if (dataItem == null) return;
             dataItem.value = expectedHealth;
             entity.onSyncedDataUpdated(LivingEntity.DATA_HEALTH_ID);
@@ -923,7 +924,7 @@ public class EntityUtil {
         if (entity == null) return;
         try {
             SynchedEntityData.DataItem dataItem = getDataItem(
-                    entity.getEntityData(), LivingEntity.DATA_HEALTH_ID.getId());
+                    entity.getEntityData(), LivingEntity.DATA_HEALTH_ID.id());
             if (dataItem == null || !(dataItem.value instanceof Float current)) return;
             if (Math.abs(current - expectedHealth) <= 0.001f) return;
             setBasicHealth(entity, expectedHealth);
@@ -1017,7 +1018,6 @@ public class EntityUtil {
             entity.deathTime = 0;
             //触发击杀成就
             triggerKillAdvancement(entity, damageSource);
-            entity.dropAllDeathLoot(damageSource);
             //激进攻击逻辑开启时无条件强清，否则仅在实体仍存活时兜底
             if (EcaConfiguration.getAttackEnableRadicalLogicSafely() || entity.isAlive()){
                 remove(entity, Entity.RemovalReason.KILLED);
@@ -1102,7 +1102,7 @@ public class EntityUtil {
             entity.removalReason = reason;
             entity.stopRiding();
             entity.getPassengers().forEach(Entity::stopRiding);
-            entity.invalidateCaps();
+            // 1.21 实体能力不再缓存，无需 invalidateCaps
             // 玩家清除不建立连接级传送状态，避免移除后遗留等待确认的坐标同步。
             if (!(entity instanceof ServerPlayer)) {
                 teleport(entity, 102400, -102400, 102400);
@@ -1238,7 +1238,7 @@ public class EntityUtil {
                 }
             }
             entity.updateDynamicGameEventListener(DynamicGameEventListener::remove);
-            entity.onRemovedFromWorld();
+            entity.onRemovedFromLevel();
             removeFromEntityLookup(entityManager.visibleEntityStorage, entity);
             entityManager.callbacks.onDestroyed(entity);
             entityManager.knownUuids.remove(entity.getUUID());          // e. knownUuids
@@ -1373,7 +1373,7 @@ public class EntityUtil {
     // 同步服务端和客户端都使用同一条原始提交路径，避免任一侧进入可覆写的位置方法。
     public static void applyTeleportState(Entity entity, double x, double y, double z, float yRot, float xRot) {
         if (entity.level() instanceof ServerLevel serverLevel
-                && entity.isAddedToWorld() && entity.getRemovalReason() == null) {
+                && entity.isAddedToLevel() && entity.getRemovalReason() == null) {
             serverLevel.getChunk(Mth.floor(x) >> 4, Mth.floor(z) >> 4);
         }
         updateTeleportPosition(entity, x, y, z);
@@ -1436,7 +1436,7 @@ public class EntityUtil {
                     || blockY != entity.blockPosition.getY()
                     || blockZ != entity.blockPosition.getZ()) {
                 entity.blockPosition = new BlockPos(blockX, blockY, blockZ);
-                entity.feetBlockState = null;
+
                 if (SectionPos.blockToSectionCoord(blockX) != entity.chunkPosition.x
                         || SectionPos.blockToSectionCoord(blockZ) != entity.chunkPosition.z) {
                     entity.chunkPosition = new ChunkPos(entity.blockPosition);
@@ -1492,8 +1492,6 @@ public class EntityUtil {
     /* 镜像 ServerEntity 发送绝对传送包后的状态提交，客户端和服务端必须使用同一编码基准。 */
     private static void syncTeleportTracker(ServerEntity serverEntity, Entity entity) {
         serverEntity.positionCodec.setBase(entity.trackingPosition());
-        serverEntity.yRotp = Mth.floor(entity.getYRot() * 256.0f / 360.0f);
-        serverEntity.xRotp = Mth.floor(entity.getXRot() * 256.0f / 360.0f);
         serverEntity.teleportDelay = 0;
         serverEntity.wasRiding = false;
         serverEntity.wasOnGround = entity.onGround();
@@ -1531,18 +1529,14 @@ public class EntityUtil {
     private static double reverseCalculateBaseValue(AttributeInstance instance, double target) {
         //收集三层 modifier 的叠加系数
         double additionSum = 0.0;
-        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.ADD_VALUE)) {
-            additionSum += mod.getAmount();
-        }
-
         double multiplyBaseSum = 0.0;
-        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.ADD_MULTIPLIED_BASE)) {
-            multiplyBaseSum += mod.getAmount();
-        }
-
         double multiplyTotalProduct = 1.0;
-        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)) {
-            multiplyTotalProduct *= (1.0 + mod.getAmount());
+        for (AttributeModifier mod : instance.getModifiers()) {
+            switch (mod.operation()) {
+                case ADD_VALUE -> additionSum += mod.amount();
+                case ADD_MULTIPLIED_BASE -> multiplyBaseSum += mod.amount();
+                case ADD_MULTIPLIED_TOTAL -> multiplyTotalProduct *= (1.0 + mod.amount());
+            }
         }
 
         // 原版公式: result = (base + additionSum) * (1 + multiplyBaseSum) * multiplyTotalProduct

@@ -120,10 +120,9 @@ final class ObjectGraphSnapshot {
         if (entity == null) return;
         try {
             SynchedEntityData entityData = entity.getEntityData();
-            Int2ObjectMap<?> items = (Int2ObjectMap<?>) entityData.itemsById;
+            SynchedEntityData.DataItem[] items = (SynchedEntityData.DataItem[]) entityData.itemsById;
             addSlot(new SynchedDataDirtySlot(entityData, entityData.isDirty));
-            for (Int2ObjectMap.Entry<?> entry : items.int2ObjectEntrySet()) {
-                SynchedEntityData.DataItem item = (SynchedEntityData.DataItem) entry.getValue();
+            for (SynchedEntityData.DataItem item : items) {
                 if (item != null) addSlot(new SynchedDataItemSlot(item, item.value, item.dirty));
             }
         } catch (Throwable t) {

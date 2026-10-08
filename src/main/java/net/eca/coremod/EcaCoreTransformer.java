@@ -2,6 +2,7 @@ package net.eca.coremod;
 
 import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.api.ITransformerVotingContext;
+import cpw.mods.modlauncher.api.TargetType;
 import cpw.mods.modlauncher.api.TransformerVoteResult;
 import net.eca.coremod.EarlyLogWriter;
 import org.objectweb.asm.ClassReader;
@@ -59,8 +60,13 @@ public final class EcaCoreTransformer implements ITransformer<ClassNode> {
     }
 
     @Override
-    public Set<Target> targets() {
-        Set<Target> targets = new HashSet<>();
+    public TargetType<ClassNode> getTargetType() {
+        return TargetType.CLASS;
+    }
+
+    @Override
+    public Set<Target<ClassNode>> targets() {
+        Set<Target<ClassNode>> targets = new HashSet<>();
         targets.add(Target.targetClass("net.minecraft.world.entity.LivingEntity"));
         targets.add(Target.targetClass("net.minecraft.world.entity.Entity"));
         targets.add(Target.targetClass("net.minecraft.world.level.entity.EntityTickList"));

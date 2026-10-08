@@ -3,6 +3,9 @@ package net.eca.client.render;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.neoforged.api.distmarker.Dist;
@@ -12,30 +15,38 @@ import org.joml.Matrix4f;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
 public final class ShaderMaskRenderQueue {
 
     private static final int MAX_POOL_SIZE = 64;
     private static final List<QueuedPass> QUEUE = new ArrayList<>();
-    private static final Deque<BufferBuilder> BUILDER_POOL = new ArrayDeque<>();
+    private static final Deque<ByteBufferBuilder> BUILDER_POOL = new ArrayDeque<>();
+    private static final Map<BufferBuilder, ByteBufferBuilder> BUILDER_BACKING = new IdentityHashMap<>();
 
     private ShaderMaskRenderQueue() {
     }
 
-    public static BufferBuilder acquireBuilder() {
-        BufferBuilder builder = BUILDER_POOL.pollFirst();
-        return builder == null ? new BufferBuilder(262144) : builder;
+    public static BufferBuilder acquireBuilder(VertexFormat.Mode mode, VertexFormat format) {
+        ByteBufferBuilder backing = BUILDER_POOL.pollFirst();
+        if (backing == null) {
+            backing = new ByteBufferBuilder(262144);
+        }
+        BufferBuilder builder = new BufferBuilder(backing, mode, format);
+        BUILDER_BACKING.put(builder, backing);
+        return builder;
     }
 
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
-                               BufferBuilder.RenderedBuffer renderedBuffer) {
+                               MeshData renderedBuffer) {
         enqueue(pass, builder, renderedBuffer, MaskUvTransform.IDENTITY);
     }
 
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
-                               BufferBuilder.RenderedBuffer renderedBuffer,
+                               MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix());
         Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
@@ -44,12 +55,12 @@ public final class ShaderMaskRenderQueue {
     }
 
     public static void drawNow(ShaderMaskPass pass, BufferBuilder builder,
-                               BufferBuilder.RenderedBuffer renderedBuffer) {
+                               MeshData renderedBuffer) {
         drawNow(pass, builder, renderedBuffer, MaskUvTransform.IDENTITY);
     }
 
     public static void drawNow(ShaderMaskPass pass, BufferBuilder builder,
-                               BufferBuilder.RenderedBuffer renderedBuffer,
+                               MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
         try {
             draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
@@ -76,15 +87,15 @@ public final class ShaderMaskRenderQueue {
         Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
         try {
             for (QueuedPass entry : entries) {
-                RenderSystem.getModelViewStack().pushPose();
+                RenderSystem.getModelViewStack().pushMatrix();
                 try {
-                    RenderSystem.getModelViewStack().setIdentity();
-                    RenderSystem.getModelViewStack().mulPoseMatrix(entry.modelView());
+                    RenderSystem.getModelViewStack().identity();
+                    RenderSystem.getModelViewStack().mul(entry.modelView());
                     RenderSystem.applyModelViewMatrix();
                     RenderSystem.setProjectionMatrix(entry.projection(), VertexSorting.DISTANCE_TO_ORIGIN);
                     draw(entry.pass(), entry.renderedBuffer(), entry.uvTransform());
                 } finally {
-                    RenderSystem.getModelViewStack().popPose();
+                    RenderSystem.getModelViewStack().popMatrix();
                     RenderSystem.applyModelViewMatrix();
                     recycle(entry.builder());
                 }
@@ -94,7 +105,7 @@ public final class ShaderMaskRenderQueue {
         }
     }
 
-    private static void draw(ShaderMaskPass pass, BufferBuilder.RenderedBuffer renderedBuffer,
+    private static void draw(ShaderMaskPass pass, MeshData renderedBuffer,
                              MaskUvTransform uvTransform) {
         applyMask(pass);
         EcaShaderInstance.setLocalUvBounds(uvTransform.minU(), uvTransform.minV(),
@@ -134,15 +145,23 @@ public final class ShaderMaskRenderQueue {
     }
 
     private static void recycle(BufferBuilder builder) {
-        if (builder != null && BUILDER_POOL.size() < MAX_POOL_SIZE) {
-            BUILDER_POOL.addLast(builder);
+        if (builder == null) {
+            return;
+        }
+        ByteBufferBuilder backing = BUILDER_BACKING.remove(builder);
+        if (backing != null) {
+            if (BUILDER_POOL.size() < MAX_POOL_SIZE) {
+                BUILDER_POOL.addLast(backing);
+            } else {
+                backing.close();
+            }
         }
     }
 
     private record QueuedPass(
         ShaderMaskPass pass,
         BufferBuilder builder,
-        BufferBuilder.RenderedBuffer renderedBuffer,
+        MeshData renderedBuffer,
         Matrix4f modelView,
         Matrix4f projection,
         MaskUvTransform uvTransform

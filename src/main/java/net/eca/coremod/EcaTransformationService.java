@@ -126,8 +126,7 @@ public class EcaTransformationService implements ITransformationService {
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
-    public @NotNull List<ITransformer> transformers() {
+    public @NotNull List<? extends ITransformer<?>> transformers() {
         if (TRANSFORMATION_BACKEND == TransformationBackend.AGENT) {
             return List.of();
         }
@@ -136,7 +135,7 @@ public class EcaTransformationService implements ITransformationService {
             return List.of();
         }
         try {
-            return List.of((ITransformer) PRELOADED[0].getDeclaredConstructor().newInstance());
+            return List.<ITransformer<?>>of((ITransformer<?>) PRELOADED[0].getDeclaredConstructor().newInstance());
         } catch (Throwable t) {
             log("[CoreMod] Failed to create load-time transformer: " + t.getMessage());
             return List.of();

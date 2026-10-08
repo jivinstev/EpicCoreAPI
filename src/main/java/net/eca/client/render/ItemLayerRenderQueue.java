@@ -1,6 +1,8 @@
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -17,12 +19,12 @@ public final class ItemLayerRenderQueue {
     private ItemLayerRenderQueue() {
     }
 
-    public static BufferBuilder acquireBuilder() {
-        return ShaderMaskRenderQueue.acquireBuilder();
+    public static BufferBuilder acquireBuilder(VertexFormat.Mode mode, VertexFormat format) {
+        return ShaderMaskRenderQueue.acquireBuilder(mode, format);
     }
 
     public static void enqueue(RenderType renderType, BufferBuilder builder,
-                               BufferBuilder.RenderedBuffer renderedBuffer, float colorKeyR,
+                               MeshData renderedBuffer, float colorKeyR,
                                float colorKeyG, float colorKeyB, float colorKeyTolerance,
                                float uvMinU, float uvMinV, float uvScaleU, float uvScaleV,
                                float alpha) {

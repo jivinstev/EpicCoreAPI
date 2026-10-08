@@ -56,7 +56,7 @@ public class FallingBlockRendererMixin {
                 ModelData.EMPTY, null);
             poseStack.popPose();
             consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(),
-                batch.builder().end(), batch.uvTransform()));
+                batch.builder().buildOrThrow(), batch.uvTransform()));
         }
     }
 }

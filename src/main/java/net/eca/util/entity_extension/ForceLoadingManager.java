@@ -11,7 +11,9 @@ import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.level.entity.EntitySection;
 import net.minecraft.world.level.entity.PersistentEntitySectionManager;
 import net.minecraft.core.SectionPos;
-import net.neoforged.neoforge.common.world.ForgeChunkManager;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
+import net.neoforged.neoforge.common.world.chunk.TicketController;
 
 import net.minecraft.world.entity.Entity;
 
@@ -26,6 +28,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * 该实体类型的所有实例所在区块会被强制加载（EntityTicking 级别），确保 AI 正常运行。
  */
 public final class ForceLoadingManager {
+
+    private static final TicketController TICKET_CONTROLLER = new TicketController(
+            ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "force_loading"),
+            (level, ticketHelper) -> {
+                // 保留所有实体票据，让 NeoForge 恢复区块加载。
+                // 实体加载后会通过 onEntityJoin 重新纳入 TRACKED 管理。
+                // 如果实体已不存在，票据会在下次 onEntityLeave/清理时移除。
+            });
 
     private static final Map<UUID, TrackedChunk> TRACKED = new ConcurrentHashMap<>();
     private static final Set<UUID> FORCE_LOADED_MANUAL = ConcurrentHashMap.newKeySet();
@@ -93,7 +103,7 @@ public final class ForceLoadingManager {
                 return;
             }
             // 返回 false 也可能只是持久化票据已经存在，此时对应区块仍处于强加载状态
-            ForgeChunkManager.forceChunk(level, EcaMod.MOD_ID, uuid, pos.x, pos.z, true, true);
+            TICKET_CONTROLLER.forceChunk(level, uuid, pos.x, pos.z, true, true);
 
             ServerLevel previousLevel = tracked.ticketLevel;
             ChunkPos previousPos = tracked.ticketChunkPos;
@@ -102,7 +112,7 @@ public final class ForceLoadingManager {
             // 新票据落地后再释放旧票据，避免远离玩家时出现无票据卸载窗口
             if (previousLevel != null && previousPos != null
                     && (previousLevel != level || previousPos.x != pos.x || previousPos.z != pos.z)) {
-                ForgeChunkManager.forceChunk(previousLevel, EcaMod.MOD_ID, uuid,
+                TICKET_CONTROLLER.forceChunk(previousLevel, uuid,
                         previousPos.x, previousPos.z, false, true);
             }
         });
@@ -149,12 +159,8 @@ public final class ForceLoadingManager {
      * 注册 Forge 区块票据验证回调。
      * 服务器重启时 Forge 会调用此回调来验证持久化的票据是否仍然有效。
      */
-    public static void registerValidationCallback() {
-        ForgeChunkManager.setForcedChunkLoadingCallback(EcaMod.MOD_ID, (level, ticketHelper) -> {
-            // 保留所有实体票据，让 Forge 恢复区块加载。
-            // 实体加载后会通过 onEntityJoin 重新纳入 TRACKED 管理。
-            // 如果实体已不存在，票据会在下次 onEntityLeave/清理时移除。
-        });
+    public static void registerValidationCallback(RegisterTicketControllersEvent event) {
+        event.register(TICKET_CONTROLLER);
     }
 
     public static void tickDimension(ServerLevel level) {
@@ -319,7 +325,7 @@ public final class ForceLoadingManager {
         tracked.pendingLevel = null;
         tracked.pendingChunkPos = null;
         if (ticketLevel != null && ticketPos != null) {
-            ForgeChunkManager.forceChunk(ticketLevel, EcaMod.MOD_ID, uuid,
+            TICKET_CONTROLLER.forceChunk(ticketLevel, uuid,
                     ticketPos.x, ticketPos.z, false, true);
         }
     }

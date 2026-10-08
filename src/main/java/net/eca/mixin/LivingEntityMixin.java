@@ -65,30 +65,29 @@ LivingEntityMixin {
         EntityUtil.MAX_HEALTH_LOCK_KEY   = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
         EntityUtil.MAX_HEALTH_LOCK_CHECK = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
         // 定义期立即登记：改血分析在任何实体进入世界前即可排除 ECA 自有同步单元
-        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_VALUE.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_KEY.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_CHECK.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.HEAL_BAN_VALUE.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.INVULNERABLE.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.RESURRECTION_TRACKED.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_VALUE.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_KEY.getId());
-        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_CHECK.getId());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_VALUE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_KEY.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_CHECK.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEAL_BAN_VALUE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.INVULNERABLE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.RESURRECTION_TRACKED.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_VALUE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_KEY.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_CHECK.id());
     }
 
     //注册实体数据（在每个实例的defineSynchedData 中调用）
     @Inject(method = "defineSynchedData", at = @At("TAIL"))
-    private void eca$onDefineSynchedData(CallbackInfo ci) {
-        LivingEntity entity = (LivingEntity) (Object) this;
-        entity.getEntityData().define(EntityUtil.HEALTH_LOCK_VALUE, "");
-        entity.getEntityData().define(EntityUtil.HEALTH_LOCK_KEY,   "0");
-        entity.getEntityData().define(EntityUtil.HEALTH_LOCK_CHECK, "");
-        entity.getEntityData().define(EntityUtil.HEAL_BAN_VALUE, "");
-        entity.getEntityData().define(EntityUtil.INVULNERABLE, false);
-        entity.getEntityData().define(EntityUtil.RESURRECTION_TRACKED, false);
-        entity.getEntityData().define(EntityUtil.MAX_HEALTH_LOCK_VALUE, "");
-        entity.getEntityData().define(EntityUtil.MAX_HEALTH_LOCK_KEY,   "0");
-        entity.getEntityData().define(EntityUtil.MAX_HEALTH_LOCK_CHECK, "");
+    private void eca$onDefineSynchedData(SynchedEntityData.Builder builder, CallbackInfo ci) {
+        builder.define(EntityUtil.HEALTH_LOCK_VALUE, "");
+        builder.define(EntityUtil.HEALTH_LOCK_KEY,   "0");
+        builder.define(EntityUtil.HEALTH_LOCK_CHECK, "");
+        builder.define(EntityUtil.HEAL_BAN_VALUE, "");
+        builder.define(EntityUtil.INVULNERABLE, false);
+        builder.define(EntityUtil.RESURRECTION_TRACKED, false);
+        builder.define(EntityUtil.MAX_HEALTH_LOCK_VALUE, "");
+        builder.define(EntityUtil.MAX_HEALTH_LOCK_KEY,   "0");
+        builder.define(EntityUtil.MAX_HEALTH_LOCK_CHECK, "");
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
@@ -212,7 +211,7 @@ LivingEntityMixin {
         if (invulnerable) {
             if (!self.level().isClientSide && !self.getActiveEffects().isEmpty()) {
                 for (MobEffectInstance effectInstance : new ArrayList<>(self.getActiveEffects())) {
-                    if (effectInstance.getEffect().getCategory() == MobEffectCategory.HARMFUL) {
+                    if (effectInstance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL) {
                         self.removeEffect(effectInstance.getEffect());
                     }
                 }

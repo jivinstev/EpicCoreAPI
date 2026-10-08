@@ -2,7 +2,7 @@ package net.eca.blender.animation;
 
 import net.eca.EcaMod;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.bus.api.EventPriority;
@@ -21,7 +21,7 @@ public final class BlenderControllerEvents {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
-    public static void onDamage(LivingDamageEvent event) {
+    public static void onDamage(LivingIncomingDamageEvent event) {
         if (!(event.getEntity().level() instanceof ServerLevel)) return;
         // Read cancellation after every subscriber has had a chance to handle the event.
         BlenderControllers.queueHurt(event.getEntity(), () -> !event.isCanceled() && event.getAmount() > 0);

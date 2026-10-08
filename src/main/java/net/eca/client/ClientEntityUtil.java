@@ -226,10 +226,9 @@ public final class ClientEntityUtil {
             Entity entity = getEntityById(clientLevel, entityId);
             if (entity != null) {
                 entity.onClientRemoval();
-                entity.invalidateCaps();
                 entity.setRemoved(Entity.RemovalReason.DISCARDED);
                 entity.stopRiding();
-                entity.onRemovedFromWorld();
+                entity.onRemovedFromLevel();
                 entity.levelCallback = EntityInLevelCallback.NULL;
                 removeFromClientContainers(clientLevel, entity);
             } else {
@@ -369,12 +368,7 @@ public final class ClientEntityUtil {
         }
         if (entity instanceof AbstractMinecart) {
             AbstractMinecart minecart = (AbstractMinecart) entity;
-            minecart.lSteps = 0;
-            minecart.lx = x;
-            minecart.ly = y;
-            minecart.lz = z;
-            minecart.lyr = yRot;
-            minecart.lxr = xRot;
+            minecart.lerpTo(x, y, z, yRot, xRot, 0);
         }
     }
 

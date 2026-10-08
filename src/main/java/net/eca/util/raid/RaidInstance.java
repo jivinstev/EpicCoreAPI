@@ -216,7 +216,10 @@ public class RaidInstance {
 
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
-            return level.structureManager().getStructureWithPieceAt(center, key).isValid();
+            Structure targetStructure = level.registryAccess()
+                    .registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE).get(key);
+            if (targetStructure == null) return false;
+            return level.structureManager().getStructureWithPieceAt(center, targetStructure).isValid();
         }
         TagKey<Structure> tag = def.getTargetStructureTag();
         if (tag != null) {
@@ -424,7 +427,7 @@ public class RaidInstance {
 
         entity.setPos(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
         if (entity instanceof Mob mob) {
-            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null, null);
+            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null);
             mob.setOnGround(true);
             level.addFreshEntityWithPassengers(mob);
         } else {
@@ -471,8 +474,8 @@ public class RaidInstance {
 
             if (!level.hasChunksAt(x - 10, z - 10, x + 10, z + 10)) continue;
             if (!level.isPositionEntityTicking(mutable)) continue;
-            boolean validGround = NaturalSpawner.isSpawnPositionOk(
-                    net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND, level, mutable, type);
+            boolean validGround = net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND
+                    .isSpawnPositionOk(level, mutable, type);
             boolean validSnowSurface = level.getBlockState(mutable.below()).is(Blocks.SNOW)
                     && level.getBlockState(mutable).isAir();
             if (!validGround && !validSnowSurface) continue;

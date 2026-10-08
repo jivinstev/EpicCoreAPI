@@ -71,35 +71,35 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
         if (hasTexture) {
             RenderType texturedLayer = RenderType.entityTranslucent(texture);
             if (oculus) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
-                builder.begin(VertexFormat.Mode.QUADS, texturedLayer.format());
+                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
                 this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay, 1.0f, 1.0f, 1.0f, alpha
+                    poseStack, builder, light, overlay,
+                    net.minecraft.util.FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
                 ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
-                    builder, builder.end());
+                    builder, builder.buildOrThrow());
             } else {
                 VertexConsumer texConsumer = bufferSource.getBuffer(texturedLayer);
                 this.getParentModel().renderToBuffer(
-                    poseStack, texConsumer, light, overlay, 1.0f, 1.0f, 1.0f, alpha
+                    poseStack, texConsumer, light, overlay,
+                    net.minecraft.util.FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
             }
         }
 
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
-            builder.begin(VertexFormat.Mode.QUADS, pass.renderType().format());
+            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
             this.getParentModel().renderToBuffer(
-                poseStack, builder, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f
+                poseStack, builder, light, overlay, 0xFFFFFFFF
             );
             if (oculus) {
-                ShaderMaskRenderQueue.enqueue(pass, builder, builder.end());
+                ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
             } else {
                 if (bufferSource instanceof MultiBufferSource.BufferSource source) {
                     source.endBatch();
                 }
-                ShaderMaskRenderQueue.drawNow(pass, builder, builder.end());
+                ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
             }
         }
     }

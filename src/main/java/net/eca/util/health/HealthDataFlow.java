@@ -1240,8 +1240,10 @@ public final class HealthDataFlow {
     private static boolean writeSynchedData(SynchedDataSource s, LivingEntity entity, Object value) {
         try {
             SynchedEntityData ed = entity.getEntityData();
-            Int2ObjectMap<?> map = (Int2ObjectMap<?>) ed.itemsById;
-            SynchedEntityData.DataItem item = (SynchedEntityData.DataItem) map.get(s.accessor.getId());
+            SynchedEntityData.DataItem<?>[] items = ed.itemsById;
+            int accessorId = s.accessor.id();
+            if (accessorId < 0 || accessorId >= items.length) return false;
+            SynchedEntityData.DataItem item = (SynchedEntityData.DataItem) items[accessorId];
             if (item == null) return false;
             Object coerced = HealthDataflowAnalyzer.coerceSameType(item.value, value);
             if (coerced == null) return false;

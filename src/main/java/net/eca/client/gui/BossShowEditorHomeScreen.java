@@ -54,10 +54,8 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
         //=== 中间 Existing list ===
         int listTop = 110;
         int listBottom = this.height - 40;
-        defList = new DefList(this.minecraft, this.width - 40, listBottom - listTop, listTop, listBottom, 24);
-        defList.setLeftPos(20);
-        defList.setRenderBackground(false);
-        defList.setRenderTopAndBottom(false);
+        defList = new DefList(this.minecraft, this.width - 40, listBottom - listTop, listTop, 24);
+        defList.setX(20);
         for (BossShowDefinition def : BossShowEditorState.getAvailableDefs()) {
             defList.addDef(def);
         }
@@ -173,8 +171,8 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
 
     //=== 内嵌 def 列表 widget ===
     private class DefList extends ObjectSelectionList<DefList.DefEntry> {
-        DefList(Minecraft mc, int width, int height, int top, int bottom, int itemHeight) {
-            super(mc, width, height, top, bottom, itemHeight);
+        DefList(Minecraft mc, int width, int height, int top, int itemHeight) {
+            super(mc, width, height, top, itemHeight);
         }
 
         public void addDef(BossShowDefinition def) {
@@ -188,12 +186,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
 
         @Override
         protected int getScrollbarPosition() {
-            return this.x1 - 6;
-        }
-
-        @Override
-        public void updateNarration(NarrationElementOutput output) {
-            super.updateNarration(output);
+            return this.getRight() - 6;
         }
 
         class DefEntry extends ObjectSelectionList.Entry<DefEntry> {

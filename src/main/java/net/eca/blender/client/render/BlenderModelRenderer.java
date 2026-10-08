@@ -190,7 +190,7 @@ public final class BlenderModelRenderer {
         poseStack.pushPose();
         try {
             Matrix4f local = nodeMatrix(node, animated.get(nodeIndex));
-            poseStack.mulPoseMatrix(local);
+            poseStack.mulPose(local);
             poseStack.last().normal().mul(new Matrix3f(local).invert().transpose());
             if (node.mesh() >= 0 && node.mesh() < asset.meshes.size()) {
                 SkinPose skinPose = createSkinPose(asset, nodeIndex, node.skin(), globalTransforms);
@@ -387,14 +387,13 @@ public final class BlenderModelRenderer {
         float u = uvOffset + 1 < primitive.texCoords().length ? primitive.texCoords()[uvOffset] : 0.0f;
         float v = uvOffset + 1 < primitive.texCoords().length ? primitive.texCoords()[uvOffset + 1] : 0.0f;
         Matrix4f position = pose.pose();
-        Matrix3f normal = pose.normal();
         consumer.addVertex(position, deformed.positions()[positionOffset], deformed.positions()[positionOffset + 1],
                 deformed.positions()[positionOffset + 2])
             .setColor(material.red(), material.green(), material.blue(), material.alpha())
             .setUv(u, v)
             .setOverlay(overlay)
             .setLight(packedLight)
-            .normal(normal, nx, ny, nz);
+            .setNormal(pose, nx, ny, nz);
     }
 
     private static final class AnimatedTransform {

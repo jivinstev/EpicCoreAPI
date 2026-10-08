@@ -2,6 +2,7 @@ package net.eca.util.selector;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.eca.api.EcaAPI;
+import net.eca.mixin.EntitySelectorAccessor;
 import net.minecraft.advancements.critereon.MinMaxBounds;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -29,7 +30,7 @@ public class EcaGlobalEntitySelector extends EntitySelector {
             vanilla.getMaxResults(),
             vanilla.includesEntities(),
             vanilla.isWorldLimited(),
-            entity -> true,
+            List.of(),
             MinMaxBounds.Doubles.ANY,
             Function.identity(),
             null,
@@ -47,7 +48,10 @@ public class EcaGlobalEntitySelector extends EntitySelector {
         Vec3 pos = vanilla.position.apply(source.getPosition());
 
         // Replicate EntitySelector.getPredicate logic using AT-exposed fields
-        Predicate<Entity> predicate = vanilla.predicate;
+        Predicate<Entity> predicate = e -> true;
+        for (Predicate<Entity> contextFree : ((EntitySelectorAccessor) vanilla).eca$getContextFreePredicates()) {
+            predicate = predicate.and(contextFree);
+        }
         if (vanilla.aabb != null) {
             AABB movedAabb = vanilla.aabb.move(pos);
             predicate = predicate.and(e -> movedAabb.intersects(e.getBoundingBox()));

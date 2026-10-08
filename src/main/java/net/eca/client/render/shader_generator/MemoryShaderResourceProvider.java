@@ -107,8 +107,13 @@ final class MemoryShaderResourceProvider implements ResourceProvider {
         }
 
         @Override
-        public String packId() {
-            return "eca_shader_generator_memory";
+        public net.minecraft.server.packs.PackLocationInfo location() {
+            return new net.minecraft.server.packs.PackLocationInfo(
+                "eca_shader_generator_memory",
+                net.minecraft.network.chat.Component.literal("eca_shader_generator_memory"),
+                net.minecraft.server.packs.repository.PackSource.BUILT_IN,
+                Optional.empty()
+            );
         }
 
         @Override

@@ -7,7 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.neoforged.neoforge.common.util.ITeleporter;
+import net.minecraft.world.level.portal.DimensionTransition;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,15 +33,15 @@ public class ServerPlayerMixin {
     }
 
     // 玩家重写的双参数入口不经过 Entity 的实现，需要独立放行旧世界清理。
-    @Inject(method = "changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/neoforged/neoforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;",
+    @Inject(method = "changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity;",
             at = @At("HEAD"), remap = false)
-    private void eca$beforeCustomDimensionChange(ServerLevel destination, ITeleporter teleporter, CallbackInfoReturnable<Entity> cir) {
+    private void eca$beforeCustomDimensionChange(DimensionTransition transition, CallbackInfoReturnable<Entity> cir) {
         EntityUtil.beginDimensionChange((ServerPlayer) (Object) this);
     }
 
-    @Inject(method = "changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/neoforged/neoforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;",
+    @Inject(method = "changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity;",
             at = @At("RETURN"), remap = false)
-    private void eca$afterCustomDimensionChange(ServerLevel destination, ITeleporter teleporter, CallbackInfoReturnable<Entity> cir) {
+    private void eca$afterCustomDimensionChange(DimensionTransition transition, CallbackInfoReturnable<Entity> cir) {
         EntityUtil.finishDimensionChange((ServerPlayer) (Object) this);
     }
 

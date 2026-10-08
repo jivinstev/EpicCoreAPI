@@ -173,7 +173,7 @@ public final class BlockExtensionRenderer {
 
     private static void enqueue(ShaderMaskPass pass, SpriteBatchingVertexConsumer batch) {
         batch.finish(spriteBatch -> ShaderMaskRenderQueue.enqueue(pass, spriteBatch.builder(),
-            spriteBatch.builder().end(), spriteBatch.uvTransform()));
+            spriteBatch.builder().buildOrThrow(), spriteBatch.uvTransform()));
     }
 
     // 发光是消费端属性而非 pass 属性，共用同一 pass 的发光与非发光方块必须分批

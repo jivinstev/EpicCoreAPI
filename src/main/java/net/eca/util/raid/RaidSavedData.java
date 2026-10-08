@@ -58,8 +58,10 @@ public class RaidSavedData extends SavedData {
 
     public static RaidSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
-                RaidSavedData::load,
-                RaidSavedData::new,
+                new SavedData.Factory<>(
+                        RaidSavedData::new,
+                        (tag, registries) -> load(tag)
+                ),
                 DATA_NAME
         );
     }
