@@ -43,6 +43,7 @@
     "ServerPlayerMixin",
     "RangedAttributeMixin",
     "ServerGamePacketListenerMixin",
+    "ServerCommonPacketListenerMixin",
     "ServerLevelMixin",
     "TrackedEntityMixin",
     "TransientEntitySectionManagerMixin",

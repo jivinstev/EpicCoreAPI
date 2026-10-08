@@ -26,6 +26,7 @@
   ],
   "mixins": [
     "ChunkMapMixin",
+    "GenerationChunkHolderMixin",
     "ClassInstanceMultiMapMixin",
     "DistanceManagerMixin",
     "EntityLookupMixin",
@@ -38,6 +39,7 @@
     "ConnectionMixin",
     "InventoryMixin",
     "ServerGamePacketListenerMixin",
+    "ServerCommonPacketListenerMixin",
     "PersistentEntitySectionManagerMixin",
     "PersistentEntitySectionManagerMixin$CallbackMixin",
     "PlayerMixin",

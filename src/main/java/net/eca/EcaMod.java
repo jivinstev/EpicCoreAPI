@@ -40,7 +40,7 @@ public final class EcaMod {
         // 注册全局 ECA 实体选择器（@eca_e / @eca_p）
         EcaSelectorRegistry.register();
         // 注册强加载区块票据验证回调
-        NeoForge.EVENT_BUS.addListener(ForceLoadingManager::registerValidationCallback);
+        modEventBus.addListener(ForceLoadingManager::registerValidationCallback);
         // 注册 Forge 生命周期事件
         LoadCompleteHandler loadCompleteHandler = new LoadCompleteHandler();
         modEventBus.addListener(loadCompleteHandler::onLoadComplete);

@@ -13,6 +13,7 @@ import net.eca.config.EcaConfiguration;
 import net.eca.util.entity_extension.EntityExtensionClientState;
 import net.eca.util.entity_extension.GlobalSkyboxExtension;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderType;
@@ -22,6 +23,7 @@ import net.minecraft.world.level.material.FogType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -52,10 +54,14 @@ public class GameRendererPostLevelMixin {
 
     // 在renderLevel()返回后注入，此时Oculus延迟渲染管线已完成合成，主帧缓冲区活跃
     @Inject(method = "renderLevel", at = @At("RETURN"))
-    private void eca$renderPostLevel(float partialTick, long nanoTime, PoseStack poseStack, CallbackInfo ci) {
+    private void eca$renderPostLevel(DeltaTracker deltaTracker, CallbackInfo ci) {
         if (minecraft.level == null) {
             return;
         }
+
+        // 1.21 不再传入 PoseStack：以相机旋转重建 1.20 中 renderLevel 所用的姿态栈
+        PoseStack poseStack = new PoseStack();
+        poseStack.mulPose(new Matrix4f().rotation(mainCamera.rotation().conjugate(new Quaternionf())));
 
         Camera camera = mainCamera;
         boolean cameraReady = camera != null && camera.getFluidInCamera() == FogType.NONE;
@@ -71,9 +77,9 @@ public class GameRendererPostLevelMixin {
 
     @Inject(method = "renderLevel",
             at = @At(value = "INVOKE",
-                     target = "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/vertex/PoseStack;FJZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;)V",
+                     target = "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V",
                      shift = At.Shift.AFTER))
-    private void eca$flushItemLayersAfterWorld(float partialTick, long nanoTime, PoseStack poseStack, CallbackInfo ci) {
+    private void eca$flushItemLayersAfterWorld(DeltaTracker deltaTracker, CallbackInfo ci) {
         if (!EcaShaderInstance.isOculusShadersActive()) {
             ShaderMaskRenderQueue.flush();
         }

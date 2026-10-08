@@ -20,10 +20,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(TransientEntitySectionManager.class)
-public class TransientEntitySectionManagerMixin {
+public class TransientEntitySectionManagerMixin<T extends EntityAccess> {
 
     @Shadow @Final
-    LevelCallback callbacks;
+    LevelCallback<T> callbacks;
 
     @Shadow @Final
     private LongSet tickingChunks;
@@ -48,14 +48,14 @@ public class TransientEntitySectionManagerMixin {
         long chunkKey = new ChunkPos(entity.blockPosition()).toLong();
         if (this.tickingChunks.contains(chunkKey)) return;
 
-        this.callbacks.onTickingStart(entity);
+        ((LevelCallback<EntityAccess>) (LevelCallback<?>) this.callbacks).onTickingStart(entity);
     }
 
     @Mixin(TransientEntitySectionManager.Callback.class)
-    public static class CallbackMixin {
+    public static class CallbackMixin<T extends EntityAccess> {
         @Final
         @Shadow
-        private EntityAccess entity;
+        private T entity;
 
         @Inject(method = "onRemove", at = @At("HEAD"), cancellable = true)
         private void eca$onRemove(Entity.RemovalReason reason, CallbackInfo ci) {

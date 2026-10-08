@@ -49,12 +49,11 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
         method = "render",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;IIFFFF)V"
+            target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"
         )
     )
     private void eca$renderBlenderReplacement(EntityModel<T> model, PoseStack poseStack, VertexConsumer consumer,
-                                              int packedLight, int packedOverlay, float red, float green,
-                                              float blue, float alpha, T entity, float entityYaw,
+                                              int packedLight, int packedOverlay, int color, T entity, float entityYaw,
                                               float partialTick, PoseStack methodPoseStack,
                                               MultiBufferSource buffers, int methodPackedLight) {
         BlenderEntityBinding blender = BlenderEntityBindings.resolve(entity);
@@ -64,7 +63,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
             eca$blenderReplacedBody = true;
             return;
         }
-        model.renderToBuffer(poseStack, consumer, packedLight, packedOverlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, red, green, blue));
+        model.renderToBuffer(poseStack, consumer, packedLight, packedOverlay, color);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

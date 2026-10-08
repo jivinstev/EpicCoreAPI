@@ -15,6 +15,7 @@ import net.eca.util.entity_extension.EntityExtensionClientState;
 import net.eca.util.entity_extension.ForceLoadingManager;
 import net.eca.util.entity_extension.GlobalSkyboxExtension;
 import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -63,9 +64,9 @@ public abstract class LevelRendererMixin {
 
     /* 云层关闭时 renderClouds 根本不会被调用，用后复位会让标志跨帧残留，只能在帧首清零 */
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void eca$resetCloudOcclusion(PoseStack poseStack, float partialTick, long finishNanoTime,
-                                         boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer,
-                                         LightTexture lightTexture, Matrix4f projectionMatrix, CallbackInfo ci) {
+    private void eca$resetCloudOcclusion(DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
+                                         GameRenderer gameRenderer, LightTexture lightTexture,
+                                         Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
         eca$cloudsOccludeForceLoaded = false;
     }
 
@@ -74,21 +75,21 @@ public abstract class LevelRendererMixin {
        只能由帧边界回收。ReceivingLevelScreen 在 tick 里也调 isChunkCompiled，
        读到跨帧残留会让“正在加载地形”在地形就绪前提前关闭。 */
     @Inject(method = "renderLevel", at = {@At("HEAD"), @At("RETURN")})
-    private void eca$clearForceLoadedRenderContext(PoseStack poseStack, float partialTick, long finishNanoTime,
-                                                   boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer,
-                                                   LightTexture lightTexture, Matrix4f projectionMatrix, CallbackInfo ci) {
+    private void eca$clearForceLoadedRenderContext(DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
+                                                   GameRenderer gameRenderer, LightTexture lightTexture,
+                                                   Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
         ForceLoadingManager.clearCurrentRenderingEntity();
     }
 
     @Inject(method = "renderClouds", at = @At("HEAD"), cancellable = true)
-    private void eca$skipOccludingClouds(PoseStack poseStack, Matrix4f frustumMatrix, float partialTick,
+    private void eca$skipOccludingClouds(PoseStack poseStack, Matrix4f frustumMatrix, Matrix4f projectionMatrix, float partialTick,
                                          double camX, double camY, double camZ, CallbackInfo ci) {
         if (eca$cloudsOccludeForceLoaded) {
             ci.cancel();
         }
     }
 
-    @Inject(method = "isChunkCompiled", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isSectionCompiled", at = @At("HEAD"), cancellable = true)
     private void eca$forceLoadedChunkCheck(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
         Entity entity = ForceLoadingManager.getCurrentRenderingEntity();
         if (entity != null && ForceLoadingManager.shouldForceLoad(entity)) {
@@ -184,11 +185,13 @@ public abstract class LevelRendererMixin {
     // ==================== 全局天空盒渲染 ====================
 
     @Inject(method = "renderSky", at = @At("TAIL"))
-    private void eca$renderGlobalSkybox(PoseStack poseStack, Matrix4f projectionMatrix, float partialTick, Camera camera, boolean foggy, Runnable setupFog, CallbackInfo ci) {
+    private void eca$renderGlobalSkybox(Matrix4f frustumMatrix, Matrix4f projectionMatrix, float partialTick, Camera camera, boolean foggy, Runnable setupFog, CallbackInfo ci) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || camera == null) {
             return;
         }
+        PoseStack poseStack = new PoseStack();
+        poseStack.mulPose(frustumMatrix);
         if (camera.getFluidInCamera() != FogType.NONE) {
             return;
         }

@@ -54,25 +54,6 @@ public abstract class ChunkMapMixin {
         }
     }
 
-    @Inject(method = "scheduleChunkGeneration", at = @At("HEAD"), cancellable = true)
-    private void eca$guardChunkGeneration(
-        ChunkHolder holder,
-        ChunkStatus status,
-        CallbackInfoReturnable<CompletableFuture<ChunkResult<ChunkAccess>>> cir
-    ) {
-        ChunkPos pos = holder.getPos();
-        if (Math.abs(pos.x) > ECA_SAFE_CHUNK_LIMIT || Math.abs(pos.z) > ECA_SAFE_CHUNK_LIMIT) {
-            EcaLogger.warn(
-                "[ChunkMapMixin] blocked out-of-range chunk generation: {},{} status={} level={}",
-                pos.x,
-                pos.z,
-                status,
-                this.level.dimension().location()
-            );
-            cir.setReturnValue(ChunkHolder.UNLOADED_CHUNK_FUTURE);
-        }
-    }
-
     @Inject(method = "tick()V", at = @At("HEAD"))
     private void eca$onTickStart(CallbackInfo ci) {
         UnsafeUtil.onChunkMapTickStart();

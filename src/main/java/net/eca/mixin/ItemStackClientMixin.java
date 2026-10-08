@@ -12,6 +12,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.neoforged.api.distmarker.Dist;
@@ -41,7 +42,7 @@ public class ItemStackClientMixin {
 
     // 与原版 tooltip 生成完成点对齐，保证扩展可以控制最终插入位置。
     @Inject(method = "getTooltipLines", at = @At("RETURN"))
-    private void eca$appendTooltip(Player player, TooltipFlag flag,
+    private void eca$appendTooltip(Item.TooltipContext context, Player player, TooltipFlag flag,
                                    CallbackInfoReturnable<List<Component>> callback) {
         ItemStack stack = (ItemStack) (Object) this;
         if (stack.isEmpty()) return;

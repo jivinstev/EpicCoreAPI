@@ -132,30 +132,5 @@ public abstract class ServerGamePacketListenerMixin implements ServerTeleportCon
         ), this.player);
     }
 
-    //拦截踢人操作，防止无敌玩家被踢出服务器
-    @Inject(method = "disconnect",
-            at = @At("HEAD"), cancellable = true)
-    private void eca$onDisconnect(Component reason, CallbackInfo ci) {
-        if (EcaAPI.isInvulnerable(this.player)) {
-            ci.cancel();
-        }
-    }
-
-    //拦截危险数据包（断线包、死亡包），防止无敌玩家被恶意包影响
-    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;)V",
-            at = @At("HEAD"), cancellable = true)
-    private void eca$onSendPacket(Packet<?> packet, CallbackInfo ci) {
-        if (!EcaAPI.isInvulnerable(this.player)) {
-            return;
-        }
-
-        if (packet instanceof ClientboundDisconnectPacket) {
-            ci.cancel();
-            return;
-        }
-
-        if (packet instanceof ClientboundPlayerCombatKillPacket) {
-            ci.cancel();
-        }
-    }
+    // 踢人/危险数据包拦截已移至 ServerCommonPacketListenerMixin（1.21 中这两个方法声明在父类）
 }
