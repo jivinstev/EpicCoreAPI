@@ -1,10 +1,10 @@
 package net.eca.pro;
 
 import net.eca.agent.AgentLogWriter;
-import net.neoforged.fml.earlydisplay.ElementShader;
-import net.neoforged.fml.earlydisplay.QuadHelper;
-import net.neoforged.fml.earlydisplay.RenderElement;
-import net.neoforged.fml.earlydisplay.SimpleBufferBuilder;
+import net.neoforged.fml.earlydisplay.render.ElementShader;
+import net.neoforged.fml.earlydisplay.render.QuadHelper;
+import net.neoforged.fml.earlydisplay.render.elements.RenderElement;
+import net.neoforged.fml.earlydisplay.render.SimpleBufferBuilder;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.STBImage;
 
