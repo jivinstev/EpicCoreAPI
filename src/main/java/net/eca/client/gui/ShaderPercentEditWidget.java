@@ -5,6 +5,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -42,13 +45,16 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (!active || !visible || button != 0 || !clicked(mouseX, mouseY)) {
             return false;
         }
         if (editing) {
             setFocused(true);
-            field.mouseClicked(mouseX, mouseY, button);
+            field.mouseClicked(event, doubleClick);
             return true;
         }
         long now = System.currentTimeMillis();
@@ -82,9 +88,10 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
         if (!editing) {
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(event);
         }
         if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
             confirm();
@@ -94,12 +101,12 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
             cancel();
             return true;
         }
-        return field.keyPressed(keyCode, scanCode, modifiers);
+        return field.keyPressed(event);
     }
 
     @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        return editing ? field.charTyped(codePoint, modifiers) : super.charTyped(codePoint, modifiers);
+    public boolean charTyped(CharacterEvent event) {
+        return editing ? field.charTyped(event) : super.charTyped(event);
     }
 
     private void confirm() {
@@ -127,7 +134,7 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(
+    protected void extractWidgetRenderState(
         GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,

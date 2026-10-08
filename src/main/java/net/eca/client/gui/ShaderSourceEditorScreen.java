@@ -20,6 +20,8 @@ import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.Whence;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
@@ -517,7 +519,8 @@ public final class ShaderSourceEditorScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && openDropdown >= 0) {
             closeDropdown();
             return true;
@@ -538,7 +541,7 @@ public final class ShaderSourceEditorScreen extends Screen {
             compile(true);
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     private void restoreHistory(
@@ -559,7 +562,10 @@ public final class ShaderSourceEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (button == 0 && editor != null && !editor.isMouseOver(mouseX, mouseY)) {
             clearEditorSelection();
         }
@@ -570,14 +576,14 @@ public final class ShaderSourceEditorScreen extends Screen {
                  index++) {
                 var listener = children.get(index);
                 if (listener.isMouseOver(mouseX, mouseY)) {
-                    return listener.mouseClicked(mouseX, mouseY, button);
+                    return listener.mouseClicked(event, doubleClick);
                 }
             }
             openDropdown = -1;
             rebuildWidgets();
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     private void clearEditorSelection() {
@@ -608,7 +614,7 @@ public final class ShaderSourceEditorScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, CONTENT_TOP - 2, 0xFF202225);
         graphics.fill(6, CONTENT_TOP - 2, editorRight, height - 6, 0xFF08090B);
         graphics.fill(previewLeft, CONTENT_TOP, width - 8, previewBottom, 0xFF08090B);

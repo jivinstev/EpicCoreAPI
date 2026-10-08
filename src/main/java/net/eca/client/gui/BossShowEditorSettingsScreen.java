@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -130,12 +131,13 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
     public boolean shouldCloseOnEsc() { return false; }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
         if (keyCode == 256) {
             closePanel();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
@@ -145,6 +147,6 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
         g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.target"), x, 63, 0xCCCCCC, false);
         g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.trigger"), x, 87, 0xCCCCCC, false);
         g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.value"), x, 111, 0xCCCCCC, false);
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 }

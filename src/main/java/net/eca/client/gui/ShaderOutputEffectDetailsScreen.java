@@ -120,7 +120,7 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - PANEL_WIDTH) / 2;
         graphics.centeredText(font, title, width / 2, 18, 0xFFFFFFFF);
         int baseY = 70;

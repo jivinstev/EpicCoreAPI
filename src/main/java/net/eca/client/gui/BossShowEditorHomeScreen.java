@@ -16,6 +16,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -127,7 +129,8 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
         if (keyCode == 256 /* GLFW_KEY_ESCAPE */) {
             if (this.getFocused() instanceof EditBox eb && eb.isFocused()) {
                 eb.setFocused(false);
@@ -137,7 +140,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             doClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
@@ -162,9 +165,9 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             this.width / 2, listHeaderY, 0xFFAAAAAA);
 
         //列表
-        if (defList != null) defList.render(g, mouseX, mouseY, partialTick);
+        if (defList != null) defList.extractRenderState(g, mouseX, mouseY, partialTick);
 
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 
     //=== 内嵌 def 列表 widget ===
@@ -231,23 +234,23 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                 editBtn.setY(top + 2);
                 playBtn.setX(left + width - 132);
                 playBtn.setY(top + 2);
-                deleteBtn.render(g, mouseX, mouseY, partialTick);
-                editBtn.render(g, mouseX, mouseY, partialTick);
-                playBtn.render(g, mouseX, mouseY, partialTick);
+                deleteBtn.extractRenderState(g, mouseX, mouseY, partialTick);
+                editBtn.extractRenderState(g, mouseX, mouseY, partialTick);
+                playBtn.extractRenderState(g, mouseX, mouseY, partialTick);
             }
 
             @Override
-            public boolean mouseClicked(double mouseX, double mouseY, int button) {
-                if (deleteBtn.mouseClicked(mouseX, mouseY, button)) {
+            public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+                if (deleteBtn.mouseClicked(event, doubleClick)) {
                     return true;
                 }
-                if (editBtn.mouseClicked(mouseX, mouseY, button)) {
+                if (editBtn.mouseClicked(event, doubleClick)) {
                     return true;
                 }
-                if (playBtn.mouseClicked(mouseX, mouseY, button)) {
+                if (playBtn.mouseClicked(event, doubleClick)) {
                     return true;
                 }
-                return super.mouseClicked(mouseX, mouseY, button);
+                return super.mouseClicked(event, doubleClick);
             }
         }
     }

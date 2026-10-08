@@ -46,6 +46,8 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
@@ -583,7 +585,10 @@ public final class ShaderGeneratorScreen extends Screen {
 
     /* 点击菜单外关闭下拉 */
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mx = event.x();
+        double my = event.y();
+        int button = event.button();
         if (editingLayerIndex >= 0
             && layerNameField != null
             && !layerNameField.isMouseOver(mx, my)
@@ -598,7 +603,7 @@ public final class ShaderGeneratorScreen extends Screen {
                  i++) {
                 GuiEventListener listener = kids.get(i);
                 if (listener.isMouseOver(mx, my)) {
-                    return listener.mouseClicked(mx, my, button);
+                    return listener.mouseClicked(event, doubleClick);
                 }
             }
             openDropdown = -1;
@@ -616,11 +621,14 @@ public final class ShaderGeneratorScreen extends Screen {
         if (button == 0 && handleCanvasClick(mx, my)) {
             return true;
         }
-        return super.mouseClicked(mx, my, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mx = event.x();
+        double my = event.y();
+        int button = event.button();
         if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
             updateScrollbarScroll(my);
             return true;
@@ -638,11 +646,12 @@ public final class ShaderGeneratorScreen extends Screen {
             }
             return true;
         }
-        return super.mouseDragged(mx, my, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        int button = event.button();
         if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
             scrollbarDragTarget = ScrollbarTarget.NONE;
             return true;
@@ -656,11 +665,13 @@ public final class ShaderGeneratorScreen extends Screen {
             rebuildWidgets();
             return true;
         }
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
+        int modifiers = event.modifiers();
         if (editingLayerIndex >= 0) {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 confirmLayerRename();
@@ -672,7 +683,7 @@ public final class ShaderGeneratorScreen extends Screen {
             }
         }
         /* 先给焦点控件（如滑条输入框）机会消费，避免抢走文本输入 */
-        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+        if (super.keyPressed(event)) {
             return true;
         }
         boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
@@ -3234,7 +3245,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         /* 4. 普通控件 */
-        super.render(g, mx, my, pt);
+        super.extractRenderState(g, mx, my, pt);
 
         /* 5. 独立深度层确保下拉菜单覆盖已经写入深度缓冲的普通控件 */
         g.pose().pushMatrix();
@@ -3863,7 +3874,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
+        protected void extractWidgetRenderState(
             GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
@@ -3911,7 +3922,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
+        protected void extractWidgetRenderState(
             GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
@@ -3965,7 +3976,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
+        protected void extractWidgetRenderState(
             GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,

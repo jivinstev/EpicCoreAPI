@@ -16,6 +16,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -502,7 +504,8 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     public boolean shouldCloseOnEsc() { return false; }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && contextMenuOpen) { closeContextMenu(); return true; }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && openDropdown >= 0) { closeDropdown(); return true; }
         if (this.getFocused() instanceof EditBox editBox) {
@@ -511,7 +514,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
                 this.setFocused(null);
                 return true;
             }
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(event);
         }
         if (hasControlDown()) {
             if (keyCode == GLFW.GLFW_KEY_Z) { undo(); return true; }
@@ -537,11 +540,14 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             if (keyCode == GLFW.GLFW_KEY_DELETE) { deleteSelectedTrackContent(); return true; }
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) { attemptClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (contextMenuOpen) {
             if (button == 0) return handleContextMenuClick(mouseX, mouseY);
             closeContextMenu();
@@ -557,11 +563,13 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             timelineResizeStartHeight = timelineCollapsed ? MIN_TIMELINE_HEIGHT : preferredTimelineHeight;
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mouseY = event.y();
+        int button = event.button();
         if (button == 0 && resizingTimeline) {
             int delta = (int) Math.round(timelineResizeStartY - mouseY);
             if (Math.abs(delta) >= 2) timelineResizeMoved = true;
@@ -571,11 +579,12 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        int button = event.button();
         if (button == 0 && resizingTimeline) {
             resizingTimeline = false;
             if (!timelineResizeMoved) {
@@ -584,7 +593,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -602,7 +611,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         g.text(this.font, Component.translatable("gui.eca.bossshow.editor.track." + selectedTrack.name().toLowerCase(Locale.ROOT)),
             this.width / 2 - 45, TOP_HEIGHT + 4, 0xFFB8BFCE, false);
         drawInspectorLabels(g);
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         drawTimelineHandle(g, timelineY, mouseX, mouseY);
         if (openDropdown >= 0) {
             g.pose().pushMatrix();
@@ -635,7 +644,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         g.fill(left, top, right, bottom, 0xFF2C2F39);
         g.outline(left, top, right - left, bottom - top, 0xFF555B6A);
         for (int i = dropdownFirstWidgetIndex; i <= dropdownLastWidgetIndex && i < kids.size(); i++) {
-            if (kids.get(i) instanceof AbstractWidget w) w.render(g, mouseX, mouseY, partialTick);
+            if (kids.get(i) instanceof AbstractWidget w) w.extractRenderState(g, mouseX, mouseY, partialTick);
         }
     }
 

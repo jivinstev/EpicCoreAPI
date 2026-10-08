@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 
 //BossShow 时间轴范围位姿偏移面板。
@@ -101,12 +102,13 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
         if (keyCode == 256) {
             closePanel();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
@@ -130,6 +132,6 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
         if (!error.getString().isEmpty()) {
             g.centeredText(this.font, error, this.width / 2, this.height - 72, 0xFF5555);
         }
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 }

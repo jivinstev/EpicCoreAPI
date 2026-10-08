@@ -123,7 +123,7 @@ public final class ShaderEffectSelectionScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         Component heading = selectedCategory == null
             ? title
             : Component.translatable(selectedCategory.translationKey());
