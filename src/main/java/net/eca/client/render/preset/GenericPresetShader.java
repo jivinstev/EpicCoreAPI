@@ -1,22 +1,21 @@
 package net.eca.client.render.preset;
 
-import com.mojang.blaze3d.opengl.Uniform;
+import net.eca.client.render.shader.EcaShaderInstance.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-/* 单个自定义预设的着色器持有者：一个逻辑预设 id 对应两个 ShaderInstance——BLOCK profile（id+"_block"，
+/* 单个自定义预设的着色器持有者：一个逻辑预设 id 对应两个 EcaShaderInstance——BLOCK profile（id+"_block"，
    DefaultVertexFormat.BLOCK）服务 BLOCK 顶点格式的 RenderType（天空盒 / Boss 血条），NEW_ENTITY profile
    （id+"_entity"，NEW_ENTITY）服务 NEW_ENTITY 顶点格式的 RenderType（Boss 实体层 / 物品层 / 实体效果层）。
    两 profile 共享同一 fsh，但必须各按匹配的 VertexFormat 编译，不能共用单一实例。
-   reload 在每次 RegisterShadersEvent（或注册晚于该事件时）重建两个 EcaShaderInstance（自带 Iris 深度颜色解锁）。 */
+   reload 在每次 ShaderRegistration（或注册晚于该事件时）重建两个 EcaShaderInstance（自带 Iris 深度颜色解锁）。 */
 @SuppressWarnings("removal")
 final class GenericPresetShader {
 
@@ -36,7 +35,7 @@ final class GenericPresetShader {
         return entity;
     }
 
-    //从给定资源源（RegisterShadersEvent 的 provider，或运行期的资源管理器）编译两个 profile 并接好标准 uniform
+    //从给定资源源（ShaderRegistration 的 provider，或运行期的资源管理器）编译两个 profile 并接好标准 uniform
     void reload(ResourceProvider provider) {
         block.reload(provider);
         entity.reload(provider);
@@ -47,15 +46,15 @@ final class GenericPresetShader {
         return Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_" + suffix);
     }
 
-    /* 单个 profile 的着色器持有者：持有该 profile 的 core shader id、匹配的顶点格式、当前 ShaderInstance 与一组标准
-       uniform 句柄。每个 ShaderInstance 各有独立的 Uniform 对象，故 uniform 句柄必须随实例分别持有。
+    /* 单个 profile 的着色器持有者：持有该 profile 的 core shader id、匹配的顶点格式、当前 EcaShaderInstance 与一组标准
+       uniform 句柄。每个 EcaShaderInstance 各有独立的 Uniform 对象，故 uniform 句柄必须随实例分别持有。
        applyUniforms 按帧喂 GameTime / 相机朝向 / 抠像 / 物品图集。 */
     static final class Profile {
 
         private final Identifier location;
         private final VertexFormat format;
 
-        private ShaderInstance shader;
+        private EcaShaderInstance shader;
         private Uniform timeUniform;
         private Uniform cameraYawUniform;
         private Uniform cameraPitchUniform;
@@ -69,13 +68,13 @@ final class GenericPresetShader {
             this.format = format;
         }
 
-        ShaderInstance getShader() {
+        EcaShaderInstance getShader() {
             return shader;
         }
 
         void reload(ResourceProvider provider) {
             try {
-                ShaderInstance instance = EcaShaderInstance.create(
+                EcaShaderInstance instance = EcaShaderInstance.create(
                     ShaderPresetResourceProvider.wrap(provider), location, format
                 );
                 this.shader = instance;

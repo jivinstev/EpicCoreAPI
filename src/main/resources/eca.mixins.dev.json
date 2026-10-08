@@ -22,7 +22,10 @@
     "ItemRendererMixin",
     "EntityFactionGlowMixin",
     "ItemStackClientMixin",
-    "FallingBlockRendererMixin"
+    "FallingBlockRendererMixin",
+    "RenderTypePrepareMixin",
+    "PreparedRenderTypeMixin",
+    "ShaderManagerSourceMixin"
   ],
   "mixins": [
     "ChunkMapMixin",

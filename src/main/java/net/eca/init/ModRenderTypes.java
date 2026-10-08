@@ -26,11 +26,17 @@ import net.eca.client.render.shader.StarlightShader;
 import net.eca.client.render.shader.StormShader;
 import net.eca.client.render.shader.TheLastEndShader;
 import net.eca.client.render.shader.VolcanoShader;
+import net.eca.client.render.shader.EcaShaderInstance;
+import net.eca.client.render.shader.ShaderRegistration;
 import net.eca.client.render.preset.ShaderPresetRegistry;
+import net.eca.util.EcaLogger;
 import net.eca.util.entity_extension.GlobalEffectRegistry;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
+import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
@@ -40,8 +46,29 @@ import java.io.IOException;
 @EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public class ModRenderTypes {
 
+    //26.x 没有 RegisterShadersEvent：客户端初始化时先从模组 jar 注册，资源重载时再按资源包重建
     @SubscribeEvent
-    public static void onRegisterShaders(RegisterShadersEvent event) throws IOException {
+    public static void onRegisterPipelines(RegisterRenderPipelinesEvent event) throws IOException {
+        onRegisterShaders(ShaderRegistration.fromModJar());
+    }
+
+    @SubscribeEvent
+    public static void onAddReloadListeners(AddClientReloadListenersEvent event) {
+        event.addListener(Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "shaders"), (ResourceManagerReloadListener) manager -> {
+            try {
+                onRegisterShaders(ShaderRegistration.of(manager));
+            } catch (IOException e) {
+                EcaLogger.warn("[ModRenderTypes] failed to reload shaders: {}", e.toString());
+            }
+        });
+    }
+
+    @SubscribeEvent
+    public static void onRenderFrame(RenderFrameEvent.Pre event) {
+        EcaShaderInstance.endFrame();
+    }
+
+    public static void onRegisterShaders(ShaderRegistration event) throws IOException {
         TheLastEndShader.register(event);
         DreamSakuraShader.register(event);
         ForestShader.register(event);

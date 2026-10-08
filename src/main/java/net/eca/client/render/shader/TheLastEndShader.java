@@ -1,19 +1,17 @@
 package net.eca.client.render.shader;
 
-import com.mojang.blaze3d.opengl.Uniform;
+import net.eca.client.render.shader.EcaShaderInstance.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 import java.io.IOException;
 
 @SuppressWarnings("removal")
 public class TheLastEndShader {
 
-    private static ShaderInstance shader;
+    private static EcaShaderInstance shader;
     private static Uniform timeUniform;
     private static Uniform cameraYawUniform;
     private static Uniform cameraPitchUniform;
@@ -22,8 +20,8 @@ public class TheLastEndShader {
     private static Uniform localUvMinUniform;
     private static Uniform localUvScaleUniform;
 
-    public static void register(RegisterShadersEvent event) throws IOException {
-        ShaderInstance theLastEndShader = EcaShaderInstance.create(
+    public static void register(ShaderRegistration event) throws IOException {
+        EcaShaderInstance theLastEndShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
             Identifier.fromNamespaceAndPath("eca", "the_last_end"),
             DefaultVertexFormat.BLOCK
@@ -40,7 +38,7 @@ public class TheLastEndShader {
         });
     }
 
-    public static ShaderInstance getShader() {
+    public static EcaShaderInstance getShader() {
         return shader;
     }
 

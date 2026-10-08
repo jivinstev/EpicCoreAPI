@@ -22,7 +22,10 @@
     "SoundManagerMixin",
     "ItemStackClientMixin",
     "ItemRendererMixin",
-    "FallingBlockRendererMixin"
+    "FallingBlockRendererMixin",
+    "RenderTypePrepareMixin",
+    "PreparedRenderTypeMixin",
+    "ShaderManagerSourceMixin"
   ],
   "mixins": [
     "ChunkMapMixin",

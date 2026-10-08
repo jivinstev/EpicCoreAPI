@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.eca.client.render.shader.ShaderRegistration;
 import net.neoforged.fml.ModList;
 
 import java.io.IOException;
@@ -175,8 +175,8 @@ public final class ShaderPresetRegistry {
         return Set.copyOf(PRESETS.keySet());
     }
 
-    /* RegisterShadersEvent 中调用：重建所有已登记预设的 ShaderInstance */
-    public static void onRegisterShaders(RegisterShadersEvent event) {
+    /* ShaderRegistration 中调用：重建所有已登记预设的 EcaShaderInstance */
+    public static void onRegisterShaders(ShaderRegistration event) {
         shadersLoaded = true;
         ResourceProvider provider = event.getResourceProvider();
         for (GenericPresetShader shader : SHADERS.values()) {

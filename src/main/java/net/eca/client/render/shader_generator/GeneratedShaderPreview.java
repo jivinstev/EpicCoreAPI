@@ -1,9 +1,13 @@
 package net.eca.client.render.shader_generator;
 
 import com.mojang.blaze3d.opengl.Uniform;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.shader_generator.ShaderExportBundle;
 import net.eca.util.shader_generator.ShaderExportMode;
@@ -13,10 +17,11 @@ import net.eca.util.shader_generator.ShaderSourceAssembler;
 import net.eca.util.shader_generator.ShaderSourceWorkspace;
 import net.eca.util.shader_generator.ShaderTargetProfile;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -73,12 +78,12 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         this.whitePreviewTexture = whitePreviewTexture;
         this.maskSamplerName = maskSamplerName;
 
-        RenderStateShard.ShaderStateShard blockState = shaderState(
+        EcaShaderInstance.State blockState = shaderState(
             blockShader,
             blockUniforms,
             maskBinding(blockShader, maskSamplerName, whitePreviewTexture)
         );
-        RenderStateShard.ShaderStateShard itemState = shaderState(
+        EcaShaderInstance.State itemState = shaderState(
             entityShader,
             entityUniforms,
             maskBinding(entityShader, maskSamplerName, InventoryMenu.BLOCK_ATLAS)
@@ -262,19 +267,16 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         }
     }
 
-    private static RenderStateShard.ShaderStateShard shaderState(
+    private static EcaShaderInstance.State shaderState(
         ShaderInstance shader,
         UniformSet uniforms,
         Runnable beforeShaderSetup
     ) {
-        return new RenderStateShard.ShaderStateShard(() -> shader) {
-            @Override
-            public void setupRenderState() {
-                beforeShaderSetup.run();
+        return EcaShaderInstance.state(() -> shader, () -> {
+beforeShaderSetup.run();
                 super.setupRenderState();
                 uniforms.apply();
-            }
-        };
+});
     }
 
     private static Runnable maskBinding(
@@ -290,93 +292,80 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
 
     private static RenderType createBossBar(
         String name,
-        RenderStateShard.ShaderStateShard shader,
+        EcaShaderInstance.State shader,
         Identifier texture
     ) {
         return RenderType.create(
             name + "_boss_bar",
-            DefaultVertexFormat.BLOCK,
-            VertexFormat.Mode.QUADS,
-            256,
-            false,
-            true,
-            RenderType.CompositeState.builder()
-                .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.NO_DEPTH_TEST)
-                .setWriteMaskState(RenderType.COLOR_WRITE)
-                .createCompositeState(false)
+            RenderSetup.builder(shader.pipeline(name + "_boss_bar", pb -> pb
+                    .withVertexBinding(0, DefaultVertexFormat.BLOCK)
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))))
+                .withTexture("Sampler0", texture)
+                .sortOnUpload()
+                .createRenderSetup()
         );
     }
 
     private static RenderType createSkybox(
         String name,
-        RenderStateShard.ShaderStateShard shader,
+        EcaShaderInstance.State shader,
         Identifier texture
     ) {
         return RenderType.create(
             name + "_skybox",
-            DefaultVertexFormat.BLOCK,
-            VertexFormat.Mode.QUADS,
-            256,
-            true,
-            false,
-            RenderType.CompositeState.builder()
-                .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.NO_DEPTH_TEST)
-                .setWriteMaskState(RenderType.COLOR_WRITE)
-                .createCompositeState(false)
+            RenderSetup.builder(shader.pipeline(name + "_skybox", pb -> pb
+                    .withVertexBinding(0, DefaultVertexFormat.BLOCK)
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                    .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))))
+                .withTexture("Sampler0", texture)
+                .affectsCrumbling()
+                .createRenderSetup()
         );
     }
 
     private static RenderType createItem(
         String name,
-        RenderStateShard.ShaderStateShard shader
+        EcaShaderInstance.State shader
     ) {
         return RenderType.create(
             name + "_item",
-            DefaultVertexFormat.NEW_ENTITY,
-            VertexFormat.Mode.QUADS,
-            256,
-            true,
-            false,
-            RenderType.CompositeState.builder()
-                .setShaderState(shader)
-                .setTextureState(RenderType.BLOCK_SHEET_MIPPED)
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
-                .setCullState(RenderType.NO_CULL)
-                .setOverlayState(RenderType.OVERLAY)
-                .setWriteMaskState(RenderType.COLOR_WRITE)
-                .createCompositeState(true)
+            RenderSetup.builder(shader.pipeline(name + "_item", pb -> pb
+                    .withVertexBinding(0, DefaultVertexFormat.ENTITY)
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                    .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+                    .withCull(false)))
+                .withTexture("Sampler0", TextureAtlas.LOCATION_BLOCKS)
+                .useOverlay()
+                .affectsCrumbling()
+                .setOutline(RenderSetup.OutlineProperty.AFFECTS_OUTLINE)
+                .createRenderSetup()
         );
     }
 
     private static RenderType createEntity(
         String name,
-        RenderStateShard.ShaderStateShard shader,
+        EcaShaderInstance.State shader,
         Identifier texture
     ) {
         return RenderType.create(
             name + "_entity",
-            DefaultVertexFormat.NEW_ENTITY,
-            VertexFormat.Mode.QUADS,
-            256,
-            true,
-            true,
-            RenderType.CompositeState.builder()
-                .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
-                .setLightmapState(RenderType.LIGHTMAP)
-                .setOverlayState(RenderType.OVERLAY)
-                .setCullState(RenderType.NO_CULL)
-                .setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
-                .createCompositeState(true)
+            RenderSetup.builder(shader.pipeline(name + "_entity", pb -> pb
+                    .withVertexBinding(0, DefaultVertexFormat.ENTITY)
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                    .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
+                    .withCull(false)))
+                .withTexture("Sampler0", texture)
+                .useLightmap()
+                .useOverlay()
+                .affectsCrumbling()
+                .sortOnUpload()
+                .setOutline(RenderSetup.OutlineProperty.AFFECTS_OUTLINE)
+                .createRenderSetup()
         );
     }
 

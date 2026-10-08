@@ -1,6 +1,5 @@
 package net.eca.client.render.preset;
 
-import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -14,7 +13,7 @@ public final class ShaderPreset {
 
     private final Identifier id;
     private final String name;
-    private final RenderStateShard.ShaderStateShard entityShaderState;
+    private final EcaShaderInstance.State entityShaderState;
     private final RenderType bossBar;
     private final RenderType bossLayer;
     private final RenderType skybox;
@@ -24,7 +23,7 @@ public final class ShaderPreset {
     ShaderPreset(Identifier id, GenericPresetShader shader) {
         this.id = id;
         this.name = "eca_preset_" + id.getNamespace() + "_" + id.getPath().replace('/', '_');
-        RenderStateShard.ShaderStateShard blockShaderState = profileState(shader.block());
+        EcaShaderInstance.State blockShaderState = profileState(shader.block());
         this.entityShaderState = profileState(shader.entity());
         this.bossBar = PresetRenderTypes.bossBar(name, blockShaderState);
         this.skybox = PresetRenderTypes.skybox(name, blockShaderState);
@@ -34,14 +33,8 @@ public final class ShaderPreset {
     }
 
     //用一个 profile 的当前 ShaderInstance 构造 ShaderState，并在渲染前喂入该 profile 的标准 uniform
-    private static RenderStateShard.ShaderStateShard profileState(GenericPresetShader.Profile profile) {
-        return new RenderStateShard.ShaderStateShard(profile::getShader) {
-            @Override
-            public void setupRenderState() {
-                super.setupRenderState();
-                profile.applyUniforms();
-            }
-        };
+    private static EcaShaderInstance.State profileState(GenericPresetShader.Profile profile) {
+        return EcaShaderInstance.state(profile::getShader, () -> profile.applyUniforms());
     }
 
     public Identifier id() {

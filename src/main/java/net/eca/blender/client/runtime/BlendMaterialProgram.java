@@ -3,17 +3,21 @@ package net.eca.blender.client.runtime;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.blender.client.runtime.BlendNodeGraph.Expr;
 import net.eca.blender.client.runtime.BlendNodeGraph.Input;
 import net.eca.blender.client.runtime.BlendNodeGraph.Value;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceProvider;
@@ -167,12 +171,19 @@ public final class BlendMaterialProgram implements AutoCloseable {
             shader = null;
             throw new IOException("Material requires more texture units than the renderer or GPU supports");
         }
-        type = RenderType.create("eca_blend_" + id, DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, true, true,
-            RenderType.CompositeState.builder().setShaderState(new RenderStateShard.ShaderStateShard(() -> shader))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY).setCullState(RenderType.NO_CULL)
-                .setLightmapState(RenderType.LIGHTMAP).setOverlayState(RenderType.OVERLAY)
-                .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST).setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
-                .createCompositeState(true));
+        type = RenderType.create("eca_blend_" + id,
+            RenderSetup.builder(EcaShaderInstance.state(() -> shader, null).pipeline("eca_blend_" + id, pb -> pb
+                    .withVertexBinding(0, DefaultVertexFormat.ENTITY)
+                    .withPrimitiveTopology(PrimitiveTopology.QUADS)
+                    .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                    .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, true))
+                    .withCull(false)))
+                .useLightmap()
+                .useOverlay()
+                .affectsCrumbling()
+                .sortOnUpload()
+                .setOutline(RenderSetup.OutlineProperty.AFFECTS_OUTLINE)
+                .createRenderSetup());
         if (byteBuffer != null) byteBuffer.close();
         byteBuffer = new ByteBufferBuilder(256);
         buffers = MultiBufferSource.immediate(byteBuffer);

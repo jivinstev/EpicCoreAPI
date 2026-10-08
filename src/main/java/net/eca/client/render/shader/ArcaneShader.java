@@ -1,18 +1,16 @@
 package net.eca.client.render.shader;
 
-import com.mojang.blaze3d.opengl.Uniform;
+import net.eca.client.render.shader.EcaShaderInstance.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 import java.io.IOException;
 @SuppressWarnings("removal")
 public class ArcaneShader {
 
-    private static ShaderInstance shader;
+    private static EcaShaderInstance shader;
     private static Uniform timeUniform;
     private static Uniform cameraYawUniform;
     private static Uniform cameraPitchUniform;
@@ -21,8 +19,8 @@ public class ArcaneShader {
     private static Uniform localUvMinUniform;
     private static Uniform localUvScaleUniform;
 
-    public static void register(RegisterShadersEvent event) throws IOException {
-        ShaderInstance arcaneShader = EcaShaderInstance.create(
+    public static void register(ShaderRegistration event) throws IOException {
+        EcaShaderInstance arcaneShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
             Identifier.fromNamespaceAndPath("eca", "arcane"),
             DefaultVertexFormat.BLOCK
@@ -39,7 +37,7 @@ public class ArcaneShader {
         });
     }
 
-    public static ShaderInstance getShader() {
+    public static EcaShaderInstance getShader() {
         return shader;
     }
 
