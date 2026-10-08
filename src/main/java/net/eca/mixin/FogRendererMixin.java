@@ -10,8 +10,8 @@ import net.eca.util.entity_extension.GlobalFogExtension;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.FogRenderer;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.fog.FogRenderer;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,7 +26,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@OnlyIn(Dist.CLIENT)
 @Mixin(FogRenderer.class)
 public class FogRendererMixin {
 
@@ -103,7 +102,7 @@ public class FogRendererMixin {
             return null;
         }
 
-        ResourceLocation dimensionId = level.dimension().location();
+        Identifier dimensionId = level.dimension().identifier();
         GlobalFogExtension cached = EntityExtensionClientState.getActiveFog(dimensionId);
         if (cached != null && cached.enabled() && cached.globalMode()) {
             strengthHolder[0] = 1.0f;

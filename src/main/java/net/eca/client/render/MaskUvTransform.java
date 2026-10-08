@@ -4,7 +4,6 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record MaskUvTransform(float minU, float minV, float scaleU, float scaleV) {
 
     public static final MaskUvTransform IDENTITY = new MaskUvTransform(0.0f, 0.0f, 1.0f, 1.0f);

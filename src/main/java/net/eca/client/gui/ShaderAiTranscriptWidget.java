@@ -3,7 +3,7 @@ package net.eca.client.gui;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractScrollWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -423,7 +423,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
 
     @Override
     protected void renderContents(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
@@ -465,7 +465,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
                         selectionCaret
                     );
                 }
-                command.render(graphics, font, contentX, contentY);
+                command.extractRenderState(graphics, font, contentX, contentY);
             }
         }
     }
@@ -485,7 +485,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
 
     private interface RenderCommand {
 
-        void render(GuiGraphics graphics, Font font, int baseX, int baseY);
+        void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY);
     }
 
     private static final class TextCommand implements RenderCommand {
@@ -516,7 +516,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
         }
 
         private void renderSelection(
-            GuiGraphics graphics,
+            GuiGraphicsExtractor graphics,
             Font font,
             int baseX,
             int baseY,
@@ -543,7 +543,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
         }
 
         @Override
-        public void render(GuiGraphics graphics, Font font, int baseX, int baseY) {
+        public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
             graphics.drawString(font, text, baseX + x, baseY + y, color, false);
         }
     }
@@ -552,7 +552,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
         implements RenderCommand {
 
         @Override
-        public void render(GuiGraphics graphics, Font font, int baseX, int baseY) {
+        public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
             graphics.fill(baseX + x, baseY + y, baseX + x + width, baseY + y + height, color);
         }
     }
@@ -561,7 +561,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
         implements RenderCommand {
 
         @Override
-        public void render(GuiGraphics graphics, Font font, int baseX, int baseY) {
+        public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
             graphics.renderOutline(baseX + x, baseY + y, width, height, color);
         }
     }

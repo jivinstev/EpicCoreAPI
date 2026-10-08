@@ -3,7 +3,7 @@ package net.eca.util.entity_extension;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,23 +15,22 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class EntityExtensionClientState {
 
-    private static final Map<ResourceLocation, EntityType<?>> ACTIVE_TYPES = new ConcurrentHashMap<>();
+    private static final Map<Identifier, EntityType<?>> ACTIVE_TYPES = new ConcurrentHashMap<>();
     private static final Map<UUID, EntityType<?>> BOSS_EVENT_TYPES = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> BOSS_EVENT_ENTITY_UUIDS = new ConcurrentHashMap<>();
 
-    private static final Map<ResourceLocation, GlobalFogExtension> ACTIVE_FOGS = new ConcurrentHashMap<>();
-    private static final Map<ResourceLocation, GlobalSkyboxExtension> ACTIVE_SKYBOXES = new ConcurrentHashMap<>();
-    private static final Map<ResourceLocation, CombatMusicExtension> ACTIVE_MUSICS = new ConcurrentHashMap<>();
-    private static final Map<ResourceLocation, Integer> ACTIVE_PRIORITIES = new ConcurrentHashMap<>();
+    private static final Map<Identifier, GlobalFogExtension> ACTIVE_FOGS = new ConcurrentHashMap<>();
+    private static final Map<Identifier, GlobalSkyboxExtension> ACTIVE_SKYBOXES = new ConcurrentHashMap<>();
+    private static final Map<Identifier, CombatMusicExtension> ACTIVE_MUSICS = new ConcurrentHashMap<>();
+    private static final Map<Identifier, Integer> ACTIVE_PRIORITIES = new ConcurrentHashMap<>();
 
-    private static final Set<ResourceLocation> OVERRIDE_FOGS = ConcurrentHashMap.newKeySet();
-    private static final Set<ResourceLocation> OVERRIDE_SKYBOXES = ConcurrentHashMap.newKeySet();
-    private static final Set<ResourceLocation> OVERRIDE_MUSICS = ConcurrentHashMap.newKeySet();
+    private static final Set<Identifier> OVERRIDE_FOGS = ConcurrentHashMap.newKeySet();
+    private static final Set<Identifier> OVERRIDE_SKYBOXES = ConcurrentHashMap.newKeySet();
+    private static final Set<Identifier> OVERRIDE_MUSICS = ConcurrentHashMap.newKeySet();
 
-    public static void setActiveType(ResourceLocation dimensionId, ResourceLocation typeId) {
+    public static void setActiveType(Identifier dimensionId, Identifier typeId) {
         if (dimensionId == null) {
             return;
         }
@@ -53,14 +52,14 @@ public final class EntityExtensionClientState {
         populateEffectCaches(dimensionId, type);
     }
 
-    public static EntityType<?> getActiveType(ResourceLocation dimensionId) {
+    public static EntityType<?> getActiveType(Identifier dimensionId) {
         if (dimensionId == null) {
             return null;
         }
         return ACTIVE_TYPES.get(dimensionId);
     }
 
-    public static void clear(ResourceLocation dimensionId) {
+    public static void clear(Identifier dimensionId) {
         if (dimensionId == null) {
             return;
         }
@@ -70,32 +69,32 @@ public final class EntityExtensionClientState {
 
     // ==================== 全局效果缓存 ====================
 
-    public static GlobalFogExtension getActiveFog(ResourceLocation dimensionId) {
+    public static GlobalFogExtension getActiveFog(Identifier dimensionId) {
         if (dimensionId == null) {
             return null;
         }
         return ACTIVE_FOGS.get(dimensionId);
     }
 
-    public static GlobalSkyboxExtension getActiveSkybox(ResourceLocation dimensionId) {
+    public static GlobalSkyboxExtension getActiveSkybox(Identifier dimensionId) {
         if (dimensionId == null) {
             return null;
         }
         return ACTIVE_SKYBOXES.get(dimensionId);
     }
 
-    public static CombatMusicExtension getActiveMusic(ResourceLocation dimensionId) {
+    public static CombatMusicExtension getActiveMusic(Identifier dimensionId) {
         if (dimensionId == null) {
             return null;
         }
         return ACTIVE_MUSICS.get(dimensionId);
     }
 
-    public static void setActiveFog(ResourceLocation dimensionId, GlobalFogExtension fog) {
+    public static void setActiveFog(Identifier dimensionId, GlobalFogExtension fog) {
         setActiveFog(dimensionId, fog, false);
     }
 
-    public static void setActiveFog(ResourceLocation dimensionId, GlobalFogExtension fog, boolean override) {
+    public static void setActiveFog(Identifier dimensionId, GlobalFogExtension fog, boolean override) {
         if (dimensionId == null) {
             return;
         }
@@ -110,11 +109,11 @@ public final class EntityExtensionClientState {
         }
     }
 
-    public static void setActiveSkybox(ResourceLocation dimensionId, GlobalSkyboxExtension skybox) {
+    public static void setActiveSkybox(Identifier dimensionId, GlobalSkyboxExtension skybox) {
         setActiveSkybox(dimensionId, skybox, false);
     }
 
-    public static void setActiveSkybox(ResourceLocation dimensionId, GlobalSkyboxExtension skybox, boolean override) {
+    public static void setActiveSkybox(Identifier dimensionId, GlobalSkyboxExtension skybox, boolean override) {
         if (dimensionId == null) {
             return;
         }
@@ -129,11 +128,11 @@ public final class EntityExtensionClientState {
         }
     }
 
-    public static void setActiveMusic(ResourceLocation dimensionId, CombatMusicExtension music) {
+    public static void setActiveMusic(Identifier dimensionId, CombatMusicExtension music) {
         setActiveMusic(dimensionId, music, false);
     }
 
-    public static void setActiveMusic(ResourceLocation dimensionId, CombatMusicExtension music, boolean override) {
+    public static void setActiveMusic(Identifier dimensionId, CombatMusicExtension music, boolean override) {
         if (dimensionId == null) {
             return;
         }
@@ -148,7 +147,7 @@ public final class EntityExtensionClientState {
         }
     }
 
-    private static void populateEffectCaches(ResourceLocation dimensionId, EntityType<?> type) {
+    private static void populateEffectCaches(Identifier dimensionId, EntityType<?> type) {
         EntityExtension extension = EntityExtensionManager.getExtension(type);
         if (extension == null) {
             clearEffectCaches(dimensionId);
@@ -168,7 +167,7 @@ public final class EntityExtensionClientState {
      * 按当前主实体状态重新解析全局效果，每个条件 tick 调用；维度被服务端覆写时跳过对应效果。
      * 主实体未定位（entity 为 null）时不应用 shouldEnableXxx 门控，仅按 enabled() 解析。
      */
-    private static void resolveConditionalEffects(ResourceLocation dimensionId, EntityExtension extension, LivingEntity entity) {
+    private static void resolveConditionalEffects(Identifier dimensionId, EntityExtension extension, LivingEntity entity) {
         if (!OVERRIDE_FOGS.contains(dimensionId)) {
             GlobalFogExtension fog = EntityExtensionSafeAccess.globalFogExtension(extension, entity);
             if (fog != null && fog.enabled() && EntityExtensionSafeAccess.shouldEnableFog(extension, entity)) {
@@ -195,7 +194,7 @@ public final class EntityExtensionClientState {
         }
     }
 
-    private static void clearEffectCaches(ResourceLocation dimensionId) {
+    private static void clearEffectCaches(Identifier dimensionId) {
         if (!OVERRIDE_FOGS.contains(dimensionId)) {
             ACTIVE_FOGS.remove(dimensionId);
         }
@@ -208,7 +207,7 @@ public final class EntityExtensionClientState {
         ACTIVE_PRIORITIES.remove(dimensionId);
     }
 
-    public static void tickConditions(ResourceLocation dimensionId, ClientLevel level) {
+    public static void tickConditions(Identifier dimensionId, ClientLevel level) {
         if (dimensionId == null || level == null) {
             return;
         }
@@ -237,7 +236,7 @@ public final class EntityExtensionClientState {
 
     // ==================== Boss Event 映射 ====================
 
-    public static void setBossEventType(UUID bossEventId, ResourceLocation typeId, UUID entityUuid) {
+    public static void setBossEventType(UUID bossEventId, Identifier typeId, UUID entityUuid) {
         if (bossEventId == null) {
             return;
         }

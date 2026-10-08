@@ -1,6 +1,6 @@
 package net.eca.client.render;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -11,12 +11,12 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
@@ -30,7 +30,6 @@ import java.math.RoundingMode;
  * 绘制分两层：外框满宽渲染作为底层，填充按 progress 横向裁剪覆盖其上。
  * 同时提供贴图与 RenderType 时，着色器通过 alpha 通道遮罩叠加在贴图的非透明像素上。
  */
-@OnlyIn(Dist.CLIENT)
 public final class EcaBossBarRenderer {
 
     // 原版血条尺寸，未提供任何尺寸信息时作为回退
@@ -46,8 +45,8 @@ public final class EcaBossBarRenderer {
      * 否则无法确定绘制范围。
      */
     public static final class BarAppearance {
-        public ResourceLocation frameTexture;
-        public ResourceLocation fillTexture;
+        public Identifier frameTexture;
+        public Identifier fillTexture;
         public RenderType frameRenderType;
         public RenderType fillRenderType;
         public int frameWidth;
@@ -83,7 +82,7 @@ public final class EcaBossBarRenderer {
      * @return true if the bar was drawn; false when required sizes are missing and the caller
      *         should fall back to the vanilla bar
      */
-    public static boolean draw(GuiGraphics graphics, int y, float progress,
+    public static boolean draw(GuiGraphicsExtractor graphics, int y, float progress,
                                BarAppearance appearance, String debugName) {
         if (appearance == null || appearance.isEmpty()) {
             return false;
@@ -195,7 +194,7 @@ public final class EcaBossBarRenderer {
                 .toPlainString();
     }
 
-    private static void renderLayer(GuiGraphics graphics, ResourceLocation texture, RenderType renderType,
+    private static void renderLayer(GuiGraphicsExtractor graphics, Identifier texture, RenderType renderType,
                                     int x, int y, int drawWidth, int drawHeight, int fullWidth, int fullHeight,
                                     float alpha) {
         if (texture == null && renderType == null) {
@@ -218,7 +217,7 @@ public final class EcaBossBarRenderer {
         }
     }
 
-    private static void drawTextureWithShaderMask(GuiGraphics graphics, ResourceLocation texture, RenderType renderType,
+    private static void drawTextureWithShaderMask(GuiGraphicsExtractor graphics, Identifier texture, RenderType renderType,
                                                   int x, int y, int drawWidth, int drawHeight,
                                                   int fullWidth, int fullHeight) {
         graphics.flush();
@@ -292,7 +291,7 @@ public final class EcaBossBarRenderer {
         RenderSystem.defaultBlendFunc();
     }
 
-    private static void drawRenderType(GuiGraphics graphics, RenderType renderType,
+    private static void drawRenderType(GuiGraphicsExtractor graphics, RenderType renderType,
                                        int x, int y, int width, int height, int fullWidth) {
         float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
         Matrix4f matrix = graphics.pose().last().pose();

@@ -8,7 +8,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -22,7 +22,7 @@ import java.util.UUID;
 //C→S：玩家在编辑器 Home 点击 Play 后，对选中的实体请求播放某个 cutscene
 public class BossShowPlaySelectionPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<BossShowPlaySelectionPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_play_selection_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "boss_show_play_selection_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BossShowPlaySelectionPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> BossShowPlaySelectionPacket.encode(msg, buf), BossShowPlaySelectionPacket::decode);
 
@@ -35,10 +35,10 @@ public class BossShowPlaySelectionPacket implements CustomPacketPayload {
     //和 /eca bossShow edit 保持一致的 64 格扫描半径
     private static final double SCAN_RADIUS = 64.0;
 
-    private final ResourceLocation defId;
+    private final Identifier defId;
     private final UUID targetUuid;
 
-    public BossShowPlaySelectionPacket(ResourceLocation defId, UUID targetUuid) {
+    public BossShowPlaySelectionPacket(Identifier defId, UUID targetUuid) {
         this.defId = defId;
         this.targetUuid = targetUuid;
     }
@@ -64,7 +64,7 @@ public class BossShowPlaySelectionPacket implements CustomPacketPayload {
             }
 
             //在玩家所在维度按 64 格半径查找目标实体
-            ServerLevel level = player.serverLevel();
+            ServerLevel level = player.level();
             AABB box = AABB.ofSize(player.position(), SCAN_RADIUS * 2, SCAN_RADIUS * 2, SCAN_RADIUS * 2);
             List<LivingEntity> nearby = level.getEntitiesOfClass(
                 LivingEntity.class, box,

@@ -3,7 +3,7 @@ package net.eca.client.render;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -13,7 +13,6 @@ import net.neoforged.api.distmarker.OnlyIn;
  * @deprecated Use {@link ShaderMaskRenderQueue} and {@link ShaderMaskPass}.
  */
 @Deprecated
-@OnlyIn(Dist.CLIENT)
 public final class ItemLayerRenderQueue {
 
     private ItemLayerRenderQueue() {

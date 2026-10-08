@@ -13,7 +13,7 @@ import net.eca.util.bossshow.BossShowDefinition.EventCue;
 import net.eca.util.bossshow.BossShowDefinition.Keyframe;
 import net.eca.util.bossshow.BossShowDefinition.SubtitleCue;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.EntityType;
 
@@ -30,7 +30,7 @@ public final class BossShowJsonCodec {
 
     private BossShowJsonCodec() {}
 
-    public static BossShowDefinition parse(String json, ResourceLocation id, BossShowDefinition.Source source) {
+    public static BossShowDefinition parse(String json, Identifier id, BossShowDefinition.Source source) {
         if (json == null || json.isEmpty()) {
             EcaLogger.error("BossShow {} JSON is empty", id);
             return null;
@@ -49,13 +49,13 @@ public final class BossShowJsonCodec {
             if (root.has("target_type") && !root.get("target_type").isJsonNull()) {
                 String typeStr = root.get("target_type").getAsString();
                 if (!typeStr.isEmpty()) {
-                    ResourceLocation typeId = ResourceLocation.tryParse(typeStr);
+                    Identifier typeId = Identifier.tryParse(typeStr);
                     if (typeId == null) {
-                        EcaLogger.warn("BossShow {} target_type {} is not a valid ResourceLocation; treating as null", id, typeStr);
+                        EcaLogger.warn("BossShow {} target_type {} is not a valid Identifier; treating as null", id, typeStr);
                     } else if (!BuiltInRegistries.ENTITY_TYPE.containsKey(typeId)) {
                         EcaLogger.warn("BossShow {} target_type {} not registered (mod missing?); treating as null", id, typeId);
                     } else {
-                        targetType = BuiltInRegistries.ENTITY_TYPE.get(typeId);
+                        targetType = BuiltInRegistries.ENTITY_TYPE.getValue(typeId);
                     }
                 }
             }
@@ -191,7 +191,7 @@ public final class BossShowJsonCodec {
         return result;
     }
 
-    private static Trigger parseTrigger(JsonObject obj, ResourceLocation id) {
+    private static Trigger parseTrigger(JsonObject obj, Identifier id) {
         if (obj == null) return new Trigger.Custom("");
         String type = obj.has("type") ? obj.get("type").getAsString() : "custom";
         if ("range".equalsIgnoreCase(type)) {
@@ -210,7 +210,7 @@ public final class BossShowJsonCodec {
     public static String serialize(BossShowDefinition def) {
         JsonObject root = new JsonObject();
         root.addProperty("format_version", 4);
-        ResourceLocation typeKey = def.targetType() != null
+        Identifier typeKey = def.targetType() != null
             ? BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType())
             : null;
         if (typeKey != null) root.addProperty("target_type", typeKey.toString());

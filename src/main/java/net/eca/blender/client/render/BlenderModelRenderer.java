@@ -12,8 +12,8 @@ import net.eca.util.EcaLogger;
 import net.eca.blender.model.BlenderRenderRequest;
 import net.eca.blender.animation.BlenderPlaybackState;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -30,12 +30,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public final class BlenderModelRenderer {
-    private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.parse("textures/misc/white.png");
+    private static final Identifier WHITE_TEXTURE = Identifier.parse("textures/misc/white.png");
     private static final BlenderModelAsset.Material DEFAULT_MATERIAL =
         new BlenderModelAsset.Material(1.0f, 1.0f, 1.0f, 1.0f, null, false);
-    private static final Set<ResourceLocation> LOGGED_MODEL_FAILURES = ConcurrentHashMap.newKeySet();
+    private static final Set<Identifier> LOGGED_MODEL_FAILURES = ConcurrentHashMap.newKeySet();
 
     private BlenderModelRenderer() {
     }
@@ -280,7 +279,7 @@ public final class BlenderModelRenderer {
             BlenderModelAsset.Material material = primitive.material() >= 0
                 && primitive.material() < asset.materials.size()
                 ? asset.materials.get(primitive.material()) : DEFAULT_MATERIAL;
-            ResourceLocation texture = material.texture() == null ? WHITE_TEXTURE : material.texture();
+            Identifier texture = material.texture() == null ? WHITE_TEXTURE : material.texture();
             RenderType type = material.translucent()
                 ? RenderType.entityTranslucent(texture) : RenderType.entityCutoutNoCull(texture);
             DeformedVertices deformed = deformVertices(primitive, skinPose);

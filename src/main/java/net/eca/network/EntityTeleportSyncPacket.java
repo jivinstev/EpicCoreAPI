@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -14,7 +14,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record EntityTeleportSyncPacket(int entityId, double x, double y, double z,
                                        float yRot, float xRot, boolean onGround, int teleportId) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<EntityTeleportSyncPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_teleport_sync_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "entity_teleport_sync_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, EntityTeleportSyncPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> EntityTeleportSyncPacket.encode(msg, buf), EntityTeleportSyncPacket::decode);
 
@@ -49,7 +49,7 @@ public record EntityTeleportSyncPacket(int entityId, double x, double y, double 
     }
 
     public static void handle(EntityTeleportSyncPacket message, IPayloadContext context) {
-        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandler.apply(message); });
+        context.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandler.apply(message); });
     }
 
     private static final class ClientHandler {

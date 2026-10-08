@@ -11,7 +11,7 @@ import net.eca.util.EcaLogger;
 import net.eca.util.faction.FactionManager;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -440,8 +440,8 @@ public final class EntityExtensionManager {
         }
 
         EntityType<?> activeType = getActiveType(level);
-        ResourceLocation dimensionId = level.dimension().location();
-        ResourceLocation typeId = activeType != null ? BuiltInRegistries.ENTITY_TYPE.getKey(activeType) : null;
+        Identifier dimensionId = level.dimension().identifier();
+        Identifier typeId = activeType != null ? BuiltInRegistries.ENTITY_TYPE.getKey(activeType) : null;
         NetworkHandler.sendToPlayer(new EntityExtensionActiveTypePacket(dimensionId, typeId), player);
     }
 
@@ -450,8 +450,8 @@ public final class EntityExtensionManager {
             return;
         }
 
-        ResourceLocation dimensionId = level.dimension().location();
-        ResourceLocation typeId = type != null ? BuiltInRegistries.ENTITY_TYPE.getKey(type) : null;
+        Identifier dimensionId = level.dimension().identifier();
+        Identifier typeId = type != null ? BuiltInRegistries.ENTITY_TYPE.getKey(type) : null;
         NetworkHandler.sendToDimension(new EntityExtensionActiveTypePacket(dimensionId, typeId), level);
     }
 
@@ -478,7 +478,7 @@ public final class EntityExtensionManager {
             return;
         }
 
-        ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(extension.getEntityType());
+        Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(extension.getEntityType());
         if (typeId == null) {
             return;
         }
@@ -494,7 +494,7 @@ public final class EntityExtensionManager {
             return;
         }
 
-        ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(extension.getEntityType());
+        Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(extension.getEntityType());
         if (typeId == null) {
             return;
         }

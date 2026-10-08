@@ -2,7 +2,7 @@ package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderFolderImporter.Candidate;
 import net.eca.util.shader_generator.ShaderProjectCodec;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -74,7 +74,7 @@ public final class ShaderImportScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 180;
         int top = height / 2 - 82;
@@ -100,11 +100,11 @@ public final class ShaderImportScreen extends Screen {
         if (error != null) {
             graphics.drawCenteredString(font, error, width / 2, top + 120, 0xFFFF6B6B);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 }

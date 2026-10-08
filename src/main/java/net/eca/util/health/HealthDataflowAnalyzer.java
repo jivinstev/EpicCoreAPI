@@ -7366,7 +7366,7 @@ public final class HealthDataflowAnalyzer {
             return List.of();
         }
         String key = evidenceKey(root) + ":target=" + target + ":entity=" + context.entity().getUUID()
-                + ":client=" + context.entity().level().isClientSide
+                + ":client=" + context.entity().level().isClientSide()
                 + ":baseline=" + Float.floatToRawIntBits(observed);
         Map<String, EnumSearchState> states = ENUM_SEARCH_STATES.get(type);
         if (states.size() >= 64 && !states.containsKey(key)) states.clear();

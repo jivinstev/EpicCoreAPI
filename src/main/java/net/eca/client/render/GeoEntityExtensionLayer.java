@@ -10,23 +10,22 @@ import net.eca.util.entity_extension.EntityExtensionManager;
 import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FastColor;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.animatable.GeoAnimatable;
-import software.bernie.geckolib.renderer.GeoRenderer;
-import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
+import com.geckolib.cache.model.BakedGeoModel;
+import com.geckolib.animatable.GeoAnimatable;
+import com.geckolib.renderer.base.GeoRenderer;
+import com.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.function.Function;
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderLayer<T> {
 
     private final GeoBoneVisibilityController boneVisibility = new GeoBoneVisibilityController();
@@ -77,7 +76,7 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
     private void renderOverlay(PoseStack poseStack, T animatable, BakedGeoModel bakedModel,
                                MultiBufferSource bufferSource, float partialTick, int packedLight,
                                int packedOverlay, EntityLayerExtension layerExtension) {
-        ResourceLocation texture = layerExtension.getTexture();
+        Identifier texture = layerExtension.getTexture();
         List<ShaderMaskPass> shaderPasses = layerExtension.getShaderPasses();
         if (shaderPasses == null) shaderPasses = List.of();
         if (shaderPasses.isEmpty() && texture == null) return;

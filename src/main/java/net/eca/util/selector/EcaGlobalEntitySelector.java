@@ -3,7 +3,7 @@ package net.eca.util.selector;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.eca.api.EcaAPI;
 import net.eca.mixin.EntitySelectorAccessor;
-import net.minecraft.advancements.critereon.MinMaxBounds;
+import net.minecraft.advancements.predicates.MinMaxBounds;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.selector.EntitySelector;

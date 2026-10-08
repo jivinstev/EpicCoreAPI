@@ -1,7 +1,7 @@
 package net.eca.client.gui;
 
 import net.eca.util.bossshow.BossShowEditorState;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -80,7 +80,7 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
     }
 
     private void closePanel() {
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.setScreenAndShow(new BossShowEditorScreen());
     }
 
     private void toggleMode() {
@@ -110,25 +110,25 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
-        g.drawCenteredString(this.font,
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        g.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+        g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.editor.range_offset.range",
                 BossShowEditorState.getInPoint(), BossShowEditorState.getOutPoint()),
             this.width / 2, 38, 0xAAAAAA);
         String[] labels = {"dx", "dy", "dz", "yaw", "pitch"};
         int x = this.width / 2 - 72;
         for (int i = 0; i < labels.length; i++) {
-            g.drawString(this.font, Component.literal(labels[i]), x, 63 + i * 24, 0xCCCCCC, false);
+            g.text(this.font, Component.literal(labels[i]), x, 63 + i * 24, 0xCCCCCC, false);
         }
         if (rampMode) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.range_offset.start"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.range_offset.start"),
                 this.width / 2 - 42, 46, 0xAAAAAA, false);
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.range_offset.end"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.range_offset.end"),
                 this.width / 2 + 58, 46, 0xAAAAAA, false);
         }
         if (!error.getString().isEmpty()) {
-            g.drawCenteredString(this.font, error, this.width / 2, this.height - 72, 0xFF5555);
+            g.centeredText(this.font, error, this.width / 2, this.height - 72, 0xFF5555);
         }
         super.render(g, mouseX, mouseY, partialTick);
     }

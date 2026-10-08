@@ -206,7 +206,7 @@ public class RaidManager {
     private static BlockPos resolveCenter(ServerLevel level, RaidDefinition def, BlockPos pos) {
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
-            Structure structure = level.registryAccess().registryOrThrow(Registries.STRUCTURE).get(key);
+            Structure structure = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).get(key);
             if (structure == null) {
                 return null;
             }

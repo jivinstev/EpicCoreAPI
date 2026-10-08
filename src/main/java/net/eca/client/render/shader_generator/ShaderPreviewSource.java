@@ -1,8 +1,8 @@
 package net.eca.client.render.shader_generator;
 
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public interface ShaderPreviewSource {
 
@@ -14,5 +14,5 @@ public interface ShaderPreviewSource {
 
     RenderType item();
 
-    RenderType entity(ResourceLocation texture);
+    RenderType entity(Identifier texture);
 }

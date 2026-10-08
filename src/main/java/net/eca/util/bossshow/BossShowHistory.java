@@ -4,7 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -32,27 +32,27 @@ public final class BossShowHistory {
     //检查 player 对 target 是否已经看过 def
     public static boolean hasPlayed(ServerPlayer player, BossShowDefinition def, LivingEntity target) {
         if (player == null || def == null) return false;
-        ResourceLocation cutsceneId = def.id();
+        Identifier cutsceneId = def.id();
         if (cutsceneId == null) return false;
 
         if (def.allowRepeat()) {
             //true：看 entity NBT 中 cutscene→uuids 里是否含有该玩家；无 target 等价于"没看过"
             if (target == null) return false;
-            CompoundTag root = target.getPersistentData().getCompound(ECA_ROOT);
-            CompoundTag seenMap = root.getCompound(ENTITY_SEEN_BY_CUTSCENE);
+            CompoundTag root = target.getPersistentData().getCompoundOrEmpty(ECA_ROOT);
+            CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
             ListTag uuids = seenMap.getList(cutsceneId.toString(), Tag.TAG_STRING);
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {
-                if (pidStr.equals(uuids.getString(i))) return true;
+                if (pidStr.equals(uuids.getStringOr(i, ""))) return true;
             }
             return false;
         } else {
             //false：看 player NBT 中的 seen list
-            CompoundTag root = player.getPersistentData().getCompound(ECA_ROOT);
-            ListTag seen = root.getList(PLAYER_SEEN, Tag.TAG_STRING);
+            CompoundTag root = player.getPersistentData().getCompoundOrEmpty(ECA_ROOT);
+            ListTag seen = root.getListOrEmpty(PLAYER_SEEN);
             String cid = cutsceneId.toString();
             for (int i = 0; i < seen.size(); i++) {
-                if (cid.equals(seen.getString(i))) return true;
+                if (cid.equals(seen.getStringOr(i, ""))) return true;
             }
             return false;
         }
@@ -61,19 +61,19 @@ public final class BossShowHistory {
     //标记 player 对 target 已播放过 def
     public static void markPlayed(ServerPlayer player, BossShowDefinition def, LivingEntity target) {
         if (player == null || def == null) return;
-        ResourceLocation cutsceneId = def.id();
+        Identifier cutsceneId = def.id();
         if (cutsceneId == null) return;
 
         if (def.allowRepeat()) {
             if (target == null) return;
             CompoundTag persistent = target.getPersistentData();
-            CompoundTag root = persistent.getCompound(ECA_ROOT);
-            CompoundTag seenMap = root.getCompound(ENTITY_SEEN_BY_CUTSCENE);
+            CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
+            CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
             ListTag uuids = seenMap.getList(cutsceneId.toString(), Tag.TAG_STRING);
 
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {
-                if (pidStr.equals(uuids.getString(i))) return;
+                if (pidStr.equals(uuids.getStringOr(i, ""))) return;
             }
             uuids.add(StringTag.valueOf(pidStr));
 
@@ -82,12 +82,12 @@ public final class BossShowHistory {
             persistent.put(ECA_ROOT, root);
         } else {
             CompoundTag persistent = player.getPersistentData();
-            CompoundTag root = persistent.getCompound(ECA_ROOT);
-            ListTag seen = root.getList(PLAYER_SEEN, Tag.TAG_STRING);
+            CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
+            ListTag seen = root.getListOrEmpty(PLAYER_SEEN);
 
             String cid = cutsceneId.toString();
             for (int i = 0; i < seen.size(); i++) {
-                if (cid.equals(seen.getString(i))) return;
+                if (cid.equals(seen.getStringOr(i, ""))) return;
             }
             seen.add(StringTag.valueOf(cid));
 
@@ -100,17 +100,17 @@ public final class BossShowHistory {
     public static void clearPlayerHistory(ServerPlayer player) {
         if (player == null) return;
         CompoundTag persistent = player.getPersistentData();
-        CompoundTag root = persistent.getCompound(ECA_ROOT);
+        CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
         root.remove(PLAYER_SEEN);
         persistent.put(ECA_ROOT, root);
     }
 
     //清除指定 target 实体上的 cutscene 历史（ON 模式）
-    public static void clearEntityHistory(LivingEntity target, ResourceLocation cutsceneId) {
+    public static void clearEntityHistory(LivingEntity target, Identifier cutsceneId) {
         if (target == null || cutsceneId == null) return;
         CompoundTag persistent = target.getPersistentData();
-        CompoundTag root = persistent.getCompound(ECA_ROOT);
-        CompoundTag seenMap = root.getCompound(ENTITY_SEEN_BY_CUTSCENE);
+        CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
+        CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
         seenMap.remove(cutsceneId.toString());
         root.put(ENTITY_SEEN_BY_CUTSCENE, seenMap);
         persistent.put(ECA_ROOT, root);

@@ -40,10 +40,10 @@ public class FactionSavedData extends SavedData {
 
     public static FactionSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
         FactionSavedData data = new FactionSavedData();
-        if (tag.contains(NBT_FACTIONS, Tag.TAG_COMPOUND)) {
-            CompoundTag factionsTag = tag.getCompound(NBT_FACTIONS);
+        if (tag.getCompound(NBT_FACTIONS).isPresent()) {
+            CompoundTag factionsTag = tag.getCompoundOrEmpty(NBT_FACTIONS);
             for (String factionId : factionsTag.getAllKeys()) {
-                CompoundTag factionTag = factionsTag.getCompound(factionId);
+                CompoundTag factionTag = factionsTag.getCompoundOrEmpty(factionId);
                 if (!factionTag.isEmpty()) {
                     data.factionTags.put(factionId, factionTag);
                 }
@@ -52,8 +52,7 @@ public class FactionSavedData extends SavedData {
         return data;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         CompoundTag factionsTag = new CompoundTag();
         for (Map.Entry<String, CompoundTag> entry : factionTags.entrySet()) {
             factionsTag.put(entry.getKey(), entry.getValue().copy());
@@ -117,32 +116,32 @@ public class FactionSavedData extends SavedData {
     private static Faction deserialize(String id, CompoundTag tag) {
         FactionRelation defaultRel;
         try {
-            defaultRel = FactionRelation.valueOf(tag.getString(NBT_DEFAULT_REL));
+            defaultRel = FactionRelation.valueOf(tag.getStringOr(NBT_DEFAULT_REL, ""));
         } catch (IllegalArgumentException e) {
             defaultRel = FactionRelation.HOSTILE;
         }
 
-        Faction faction = new Faction(id, tag.getString(NBT_DISPLAY_NAME), tag.getInt(NBT_COLOR), defaultRel);
+        Faction faction = new Faction(id, tag.getStringOr(NBT_DISPLAY_NAME, ""), tag.getIntOr(NBT_COLOR, 0), defaultRel);
 
-        if (tag.contains(NBT_RELATIONS, Tag.TAG_COMPOUND)) {
-            CompoundTag relTag = tag.getCompound(NBT_RELATIONS);
+        if (tag.getCompound(NBT_RELATIONS).isPresent()) {
+            CompoundTag relTag = tag.getCompoundOrEmpty(NBT_RELATIONS);
             for (String otherId : relTag.getAllKeys()) {
                 try {
-                    faction.setRelation(otherId, FactionRelation.valueOf(relTag.getString(otherId)));
+                    faction.setRelation(otherId, FactionRelation.valueOf(relTag.getStringOr(otherId, "")));
                 } catch (IllegalArgumentException ignored) {
                     // 非法关系名，跳过该条覆盖
                 }
             }
         }
 
-        if (tag.contains(NBT_LEADER, Tag.TAG_COMPOUND)) {
-            faction.setLeader(FactionMember.load(tag.getCompound(NBT_LEADER)));
+        if (tag.getCompound(NBT_LEADER).isPresent()) {
+            faction.setLeader(FactionMember.load(tag.getCompoundOrEmpty(NBT_LEADER)));
         }
 
         if (tag.contains(NBT_MEMBERS, Tag.TAG_LIST)) {
-            ListTag memberList = tag.getList(NBT_MEMBERS, Tag.TAG_COMPOUND);
+            ListTag memberList = tag.getListOrEmpty(NBT_MEMBERS);
             for (int i = 0; i < memberList.size(); i++) {
-                FactionMember member = FactionMember.load(memberList.getCompound(i));
+                FactionMember member = FactionMember.load(memberList.getCompoundOrEmpty(i));
                 if (member != null) {
                     faction.addMember(member);
                 }

@@ -3,7 +3,7 @@ package net.eca.client.gui;
 import net.eca.util.EcaLogger;
 import net.eca.util.shader_generator.ShaderProjectCodec;
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -81,7 +81,7 @@ public final class ShaderLayerDetailsScreen extends Screen {
     }
 
     private void openColorPicker() {
-        minecraft.setScreen(new ShaderColorPickerScreen(
+        minecraft.setScreenAndShow(new ShaderColorPickerScreen(
             this,
             red,
             green,
@@ -130,16 +130,16 @@ public final class ShaderLayerDetailsScreen extends Screen {
             return;
         }
         confirmHandler.accept(new LayerDetails(name, red, green, blue, alpha, imagePath));
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 150;
         int top = height / 2 - 86;
         graphics.drawCenteredString(font, title, width / 2, top, 0xFFFFFFFF);
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         /* 颜色矩形和文本在按钮上层绘制，避免被遮挡 */
         graphics.fill(left + 8, top + 58, left + 44, top + 70, colorArgb());
         graphics.renderOutline(left + 8, top + 58, 36, 12, 0xFFFFFFFF);
@@ -150,7 +150,7 @@ public final class ShaderLayerDetailsScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private int colorArgb() {

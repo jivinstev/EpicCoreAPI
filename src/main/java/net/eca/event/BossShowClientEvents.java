@@ -8,7 +8,7 @@ import net.eca.util.bossshow.BossShowPose;
 import net.eca.client.BossShowScreenEffectState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -43,7 +43,7 @@ public final class BossShowClientEvents {
         Minecraft mc = Minecraft.getInstance();
         int width = mc.getWindow().getGuiScaledWidth();
         int height = mc.getWindow().getGuiScaledHeight();
-        GuiGraphics gui = event.getGuiGraphics();
+        GuiGraphicsExtractor gui = event.getGuiGraphics();
 
         if (BossShowClientState.isCinematic()) {
             int bar = (int) (height * 0.12f);
@@ -63,7 +63,7 @@ public final class BossShowClientEvents {
         event.setCanceled(true);
     }
 
-    private static void renderSubtitle(GuiGraphics gui, Font font, int width, int height) {
+    private static void renderSubtitle(GuiGraphicsExtractor gui, Font font, int width, int height) {
         Component subtitle = BossShowClientState.getSubtitle();
         if (subtitle == null) return;
         float alpha = BossShowClientState.getSubtitleAlpha();

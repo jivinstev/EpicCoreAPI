@@ -1,7 +1,7 @@
 package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -48,7 +48,7 @@ public final class ShaderProjectSelectionScreen extends Screen {
                 Component.literal(reference.id()),
                 button -> {
                     selectionHandler.accept(reference);
-                    minecraft.setScreen(parent);
+                    minecraft.setScreenAndShow(parent);
                 }
             ).bounds(left, y, LIST_WIDTH, 20).build());
         }
@@ -70,7 +70,7 @@ public final class ShaderProjectSelectionScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
         if (projects.isEmpty()) {
@@ -82,11 +82,11 @@ public final class ShaderProjectSelectionScreen extends Screen {
                 0xFF9DA3AC
             );
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 }

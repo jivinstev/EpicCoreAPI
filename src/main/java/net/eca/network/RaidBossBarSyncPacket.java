@@ -6,7 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -22,7 +22,7 @@ import java.util.UUID;
  */
 public final class RaidBossBarSyncPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<RaidBossBarSyncPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "raid_boss_bar_sync_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "raid_boss_bar_sync_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, RaidBossBarSyncPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> RaidBossBarSyncPacket.encode(msg, buf), RaidBossBarSyncPacket::decode);
 
@@ -55,6 +55,6 @@ public final class RaidBossBarSyncPacket implements CustomPacketPayload {
     }
 
     public static void handle(RaidBossBarSyncPacket msg, IPayloadContext context) {
-        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) RaidClientState.setBarState(msg.bossEventId, msg.state); });
+        context.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) RaidClientState.setBarState(msg.bossEventId, msg.state); });
     }
 }

@@ -5,7 +5,7 @@ import net.eca.util.shader_generator.ShaderModuleDefinition;
 import net.eca.util.shader_generator.ShaderModuleInstance;
 import net.eca.util.shader_generator.ShaderProjectCodec;
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -127,7 +127,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
     }
 
     private void openColorPicker() {
-        minecraft.setScreen(new ShaderColorPickerScreen(
+        minecraft.setScreenAndShow(new ShaderColorPickerScreen(
             this,
             effect.value("color_r"),
             effect.value("color_g"),
@@ -170,7 +170,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
             return;
         }
         confirmHandler.accept(effect);
-        minecraft.setScreen(returnScreen);
+        minecraft.setScreenAndShow(returnScreen);
     }
 
     @Override
@@ -185,7 +185,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - PANEL_WIDTH) / 2;
         /* 颜色色块：紧跟在标题下方，与颜色按钮的 y=44（或含导入则 y=70）对齐 */
@@ -210,12 +210,12 @@ public final class ShaderEffectDetailsScreen extends Screen {
                 false
             );
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private int colorArgb() {

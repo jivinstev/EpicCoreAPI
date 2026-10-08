@@ -1,11 +1,11 @@
 package net.eca.client.render.shader;
 
-import com.mojang.blaze3d.shaders.Uniform;
+import com.mojang.blaze3d.opengl.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ public class ArcaneShader {
     public static void register(RegisterShadersEvent event) throws IOException {
         ShaderInstance arcaneShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
-            ResourceLocation.fromNamespaceAndPath("eca", "arcane"),
+            Identifier.fromNamespaceAndPath("eca", "arcane"),
             DefaultVertexFormat.BLOCK
         );
         event.registerShader(arcaneShader, instance -> {

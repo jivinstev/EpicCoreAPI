@@ -4,7 +4,7 @@ import net.eca.api.RegisterShaderPreset;
 import net.eca.util.EcaLogger;
 import net.eca.util.entity_extension.GlobalEffectRegistry;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -29,13 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
    NEW_ENTITY profile → boss layer / item / entity effect 的 RenderType。
    纯客户端：服务端无着色器子系统。 */
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public final class ShaderPresetRegistry {
 
     private ShaderPresetRegistry() {}
 
-    private static final Map<ResourceLocation, GenericPresetShader> SHADERS = new ConcurrentHashMap<>();
-    private static final Map<ResourceLocation, ShaderPreset> PRESETS = new ConcurrentHashMap<>();
+    private static final Map<Identifier, GenericPresetShader> SHADERS = new ConcurrentHashMap<>();
+    private static final Map<Identifier, ShaderPreset> PRESETS = new ConcurrentHashMap<>();
 
     private static volatile boolean shadersLoaded = false;
 
@@ -58,7 +57,7 @@ public final class ShaderPresetRegistry {
                     if (RegisterShaderPreset.class.getName().equals(annotationData.annotationType().getClassName())) {
                         String idStr = (String) annotationData.annotationData().get("value");
                         if (idStr != null && !idStr.isBlank()) {
-                            ResourceLocation id = ResourceLocation.tryParse(idStr);
+                            Identifier id = Identifier.tryParse(idStr);
                             if (id != null) {
                                 register(id);
                             }
@@ -83,7 +82,7 @@ public final class ShaderPresetRegistry {
                         if (!Files.isDirectory(presetDir)) continue;
                         String name = presetDir.getFileName().toString();
                         if (hasPresetFiles(presetDir, name)) {
-                            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(namespace, name);
+                            Identifier id = Identifier.fromNamespaceAndPath(namespace, name);
                             register(id);
                         }
                     }
@@ -120,7 +119,7 @@ public final class ShaderPresetRegistry {
                 String name = fileName.substring(0, fileName.length() - 4);
                 if (!hasPresetFiles(current, name)) continue;
                 String relative = normalizeResourcePath(root.relativize(current.resolve(name)));
-                ResourceLocation id = ResourceLocation.tryParse(namespace + ":" + relative);
+                Identifier id = Identifier.tryParse(namespace + ":" + relative);
                 if (id != null) {
                     register(id);
                 }
@@ -153,7 +152,7 @@ public final class ShaderPresetRegistry {
     }
 
     /* 程序化注册入口（供极少数需要手动注册的场景使用）。id 需对应已有的五文件资源。 */
-    public static void register(ResourceLocation id) {
+    public static void register(Identifier id) {
         if (id == null || PRESETS.containsKey(id)) {
             return;
         }
@@ -168,11 +167,11 @@ public final class ShaderPresetRegistry {
         }
     }
 
-    public static ShaderPreset getPreset(ResourceLocation id) {
+    public static ShaderPreset getPreset(Identifier id) {
         return id == null ? null : PRESETS.get(id);
     }
 
-    public static Set<ResourceLocation> getPresetIds() {
+    public static Set<Identifier> getPresetIds() {
         return Set.copyOf(PRESETS.keySet());
     }
 

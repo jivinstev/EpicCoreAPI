@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 public class ClientRemovePacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<ClientRemovePacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "client_remove_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "client_remove_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ClientRemovePacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> ClientRemovePacket.encode(msg, buf), ClientRemovePacket::decode);
 
@@ -72,7 +72,7 @@ public class ClientRemovePacket implements CustomPacketPayload {
      * @param ctx the network context
      */
     public static void handle(ClientRemovePacket msg, IPayloadContext context) {
-        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.apply(msg); });
+        context.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.apply(msg); });
     }
 
     // 客户端引用隔离在独立内部类中，实际逻辑委托给 @OnlyIn(Dist.CLIENT) 的 ClientEntityUtil

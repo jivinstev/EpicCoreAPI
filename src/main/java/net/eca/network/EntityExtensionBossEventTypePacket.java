@@ -5,14 +5,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
 
 public class EntityExtensionBossEventTypePacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<EntityExtensionBossEventTypePacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_extension_boss_event_type_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "entity_extension_boss_event_type_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, EntityExtensionBossEventTypePacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> EntityExtensionBossEventTypePacket.encode(msg, buf), EntityExtensionBossEventTypePacket::decode);
 
@@ -23,10 +23,10 @@ public class EntityExtensionBossEventTypePacket implements CustomPacketPayload {
 
 
     private final UUID bossEventId;
-    private final ResourceLocation typeId;
+    private final Identifier typeId;
     private final UUID entityUuid;
 
-    public EntityExtensionBossEventTypePacket(UUID bossEventId, ResourceLocation typeId, UUID entityUuid) {
+    public EntityExtensionBossEventTypePacket(UUID bossEventId, Identifier typeId, UUID entityUuid) {
         this.bossEventId = bossEventId;
         this.typeId = typeId;
         this.entityUuid = entityUuid;
@@ -47,7 +47,7 @@ public class EntityExtensionBossEventTypePacket implements CustomPacketPayload {
     public static EntityExtensionBossEventTypePacket decode(FriendlyByteBuf buffer) {
         UUID bossEventId = buffer.readUUID();
         boolean hasType = buffer.readBoolean();
-        ResourceLocation typeId = hasType ? buffer.readResourceLocation() : null;
+        Identifier typeId = hasType ? buffer.readResourceLocation() : null;
         boolean hasEntityUuid = buffer.readBoolean();
         UUID entityUuid = hasEntityUuid ? buffer.readUUID() : null;
         return new EntityExtensionBossEventTypePacket(bossEventId, typeId, entityUuid);

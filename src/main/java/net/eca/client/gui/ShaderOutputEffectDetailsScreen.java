@@ -2,7 +2,7 @@ package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderModuleDefinition;
 import net.eca.util.shader_generator.ShaderOutputEffectInstance;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -83,7 +83,7 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
                 Component.translatable("gui.eca.shader_generator.output_effect.remove"),
                 button -> {
                     removeHandler.run();
-                    minecraft.setScreen(returnScreen);
+                    minecraft.setScreenAndShow(returnScreen);
                 }
             ).bounds(width / 2 - 156, height - 30, 88, 20).build());
         }
@@ -104,7 +104,7 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
 
     private void confirm() {
         confirmHandler.accept(effect);
-        minecraft.setScreen(returnScreen);
+        minecraft.setScreenAndShow(returnScreen);
     }
 
     @Override
@@ -119,7 +119,7 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - PANEL_WIDTH) / 2;
         graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
@@ -130,11 +130,11 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
             graphics.drawString(font, Component.translatable(parameter.displayName()), left,
                 baseY + (index - scroll) * 22, 0xFFC7CBD1, false);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 }

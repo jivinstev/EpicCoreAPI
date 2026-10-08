@@ -15,7 +15,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -26,7 +26,7 @@ import java.util.ArrayList;
 //C→S：客户端把当前编辑中的 BossShow 定义提交保存
 public class BossShowSaveEditorPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<BossShowSaveEditorPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_save_editor_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "boss_show_save_editor_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BossShowSaveEditorPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> BossShowSaveEditorPacket.encode(msg, buf), BossShowSaveEditorPacket::decode);
 
@@ -36,8 +36,8 @@ public class BossShowSaveEditorPacket implements CustomPacketPayload {
     }
 
 
-    private final ResourceLocation cutsceneId;
-    private final ResourceLocation targetTypeId;
+    private final Identifier cutsceneId;
+    private final Identifier targetTypeId;
     private final Trigger trigger;
     private final boolean cinematic;
     private final boolean allowRepeat;
@@ -47,14 +47,14 @@ public class BossShowSaveEditorPacket implements CustomPacketPayload {
     private final List<BossShowEffectCue> effectCues;
     private final float anchorYawDeg;
 
-    public BossShowSaveEditorPacket(ResourceLocation cutsceneId, ResourceLocation targetTypeId,
+    public BossShowSaveEditorPacket(Identifier cutsceneId, Identifier targetTypeId,
                                     Trigger trigger, boolean cinematic, boolean allowRepeat,
                                     List<Frame> frames, float anchorYawDeg) {
         this(cutsceneId, targetTypeId, trigger, cinematic, allowRepeat, frames, anchorYawDeg,
             deriveEventCues(frames), deriveSubtitleCues(frames), List.of());
     }
 
-    public BossShowSaveEditorPacket(ResourceLocation cutsceneId, ResourceLocation targetTypeId,
+    public BossShowSaveEditorPacket(Identifier cutsceneId, Identifier targetTypeId,
                                     Trigger trigger, boolean cinematic, boolean allowRepeat,
                                     List<Frame> frames, float anchorYawDeg,
                                     List<EventCue> eventCues, List<SubtitleCue> subtitleCues,
@@ -85,8 +85,8 @@ public class BossShowSaveEditorPacket implements CustomPacketPayload {
     }
 
     public static BossShowSaveEditorPacket decode(FriendlyByteBuf buf) {
-        ResourceLocation cutsceneId = buf.readResourceLocation();
-        ResourceLocation typeId = BossShowNetCodec.readNullableRL(buf);
+        Identifier cutsceneId = buf.readResourceLocation();
+        Identifier typeId = BossShowNetCodec.readNullableRL(buf);
         Trigger trigger = BossShowNetCodec.readTrigger(buf);
         boolean cine = buf.readBoolean();
         boolean allowRepeat = buf.readBoolean();
@@ -104,7 +104,7 @@ public class BossShowSaveEditorPacket implements CustomPacketPayload {
             ServerPlayer player = ((ServerPlayer) ctx.player());
             if (player == null) return;
             EntityType<?> type = (msg.targetTypeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(msg.targetTypeId))
-                ? BuiltInRegistries.ENTITY_TYPE.get(msg.targetTypeId)
+                ? BuiltInRegistries.ENTITY_TYPE.getValue(msg.targetTypeId)
                 : null;
             BossShowDefinition def = new BossShowDefinition(
                 msg.cutsceneId, type, msg.trigger, msg.cinematic, msg.allowRepeat,

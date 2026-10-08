@@ -1,8 +1,8 @@
 package net.eca.client.render;
 
 import net.eca.util.entity_extension.EntityLayerExtension;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.cache.object.GeoBone;
+import com.geckolib.cache.model.BakedGeoModel;
+import com.geckolib.cache.model.GeoBone;
 
 import java.util.IdentityHashMap;
 import java.util.Map;

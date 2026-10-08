@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -22,7 +22,7 @@ import java.util.Map;
  */
 public final class FactionGlowSyncPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<FactionGlowSyncPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "faction_glow_sync_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "faction_glow_sync_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, FactionGlowSyncPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> FactionGlowSyncPacket.encode(msg, buf), FactionGlowSyncPacket::decode);
 
@@ -61,6 +61,6 @@ public final class FactionGlowSyncPacket implements CustomPacketPayload {
     }
 
     public static void handle(FactionGlowSyncPacket msg, IPayloadContext context) {
-        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) FactionGlowData.update(msg.glowMap, msg.durationTicks); });
+        context.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) FactionGlowData.update(msg.glowMap, msg.durationTicks); });
     }
 }

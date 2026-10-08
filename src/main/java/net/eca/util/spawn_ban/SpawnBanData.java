@@ -3,7 +3,7 @@ package net.eca.util.spawn_ban;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -21,7 +21,7 @@ public class SpawnBanData extends SavedData {
     private static final String DATA_NAME = "eca_spawn_bans";
     private static final String NBT_BANS = "bans";
 
-    private final Map<ResourceLocation, Integer> bans = new HashMap<>();
+    private final Map<Identifier, Integer> bans = new HashMap<>();
     private final Set<EntityType<?>> bannedTypes = Collections.newSetFromMap(new IdentityHashMap<>());
 
     public SpawnBanData() {
@@ -32,14 +32,14 @@ public class SpawnBanData extends SavedData {
         SpawnBanData data = new SpawnBanData();
 
         if (tag.contains(NBT_BANS, 10)) { // 10 = CompoundTag
-            CompoundTag bansTag = tag.getCompound(NBT_BANS);
+            CompoundTag bansTag = tag.getCompoundOrEmpty(NBT_BANS);
             for (String key : bansTag.getAllKeys()) {
-                ResourceLocation typeId = ResourceLocation.tryParse(key);
+                Identifier typeId = Identifier.tryParse(key);
                 if (typeId != null) {
-                    int seconds = bansTag.getInt(key);
+                    int seconds = bansTag.getIntOr(key, 0);
                     if (seconds > 0) {
                         data.bans.put(typeId, seconds);
-                        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(typeId);
+                        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(typeId);
                         if (type != null) {
                             data.bannedTypes.add(type);
                         }
@@ -51,10 +51,9 @@ public class SpawnBanData extends SavedData {
         return data;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+        public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         CompoundTag bansTag = new CompoundTag();
-        for (Map.Entry<ResourceLocation, Integer> entry : bans.entrySet()) {
+        for (Map.Entry<Identifier, Integer> entry : bans.entrySet()) {
             bansTag.putInt(entry.getKey().toString(), entry.getValue());
         }
         tag.put(NBT_BANS, bansTag);
@@ -72,14 +71,14 @@ public class SpawnBanData extends SavedData {
         );
     }
 
-    public void addBan(ResourceLocation typeId, EntityType<?> type, int seconds) {
+    public void addBan(Identifier typeId, EntityType<?> type, int seconds) {
         if (typeId == null || type == null || seconds <= 0) return;
         bans.put(typeId, seconds);
         bannedTypes.add(type);
         setDirty();
     }
 
-    public boolean removeBan(ResourceLocation typeId, EntityType<?> type) {
+    public boolean removeBan(Identifier typeId, EntityType<?> type) {
         if (typeId == null || type == null) return false;
         boolean removed = bans.remove(typeId) != null;
         if (removed) {
@@ -97,18 +96,18 @@ public class SpawnBanData extends SavedData {
         return type != null && bannedTypes.contains(type);
     }
 
-    public boolean hasBan(ResourceLocation typeId) {
+    public boolean hasBan(Identifier typeId) {
         if (typeId == null) return false;
         Integer time = bans.get(typeId);
         return time != null && time > 0;
     }
 
-    public int getTime(ResourceLocation typeId) {
+    public int getTime(Identifier typeId) {
         if (typeId == null) return 0;
         return bans.getOrDefault(typeId, 0);
     }
 
-    public Map<ResourceLocation, Integer> getAllBans() {
+    public Map<Identifier, Integer> getAllBans() {
         return Collections.unmodifiableMap(new HashMap<>(bans));
     }
 
@@ -116,14 +115,14 @@ public class SpawnBanData extends SavedData {
         if (bans.isEmpty()) return;
 
         boolean modified = false;
-        Iterator<Map.Entry<ResourceLocation, Integer>> iterator = bans.entrySet().iterator();
+        Iterator<Map.Entry<Identifier, Integer>> iterator = bans.entrySet().iterator();
 
         while (iterator.hasNext()) {
-            Map.Entry<ResourceLocation, Integer> entry = iterator.next();
+            Map.Entry<Identifier, Integer> entry = iterator.next();
             int newTime = entry.getValue() - 1;
 
             if (newTime <= 0) {
-                EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(entry.getKey());
+                EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(entry.getKey());
                 if (type != null) {
                     bannedTypes.remove(type);
                 }

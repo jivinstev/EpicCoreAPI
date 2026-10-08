@@ -6,7 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -16,7 +16,7 @@ import java.util.UUID;
 
 public record BlenderAnimationSyncPacket(UUID entityId, long revision, BlenderPlaybackState state) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<BlenderAnimationSyncPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "blender_animation_sync_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "blender_animation_sync_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BlenderAnimationSyncPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> BlenderAnimationSyncPacket.encode(msg, buf), BlenderAnimationSyncPacket::decode);
 
@@ -58,10 +58,9 @@ public record BlenderAnimationSyncPacket(UUID entityId, long revision, BlenderPl
     }
 
     public static void handle(BlenderAnimationSyncPacket message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandler.apply(message); });
+        ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandler.apply(message); });
     }
 
-    @OnlyIn(Dist.CLIENT)
     private static final class ClientHandler {
         private static void apply(BlenderAnimationSyncPacket message) {
             BlenderAnimationClientState.apply(message.entityId, message.revision, message.state);

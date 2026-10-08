@@ -1,13 +1,13 @@
 package net.eca.client.render.shader;
 
-import com.mojang.blaze3d.shaders.Uniform;
+import com.mojang.blaze3d.opengl.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.ShaderMaskSource;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import org.lwjgl.opengl.GL11;
 
@@ -129,7 +129,7 @@ public class EcaShaderInstance extends ShaderInstance {
     private static float ecaOpacity = 1.0f;
 
     private static ShaderMaskSource shaderMaskSource = ShaderMaskSource.NONE;
-    private static ResourceLocation shaderMaskTexture;
+    private static Identifier shaderMaskTexture;
     private static int shaderMaskColor;
     private static float shaderMaskTolerance = 0.05f;
 
@@ -144,7 +144,7 @@ public class EcaShaderInstance extends ShaderInstance {
         ecaOpacity = 1.0f;
     }
 
-    public static void setShaderMask(ShaderMaskSource source, ResourceLocation texture,
+    public static void setShaderMask(ShaderMaskSource source, Identifier texture,
                                      int color, float tolerance) {
         shaderMaskSource = source == null ? ShaderMaskSource.NONE : source;
         shaderMaskTexture = texture;
@@ -160,7 +160,7 @@ public class EcaShaderInstance extends ShaderInstance {
     }
 
     @Deprecated
-    public static void setEntityMask(ResourceLocation texture, int color, float tolerance) {
+    public static void setEntityMask(Identifier texture, int color, float tolerance) {
         setShaderMask(texture == null ? ShaderMaskSource.NONE : ShaderMaskSource.TEXTURE,
             texture, color, tolerance);
     }
@@ -195,13 +195,13 @@ public class EcaShaderInstance extends ShaderInstance {
         }
     }
 
-    public EcaShaderInstance(ResourceProvider resourceProvider, ResourceLocation location, VertexFormat format) throws IOException {
+    public EcaShaderInstance(ResourceProvider resourceProvider, Identifier location, VertexFormat format) throws IOException {
         super(resourceProvider, location, format);
         this.maskColorUniform = getUniform("MaskColor");
         this.maskToleranceUniform = getUniform("MaskTolerance");
     }
 
-    public static EcaShaderInstance create(ResourceProvider resourceProvider, ResourceLocation location, VertexFormat format) throws IOException {
+    public static EcaShaderInstance create(ResourceProvider resourceProvider, Identifier location, VertexFormat format) throws IOException {
         return new EcaShaderInstance(resourceProvider, location, format);
     }
 

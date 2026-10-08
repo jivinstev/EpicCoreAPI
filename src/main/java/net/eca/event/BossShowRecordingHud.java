@@ -3,7 +3,7 @@ package net.eca.event;
 import net.eca.util.bossshow.BossShowEditorState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
@@ -25,20 +25,20 @@ public final class BossShowRecordingHud {
     public static void onRenderGui(RenderGuiEvent.Post event) {
         if (BossShowEditorState.isPoseCaptureArmed()) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.screen != null) return;
+            if (mc.gui.screen() != null) return;
             int w = mc.getWindow().getGuiScaledWidth();
             int h = mc.getWindow().getGuiScaledHeight();
-            GuiGraphics g = event.getGuiGraphics();
-            g.drawCenteredString(mc.font,
+            GuiGraphicsExtractor g = event.getGuiGraphics();
+            g.centeredText(mc.font,
                 Component.translatable("gui.eca.bossshow.editor.pose_capture.hint"),
                 w / 2, h / 4, 0xFFFFFF);
             return;
         }
         if (!BossShowEditorState.isRecordingMode()) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null || mc.level == null) return;
+        if (mc.gui.screen() != null || mc.level == null) return;
 
-        GuiGraphics g = event.getGuiGraphics();
+        GuiGraphicsExtractor g = event.getGuiGraphics();
         Font font = mc.font;
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
@@ -62,9 +62,9 @@ public final class BossShowRecordingHud {
         g.fill(barLeft, BAR_Y, progressX, BAR_Y + BAR_HEIGHT, fillColor);
 
         //时间标签
-        g.drawString(font, "0:00", barLeft, BAR_Y + BAR_HEIGHT + 2, 0xFFAAAAAA, false);
+        g.text(font, "0:00", barLeft, BAR_Y + BAR_HEIGHT + 2, 0xFFAAAAAA, false);
         String rightLabel = formatTime(windowSec);
-        g.drawString(font, rightLabel, barRight - font.width(rightLabel), BAR_Y + BAR_HEIGHT + 2, 0xFFAAAAAA, false);
+        g.text(font, rightLabel, barRight - font.width(rightLabel), BAR_Y + BAR_HEIGHT + 2, 0xFFAAAAAA, false);
 
         //中央 REC/PAUSED 提示
         long blink = (System.currentTimeMillis() / 500) % 2;
@@ -80,8 +80,8 @@ public final class BossShowRecordingHud {
             recDot, formatTime(elapsedSec), frameCount);
         Component line2 = Component.translatable("gui.eca.bossshow.recording.line2");
         int cy = h / 4;
-        g.drawCenteredString(font, line1, w / 2, cy, 0xFFFFFF);
-        g.drawCenteredString(font, line2, w / 2, cy + 14, 0xFFAAAAAA);
+        g.centeredText(font, line1, w / 2, cy, 0xFFFFFF);
+        g.centeredText(font, line2, w / 2, cy + 14, 0xFFAAAAAA);
     }
 
     private static String formatTime(double seconds) {

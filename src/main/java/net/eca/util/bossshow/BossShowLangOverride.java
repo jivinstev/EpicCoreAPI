@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 //客户端字幕翻译的整合包覆盖层：读 config/eca/bossshow/lang/<locale>.json
 //优先级在 vanilla I18n 之上；当前 locale 未命中 → 返回 null，由调用方回退到 I18n
-@OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class BossShowLangOverride {
 

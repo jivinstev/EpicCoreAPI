@@ -1,11 +1,11 @@
 package net.eca.client.render.shader;
 
-import com.mojang.blaze3d.shaders.Uniform;
+import com.mojang.blaze3d.opengl.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 import java.io.IOException;
@@ -25,7 +25,7 @@ public class VolcanoShader {
     public static void register(RegisterShadersEvent event) throws IOException {
         ShaderInstance volcanoShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
-            ResourceLocation.fromNamespaceAndPath("eca", "volcano"),
+            Identifier.fromNamespaceAndPath("eca", "volcano"),
             DefaultVertexFormat.BLOCK
         );
         event.registerShader(volcanoShader, instance -> {

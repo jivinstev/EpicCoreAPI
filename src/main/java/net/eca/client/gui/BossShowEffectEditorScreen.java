@@ -6,7 +6,7 @@ import net.eca.util.bossshow.Curve;
 import net.eca.util.filter.FilterType;
 import net.eca.util.shader_generator.ShaderOutputEffectDefinition;
 import net.eca.util.shader_generator.ShaderOutputEffectRegistry;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -143,7 +143,7 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
     private void saveAndClose() {
         storeCurrent();
         BossShowEditorState.replaceEffectsAtTick(tick, cues);
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private void load(BossShowEffectCue cue) {
@@ -223,7 +223,7 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, height / 2 - 112, 0xFFFFFFFF);
         int y = height / 2 - 86;
@@ -233,11 +233,11 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
         graphics.drawString(font, Component.translatable("gui.eca.bossshow.effect.parameters"), width / 2, y + 52, 0xFFAAAAAA);
         graphics.drawCenteredString(font, Component.literal((cues.isEmpty() ? 0 : selected + 1) + "/" + cues.size()),
             width / 2, y + 118, 0xFFAAAAAA);
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 }

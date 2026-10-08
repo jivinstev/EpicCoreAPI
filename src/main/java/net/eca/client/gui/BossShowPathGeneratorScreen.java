@@ -3,7 +3,7 @@ package net.eca.client.gui;
 import net.eca.util.bossshow.BossShowDefinition.Frame;
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.Curve;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -194,7 +194,7 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
     }
 
     private void closePanel() {
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.setScreenAndShow(new BossShowEditorScreen());
     }
 
     @Override
@@ -218,7 +218,7 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         updateDerivedTiming();
         int center = this.width / 2;
         int labelX = center - 150;
@@ -245,7 +245,7 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
         if (!error.getString().isEmpty()) {
             graphics.drawCenteredString(this.font, error, center, this.height - 38, 0xFF5555);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     private static String format(double value) {

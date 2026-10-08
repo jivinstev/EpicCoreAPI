@@ -9,7 +9,7 @@ import net.eca.util.bossshow.BossShowDefinition.EventCue;
 import net.eca.util.bossshow.BossShowDefinition.Keyframe;
 import net.eca.util.bossshow.BossShowDefinition.SubtitleCue;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 
 import java.util.ArrayList;
@@ -29,7 +29,7 @@ public final class BossShowEditorState {
     public enum RecState { IDLE, RECORDING, PAUSED }
 
     private static boolean active = false;
-    private static ResourceLocation editingId = null;
+    private static Identifier editingId = null;
     private static EntityType<?> targetType = null;
     private static Trigger trigger = new Trigger.Custom("");
     private static boolean cinematic = true;
@@ -50,7 +50,7 @@ public final class BossShowEditorState {
     //=== 选择模式 ===
     public enum SelectionKind { NONE, CREATE_NEW, RECORD, PLAY }
     private static SelectionKind selectionKind = SelectionKind.NONE;
-    private static ResourceLocation pendingPlayDefId = null;
+    private static Identifier pendingPlayDefId = null;
     private static UUID hoveredEntityUuid = null;
 
     //=== 锚点 ===
@@ -152,7 +152,7 @@ public final class BossShowEditorState {
         previewPlaying = false;
     }
 
-    public static BossShowDefinition createBlank(ResourceLocation id, EntityType<?> type) {
+    public static BossShowDefinition createBlank(Identifier id, EntityType<?> type) {
         return new BossShowDefinition(id, type, new Trigger.Custom(""), true, false,
             new ArrayList<>(), BossShowDefinition.Source.CONFIG, 0f);
     }
@@ -460,7 +460,7 @@ public final class BossShowEditorState {
     public static void clearDirty() { dirty = false; }
     public static void markDirty() { dirty = true; }
 
-    public static ResourceLocation getEditingId() { return editingId; }
+    public static Identifier getEditingId() { return editingId; }
     public static EntityType<?> getTargetType() { return targetType; }
     public static void setTargetType(EntityType<?> type) { targetType = type; }
 
@@ -833,7 +833,7 @@ public final class BossShowEditorState {
         backupFrames.clear();
     }
 
-    public static void enterPlaySelection(ResourceLocation defId) {
+    public static void enterPlaySelection(Identifier defId) {
         selectionKind = SelectionKind.PLAY;
         pendingPlayDefId = defId;
         hoveredEntityUuid = null;
@@ -851,24 +851,24 @@ public final class BossShowEditorState {
         hoveredEntityUuid = null;
     }
 
-    public static ResourceLocation getPendingPlayDefId() { return pendingPlayDefId; }
+    public static Identifier getPendingPlayDefId() { return pendingPlayDefId; }
     public static UUID getHoveredEntityUuid() { return hoveredEntityUuid; }
     public static void setHoveredEntityUuid(UUID uuid) { hoveredEntityUuid = uuid; }
 
-    public static ResourceLocation generateAutoId(EntityType<?> type) {
-        ResourceLocation typeId = type != null ? BuiltInRegistries.ENTITY_TYPE.getKey(type) : null;
+    public static Identifier generateAutoId(EntityType<?> type) {
+        Identifier typeId = type != null ? BuiltInRegistries.ENTITY_TYPE.getKey(type) : null;
         String namespace = typeId != null ? typeId.getNamespace() : "eca";
         String basePath = typeId != null ? typeId.getPath() : "anchor";
-        ResourceLocation candidate = ResourceLocation.fromNamespaceAndPath(namespace, basePath);
+        Identifier candidate = Identifier.fromNamespaceAndPath(namespace, basePath);
         int n = 2;
         while (idTaken(candidate)) {
-            candidate = ResourceLocation.fromNamespaceAndPath(namespace, basePath + "_" + n);
+            candidate = Identifier.fromNamespaceAndPath(namespace, basePath + "_" + n);
             n++;
         }
         return candidate;
     }
 
-    private static boolean idTaken(ResourceLocation id) {
+    private static boolean idTaken(Identifier id) {
         for (BossShowDefinition d : availableDefs) {
             if (d.id().equals(id)) return true;
         }

@@ -8,7 +8,7 @@ plugins {
 
 version = project.mod_version
 group = project.maven_group
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 base {
     archivesName = project.archives_name
@@ -30,7 +30,8 @@ sourceSets {
 
 repositories {
     maven { url = "https://maven.neoforged.net/releases" }
-    maven { name = "GeckoLib"; url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+    // GeckoLib publishes its 26.2 build on Modrinth only; the version is Modrinth's version id
+    maven { name = "Modrinth"; url = "https://api.modrinth.com/maven"; content { includeGroup "maven.modrinth" } }
     maven { name = "Progwml6"; url = "https://dvs1.progwml6.com/files/maven/" }
     maven { name = "BlameJared"; url = "https://maven.blamejared.com/" }
     maven { name = "ModMaven"; url = "https://modmaven.dev" }
@@ -39,6 +40,12 @@ repositories {
 neoForge {
     version = project.neo_version
     accessTransformers = files('src/main/resources/META-INF/accesstransformer.cfg')
+    // GeckoLib 5's generics only close with its interface injections applied at compile time
+    interfaceInjectionData.from(provider {
+        def gecko = configurations.detachedConfiguration(dependencies.create("maven.modrinth:geckolib:${project.geckolib_version}"))
+        gecko.transitive = false
+        zipTree(gecko.singleFile).matching { include 'META-INF/interface_injections.json' }.files
+    })
 
     runs {
         client {
@@ -78,7 +85,7 @@ dependencies {
         transitive = false
         version { strictly '[0.27,0.28)'; prefer '0.27' }
     }
-    implementation "software.bernie.geckolib:geckolib-neoforge-${project.minecraft_version}:${project.geckolib_version}"
+    implementation "maven.modrinth:geckolib:${project.geckolib_version}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 }
 
@@ -99,13 +106,13 @@ tasks.named('processCfResources') {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    it.options.release = 21
+    it.options.release = 25
 }
 
 tasks.withType(Test).configureEach {

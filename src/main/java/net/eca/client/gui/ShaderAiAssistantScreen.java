@@ -3,7 +3,7 @@ package net.eca.client.gui;
 import net.eca.util.shader_generator.ai.ShaderAiSettings;
 import net.eca.util.shader_generator.ai.ShaderAiSettingsCodec;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -142,7 +142,7 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     private void openSettings() {
-        minecraft.setScreen(new ShaderAiSettingsScreen(this, settings));
+        minecraft.setScreenAndShow(new ShaderAiSettingsScreen(this, settings));
     }
 
     void settingsSaved(ShaderAiSettings savedSettings) {
@@ -169,7 +169,7 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     private void openMcp() {
-        minecraft.setScreen(new ShaderMcpScreen(this, parent));
+        minecraft.setScreenAndShow(new ShaderMcpScreen(this, parent));
     }
 
     @Override
@@ -182,7 +182,7 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         transcript.setMessages(session.messages());
         graphics.fill(0, 0, width, height, 0xFF111315);
         graphics.fill(0, 0, width, 26, 0xFF17191C);
@@ -211,13 +211,13 @@ final class ShaderAiAssistantScreen extends Screen {
             12,
             0xFFCDD1D7
         );
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
         parent.returnFromAiAssistant();
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     ShaderAiToolResult capturePreview() {

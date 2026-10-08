@@ -9,14 +9,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 
 public class EntityExtensionOverridePacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<EntityExtensionOverridePacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_extension_override_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "entity_extension_override_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, EntityExtensionOverridePacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> EntityExtensionOverridePacket.encode(msg, buf), EntityExtensionOverridePacket::decode);
 
@@ -30,7 +30,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
     private static final byte ACTION_SET = 1;
     private static final byte ACTION_CLEAR = 2;
 
-    private final ResourceLocation dimensionId;
+    private final Identifier dimensionId;
     private final byte fogAction;
     private final FogData fogData;
     private final byte skyboxAction;
@@ -38,7 +38,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
     private final byte musicAction;
     private final MusicData musicData;
 
-    private EntityExtensionOverridePacket(ResourceLocation dimensionId,
+    private EntityExtensionOverridePacket(Identifier dimensionId,
                                           byte fogAction, FogData fogData,
                                           byte skyboxAction, SkyboxData skyboxData,
                                           byte musicAction, MusicData musicData) {
@@ -51,31 +51,31 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
         this.musicData = musicData;
     }
 
-    public static EntityExtensionOverridePacket setFog(ResourceLocation dimensionId, FogData data) {
+    public static EntityExtensionOverridePacket setFog(Identifier dimensionId, FogData data) {
         return new EntityExtensionOverridePacket(dimensionId, ACTION_SET, data, ACTION_NONE, null, ACTION_NONE, null);
     }
 
-    public static EntityExtensionOverridePacket clearFog(ResourceLocation dimensionId) {
+    public static EntityExtensionOverridePacket clearFog(Identifier dimensionId) {
         return new EntityExtensionOverridePacket(dimensionId, ACTION_CLEAR, null, ACTION_NONE, null, ACTION_NONE, null);
     }
 
-    public static EntityExtensionOverridePacket setSkybox(ResourceLocation dimensionId, SkyboxData data) {
+    public static EntityExtensionOverridePacket setSkybox(Identifier dimensionId, SkyboxData data) {
         return new EntityExtensionOverridePacket(dimensionId, ACTION_NONE, null, ACTION_SET, data, ACTION_NONE, null);
     }
 
-    public static EntityExtensionOverridePacket clearSkybox(ResourceLocation dimensionId) {
+    public static EntityExtensionOverridePacket clearSkybox(Identifier dimensionId) {
         return new EntityExtensionOverridePacket(dimensionId, ACTION_NONE, null, ACTION_CLEAR, null, ACTION_NONE, null);
     }
 
-    public static EntityExtensionOverridePacket setMusic(ResourceLocation dimensionId, MusicData data) {
+    public static EntityExtensionOverridePacket setMusic(Identifier dimensionId, MusicData data) {
         return new EntityExtensionOverridePacket(dimensionId, ACTION_NONE, null, ACTION_NONE, null, ACTION_SET, data);
     }
 
-    public static EntityExtensionOverridePacket clearMusic(ResourceLocation dimensionId) {
+    public static EntityExtensionOverridePacket clearMusic(Identifier dimensionId) {
         return new EntityExtensionOverridePacket(dimensionId, ACTION_NONE, null, ACTION_NONE, null, ACTION_CLEAR, null);
     }
 
-    public static EntityExtensionOverridePacket full(ResourceLocation dimensionId,
+    public static EntityExtensionOverridePacket full(Identifier dimensionId,
                                                       byte fogAction, FogData fogData,
                                                       byte skyboxAction, SkyboxData skyboxData,
                                                       byte musicAction, MusicData musicData) {
@@ -104,7 +104,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
     }
 
     public static EntityExtensionOverridePacket decode(FriendlyByteBuf buf) {
-        ResourceLocation dimensionId = buf.readResourceLocation();
+        Identifier dimensionId = buf.readResourceLocation();
 
         byte fogAction = buf.readByte();
         FogData fogData = (fogAction == ACTION_SET) ? FogData.read(buf) : null;
@@ -232,9 +232,9 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
 
     public static class SkyboxData {
         public final boolean enableTexture;
-        public final ResourceLocation texture;
+        public final Identifier texture;
         public final boolean enableShader;
-        public final ResourceLocation shaderPresetId;
+        public final Identifier shaderPresetId;
         public final float alpha;
         public final float size;
         public final float textureUvScale;
@@ -242,8 +242,8 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
         public final float textureGreen;
         public final float textureBlue;
 
-        public SkyboxData(boolean enableTexture, ResourceLocation texture,
-                          boolean enableShader, ResourceLocation shaderPresetId,
+        public SkyboxData(boolean enableTexture, Identifier texture,
+                          boolean enableShader, Identifier shaderPresetId,
                           float alpha, float size, float textureUvScale,
                           float textureRed, float textureGreen, float textureBlue) {
             this.enableTexture = enableTexture;
@@ -279,9 +279,9 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
 
         public static SkyboxData read(FriendlyByteBuf buf) {
             boolean enableTexture = buf.readBoolean();
-            ResourceLocation texture = buf.readBoolean() ? buf.readResourceLocation() : null;
+            Identifier texture = buf.readBoolean() ? buf.readResourceLocation() : null;
             boolean enableShader = buf.readBoolean();
-            ResourceLocation shaderPresetId = buf.readBoolean() ? buf.readResourceLocation() : null;
+            Identifier shaderPresetId = buf.readBoolean() ? buf.readResourceLocation() : null;
             float alpha = buf.readFloat();
             float size = buf.readFloat();
             float textureUvScale = buf.readFloat();
@@ -297,9 +297,9 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
             return new GlobalSkyboxExtension() {
                 @Override public boolean enabled() { return true; }
                 @Override public boolean enableTexture() { return self.enableTexture; }
-                @Override public ResourceLocation texture() { return self.texture; }
+                @Override public Identifier texture() { return self.texture; }
                 @Override public boolean enableShader() { return self.enableShader; }
-                @Override public net.minecraft.client.renderer.RenderType shaderRenderType() {
+                @Override public net.minecraft.client.renderer.rendertype.RenderType shaderRenderType() {
                     return GlobalEffectRegistry.getSkyboxPreset(self.shaderPresetId);
                 }
                 @Override public float alpha() { return self.alpha; }
@@ -313,14 +313,14 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
     }
 
     public static class MusicData {
-        public final ResourceLocation soundEventId;
+        public final Identifier soundEventId;
         public final int soundSourceOrdinal;
         public final float volume;
         public final float pitch;
         public final boolean loop;
         public final boolean strictMusicLock;
 
-        public MusicData(ResourceLocation soundEventId, int soundSourceOrdinal,
+        public MusicData(Identifier soundEventId, int soundSourceOrdinal,
                          float volume, float pitch, boolean loop, boolean strictMusicLock) {
             this.soundEventId = soundEventId;
             this.soundSourceOrdinal = soundSourceOrdinal;
@@ -354,7 +354,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
         }
 
         public static MusicData read(FriendlyByteBuf buf) {
-            ResourceLocation soundEventId = buf.readBoolean() ? buf.readResourceLocation() : null;
+            Identifier soundEventId = buf.readBoolean() ? buf.readResourceLocation() : null;
             int soundSourceOrdinal = buf.readByte();
             float volume = buf.readFloat();
             float pitch = buf.readFloat();
@@ -369,7 +369,7 @@ public class EntityExtensionOverridePacket implements CustomPacketPayload {
                 ? SoundSource.values()[soundSourceOrdinal] : SoundSource.MUSIC;
             return new CombatMusicExtension() {
                 @Override public boolean enabled() { return true; }
-                @Override public ResourceLocation soundEventId() { return self.soundEventId; }
+                @Override public Identifier soundEventId() { return self.soundEventId; }
                 @Override public SoundSource soundSource() { return source; }
                 @Override public float volume() { return self.volume; }
                 @Override public float pitch() { return self.pitch; }

@@ -53,7 +53,7 @@ import java.lang.annotation.Target;
  *     }
  *
  *     public WardenExtension() {
- *         super(EntityType.WARDEN, 7);
+ *         super(net.minecraft.world.entity.EntityTypes.WARDEN, 7);
  *     }
  *
  *     @Override
@@ -75,7 +75,7 @@ import java.lang.annotation.Target;
  *             }
  *
  *             @Override
- *             public ResourceLocation texture() {
+ *             public Identifier texture() {
  *                 return texture("screen/custom_bar.png");
  *             }
  *
@@ -101,7 +101,7 @@ import java.lang.annotation.Target;
  *
  *             @Override
  *             public List&lt;ShaderMaskPass&gt; getShaderPasses() {
- *                 ResourceLocation mask = WardenExtension.this.texture("entity/warden_mask.png");
+ *                 Identifier mask = WardenExtension.this.texture("entity/warden_mask.png");
  *                 return List.of(
  *                     ShaderMaskPass.masked(YourCustomRenderTypes.ENTITY_LAYER, mask,
  *                         0x000000, 0.05f, 0.5f),
@@ -171,7 +171,7 @@ import java.lang.annotation.Target;
  *             }
  *
  *             @Override
- *             public ResourceLocation texture() {
+ *             public Identifier texture() {
  *                 return WardenExtension.this.texture("shader/starfield.png");
  *             }
  *
@@ -221,8 +221,8 @@ import java.lang.annotation.Target;
  *             }
  *
  *             @Override
- *             public ResourceLocation soundEventId() {
- *                 return ResourceLocation.parse("your_mod_id:epic_battle_music");
+ *             public Identifier soundEventId() {
+ *                 return Identifier.parse("your_mod_id:epic_battle_music");
  *             }
  *
  *             @Override

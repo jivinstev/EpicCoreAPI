@@ -9,7 +9,7 @@ public class SpawnBanHook {
 
     // 检查实体是否应该被阻止添加
     public static boolean shouldBlockSpawn(Level level, Entity entity) {
-        if (level == null || level.isClientSide || entity == null) {
+        if (level == null || level.isClientSide() || entity == null) {
             return false;
         }
 

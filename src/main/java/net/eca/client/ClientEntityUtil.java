@@ -14,8 +14,8 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.vehicle.AbstractMinecart;
-import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
+import net.minecraft.world.entity.vehicle.boat.Boat;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.level.entity.EntitySection;
@@ -35,7 +35,6 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 // 客户端专属实体工具：所有触碰 ClientLevel 的逻辑集中于此，使公共类不会在专用服务端触发 ClientLevel 类加载
-@OnlyIn(Dist.CLIENT)
 public final class ClientEntityUtil {
 
     private ClientEntityUtil() {
@@ -242,7 +241,7 @@ public final class ClientEntityUtil {
     private static void removeBossOverlayEntries(Minecraft minecraft, List<UUID> bossEventUUIDs) {
         if (bossEventUUIDs.isEmpty()) return;
         try {
-            BossHealthOverlay bossOverlay = minecraft.gui.getBossOverlay();
+            BossHealthOverlay bossOverlay = minecraft.gui.hud.getBossOverlay();
             for (UUID uuid : bossEventUUIDs) {
                 bossOverlay.events.remove(uuid);
             }

@@ -33,7 +33,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.entity.*;
 import net.minecraft.world.level.gameevent.DynamicGameEventListener;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
@@ -847,7 +847,7 @@ public class EntityUtil {
     public static boolean setHealth(LivingEntity entity, float expectedHealth) {
         if (entity == null) return false;
         try {
-            boolean client = entity.level() != null && entity.level().isClientSide;
+            boolean client = entity.level() != null && entity.level().isClientSide();
             //客户端仅允许被同步包驱动改血(否则客户端会与服务端各自为政)
             if (client && !IS_FROM_SYNC.get()) return false;
             HealthMutationPipeline.Result result = HealthMutationPipeline.apply(entity, expectedHealth);
@@ -895,7 +895,7 @@ public class EntityUtil {
     // 服务端值未变化时客户端仍可能滞后，不能据此省略同步。
     private static void syncHealthToClients(LivingEntity entity, float expectedHealth) {
         if (IS_FROM_SYNC.get()) return;
-        if (entity.level() == null || entity.level().isClientSide) return;
+        if (entity.level() == null || entity.level().isClientSide()) return;
         UUID request = HealthReportManager.beginClientSync(entity);
         try {
             NetworkHandler.sendToTrackingClients(new SetHealthClientSyncPacket(
@@ -936,7 +936,7 @@ public class EntityUtil {
     //强制实体受伤（清无敌帧走原版 hurt，再校验不符时兜底强制改血）
     public static boolean hurt(LivingEntity entity, DamageSource damageSource, float amount) {
         if (entity == null || damageSource == null || amount <= 0.0f) return false;
-        if (entity.level() == null || entity.level().isClientSide) return false;
+        if (entity.level() == null || entity.level().isClientSide()) return false;
         try {
             if (EcaAPI.isInvulnerable(entity) || HealthLockManager.getLock(entity) != null) {
                 return entity.hurt(damageSource, amount);
@@ -1058,7 +1058,7 @@ public class EntityUtil {
             return;
         }
         try {
-            entity.moveTo(position.x, position.y, position.z, yRot, xRot);
+            entity.snapTo(position.x, position.y, position.z, yRot, xRot);
         } catch (Exception e) {
             EcaLogger.info("[EntityUtil] Failed to restore entity position, uuid={}, msg={}",
                     entity.getUUID(), e.getMessage());
@@ -1088,7 +1088,7 @@ public class EntityUtil {
     //完整的实体清除方法
     public static void remove(Entity entity, Entity.RemovalReason reason) {
         if (entity == null || entity.level() == null) return;
-        if (entity.level().isClientSide) return;
+        if (entity.level().isClientSide()) return;
         ServerLevel serverLevel = (ServerLevel) entity.level();
         if (entity instanceof LivingEntity && EcaAPI.isInvulnerable(entity) && !isChangingDimension(entity)) {
             return;
@@ -1156,7 +1156,7 @@ public class EntityUtil {
 
     public static List<UUID> collectAllBossEventUUIDsForRemoval(Entity entity) {
         List<UUID> bossEventUUIDs = collectBossEventUUIDs(entity);
-        if (entity != null && !entity.level().isClientSide && entity instanceof LivingEntity living) {
+        if (entity != null && !entity.level().isClientSide() && entity instanceof LivingEntity living) {
             bossEventUUIDs.addAll(EntityExtensionManager.collectCustomBossEventUUIDs(living));
         }
         return bossEventUUIDs;

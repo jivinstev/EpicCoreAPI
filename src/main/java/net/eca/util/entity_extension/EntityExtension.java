@@ -1,7 +1,7 @@
 package net.eca.util.entity_extension;
 
 import net.eca.blender.animation.controller.BlenderControllerSet;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
@@ -82,96 +82,78 @@ public abstract class EntityExtension {
         return null;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public abstract BossBarExtension bossBarExtension();
 
     // 带参重载用于按实体状态条件切换；entity 可能为 null，重写时需自行判空
-    @OnlyIn(Dist.CLIENT)
     public BossBarExtension bossBarExtension(LivingEntity entity) {
         return bossBarExtension();
     }
 
-    @OnlyIn(Dist.CLIENT)
     public abstract EntityLayerExtension entityLayerExtension();
 
-    @OnlyIn(Dist.CLIENT)
     public EntityLayerExtension entityLayerExtension(LivingEntity entity) {
         return entityLayerExtension();
     }
 
-    @OnlyIn(Dist.CLIENT)
     public BlenderModelExtension blenderModelExtension() {
         return null;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public BlenderModelExtension blenderModelExtension(LivingEntity entity) {
         return blenderModelExtension();
     }
 
-    @OnlyIn(Dist.CLIENT)
     public GlobalFogExtension globalFogExtension() {
         return null;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public GlobalFogExtension globalFogExtension(LivingEntity entity) {
         return globalFogExtension();
     }
 
-    @OnlyIn(Dist.CLIENT)
     public GlobalSkyboxExtension globalSkyboxExtension() {
         return null;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public GlobalSkyboxExtension globalSkyboxExtension(LivingEntity entity) {
         return globalSkyboxExtension();
     }
 
-    @OnlyIn(Dist.CLIENT)
     public CombatMusicExtension combatMusicExtension() {
         return null;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public CombatMusicExtension combatMusicExtension(LivingEntity entity) {
         return combatMusicExtension();
     }
 
-    @OnlyIn(Dist.CLIENT)
     public boolean shouldEnableFog(LivingEntity entity) {
         return true;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public boolean shouldEnableSkybox(LivingEntity entity) {
         return true;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public boolean shouldEnableMusic(LivingEntity entity) {
         return true;
     }
 
-    @OnlyIn(Dist.CLIENT)
     protected abstract String getModId();
 
-    @OnlyIn(Dist.CLIENT)
-    protected ResourceLocation texture(String path) {
+    protected Identifier texture(String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
         String normalized = path.startsWith("textures/") ? path : "textures/" + path;
-        return ResourceLocation.fromNamespaceAndPath(getModId(), normalized);
+        return Identifier.fromNamespaceAndPath(getModId(), normalized);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    protected ResourceLocation sound(String path) {
+    protected Identifier sound(String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
-        return ResourceLocation.fromNamespaceAndPath(getModId(), path);
+        return Identifier.fromNamespaceAndPath(getModId(), path);
     }
 
     @Override

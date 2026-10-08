@@ -3,18 +3,17 @@ package net.eca.client.render;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.OceanShader;
 
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public class OceanRenderTypes {
 
-    private static final ResourceLocation BUBBLE_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/ocean_bubble.png");
+    private static final Identifier BUBBLE_TEXTURE = Identifier.fromNamespaceAndPath("eca", "textures/shader/ocean_bubble.png");
 
     private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(OceanShader::getShader) {
         @Override
@@ -86,7 +85,7 @@ public class OceanRenderTypes {
             .createCompositeState(true)
     );
 
-    public static RenderType createEntityEffect(ResourceLocation texture) {
+    public static RenderType createEntityEffect(Identifier texture) {
         return RenderType.create("ocean_entity_effect",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,

@@ -17,7 +17,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -60,7 +60,7 @@ public class BossShowCommand {
     }
 
     private static CompletableFuture<Suggestions> suggestIds(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
-        for (ResourceLocation id : BossShowManager.getAllDefinitions().keySet()) {
+        for (Identifier id : BossShowManager.getAllDefinitions().keySet()) {
             builder.suggest(id.toString());
         }
         return builder.buildFuture();
@@ -78,7 +78,7 @@ public class BossShowCommand {
                 return 0;
             }
 
-            ResourceLocation id = ResourceLocation.tryParse(idStr.trim());
+            Identifier id = Identifier.tryParse(idStr.trim());
             if (id == null) {
                 source.sendFailure(Component.literal("§cInvalid cutscene id: " + idStr));
                 return 0;
@@ -127,13 +127,13 @@ public class BossShowCommand {
 
     private static int list(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
-        Map<ResourceLocation, BossShowDefinition> all = BossShowManager.getAllDefinitions();
+        Map<Identifier, BossShowDefinition> all = BossShowManager.getAllDefinitions();
         if (all.isEmpty()) {
             source.sendSuccess(() -> Component.literal("§eNo BossShow definitions loaded"), false);
             return 0;
         }
         source.sendSuccess(() -> Component.literal("§aLoaded BossShows (" + all.size() + "):"), false);
-        for (Map.Entry<ResourceLocation, BossShowDefinition> e : all.entrySet()) {
+        for (Map.Entry<Identifier, BossShowDefinition> e : all.entrySet()) {
             BossShowDefinition def = e.getValue();
             int contentCount = 0;
             for (BossShowDefinition.Frame f : def.frames()) { if (f.keyframe() != null) contentCount++; }
@@ -153,7 +153,7 @@ public class BossShowCommand {
             if (!BossShowEditorSessionManager.isActive(player)) {
                 //首次进入才校验锚点候选，重复打开不应破坏既有会话。
                 AABB box = AABB.ofSize(player.position(), EDITOR_SCAN_RADIUS * 2, EDITOR_SCAN_RADIUS * 2, EDITOR_SCAN_RADIUS * 2);
-                List<LivingEntity> nearby = player.serverLevel().getEntitiesOfClass(
+                List<LivingEntity> nearby = player.level().getEntitiesOfClass(
                     LivingEntity.class, box, e -> e != null && e != player && e.isAlive());
                 if (nearby.isEmpty()) {
                     source.sendFailure(Component.literal("§cNo LivingEntity within " + (int) EDITOR_SCAN_RADIUS + " blocks. Editor needs at least one nearby entity."));

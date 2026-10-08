@@ -20,7 +20,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.model.data.ModelData;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 
@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlockExtensionRenderer {
 
     private static final double MAX_RENDER_DISTANCE_SQR = 256.0 * 256.0;

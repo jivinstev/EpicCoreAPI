@@ -33,15 +33,15 @@ import java.lang.annotation.Target;
  *     @Override public String getRaiderFactionId() { return "undead_legion"; }
  *
  *     @Override public ResourceKey<Structure> getTargetStructure() {
- *         return ResourceKey.create(Registries.STRUCTURE, ResourceLocation.fromNamespaceAndPath("minecraft", "village_plains"));
+ *         return ResourceKey.create(Registries.STRUCTURE, Identifier.fromNamespaceAndPath("minecraft", "village_plains"));
  *     }
  *
  *     @Override public List<RaidWave> getWaves() {
  *         return List.of(
- *             new RaidWave().addEntry(EntityType.ZOMBIE, 6),
+ *             new RaidWave().addEntry(net.minecraft.world.entity.EntityTypes.ZOMBIE, 6),
  *             new RaidWave().addFaction("undead_legion", 10, Map.of(
- *                 EntityType.ZOMBIE, 8,
- *                 EntityType.SKELETON, 2
+ *                 net.minecraft.world.entity.EntityTypes.ZOMBIE, 8,
+ *                 net.minecraft.world.entity.EntityTypes.SKELETON, 2
  *             ))
  *         );
  *     }

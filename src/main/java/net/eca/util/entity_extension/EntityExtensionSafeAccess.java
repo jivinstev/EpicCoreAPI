@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * 带参重载在 entity 为 null 时不会把 null 交给重写代码，而是退回无参版；重写代码抛出的任何异常
  * 都会被捕获并退回安全默认值，避免渲染 / 网络 / tick 线程因第三方扩展实现而崩溃。
  */
-@OnlyIn(Dist.CLIENT)
 public final class EntityExtensionSafeAccess {
 
     // 已记录异常的 扩展类#方法 组合，去重避免每帧刷屏

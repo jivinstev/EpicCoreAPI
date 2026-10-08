@@ -1,7 +1,7 @@
 package net.eca.client.render.shader_generator;
 
 import net.eca.util.shader_generator.ShaderExportBundle;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackLocationInfo;
@@ -26,9 +26,9 @@ import java.util.Set;
 @SuppressWarnings("removal")
 final class MemoryShaderResourceProvider implements ResourceProvider {
 
-    private final Map<ResourceLocation, byte[]> resources = new HashMap<>();
+    private final Map<Identifier, byte[]> resources = new HashMap<>();
     private final ResourceProvider fallback;
-    private final Map<ResourceLocation, Path> externalResources;
+    private final Map<Identifier, Path> externalResources;
     private final Map<String, Path> externalResourcesByPath;
     private final PackResources pack = new MemoryPackResources();
 
@@ -36,7 +36,7 @@ final class MemoryShaderResourceProvider implements ResourceProvider {
         String namespace,
         ShaderExportBundle bundle,
         ResourceProvider fallback,
-        Map<ResourceLocation, Path> externalResources
+        Map<Identifier, Path> externalResources
     ) {
         this.fallback = fallback;
         this.externalResources = externalResources == null ? Map.of() : Map.copyOf(externalResources);
@@ -54,17 +54,17 @@ final class MemoryShaderResourceProvider implements ResourceProvider {
             }
             String path = file.relativePath().substring(prefix.length());
             byte[] content = file.content().getBytes(StandardCharsets.UTF_8);
-            resources.put(ResourceLocation.fromNamespaceAndPath(namespace, path), content);
+            resources.put(Identifier.fromNamespaceAndPath(namespace, path), content);
             String presetPrefix = "eca/shader_presets/";
             if (path.startsWith(presetPrefix)) {
-                resources.put(ResourceLocation.fromNamespaceAndPath(namespace,
+                resources.put(Identifier.fromNamespaceAndPath(namespace,
                     "shaders/core/" + path.substring(presetPrefix.length())), content);
             }
         }
     }
 
     @Override
-    public Optional<Resource> getResource(ResourceLocation location) {
+    public Optional<Resource> getResource(Identifier location) {
         byte[] bytes = resources.get(location);
         if (bytes != null) {
             return Optional.of(new Resource(pack, () -> new ByteArrayInputStream(bytes)));
@@ -86,7 +86,7 @@ final class MemoryShaderResourceProvider implements ResourceProvider {
         }
 
         @Override
-        public IoSupplier<InputStream> getResource(PackType type, ResourceLocation location) {
+        public IoSupplier<InputStream> getResource(PackType type, Identifier location) {
             return null;
         }
 

@@ -1,6 +1,6 @@
 package net.eca.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -82,11 +82,11 @@ public final class ShaderColorPickerScreen extends Screen {
             (rgb & 0xFF) / 255.0F,
             alpha
         );
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 104;
         int top = height / 2 - PICKER_SIZE / 2;
@@ -101,12 +101,12 @@ public final class ShaderColorPickerScreen extends Screen {
             top + 106,
             0xFFCDD1D7
         );
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private int currentArgb() {
@@ -151,7 +151,7 @@ public final class ShaderColorPickerScreen extends Screen {
 
         @Override
         protected void renderWidget(
-            GuiGraphics graphics,
+            GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
             float partialTick
@@ -202,7 +202,7 @@ public final class ShaderColorPickerScreen extends Screen {
 
         @Override
         protected void renderWidget(
-            GuiGraphics graphics,
+            GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
             float partialTick

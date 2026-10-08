@@ -4,7 +4,7 @@ package net.eca.util.bossshow;
 import net.eca.api.RegisterBossShow;
 import net.eca.util.EcaLogger;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforgespi.language.IModInfo;
@@ -41,8 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class BossShowManager {
 
-    private static final Map<ResourceLocation, BossShow> CODE_REGISTRY = new ConcurrentHashMap<>();
-    private static final Map<ResourceLocation, BossShowDefinition> DEFINITIONS = new ConcurrentHashMap<>();
+    private static final Map<Identifier, BossShow> CODE_REGISTRY = new ConcurrentHashMap<>();
+    private static final Map<Identifier, BossShowDefinition> DEFINITIONS = new ConcurrentHashMap<>();
 
     private static final Path CONFIG_DIR = Paths.get("config", "eca", "bossshow");
 
@@ -54,7 +54,7 @@ public final class BossShowManager {
             EcaLogger.error("Cannot register null BossShow");
             return false;
         }
-        ResourceLocation id = bossShow.id();
+        Identifier id = bossShow.id();
         if (CODE_REGISTRY.containsKey(id)) {
             EcaLogger.error("BossShow id {} already registered as {}, skipping {}",
                 id, CODE_REGISTRY.get(id).getClass().getName(), bossShow.getClass().getName());
@@ -135,9 +135,9 @@ public final class BossShowManager {
                 }
                 pathBuilder.append(seg);
             }
-            ResourceLocation id = ResourceLocation.tryParse(namespace + ":" + pathBuilder);
+            Identifier id = Identifier.tryParse(namespace + ":" + pathBuilder);
             if (id == null) {
-                EcaLogger.error("Mod BossShow file {} produced invalid ResourceLocation", file);
+                EcaLogger.error("Mod BossShow file {} produced invalid Identifier", file);
                 return false;
             }
 
@@ -187,7 +187,7 @@ public final class BossShowManager {
 
     private static void loadJsonFile(Path root, Path file) {
         try {
-            //路径转 ResourceLocation：<ns>/<path>.json → ns:path
+            //路径转 Identifier：<ns>/<path>.json → ns:path
             Path rel = root.relativize(file);
             int nameCount = rel.getNameCount();
             if (nameCount < 2) {
@@ -204,9 +204,9 @@ public final class BossShowManager {
                 }
                 pathBuilder.append(seg);
             }
-            ResourceLocation id = ResourceLocation.tryParse(namespace + ":" + pathBuilder);
+            Identifier id = Identifier.tryParse(namespace + ":" + pathBuilder);
             if (id == null) {
-                EcaLogger.error("BossShow file {} produced invalid ResourceLocation", file);
+                EcaLogger.error("BossShow file {} produced invalid Identifier", file);
                 return;
             }
 
@@ -222,8 +222,8 @@ public final class BossShowManager {
 
     //为 code-registered 但没有 json 的 BossShow 自动生成模板
     private static void autoGenerateMissingTemplates() {
-        for (Map.Entry<ResourceLocation, BossShow> entry : CODE_REGISTRY.entrySet()) {
-            ResourceLocation id = entry.getKey();
+        for (Map.Entry<Identifier, BossShow> entry : CODE_REGISTRY.entrySet()) {
+            Identifier id = entry.getKey();
             if (DEFINITIONS.containsKey(id)) continue;
 
             BossShow bossShow = entry.getValue();
@@ -240,7 +240,7 @@ public final class BossShowManager {
         }
     }
 
-    private static BossShowDefinition buildTemplate(ResourceLocation id, EntityType<?> targetType) {
+    private static BossShowDefinition buildTemplate(Identifier id, EntityType<?> targetType) {
         //空白模板：无帧数据，code-registered cutscene 由作者后续录制填充
         return new BossShowDefinition(id, targetType, new Trigger.Custom(""), true, false,
             new ArrayList<>(), BossShowDefinition.Source.CODE, 0f);
@@ -248,15 +248,15 @@ public final class BossShowManager {
 
     //==================== 查询 API ====================
 
-    public static BossShowDefinition get(ResourceLocation id) {
+    public static BossShowDefinition get(Identifier id) {
         return DEFINITIONS.get(id);
     }
 
-    public static BossShow getCodeHook(ResourceLocation id) {
+    public static BossShow getCodeHook(Identifier id) {
         return CODE_REGISTRY.get(id);
     }
 
-    public static Map<ResourceLocation, BossShowDefinition> getAllDefinitions() {
+    public static Map<Identifier, BossShowDefinition> getAllDefinitions() {
         return Collections.unmodifiableMap(DEFINITIONS);
     }
 
@@ -288,7 +288,7 @@ public final class BossShowManager {
 
     //从内存和磁盘删除一个定义（编辑器使用）
     //返回 true 表示已确认从 DEFINITIONS 移除（无论文件是否存在）
-    public static boolean delete(ResourceLocation id) {
+    public static boolean delete(Identifier id) {
         if (id == null) return false;
         try {
             Path target = CONFIG_DIR.resolve(id.getNamespace()).resolve(id.getPath() + ".json");
@@ -309,13 +309,13 @@ public final class BossShowManager {
         autoGenerateMissingTemplates();
     }
 
-    //工具：从字符串解析 ResourceLocation
-    public static ResourceLocation parseId(String s) {
-        return ResourceLocation.tryParse(s);
+    //工具：从字符串解析 Identifier
+    public static Identifier parseId(String s) {
+        return Identifier.tryParse(s);
     }
 
-    //按 EntityType 反查 ResourceLocation，供序列化使用
-    public static ResourceLocation idOfType(EntityType<?> type) {
+    //按 EntityType 反查 Identifier，供序列化使用
+    public static Identifier idOfType(EntityType<?> type) {
         return BuiltInRegistries.ENTITY_TYPE.getKey(type);
     }
 
@@ -334,13 +334,13 @@ public final class BossShowManager {
         //注意：CODE_REGISTRY 不清，因为静态块只执行一次
     }
 
-    //通过 entity-type ResourceLocation 查类型
-    public static EntityType<?> entityTypeFromId(ResourceLocation id) {
-        return id != null ? BuiltInRegistries.ENTITY_TYPE.get(id) : null;
+    //通过 entity-type Identifier 查类型
+    public static EntityType<?> entityTypeFromId(Identifier id) {
+        return id != null ? BuiltInRegistries.ENTITY_TYPE.getValue(id) : null;
     }
 
     //HashMap 副本供迭代安全
-    public static Map<ResourceLocation, BossShowDefinition> snapshot() {
+    public static Map<Identifier, BossShowDefinition> snapshot() {
         return new HashMap<>(DEFINITIONS);
     }
 }

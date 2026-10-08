@@ -1,7 +1,7 @@
 package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderProjectCodec;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -75,7 +75,7 @@ public final class ShaderProjectDetailsScreen extends Screen {
             error = Component.translatable("gui.eca.shader_generator.project.operation_failed");
             return;
         }
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     @Override
@@ -88,7 +88,7 @@ public final class ShaderProjectDetailsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - DIALOG_WIDTH) / 2;
         int top = height / 2 - 72;
@@ -104,12 +104,12 @@ public final class ShaderProjectDetailsScreen extends Screen {
         if (error != null) {
             graphics.drawCenteredString(font, error, width / 2, top + 100, 0xFFFF6B6B);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     @FunctionalInterface

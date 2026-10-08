@@ -9,20 +9,19 @@ import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
 import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.animatable.GeoAnimatable;
-import software.bernie.geckolib.renderer.GeoBlockRenderer;
-import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
+import com.geckolib.cache.model.BakedGeoModel;
+import com.geckolib.animatable.GeoAnimatable;
+import com.geckolib.renderer.GeoBlockRenderer;
+import com.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> extends GeoRenderLayer<T> {
 
     private final GeoBoneVisibilityController boneVisibility = new GeoBoneVisibilityController();
@@ -53,7 +52,7 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
             if (activeExtension == null) {
                 return;
             }
-            ResourceLocation texture = getTextureResource(animatable);
+            Identifier texture = getTextureResource(animatable);
             List<ShaderMaskPass> passes = activeExtension.getGeoShaderPasses(texture);
             if (passes == null || passes.isEmpty()) {
                 return;

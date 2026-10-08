@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class ItemExtensionManager {
 
     private static final Map<Item, ItemExtension> REGISTRY = new ConcurrentHashMap<>();

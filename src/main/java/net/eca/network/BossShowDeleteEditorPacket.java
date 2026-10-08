@@ -6,7 +6,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -14,7 +14,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 //C→S：客户端请求删除一个 BossShow 定义（同时删 JSON 文件）。删完服务端重发 Home 包刷新列表
 public class BossShowDeleteEditorPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<BossShowDeleteEditorPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_delete_editor_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "boss_show_delete_editor_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BossShowDeleteEditorPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> BossShowDeleteEditorPacket.encode(msg, buf), BossShowDeleteEditorPacket::decode);
 
@@ -24,13 +24,13 @@ public class BossShowDeleteEditorPacket implements CustomPacketPayload {
     }
 
 
-    private final ResourceLocation id;
+    private final Identifier id;
 
-    public BossShowDeleteEditorPacket(ResourceLocation id) {
+    public BossShowDeleteEditorPacket(Identifier id) {
         this.id = id;
     }
 
-    public ResourceLocation id() { return id; }
+    public Identifier id() { return id; }
 
     public static void encode(BossShowDeleteEditorPacket msg, FriendlyByteBuf buf) {
         buf.writeResourceLocation(msg.id);

@@ -49,7 +49,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforgespi.language.IModFileInfo;
 import net.neoforged.neoforgespi.language.ModFileScanData;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -548,12 +548,12 @@ public final class EcaAPI {
      *
      * @param viewer     the player who will watch the cutscene
      * @param target     the target entity the cutscene is anchored to
-     * @param cutsceneId the ResourceLocation id of the cutscene
+     * @param cutsceneId the Identifier id of the cutscene
      * @return true if playback started, false if no such definition or viewer already has a session
      */
     public static boolean playBossShow(ServerPlayer viewer,
                                        LivingEntity target,
-                                       ResourceLocation cutsceneId) {
+                                       Identifier cutsceneId) {
         BossShowDefinition def = BossShowManager.get(cutsceneId);
         if (def == null) return false;
         return BossShowPlaybackTracker.start(viewer, target, def, true);
@@ -569,7 +569,7 @@ public final class EcaAPI {
      */
     public static boolean playBossShowIfNew(ServerPlayer viewer,
                                             LivingEntity target,
-                                            ResourceLocation cutsceneId) {
+                                            Identifier cutsceneId) {
         BossShowDefinition def = BossShowManager.get(cutsceneId);
         if (def == null) return false;
         return BossShowPlaybackTracker.start(viewer, target, def, false);
@@ -1740,8 +1740,7 @@ public final class EcaAPI {
      * @param id the preset resource id
      * @return the shader preset, or null if no preset is registered for the id
      */
-    @OnlyIn(Dist.CLIENT)
-    public static ShaderPreset shaderPreset(ResourceLocation id) {
+    public static ShaderPreset shaderPreset(Identifier id) {
         return ShaderPresetRegistry.getPreset(id);
     }
 

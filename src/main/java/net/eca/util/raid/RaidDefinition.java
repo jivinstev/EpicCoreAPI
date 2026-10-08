@@ -37,17 +37,17 @@ import java.util.List;
  *     @Override public String getRaiderFactionId() { return "undead_legion"; }
  *
  *     @Override public ResourceKey<Structure> getTargetStructure() {
- *         return ResourceKey.create(Registries.STRUCTURE, ResourceLocation.fromNamespaceAndPath("minecraft", "village_plains"));
+ *         return ResourceKey.create(Registries.STRUCTURE, Identifier.fromNamespaceAndPath("minecraft", "village_plains"));
  *     }
  *
  *     @Override public List<RaidWave> getWaves() {
  *         return List.of(
- *             new RaidWave().addEntry(EntityType.ZOMBIE, 6),
+ *             new RaidWave().addEntry(net.minecraft.world.entity.EntityTypes.ZOMBIE, 6),
  *             new RaidWave().addFaction("undead_legion", 10,
- *                     Map.of(EntityType.ZOMBIE, 8, EntityType.SKELETON, 2)),
- *             new RaidWave().addEntry(EntityType.WITHER_SKELETON, 4)
+ *                     Map.of(net.minecraft.world.entity.EntityTypes.ZOMBIE, 8, net.minecraft.world.entity.EntityTypes.SKELETON, 2)),
+ *             new RaidWave().addEntry(net.minecraft.world.entity.EntityTypes.WITHER_SKELETON, 4)
  *                     .addFaction("undead_legion", 8,
- *                             Map.of(EntityType.ZOMBIE, 1, EntityType.WITHER_SKELETON, 4))
+ *                             Map.of(net.minecraft.world.entity.EntityTypes.ZOMBIE, 1, net.minecraft.world.entity.EntityTypes.WITHER_SKELETON, 4))
  *         );
  *     }
  * }
@@ -298,7 +298,6 @@ public abstract class RaidDefinition {
      *
      * @return the custom bar appearance, or null to keep the vanilla bar
      */
-    @OnlyIn(Dist.CLIENT)
     public RaidBossBarExtension bossBarExtension() {
         return null;
     }

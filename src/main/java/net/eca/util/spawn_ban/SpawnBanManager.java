@@ -2,7 +2,7 @@ package net.eca.util.spawn_ban;
 
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -27,7 +27,7 @@ public class SpawnBanManager {
             return false;
         }
 
-        ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+        Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
         if (typeId == null) {
             return false;
         }
@@ -53,7 +53,7 @@ public class SpawnBanManager {
             return 0;
         }
 
-        ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+        Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
         if (typeId == null) {
             return 0;
         }
@@ -68,7 +68,7 @@ public class SpawnBanManager {
             return false;
         }
 
-        ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+        Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
         if (typeId == null) {
             return false;
         }
@@ -84,11 +84,11 @@ public class SpawnBanManager {
         }
 
         SpawnBanData data = getData(level);
-        Map<ResourceLocation, Integer> rawBans = data.getAllBans();
+        Map<Identifier, Integer> rawBans = data.getAllBans();
 
         Map<EntityType<?>, Integer> result = new HashMap<>();
-        for (Map.Entry<ResourceLocation, Integer> entry : rawBans.entrySet()) {
-            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(entry.getKey());
+        for (Map.Entry<Identifier, Integer> entry : rawBans.entrySet()) {
+            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(entry.getKey());
             if (type != null) {
                 result.put(type, entry.getValue());
             }

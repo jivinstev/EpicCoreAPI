@@ -16,8 +16,8 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.material.FogType;
 import net.neoforged.api.distmarker.Dist;
@@ -32,7 +32,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@OnlyIn(Dist.CLIENT)
 @Mixin(GameRenderer.class)
 public class GameRendererPostLevelMixin {
 
@@ -86,7 +85,7 @@ public class GameRendererPostLevelMixin {
     }
 
     private void renderPostSkybox(PoseStack poseStack) {
-        GlobalSkyboxExtension skybox = getGlobalSkyboxExtension(minecraft.level.dimension().location());
+        GlobalSkyboxExtension skybox = getGlobalSkyboxExtension(minecraft.level.dimension().identifier());
         if (skybox == null || !skybox.enabled()) {
             return;
         }
@@ -104,7 +103,7 @@ public class GameRendererPostLevelMixin {
         drawPostLevelSkybox(poseStack, skybox.shaderRenderType(), size, alpha);
     }
 
-    private GlobalSkyboxExtension getGlobalSkyboxExtension(ResourceLocation dimensionId) {
+    private GlobalSkyboxExtension getGlobalSkyboxExtension(Identifier dimensionId) {
         return EntityExtensionClientState.getActiveSkybox(dimensionId);
     }
 

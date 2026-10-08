@@ -2,7 +2,7 @@ package net.eca.util.block_extension;
 
 import net.eca.util.EcaLogger;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlockExtensionSafeAccess {
 
     private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();

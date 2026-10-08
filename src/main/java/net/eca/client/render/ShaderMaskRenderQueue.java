@@ -19,7 +19,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-@OnlyIn(Dist.CLIENT)
 public final class ShaderMaskRenderQueue {
 
     private static final int MAX_POOL_SIZE = 64;

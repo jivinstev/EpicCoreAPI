@@ -1,7 +1,7 @@
 package net.eca.util;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -21,7 +21,7 @@ public final class ResurrectionRecord {
 
     volatile ResourceKey<Level> dimension;
     volatile CompoundTag nbt;
-    volatile ResourceLocation typeId;
+    volatile Identifier typeId;
     volatile Vec3 position;
     volatile float yRot;
     volatile float xRot;

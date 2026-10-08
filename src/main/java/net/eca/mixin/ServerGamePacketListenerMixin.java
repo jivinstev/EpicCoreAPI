@@ -100,7 +100,7 @@ public abstract class ServerGamePacketListenerMixin implements ServerTeleportCon
         PacketUtils.ensureRunningOnSameThread(
                 packet,
                 (ServerGamePacketListenerImpl) (Object) this,
-                this.player.serverLevel()
+                this.player.level()
         );
         if (this.tickCount - this.eca$pendingTeleportTime > 20) {
             this.eca$pendingTeleportTime = this.tickCount;

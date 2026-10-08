@@ -1,7 +1,7 @@
 package net.eca.client.render;
 
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -16,11 +16,10 @@ import net.neoforged.api.distmarker.OnlyIn;
  * @param maskTolerance maximum normalized RGB distance from {@code maskColor}
  * @param alpha overlay opacity in the inclusive range {@code 0..1}
  */
-@OnlyIn(Dist.CLIENT)
 public record ShaderMaskPass(
     RenderType renderType,
     ShaderMaskSource maskSource,
-    ResourceLocation maskTexture,
+    Identifier maskTexture,
     int maskColor,
     float maskTolerance,
     float alpha
@@ -61,7 +60,7 @@ public record ShaderMaskPass(
      * @param alpha overlay opacity
      * @return texture-masked shader pass
      */
-    public static ShaderMaskPass masked(RenderType renderType, ResourceLocation texture,
+    public static ShaderMaskPass masked(RenderType renderType, Identifier texture,
                                         int color, float tolerance, float alpha) {
         if (texture == null) {
             return unmasked(renderType, alpha);

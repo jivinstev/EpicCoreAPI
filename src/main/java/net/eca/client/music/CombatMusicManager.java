@@ -9,7 +9,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.api.distmarker.Dist;
@@ -23,9 +23,9 @@ public final class CombatMusicManager {
     private static final int CHECK_INTERVAL = 20;
 
     private static SoundInstance currentMusic;
-    private static ResourceLocation currentSoundId;
+    private static Identifier currentSoundId;
     private static boolean strictLockEnabled;
-    private static ResourceLocation strictAllowedSoundId;
+    private static Identifier strictAllowedSoundId;
     private static int tickCounter;
 
     @SubscribeEvent
@@ -45,7 +45,7 @@ public final class CombatMusicManager {
         }
         tickCounter = 0;
 
-        ResourceLocation dimensionId = minecraft.level.dimension().location();
+        Identifier dimensionId = minecraft.level.dimension().identifier();
         EntityExtensionClientState.tickConditions(dimensionId, minecraft.level);
 
         CombatMusicExtension musicExtension = EntityExtensionClientState.getActiveMusic(dimensionId);
@@ -55,7 +55,7 @@ public final class CombatMusicManager {
             return;
         }
 
-        ResourceLocation soundId = musicExtension.soundEventId();
+        Identifier soundId = musicExtension.soundEventId();
         if (soundId == null) {
             clearStrictLock();
             stopCurrent(minecraft);
@@ -106,7 +106,7 @@ public final class CombatMusicManager {
         currentSoundId = null;
     }
 
-    public static boolean shouldBlockMusic(ResourceLocation soundId, SoundSource source) {
+    public static boolean shouldBlockMusic(Identifier soundId, SoundSource source) {
         if (!strictLockEnabled) {
             return false;
         }
@@ -116,7 +116,7 @@ public final class CombatMusicManager {
         return strictAllowedSoundId == null || !strictAllowedSoundId.equals(soundId);
     }
 
-    private static void updateStrictLock(Minecraft minecraft, boolean strict, ResourceLocation allowedSoundId) {
+    private static void updateStrictLock(Minecraft minecraft, boolean strict, Identifier allowedSoundId) {
         strictLockEnabled = strict;
         strictAllowedSoundId = strict ? allowedSoundId : null;
         if (strict && minecraft != null) {

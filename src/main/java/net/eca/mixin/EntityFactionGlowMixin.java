@@ -17,7 +17,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *
  * 集成服务端（单人游戏）下 Entity 仍可能属于 ServerLevel，因此 isClientSide 门控必须保留。
  */
-@OnlyIn(Dist.CLIENT)
 @Mixin(Entity.class)
 public class EntityFactionGlowMixin {
 

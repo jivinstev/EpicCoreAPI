@@ -3,9 +3,9 @@ package net.eca.util.block_extension;
 import net.eca.client.render.ShaderMaskPass;
 import net.eca.client.render.preset.ShaderPreset;
 import net.eca.client.render.preset.ShaderPresetRegistry;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.BlockPos;
@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class BlockExtension {
 
     private final Block block;
@@ -40,18 +39,18 @@ public abstract class BlockExtension {
         return true;
     }
 
-    public ResourceLocation getShaderPresetId() {
+    public Identifier getShaderPresetId() {
         return null;
     }
 
     public RenderType getBlockRenderType() {
-        ResourceLocation presetId = getShaderPresetId();
+        Identifier presetId = getShaderPresetId();
         ShaderPreset preset = presetId == null ? null : ShaderPresetRegistry.getPreset(presetId);
         return preset == null ? null : preset.block();
     }
 
-    public RenderType getGeoRenderType(ResourceLocation texture) {
-        ResourceLocation presetId = getShaderPresetId();
+    public RenderType getGeoRenderType(Identifier texture) {
+        Identifier presetId = getShaderPresetId();
         ShaderPreset preset = presetId == null ? null : ShaderPresetRegistry.getPreset(presetId);
         return preset == null ? null : preset.geoBlock(texture);
     }
@@ -94,7 +93,7 @@ public abstract class BlockExtension {
      * @deprecated Return one or more masks from {@link #getBlockShaderPasses()}.
      */
     @Deprecated
-    public ResourceLocation getMaskTexture() {
+    public Identifier getMaskTexture() {
         return null;
     }
 
@@ -124,10 +123,10 @@ public abstract class BlockExtension {
      * Returns the legacy single mask texture for GeckoLib block entities.
      *
      * @return mask texture, or {@code null}
-     * @deprecated Return one or more masks from {@link #getGeoShaderPasses(ResourceLocation)}.
+     * @deprecated Return one or more masks from {@link #getGeoShaderPasses(Identifier)}.
      */
     @Deprecated
-    public ResourceLocation getGeoMaskTexture() {
+    public Identifier getGeoMaskTexture() {
         return null;
     }
 
@@ -135,7 +134,7 @@ public abstract class BlockExtension {
      * Returns the legacy single GeckoLib block mask target color.
      *
      * @return packed RGB color, black by default
-     * @deprecated Return one or more masks from {@link #getGeoShaderPasses(ResourceLocation)}.
+     * @deprecated Return one or more masks from {@link #getGeoShaderPasses(Identifier)}.
      */
     @Deprecated
     public int getGeoMaskColor() {
@@ -146,7 +145,7 @@ public abstract class BlockExtension {
      * Returns the legacy single GeckoLib block mask tolerance.
      *
      * @return normalized RGB distance tolerance
-     * @deprecated Return one or more masks from {@link #getGeoShaderPasses(ResourceLocation)}.
+     * @deprecated Return one or more masks from {@link #getGeoShaderPasses(Identifier)}.
      */
     @Deprecated
     public float getGeoMaskTolerance() {
@@ -164,7 +163,7 @@ public abstract class BlockExtension {
         if (renderType == null) {
             return List.of();
         }
-        ResourceLocation maskTexture = getMaskTexture();
+        Identifier maskTexture = getMaskTexture();
         if (maskTexture != null) {
             return List.of(ShaderMaskPass.masked(renderType, maskTexture,
                 getMaskColor(), getMaskTolerance(), getAlpha()));
@@ -183,7 +182,7 @@ public abstract class BlockExtension {
      * @param texture current GeckoLib model texture
      * @return ordered GeckoLib block shader mask passes
      */
-    public List<ShaderMaskPass> getGeoShaderPasses(ResourceLocation texture) {
+    public List<ShaderMaskPass> getGeoShaderPasses(Identifier texture) {
         RenderType renderType = getGeoRenderType(texture);
         if (renderType == null) {
             return List.of();

@@ -111,7 +111,7 @@ public final class NumericInverter {
                 double cur = cell.read();
                 if (!Double.isFinite(cur)) continue;
                 Object exact = cell.snapshot();   // 保留原始类型和值，避免 long 与 double 转换造成精度损失
-                if (!HealthMutationContext.attempt(cell.location(), cur + PERTURB)) continue;
+                if (!HealthMutationContext.attempt(cell.identifier(), cur + PERTURB)) continue;
                 if (!cell.write(cur + PERTURB)) continue;
                 float h = EcaSetHealthManager.readHealthAnchor(entity);
                 restoreCell(cell, exact);
@@ -172,7 +172,7 @@ public final class NumericInverter {
         for (int attempt = 0; attempt < 12; attempt++, scale *= 0.5) {
             restoreCell(cell, exact);
             if (HealthMutationContext.stopped()) break;
-            if (!HealthMutationContext.attempt(cell.location(), current + delta * scale)) continue;
+            if (!HealthMutationContext.attempt(cell.identifier(), current + delta * scale)) continue;
             if (!cell.write(current + delta * scale)) continue;
             float after = EcaSetHealthManager.readHealthAnchor(entity);
             if (!Float.isFinite(after)) continue;

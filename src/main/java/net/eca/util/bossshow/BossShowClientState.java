@@ -14,7 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -28,11 +28,10 @@ import java.util.UUID;
  * Holds the full frame list so we can interpolate the camera each render frame
  * without per-tick network traffic.
  */
-@OnlyIn(Dist.CLIENT)
 public final class BossShowClientState {
 
     private static volatile boolean active = false;
-    private static ResourceLocation cutsceneId;
+    private static Identifier cutsceneId;
     private static UUID targetUuid;
     private static EntityType<?> targetType;
     private static double anchorX, anchorY, anchorZ;
@@ -55,7 +54,7 @@ public final class BossShowClientState {
     public static void onServerStart(BossShowStartPacket msg) {
         cutsceneId = msg.cutsceneId();
         targetUuid = msg.targetUuid();
-        targetType = msg.targetTypeId() != null ? BuiltInRegistries.ENTITY_TYPE.get(msg.targetTypeId()) : null;
+        targetType = msg.targetTypeId() != null ? BuiltInRegistries.ENTITY_TYPE.getValue(msg.targetTypeId()) : null;
         anchorX = msg.anchorX();
         anchorY = msg.anchorY();
         anchorZ = msg.anchorZ();
@@ -108,8 +107,8 @@ public final class BossShowClientState {
         //如果 editor session 还活着（试播结束），自动回到 Home
         if (BossShowEditorState.isActive()) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.screen == null) {
-                mc.setScreen(new BossShowEditorHomeScreen());
+            if (mc.gui.screen() == null) {
+                mc.setScreenAndShow(new BossShowEditorHomeScreen());
             }
         }
     }
@@ -150,7 +149,7 @@ public final class BossShowClientState {
         return POSE;
     }
 
-    public static ResourceLocation currentId() { return cutsceneId; }
+    public static Identifier currentId() { return cutsceneId; }
 
     public static boolean isCinematic() { return cinematic; }
 

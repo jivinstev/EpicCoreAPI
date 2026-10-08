@@ -9,7 +9,7 @@ import net.eca.util.bossshow.BossShowDefinition.Keyframe;
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.BossShowEffectCue;
 import net.eca.util.bossshow.Curve;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -18,7 +18,7 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -89,7 +89,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     protected void init() {
         super.init();
         if (!BossShowEditorState.isActive() || BossShowEditorState.getEditingId() == null) {
-            this.minecraft.setScreen(null);
+            this.minecraft.setScreenAndShow(null);
             return;
         }
         preferredTimelineHeight = clampTimelineHeight(preferredTimelineHeight);
@@ -119,7 +119,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         x = addMenuButton(x, Component.translatable("gui.eca.bossshow.editor.menu.show"), MENU_SHOW, menuWidth);
         x = addMenuButton(x, Component.translatable("gui.eca.bossshow.editor.menu.track"), MENU_TRACK, compact ? 50 : 58);
         x = addMenuButton(x, Component.translatable("gui.eca.bossshow.editor.menu.preview"), MENU_PREVIEW, compact ? 58 : 68);
-        ResourceLocation id = BossShowEditorState.getEditingId();
+        Identifier id = BossShowEditorState.getEditingId();
         int idLeft = x + 4;
         int idRight = this.width - 126;
         if (idRight - idLeft >= 80) {
@@ -412,22 +412,22 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         closeDropdown();
         if (BossShowEditorState.armPoseCapture()) {
             BossShowEditorState.setPreviewEnabled(false);
-            this.minecraft.setScreen(null);
+            this.minecraft.setScreenAndShow(null);
         }
     }
 
-    private void openSettings() { closeDropdown(); this.minecraft.setScreen(new BossShowEditorSettingsScreen()); }
-    private void openRangeTransform() { closeDropdown(); if (BossShowEditorState.hasValidRange()) this.minecraft.setScreen(new BossShowRangeTransformScreen()); }
-    private void openPathGenerator() { closeDropdown(); if (BossShowEditorState.frameCount() > 0) this.minecraft.setScreen(new BossShowPathGeneratorScreen()); }
+    private void openSettings() { closeDropdown(); this.minecraft.setScreenAndShow(new BossShowEditorSettingsScreen()); }
+    private void openRangeTransform() { closeDropdown(); if (BossShowEditorState.hasValidRange()) this.minecraft.setScreenAndShow(new BossShowRangeTransformScreen()); }
+    private void openPathGenerator() { closeDropdown(); if (BossShowEditorState.frameCount() > 0) this.minecraft.setScreenAndShow(new BossShowPathGeneratorScreen()); }
     private void openEffectEditor() {
         closeDropdown();
         if (BossShowEditorState.frameCount() > 0) {
-            this.minecraft.setScreen(new BossShowEffectEditorScreen(this, BossShowEditorState.getPlayhead()));
+            this.minecraft.setScreenAndShow(new BossShowEffectEditorScreen(this, BossShowEditorState.getPlayhead()));
         }
     }
     private void setIn() { BossShowEditorState.setInPoint(BossShowEditorState.getPlayhead()); closeDropdown(); syncFromState(); }
     private void setOut() { BossShowEditorState.setOutPoint(BossShowEditorState.getPlayhead()); closeDropdown(); syncFromState(); }
-    private void openShortcutHelp() { closeDropdown(); this.minecraft.setScreen(new BossShowShortcutHelpScreen()); }
+    private void openShortcutHelp() { closeDropdown(); this.minecraft.setScreenAndShow(new BossShowShortcutHelpScreen()); }
     private void deleteRange() { if (BossShowEditorState.deleteRange()) syncFromState(); closeDropdown(); }
     private void undo() { if (BossShowEditorState.undo()) syncFromState(); closeDropdown(); }
     private void redo() { if (BossShowEditorState.redo()) syncFromState(); closeDropdown(); }
@@ -436,8 +436,8 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         closeDropdown();
         if (!BossShowEditorState.hasAnchor()) return;
         if (BossShowEditorState.frameCount() > 0) {
-            this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
-                if (confirmed) doStartRecording(); else this.minecraft.setScreen(new BossShowEditorScreen());
+            this.minecraft.setScreenAndShow(new ConfirmScreen(confirmed -> {
+                if (confirmed) doStartRecording(); else this.minecraft.setScreenAndShow(new BossShowEditorScreen());
             }, Component.translatable("gui.eca.bossshow.editor.start_rec.title"),
                 Component.translatable("gui.eca.bossshow.editor.start_rec.body", BossShowEditorState.frameCount())));
         } else doStartRecording();
@@ -445,13 +445,13 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
 
     private void doStartRecording() {
         BossShowEditorState.enterRecordSelection();
-        this.minecraft.setScreen(null);
+        this.minecraft.setScreenAndShow(null);
     }
 
     private void doSave() {
-        ResourceLocation id = BossShowEditorState.getEditingId();
+        Identifier id = BossShowEditorState.getEditingId();
         if (id == null) return;
-        ResourceLocation typeId = BossShowEditorState.getTargetType() == null ? null
+        Identifier typeId = BossShowEditorState.getTargetType() == null ? null
             : BuiltInRegistries.ENTITY_TYPE.getKey(BossShowEditorState.getTargetType());
         NetworkHandler.sendToServer(new BossShowSaveEditorPacket(id, typeId, BossShowEditorState.getTrigger(),
             BossShowEditorState.isCinematic(), BossShowEditorState.isAllowRepeat(),
@@ -467,8 +467,8 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     private void attemptClose() {
         closeDropdown();
         if (BossShowEditorState.isDirty()) {
-            this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
-                if (confirmed) backToHome(); else this.minecraft.setScreen(new BossShowEditorScreen());
+            this.minecraft.setScreenAndShow(new ConfirmScreen(confirmed -> {
+                if (confirmed) backToHome(); else this.minecraft.setScreenAndShow(new BossShowEditorScreen());
             }, Component.translatable("gui.eca.bossshow.editor.discard.title"),
                 Component.translatable("gui.eca.bossshow.editor.discard.body")));
         } else backToHome();
@@ -476,7 +476,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
 
     private void backToHome() {
         BossShowEditorState.clearDirty();
-        this.minecraft.setScreen(new BossShowEditorHomeScreen());
+        this.minecraft.setScreenAndShow(new BossShowEditorHomeScreen());
     }
 
     private void rebuildWidgetsForDropdown() {
@@ -588,7 +588,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         int timelineY = timeline == null ? this.height - preferredTimelineHeight - 8 : timeline.getY();
         int previewBottom = Math.max(TOP_HEIGHT + 20, inspectorY - 4);
         g.fill(0, 0, this.width, TOP_HEIGHT, 0xEE171922);
@@ -597,9 +597,9 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         g.renderOutline(6, TOP_HEIGHT + 2, this.width - 12, previewBottom - TOP_HEIGHT - 2, 0x553F4657);
         Component dirty = Component.translatable(BossShowEditorState.isDirty()
             ? "gui.eca.bossshow.editor.unsaved" : "gui.eca.bossshow.editor.clean");
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.tick",
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.tick",
             BossShowEditorState.getPlayhead(), BossShowEditorState.frameCount(), dirty), 8, TOP_HEIGHT + 4, 0xFFB8BFCE, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.track." + selectedTrack.name().toLowerCase(Locale.ROOT)),
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.track." + selectedTrack.name().toLowerCase(Locale.ROOT)),
             this.width / 2 - 45, TOP_HEIGHT + 4, 0xFFB8BFCE, false);
         drawInspectorLabels(g);
         super.render(g, mouseX, mouseY, partialTick);
@@ -618,7 +618,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         }
     }
 
-    private void drawDropdown(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    private void drawDropdown(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         if (dropdownFirstWidgetIndex < 0 || dropdownLastWidgetIndex < dropdownFirstWidgetIndex) return;
         List<? extends GuiEventListener> kids = this.children();
         if (dropdownFirstWidgetIndex >= kids.size()) return;
@@ -639,23 +639,23 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         }
     }
 
-    private void drawInspectorLabels(GuiGraphics g) {
+    private void drawInspectorLabels(GuiGraphicsExtractor g) {
         if (selectedTrack == SelectedTrack.CAMERA) {
             int fieldGap = 6;
             int fieldWidth = Math.max(36, (this.width - 16 - fieldGap * 4) / 5);
             int x = 8;
             for (String label : new String[]{"dx", "dy", "dz", "yaw", "pitch"}) {
-                g.drawString(this.font, Component.literal(label), x, inspectorY + 4, 0xFF858C9B, false);
+                g.text(this.font, Component.literal(label), x, inspectorY + 4, 0xFF858C9B, false);
                 x += fieldWidth + fieldGap;
             }
         } else if (selectedTrack == SelectedTrack.EVENT) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.label.event"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.label.event"),
                 8, inspectorY + 4, 0xFF858C9B, false);
         } else if (selectedTrack == SelectedTrack.SUBTITLE) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.label.subtitle"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.label.subtitle"),
                 8, inspectorY + 4, 0xFF858C9B, false);
         } else if (selectedTrack == SelectedTrack.EFFECT) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.track.effect"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.track.effect"),
                 8, inspectorY + 4, 0xFF858C9B, false);
         }
     }
@@ -809,7 +809,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         return true;
     }
 
-    private void renderContextMenu(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderContextMenu(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int rootHover = menuIndexAt(mouseX, mouseY, contextMenuX, contextMenuY, contextEntries.size());
         if (rootHover >= 0) {
             contextSubmenuIndex = contextEntries.get(rootHover).children().isEmpty() ? -1 : rootHover;
@@ -824,7 +824,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         }
     }
 
-    private void drawContextEntries(GuiGraphics g, int x, int y, List<ContextEntry> entries, int hoveredIndex) {
+    private void drawContextEntries(GuiGraphicsExtractor g, int x, int y, List<ContextEntry> entries, int hoveredIndex) {
         int height = entries.size() * CONTEXT_ROW_HEIGHT + 4;
         g.fill(x, y, x + CONTEXT_WIDTH, y + height, 0xFF2C2F39);
         g.renderOutline(x, y, CONTEXT_WIDTH, height, 0xFF555B6A);
@@ -833,7 +833,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             int rowY = y + 2 + i * CONTEXT_ROW_HEIGHT;
             if (i == hoveredIndex && entry.enabled()) g.fill(x + 2, rowY, x + CONTEXT_WIDTH - 2, rowY + CONTEXT_ROW_HEIGHT, 0xFF5A6070);
             Component label = entry.children().isEmpty() ? entry.label() : entry.label().copy().append("  ▶");
-            g.drawString(this.font, label, x + 6, rowY + 5, entry.enabled() ? 0xFFF1F3F7 : 0xFF777C87, false);
+            g.text(this.font, label, x + 6, rowY + 5, entry.enabled() ? 0xFFF1F3F7 : 0xFF777C87, false);
         }
     }
 
@@ -889,14 +889,14 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             && mouseY >= timelineY - 8 && mouseY <= timelineY + 5;
     }
 
-    private void drawTimelineHandle(GuiGraphics g, int timelineY, int mouseX, int mouseY) {
+    private void drawTimelineHandle(GuiGraphicsExtractor g, int timelineY, int mouseX, int mouseY) {
         int left = this.width / 2 - 24;
         int top = timelineY - 8;
         boolean hovered = isOverTimelineHandle(mouseX, mouseY);
         g.fill(8, timelineY - 2, this.width - 8, timelineY, 0xFF454A58);
         g.fill(left, top, left + 48, top + 12, hovered || resizingTimeline ? 0xFF555B6A : 0xFF303541);
         g.renderOutline(left, top, 48, 12, 0xFF747B8D);
-        g.drawCenteredString(this.font, timelineCollapsed ? "▲" : "▼", this.width / 2, top + 2, 0xFFE1E5EE);
+        g.centeredText(this.font, timelineCollapsed ? "▲" : "▼", this.width / 2, top + 2, 0xFFE1E5EE);
     }
 
     private static String format(double value) { return String.format(Locale.ROOT, "%.4f", value); }

@@ -21,11 +21,11 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -196,7 +196,7 @@ public abstract class LevelRendererMixin {
             return;
         }
 
-        GlobalSkyboxExtension skybox = getGlobalSkyboxExtension(minecraft.level.dimension().location());
+        GlobalSkyboxExtension skybox = getGlobalSkyboxExtension(minecraft.level.dimension().identifier());
         if (skybox == null || !skybox.enabled()) {
             return;
         }
@@ -218,7 +218,7 @@ public abstract class LevelRendererMixin {
     }
 
     @Unique
-    private static GlobalSkyboxExtension getGlobalSkyboxExtension(ResourceLocation dimensionId) {
+    private static GlobalSkyboxExtension getGlobalSkyboxExtension(Identifier dimensionId) {
         return EntityExtensionClientState.getActiveSkybox(dimensionId);
     }
 

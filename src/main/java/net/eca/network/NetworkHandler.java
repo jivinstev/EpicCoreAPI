@@ -83,7 +83,7 @@ public class NetworkHandler {
      * @param message the message to send
      */
     public static <MSG extends CustomPacketPayload> void sendToServer(MSG message) {
-        PacketDistributor.sendToServer(message);
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(message);
     }
 
     /**

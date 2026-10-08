@@ -6,12 +6,11 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.world.entity.Entity;
-import software.bernie.geckolib.event.GeoRenderEvent;
-import software.bernie.geckolib.renderer.GeoEntityRenderer;
-import software.bernie.geckolib.renderer.GeoBlockRenderer;
-import software.bernie.geckolib.renderer.GeoReplacedEntityRenderer;
+import com.geckolib.event.GeoRenderEvent;
+import com.geckolib.renderer.GeoEntityRenderer;
+import com.geckolib.renderer.GeoBlockRenderer;
+import com.geckolib.renderer.GeoReplacedEntityRenderer;
 
-@OnlyIn(Dist.CLIENT)
 public class GeckoLibCompat {
 
     public static void register() {

@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlenderEntityRenderer {
     private static final Set<Class<?>> FAILURES = ConcurrentHashMap.newKeySet();
 

@@ -3,7 +3,7 @@ package net.eca.blender.client.runtime;
 import net.eca.blender.client.model.BlenderModelAsset;
 import net.eca.blender.model.BlenderModelDefinition;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.joml.Matrix4f;
@@ -27,8 +27,8 @@ import static net.eca.blender.client.runtime.BlendFile.require;
 @SuppressWarnings("removal")
 public final class BlendModelLoader {
     private final ResourceManager resources;
-    private final ResourceLocation location;
-    private final ResourceLocation id;
+    private final Identifier location;
+    private final Identifier id;
     private final BlenderModelDefinition definition;
     private final Resource source;
     private final BlendFile file;
@@ -42,9 +42,9 @@ public final class BlendModelLoader {
     private final List<BlenderModelAsset.Material> materials = new ArrayList<>();
     private final Map<Long, Integer> materialIndices = new HashMap<>();
     private final List<BlenderModelAsset.TextureData> textures = new ArrayList<>();
-    private final Map<Long, ResourceLocation> imageLocations = new HashMap<>();
+    private final Map<Long, Identifier> imageLocations = new HashMap<>();
 
-    public static BlenderModelAsset load(ResourceManager resources, ResourceLocation location, ResourceLocation id,
+    public static BlenderModelAsset load(ResourceManager resources, Identifier location, Identifier id,
                                   BlenderModelDefinition definition) throws IOException {
         Resource source = resources.getResourceOrThrow(location);
         BlendFile file;
@@ -52,7 +52,7 @@ public final class BlendModelLoader {
         return new BlendModelLoader(resources, location, id, definition, source, file).build();
     }
 
-    private BlendModelLoader(ResourceManager resources, ResourceLocation location, ResourceLocation id,
+    private BlendModelLoader(ResourceManager resources, Identifier location, Identifier id,
                              BlenderModelDefinition definition, Resource source, BlendFile file) {
         this.resources = resources; this.location = location; this.id = id; this.definition = definition;
         this.source = source; this.file = file;
@@ -353,7 +353,7 @@ public final class BlendModelLoader {
             require(value.ref("adt") == null, value.idName() + ": material animation is unsupported");
             if (value.ref("nodetree") != null) {
                 program = BlendMaterialProgram.compile(new BlendNodeGraph(file, value.ref("nodetree")).material(),
-                    ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "eca_blend/" + id.getPath() + "/material_" + index),
+                    Identifier.fromNamespaceAndPath(id.getNamespace(), "eca_blend/" + id.getPath() + "/material_" + index),
                     resources, source, this::image);
             } else { r = value.scalar("r"); g = value.scalar("g"); b = value.scalar("b"); a = value.scalar("a"); }
         }
@@ -362,9 +362,9 @@ public final class BlendModelLoader {
         return index;
     }
 
-    private ResourceLocation image(BlendFile.View image) throws IOException {
+    private Identifier image(BlendFile.View image) throws IOException {
         require(image != null, "Image Texture node has no image");
-        ResourceLocation existing = imageLocations.get(image.address());
+        Identifier existing = imageLocations.get(image.address());
         if (existing != null) return existing;
         require(image.integer("source") == 1, image.idName() + ": only file images are supported");
         List<BlendFile.View> packed = image.list("packedfiles");
@@ -380,11 +380,11 @@ public final class BlendModelLoader {
             if (path.startsWith("//")) path = path.substring(2);
             require(!path.startsWith("/") && !path.contains(":") && !path.contains(".."), "Texture must be packed or resource-relative: " + path);
             String folder = location.getPath().substring(0, location.getPath().lastIndexOf('/') + 1);
-            try (InputStream stream = resources.getResourceOrThrow(ResourceLocation.fromNamespaceAndPath(location.getNamespace(), folder + path)).open()) {
+            try (InputStream stream = resources.getResourceOrThrow(Identifier.fromNamespaceAndPath(location.getNamespace(), folder + path)).open()) {
                 bytes = stream.readAllBytes();
             }
         }
-        ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "eca/blender_runtime/" + id.getPath() + "/blend_image_" + textures.size());
+        Identifier texture = Identifier.fromNamespaceAndPath(id.getNamespace(), "eca/blender_runtime/" + id.getPath() + "/blend_image_" + textures.size());
         textures.add(new BlenderModelAsset.TextureData(texture, bytes));
         imageLocations.put(image.address(), texture);
         return texture;

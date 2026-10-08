@@ -5,7 +5,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 /** Installs the extension bridge without introducing a reverse dependency in the core. */
-@OnlyIn(Dist.CLIENT)
 public final class BlenderExtensionAdapter {
     private BlenderExtensionAdapter() { }
 

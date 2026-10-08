@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.UUID;
 
 /** Bounded, latest-request-wins replay on the client thread, followed by a separate-tick readback. */
-@OnlyIn(Dist.CLIENT)
 public final class HealthClientSync {
     private static final Map<UUID, Pending> PENDING = new LinkedHashMap<>();
     private static long tick;

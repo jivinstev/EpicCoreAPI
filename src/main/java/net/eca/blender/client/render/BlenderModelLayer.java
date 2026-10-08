@@ -13,7 +13,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlenderModelLayer<T extends LivingEntity, M extends EntityModel<T>> extends RenderLayer<T, M> {
     public BlenderModelLayer(RenderLayerParent<T, M> renderer) {
         super(renderer);

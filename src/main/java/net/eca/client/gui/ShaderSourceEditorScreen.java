@@ -13,7 +13,7 @@ import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
 import net.eca.util.shader_generator.ShaderSourceAssembler;
 import net.eca.util.shader_generator.ShaderSourceFile;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -607,7 +607,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, CONTENT_TOP - 2, 0xFF202225);
         graphics.fill(6, CONTENT_TOP - 2, editorRight, height - 6, 0xFF08090B);
@@ -618,7 +618,7 @@ public final class ShaderSourceEditorScreen extends Screen {
             mouseX, mouseY, partialTick
         );
         renderDiagnostics(graphics);
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, 0.0F, 400.0F);
         drawDropdownBackground(graphics);
@@ -626,7 +626,7 @@ public final class ShaderSourceEditorScreen extends Screen {
         graphics.pose().popPose();
     }
 
-    private void drawDropdownBackground(GuiGraphics graphics) {
+    private void drawDropdownBackground(GuiGraphicsExtractor graphics) {
         DropdownBounds bounds = dropdownBounds();
         if (bounds == null) return;
         graphics.fill(bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), DROPDOWN_BACKGROUND);
@@ -640,7 +640,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     }
 
     private void renderDropdownWidgets(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
@@ -651,7 +651,7 @@ public final class ShaderSourceEditorScreen extends Screen {
              index <= dropdownLastWidgetIndex && index < children.size();
              index++) {
             if (children.get(index) instanceof AbstractWidget widget) {
-                widget.render(graphics, mouseX, mouseY, partialTick);
+                widget.extractRenderState(graphics, mouseX, mouseY, partialTick);
             }
         }
     }
@@ -680,7 +680,7 @@ public final class ShaderSourceEditorScreen extends Screen {
         return new DropdownBounds(left, top, right, bottom);
     }
 
-    private void renderDiagnostics(GuiGraphics graphics) {
+    private void renderDiagnostics(GuiGraphicsExtractor graphics) {
         int textX = previewLeft + 6;
         int textWidth = Math.max(20, width - previewLeft - 22);
         graphics.drawString(
@@ -739,7 +739,7 @@ public final class ShaderSourceEditorScreen extends Screen {
             preview = null;
         }
         parent.returnFromSourceEditor();
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private record NavigationEntry(

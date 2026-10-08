@@ -5,13 +5,12 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.CosmosShader;
 import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public class CosmosRenderTypes {
 
     private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(CosmosShader::getShader) {
@@ -81,7 +80,7 @@ public class CosmosRenderTypes {
             .createCompositeState(true)
     );
 
-    public static RenderType createEntityEffect(ResourceLocation texture) {
+    public static RenderType createEntityEffect(Identifier texture) {
         return RenderType.create("cosmos_entity_effect",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,

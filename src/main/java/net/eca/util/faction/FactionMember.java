@@ -100,7 +100,7 @@ public final class FactionMember {
         if (tag == null || !tag.hasUUID(NBT_UUID)) return null;
         return new FactionMember(
                 tag.getUUID(NBT_UUID),
-                tag.getString(NBT_TYPE),
+                tag.getStringOr(NBT_TYPE, ""),
                 tag.getBoolean(NBT_PLAYER)
         );
     }

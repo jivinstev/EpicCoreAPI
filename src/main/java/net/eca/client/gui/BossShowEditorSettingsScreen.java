@@ -3,13 +3,13 @@ package net.eca.client.gui;
 
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.Trigger;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 //BossShow 全局演出设置面板，避免把固定属性挤进时间线工作区。
 final class BossShowEditorSettingsScreen extends Screen implements BossShowEditorSessionScreen {
@@ -36,7 +36,7 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
         targetTypeBox = new EditBox(this.font, fieldX, 58, 200, 18,
             Component.translatable("gui.eca.bossshow.editor.target_type_placeholder"));
         targetTypeBox.setMaxLength(128);
-        ResourceLocation typeId = BossShowEditorState.getTargetType() == null ? null
+        Identifier typeId = BossShowEditorState.getTargetType() == null ? null
             : BuiltInRegistries.ENTITY_TYPE.getKey(BossShowEditorState.getTargetType());
         targetTypeBox.setValue(typeId == null ? "" : typeId.toString());
         this.addRenderableWidget(targetTypeBox);
@@ -92,9 +92,9 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
 
     private void apply() {
         String type = targetTypeBox.getValue().trim();
-        ResourceLocation typeId = type.isEmpty() ? null : ResourceLocation.tryParse(type);
+        Identifier typeId = type.isEmpty() ? null : Identifier.tryParse(type);
         if (typeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(typeId)) {
-            BossShowEditorState.setTargetType(BuiltInRegistries.ENTITY_TYPE.get(typeId));
+            BossShowEditorState.setTargetType(BuiltInRegistries.ENTITY_TYPE.getValue(typeId));
         } else if (type.isEmpty()) {
             BossShowEditorState.setTargetType(null);
         }
@@ -113,7 +113,7 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
     }
 
     private void closePanel() {
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.setScreenAndShow(new BossShowEditorScreen());
     }
 
     private Component triggerText(Trigger trigger) {
@@ -139,12 +139,12 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        g.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
         int x = this.width / 2 - 150;
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.target"), x, 63, 0xCCCCCC, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.trigger"), x, 87, 0xCCCCCC, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.value"), x, 111, 0xCCCCCC, false);
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.target"), x, 63, 0xCCCCCC, false);
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.trigger"), x, 87, 0xCCCCCC, false);
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.value"), x, 111, 0xCCCCCC, false);
         super.render(g, mouseX, mouseY, partialTick);
     }
 }

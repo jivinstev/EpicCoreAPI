@@ -3,14 +3,13 @@ package net.eca.client.render.preset;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 /* 通用预设 RenderType 工厂：把原本每个内置预设各写一份的 5 种 RenderType 抽成"名字 + ShaderState"参数化的构造。
    各档的顶点格式与渲染状态与内置预设逐项一致，保证自定义预设在 boss 条 / 实体层 / 天空盒 / 物品 / 实体效果上的行为完全等价。 */
-@OnlyIn(Dist.CLIENT)
 public final class PresetRenderTypes {
 
     private PresetRenderTypes() {}
@@ -115,7 +114,7 @@ public final class PresetRenderTypes {
         );
     }
 
-    static RenderType entityEffect(String name, RenderStateShard.ShaderStateShard shaderState, ResourceLocation texture) {
+    static RenderType entityEffect(String name, RenderStateShard.ShaderStateShard shaderState, Identifier texture) {
         return RenderType.create(name + "_entity_effect",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,

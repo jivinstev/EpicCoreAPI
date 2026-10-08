@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -14,7 +14,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 //S→C：停止当前 BossShow 演出
 public class BossShowStopPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<BossShowStopPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_stop_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "boss_show_stop_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BossShowStopPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> BossShowStopPacket.encode(msg, buf), BossShowStopPacket::decode);
 
@@ -24,10 +24,10 @@ public class BossShowStopPacket implements CustomPacketPayload {
     }
 
 
-    private final ResourceLocation cutsceneId;
+    private final Identifier cutsceneId;
     private final boolean skipped;
 
-    public BossShowStopPacket(ResourceLocation cutsceneId, boolean skipped) {
+    public BossShowStopPacket(Identifier cutsceneId, boolean skipped) {
         this.cutsceneId = cutsceneId;
         this.skipped = skipped;
     }
@@ -42,10 +42,10 @@ public class BossShowStopPacket implements CustomPacketPayload {
     }
 
     public static void handle(BossShowStopPacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onStop(msg); });
+        ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onStop(msg); });
     }
 
-    public ResourceLocation cutsceneId() { return cutsceneId; }
+    public Identifier cutsceneId() { return cutsceneId; }
     public boolean skipped() { return skipped; }
 
     private static final class ClientHandlerRef {

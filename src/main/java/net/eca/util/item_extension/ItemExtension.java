@@ -1,10 +1,10 @@
 package net.eca.util.item_extension;
 
 import net.eca.client.render.ShaderMaskPass;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.List;
 
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public abstract class ItemExtension {
     private final Item item;
 
@@ -79,7 +78,7 @@ public abstract class ItemExtension {
      * @deprecated Return one or more masks from {@link #getShaderPasses()}.
      */
     @Deprecated
-    public ResourceLocation getMaskTexture() {
+    public Identifier getMaskTexture() {
         return null;
     }
 
@@ -117,7 +116,7 @@ public abstract class ItemExtension {
         if (renderType == null) {
             return List.of();
         }
-        ResourceLocation maskTexture = getMaskTexture();
+        Identifier maskTexture = getMaskTexture();
         if (maskTexture != null) {
             return List.of(ShaderMaskPass.masked(renderType, maskTexture,
                 getMaskColor(), getMaskTolerance(), getAlpha()));
@@ -171,12 +170,12 @@ public abstract class ItemExtension {
 
     protected abstract String getModId();
 
-    protected ResourceLocation texture(String path) {
+    protected Identifier texture(String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
         String normalized = path.startsWith("textures/") ? path : "textures/" + path;
-        return ResourceLocation.fromNamespaceAndPath(getModId(), normalized);
+        return Identifier.fromNamespaceAndPath(getModId(), normalized);
     }
 
     @Override

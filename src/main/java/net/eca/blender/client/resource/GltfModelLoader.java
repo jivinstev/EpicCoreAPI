@@ -7,7 +7,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.joml.Matrix4f;
@@ -34,22 +34,22 @@ final class GltfModelLoader {
     private static final int BIN_CHUNK = 0x004E4942;
 
     private final ResourceManager resources;
-    private final ResourceLocation modelLocation;
-    private final ResourceLocation modelId;
+    private final Identifier modelLocation;
+    private final Identifier modelId;
     private final BlenderModelDefinition definition;
     private JsonObject root;
     private ByteBuffer binary;
 
-    private GltfModelLoader(ResourceManager resources, ResourceLocation modelLocation,
-                            ResourceLocation modelId, BlenderModelDefinition definition) {
+    private GltfModelLoader(ResourceManager resources, Identifier modelLocation,
+                            Identifier modelId, BlenderModelDefinition definition) {
         this.resources = resources;
         this.modelLocation = modelLocation;
         this.modelId = modelId;
         this.definition = definition;
     }
 
-    static BlenderModelAsset load(ResourceManager resources, ResourceLocation modelLocation,
-                                  ResourceLocation modelId, BlenderModelDefinition definition) throws IOException {
+    static BlenderModelAsset load(ResourceManager resources, Identifier modelLocation,
+                                  Identifier modelId, BlenderModelDefinition definition) throws IOException {
         GltfModelLoader loader = new GltfModelLoader(resources, modelLocation, modelId, definition);
         loader.readContainer();
         return loader.build();
@@ -101,7 +101,7 @@ final class GltfModelLoader {
 
     private BlenderModelAsset build() throws IOException {
         List<BlenderModelAsset.TextureData> textures = new ArrayList<>();
-        Map<Integer, ResourceLocation> textureLocations = readTextures(textures);
+        Map<Integer, Identifier> textureLocations = readTextures(textures);
         List<BlenderModelAsset.Material> materials = readMaterials(textureLocations);
         List<BlenderModelAsset.Mesh> meshes = readMeshes();
         List<BlenderModelAsset.Node> nodes = readNodes();
@@ -246,7 +246,7 @@ final class GltfModelLoader {
         return result;
     }
 
-    private List<BlenderModelAsset.Material> readMaterials(Map<Integer, ResourceLocation> textureLocations) {
+    private List<BlenderModelAsset.Material> readMaterials(Map<Integer, Identifier> textureLocations) {
         List<BlenderModelAsset.Material> result = new ArrayList<>();
         JsonArray materials = array("materials");
         if (materials == null) {
@@ -256,7 +256,7 @@ final class GltfModelLoader {
             JsonObject material = element.getAsJsonObject();
             JsonObject pbr = material.getAsJsonObject("pbrMetallicRoughness");
             float[] color = {1.0f, 1.0f, 1.0f, 1.0f};
-            ResourceLocation texture = null;
+            Identifier texture = null;
             if (pbr != null) {
                 JsonArray factor = pbr.getAsJsonArray("baseColorFactor");
                 if (factor != null && factor.size() == 4) {
@@ -276,18 +276,18 @@ final class GltfModelLoader {
         return result;
     }
 
-    private Map<Integer, ResourceLocation> readTextures(List<BlenderModelAsset.TextureData> output) throws IOException {
-        Map<Integer, ResourceLocation> result = new HashMap<>();
+    private Map<Integer, Identifier> readTextures(List<BlenderModelAsset.TextureData> output) throws IOException {
+        Map<Integer, Identifier> result = new HashMap<>();
         JsonArray textures = array("textures");
         JsonArray images = array("images");
         if (textures == null || images == null) {
             return result;
         }
-        Map<Integer, ResourceLocation> imagesByIndex = new HashMap<>();
+        Map<Integer, Identifier> imagesByIndex = new HashMap<>();
         for (int i = 0; i < images.size(); i++) {
             JsonObject image = images.get(i).getAsJsonObject();
             byte[] bytes = readImage(image);
-            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(modelId.getNamespace(),
+            Identifier location = Identifier.fromNamespaceAndPath(modelId.getNamespace(),
                 "eca/blender_runtime/" + modelId.getPath() + "/image_" + i);
             output.add(new BlenderModelAsset.TextureData(location, bytes));
             imagesByIndex.put(i, location);
@@ -320,7 +320,7 @@ final class GltfModelLoader {
             throw new IOException("Invalid image path in " + modelLocation);
         }
         String parent = modelLocation.getPath().substring(0, modelLocation.getPath().lastIndexOf('/') + 1);
-        ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(modelLocation.getNamespace(), parent + uri);
+        Identifier imageLocation = Identifier.fromNamespaceAndPath(modelLocation.getNamespace(), parent + uri);
         Resource resource = resources.getResource(imageLocation)
             .orElseThrow(() -> new IOException("Missing image resource " + imageLocation));
         try (InputStream input = resource.open()) {
@@ -410,7 +410,7 @@ final class GltfModelLoader {
             values[i] = switch (componentType) {
                 case 5121 -> Byte.toUnsignedInt(binary.get(offset));
                 case 5123 -> Short.toUnsignedInt(binary.getShort(offset));
-                case 5125 -> binary.getInt(offset);
+                case 5125 -> binary.getIntOr(offset, 0);
                 default -> throw new IOException("Unsupported index component type " + componentType);
             };
         }
@@ -494,8 +494,8 @@ final class GltfModelLoader {
             case 5121 -> normalized ? Byte.toUnsignedInt(binary.get(offset)) / 255.0f : Byte.toUnsignedInt(binary.get(offset));
             case 5122 -> normalized ? Math.max(binary.getShort(offset) / 32767.0f, -1.0f) : binary.getShort(offset);
             case 5123 -> normalized ? Short.toUnsignedInt(binary.getShort(offset)) / 65535.0f : Short.toUnsignedInt(binary.getShort(offset));
-            case 5125 -> normalized ? Integer.toUnsignedLong(binary.getInt(offset)) / 4294967295.0f : binary.getInt(offset);
-            case 5126 -> binary.getFloat(offset);
+            case 5125 -> normalized ? Integer.toUnsignedLong(binary.getIntOr(offset, 0)) / 4294967295.0f : binary.getIntOr(offset, 0);
+            case 5126 -> binary.getFloatOr(offset, 0.0F);
             default -> throw new IOException("Unsupported accessor component type " + type);
         };
     }

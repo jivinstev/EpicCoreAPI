@@ -10,7 +10,7 @@ import net.eca.util.bossshow.BossShowEditorState;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
@@ -18,7 +18,7 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 //BossShow 编辑器 Home 界面：选择已有定义或进入实体选择模式新建
 public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSessionScreen {
@@ -34,7 +34,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     public static void openFromPacket(BossShowOpenEditorHomePacket msg) {
         BossShowEditorState.beginSession(msg.definitions());
         Minecraft mc = Minecraft.getInstance();
-        mc.execute(() -> mc.setScreen(new BossShowEditorHomeScreen()));
+        mc.execute(() -> mc.setScreenAndShow(new BossShowEditorHomeScreen()));
     }
 
     @Override
@@ -69,13 +69,13 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     //进入实体选择模式：关闭 Screen 让游戏恢复运行，事件处理器接管
     private void startSelectionMode() {
         BossShowEditorState.enterSelectionMode();
-        this.minecraft.setScreen(null);
+        this.minecraft.setScreenAndShow(null);
     }
 
     //进入"播放选择"模式：和 selection 类似，但右键命中后客户端发包让服务端播放
     private void startPlaySelection(BossShowDefinition def) {
         BossShowEditorState.enterPlaySelection(def.id());
-        this.minecraft.setScreen(null);
+        this.minecraft.setScreenAndShow(null);
     }
 
     private void editExisting(BossShowDefinition def) {
@@ -96,7 +96,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                 }
             }
         }
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.setScreenAndShow(new BossShowEditorScreen());
     }
 
     //请求删除：弹二次确认 → 发包 → 服务端删完会重发 Home 包刷新列表
@@ -107,18 +107,18 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                     NetworkHandler.sendToServer(new BossShowDeleteEditorPacket(def.id()));
                     //服务端会重发 Home 包，届时 openFromPacket 会重建本界面
                 }
-                this.minecraft.setScreen(this);
+                this.minecraft.setScreenAndShow(this);
             },
             Component.translatable("gui.eca.bossshow.home.delete.title"),
             Component.translatable("gui.eca.bossshow.home.delete.body", def.id().toString())
         );
-        this.minecraft.setScreen(confirm);
+        this.minecraft.setScreenAndShow(confirm);
     }
 
     private void doClose() {
         NetworkHandler.sendToServer(new BossShowExitEditorPacket());
         BossShowEditorState.exit();
-        this.minecraft.setScreen(null);
+        this.minecraft.setScreenAndShow(null);
     }
 
     @Override
@@ -141,22 +141,22 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         //完全透明，世界透出来
 
-        g.drawCenteredString(this.font, this.title, this.width / 2, 14, 0xFFFFFF);
-        g.drawCenteredString(this.font,
+        g.centeredText(this.font, this.title, this.width / 2, 14, 0xFFFFFF);
+        g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.home.subtitle"),
             this.width / 2, 30, 0xAAAAAA);
 
         //创建按钮下方说明
-        g.drawCenteredString(this.font,
+        g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.home.new_hint"),
             this.width / 2, 80, 0xFF888888);
 
         //列表标题
         int listHeaderY = 96;
-        g.drawCenteredString(this.font,
+        g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.home.existing",
                 BossShowEditorState.getAvailableDefs().size()),
             this.width / 2, listHeaderY, 0xFFAAAAAA);
@@ -212,17 +212,17 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             }
 
             @Override
-            public void render(GuiGraphics g, int entryIdx, int top, int left, int width, int height,
+            public void render(GuiGraphicsExtractor g, int entryIdx, int top, int left, int width, int height,
                                int mouseX, int mouseY, boolean isHovering, float partialTick) {
-                ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType());
+                Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType());
                 String idLine = def.id().toString();
                 int contentCount = 0;
                 for (BossShowDefinition.Frame f : def.frames()) { if (f.keyframe() != null) contentCount++; }
                 String meta = (typeId != null ? typeId.toString() : "?")
                     + "    " + def.frames().size() + " frames    "
                     + contentCount + " content ticks    " + def.trigger().type();
-                g.drawString(Minecraft.getInstance().font, idLine, left + 4, top + 2, 0xFFFFFF, false);
-                g.drawString(Minecraft.getInstance().font, meta, left + 4, top + 12, 0xAAAAAA, false);
+                g.text(Minecraft.getInstance().font, idLine, left + 4, top + 2, 0xFFFFFF, false);
+                g.text(Minecraft.getInstance().font, meta, left + 4, top + 12, 0xAAAAAA, false);
 
                 //右侧按钮（从右到左）：删除 | 编辑 | 播放
                 deleteBtn.setX(left + width - 44);

@@ -22,7 +22,7 @@ import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.ChunkPos;
@@ -217,7 +217,7 @@ public class RaidInstance {
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
             Structure targetStructure = level.registryAccess()
-                    .registryOrThrow(Registries.STRUCTURE).get(key);
+                    .lookupOrThrow(Registries.STRUCTURE).get(key);
             if (targetStructure == null) return false;
             return level.structureManager().getStructureWithPieceAt(center, targetStructure).isValid();
         }
@@ -422,12 +422,12 @@ public class RaidInstance {
             return null;
         }
 
-        Entity entity = type.create(level);
+        Entity entity = type.create(level, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
         if (entity == null) return null;
 
         entity.setPos(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
         if (entity instanceof Mob mob) {
-            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null);
+            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), EntitySpawnReason.EVENT, null);
             mob.setOnGround(true);
             level.addFreshEntityWithPassengers(mob);
         } else {
@@ -632,7 +632,7 @@ public class RaidInstance {
 
     private ServerBossEvent getBossEvent(RaidDefinition def) {
         if (bossEvent == null) {
-            bossEvent = new ServerBossEvent(Component.translatable(def.getDisplayName()),
+            bossEvent = new ServerBossEvent(java.util.UUID.randomUUID(),Component.translatable(def.getDisplayName()),
                     def.getBossBarColor(), BossEvent.BossBarOverlay.NOTCHED_10);
         }
         return bossEvent;
@@ -743,34 +743,34 @@ public class RaidInstance {
      * @return the restored raid, or null if the tag is malformed
      */
     public static RaidInstance load(CompoundTag tag) {
-        String definitionId = tag.getString(NBT_DEFINITION);
+        String definitionId = tag.getStringOr(NBT_DEFINITION, "");
         if (definitionId.isEmpty()) return null;
 
-        BlockPos center = new BlockPos(tag.getInt(NBT_CENTER_X), tag.getInt(NBT_CENTER_Y), tag.getInt(NBT_CENTER_Z));
-        RaidInstance raid = new RaidInstance(tag.getInt(NBT_ID), definitionId, center);
+        BlockPos center = new BlockPos(tag.getIntOr(NBT_CENTER_X, 0), tag.getIntOr(NBT_CENTER_Y, 0), tag.getIntOr(NBT_CENTER_Z, 0));
+        RaidInstance raid = new RaidInstance(tag.getIntOr(NBT_ID, 0), definitionId, center);
 
         try {
-            raid.status = RaidStatus.valueOf(tag.getString(NBT_STATUS));
+            raid.status = RaidStatus.valueOf(tag.getStringOr(NBT_STATUS, ""));
         } catch (IllegalArgumentException e) {
             raid.status = RaidStatus.ONGOING;
         }
-        raid.wavesSpawned = tag.getInt(NBT_WAVES_SPAWNED);
-        raid.ticksActive = tag.getLong(NBT_TICKS_ACTIVE);
-        raid.waveCooldown = tag.getInt(NBT_WAVE_COOLDOWN);
-        raid.celebrationTicks = tag.getInt(NBT_CELEBRATION);
-        raid.currentWaveTotal = Math.max(1, tag.getInt(NBT_WAVE_TOTAL));
+        raid.wavesSpawned = tag.getIntOr(NBT_WAVES_SPAWNED, 0);
+        raid.ticksActive = tag.getLongOr(NBT_TICKS_ACTIVE, 0L);
+        raid.waveCooldown = tag.getIntOr(NBT_WAVE_COOLDOWN, 0);
+        raid.celebrationTicks = tag.getIntOr(NBT_CELEBRATION, 0);
+        raid.currentWaveTotal = Math.max(1, tag.getIntOr(NBT_WAVE_TOTAL, 0));
         raid.started = tag.getBoolean(NBT_STARTED);
 
-        ListTag raiders = tag.getList(NBT_RAIDERS, Tag.TAG_STRING);
+        ListTag raiders = tag.getListOrEmpty(NBT_RAIDERS);
         for (int i = 0; i < raiders.size(); i++) {
             try {
-                raid.raiderUuids.add(UUID.fromString(raiders.getString(i)));
+                raid.raiderUuids.add(UUID.fromString(raiders.getStringOr(i, "")));
             } catch (IllegalArgumentException ignored) {
                 // 非法 UUID 字符串，跳过
             }
         }
         raid.wavesCompleted = tag.contains(NBT_WAVES_COMPLETED)
-                ? Mth.clamp(tag.getInt(NBT_WAVES_COMPLETED), 0, raid.wavesSpawned)
+                ? Mth.clamp(tag.getIntOr(NBT_WAVES_COMPLETED, 0), 0, raid.wavesSpawned)
                 : Math.max(0, raid.wavesSpawned - (raid.raiderUuids.isEmpty() ? 0 : 1));
         return raid;
     }

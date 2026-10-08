@@ -5,14 +5,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 
 public record EntityTeleportAckPacket(int teleportId, double x, double y, double z) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<EntityTeleportAckPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_teleport_ack_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "entity_teleport_ack_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, EntityTeleportAckPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> EntityTeleportAckPacket.encode(msg, buf), EntityTeleportAckPacket::decode);
 

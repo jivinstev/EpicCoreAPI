@@ -10,7 +10,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -28,30 +28,29 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-@OnlyIn(Dist.CLIENT)
 @SuppressWarnings("removal")
-public final class BlenderModelManager extends SimplePreparableReloadListener<Map<ResourceLocation, BlenderModelAsset>> {
+public final class BlenderModelManager extends SimplePreparableReloadListener<Map<Identifier, BlenderModelAsset>> {
     public static final BlenderModelManager INSTANCE = new BlenderModelManager();
     private static final String ROOT = "eca/blender";
 
-    private volatile Map<ResourceLocation, BlenderModelAsset> models = Map.of();
-    private final Set<ResourceLocation> dynamicTextures = new HashSet<>();
+    private volatile Map<Identifier, BlenderModelAsset> models = Map.of();
+    private final Set<Identifier> dynamicTextures = new HashSet<>();
 
     private BlenderModelManager() {
     }
 
-    public BlenderModelAsset get(ResourceLocation id) {
+    public BlenderModelAsset get(Identifier id) {
         return id == null ? null : models.get(id);
     }
 
     @Override
-    protected Map<ResourceLocation, BlenderModelAsset> prepare(ResourceManager resourceManager,
+    protected Map<Identifier, BlenderModelAsset> prepare(ResourceManager resourceManager,
                                                                ProfilerFiller profiler) {
-        Map<ResourceLocation, BlenderModelAsset> loaded = new HashMap<>();
-        Map<ResourceLocation, Resource> definitions = resourceManager.listResources(ROOT,
+        Map<Identifier, BlenderModelAsset> loaded = new HashMap<>();
+        Map<Identifier, Resource> definitions = resourceManager.listResources(ROOT,
             location -> location.getPath().endsWith("/definition.json"));
-        for (Map.Entry<ResourceLocation, Resource> entry : definitions.entrySet()) {
-            ResourceLocation definitionLocation = entry.getKey();
+        for (Map.Entry<Identifier, Resource> entry : definitions.entrySet()) {
+            Identifier definitionLocation = entry.getKey();
             try {
                 String path = definitionLocation.getPath();
                 int start = ROOT.length() + 1;
@@ -59,7 +58,7 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
                 if (start >= end) {
                     throw new IOException("Definition has no model id");
                 }
-                ResourceLocation modelId = ResourceLocation.fromNamespaceAndPath(definitionLocation.getNamespace(),
+                Identifier modelId = Identifier.fromNamespaceAndPath(definitionLocation.getNamespace(),
                     path.substring(start, end));
                 JsonObject json;
                 try (InputStream input = entry.getValue().open();
@@ -68,7 +67,7 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
                 }
                 BlenderModelDefinition definition = BlenderModelDefinition.parse(json);
                 String folder = path.substring(0, path.length() - "definition.json".length());
-                ResourceLocation modelLocation = ResourceLocation.fromNamespaceAndPath(definitionLocation.getNamespace(),
+                Identifier modelLocation = Identifier.fromNamespaceAndPath(definitionLocation.getNamespace(),
                     folder + definition.modelFile());
                 BlenderModelAsset asset = definition.modelFile().endsWith(".blend")
                     ? BlendModelLoader.load(resourceManager, modelLocation, modelId, definition)
@@ -82,21 +81,21 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, BlenderModelAsset> prepared, ResourceManager resourceManager,
+    protected void apply(Map<Identifier, BlenderModelAsset> prepared, ResourceManager resourceManager,
                          ProfilerFiller profiler) {
         var textureManager = Minecraft.getInstance().getTextureManager();
         for (BlenderModelAsset asset : models.values()) closePrograms(asset);
         dynamicTextures.forEach(textureManager::release);
         dynamicTextures.clear();
 
-        Map<ResourceLocation, BlenderModelAsset> accepted = new HashMap<>();
-        for (Map.Entry<ResourceLocation, BlenderModelAsset> entry : prepared.entrySet()) {
+        Map<Identifier, BlenderModelAsset> accepted = new HashMap<>();
+        for (Map.Entry<Identifier, BlenderModelAsset> entry : prepared.entrySet()) {
             boolean valid = true;
             for (BlenderModelAsset.TextureData texture : entry.getValue().textures) {
                 try (ByteArrayInputStream input = new ByteArrayInputStream(texture.bytes())) {
                     NativeImage image = NativeImage.read(input);
-                    textureManager.register(texture.location(), new DynamicTexture(image));
-                    dynamicTextures.add(texture.location());
+                    textureManager.register(texture.identifier(), new DynamicTexture(image));
+                    dynamicTextures.add(texture.identifier());
                 } catch (Exception exception) {
                     EcaLogger.error("Failed to create texture for Blender model " + entry.getKey(), exception);
                     valid = false;
@@ -117,7 +116,7 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
             if (!valid) {
                 closePrograms(entry.getValue());
                 for (BlenderModelAsset.TextureData texture : entry.getValue().textures) {
-                    if (dynamicTextures.remove(texture.location())) textureManager.release(texture.location());
+                    if (dynamicTextures.remove(texture.identifier())) textureManager.release(texture.identifier());
                 }
             }
         }

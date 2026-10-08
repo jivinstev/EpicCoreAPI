@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * 与 EntityExtensionSafeAccess 同一职责，针对袭击的血条外观接口。
  */
-@OnlyIn(Dist.CLIENT)
 public final class RaidSafeAccess {
 
     // 已记录异常的 类#方法 组合，去重避免每帧刷屏

@@ -7,7 +7,7 @@ import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.BossShowEffectCue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -66,7 +66,7 @@ final class BossShowTimelineWidget extends AbstractWidget {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         if (delta == 0.0) return false;
-        if (Screen.hasShiftDown()) {
+        if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             scrollTick += delta > 0 ? -visibleTicks() / 5 : visibleTicks() / 5;
             clampScroll();
         } else {
@@ -125,7 +125,7 @@ final class BossShowTimelineWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         int left = getX();
         int top = getY();
         int right = left + getWidth();
@@ -164,7 +164,7 @@ final class BossShowTimelineWidget extends AbstractWidget {
         g.renderOutline(left, top, getWidth(), getHeight(), 0xFF454A58);
     }
 
-    private void drawRangeMarker(GuiGraphics g, Font font, int tick, String label, int color, int labelOffset) {
+    private void drawRangeMarker(GuiGraphicsExtractor g, Font font, int tick, String label, int color, int labelOffset) {
         if (tick < 0 || tick >= BossShowEditorState.frameCount()) return;
         int x = tickToX(tick);
         int left = contentLeft();
@@ -172,10 +172,10 @@ final class BossShowTimelineWidget extends AbstractWidget {
         if (x < left || x > right) return;
         g.fill(Math.max(left, x - 1), getY(), Math.min(right, x + 2), getY() + getHeight(), color);
         int labelX = Math.max(left + 2, Math.min(x + labelOffset, right - font.width(label) - 2));
-        g.drawString(font, label, labelX, getY() + 2, color, false);
+        g.text(font, label, labelX, getY() + 2, color, false);
     }
 
-    private void drawRuler(GuiGraphics g, Font font, int contentLeft, int top) {
+    private void drawRuler(GuiGraphicsExtractor g, Font font, int contentLeft, int top) {
         int total = BossShowEditorState.frameCount();
         if (total <= 0) return;
         int step = rulerStep();
@@ -184,7 +184,7 @@ final class BossShowTimelineWidget extends AbstractWidget {
             int x = tickToX(tick);
             if (x < contentLeft || x > getX() + getWidth()) continue;
             g.fill(x, top + 10, x + 1, top + RULER_HEIGHT, 0xFF777C8B);
-            g.drawString(font, formatTime(tick), x + 2, top + 2, 0xFF9DA3AC, false);
+            g.text(font, formatTime(tick), x + 2, top + 2, 0xFF9DA3AC, false);
         }
     }
 
@@ -200,11 +200,11 @@ final class BossShowTimelineWidget extends AbstractWidget {
         return String.format("%d:%02d", tick / 1200, (tick / 20) % 60);
     }
 
-    private void drawTrack(GuiGraphics g, Font font, Track track, Component label, int top, int trackHeight) {
+    private void drawTrack(GuiGraphicsExtractor g, Font font, Track track, Component label, int top, int trackHeight) {
         int contentLeft = contentLeft();
         int right = getX() + getWidth();
         g.fill(contentLeft, top, right, top + trackHeight, track == Track.CAMERA ? 0x55262B37 : 0x5520252E);
-        g.drawString(font, label, getX() + 6, top + Math.max(2, (trackHeight - font.lineHeight) / 2), 0xFFD0D4DE, false);
+        g.text(font, label, getX() + 6, top + Math.max(2, (trackHeight - font.lineHeight) / 2), 0xFFD0D4DE, false);
         g.fill(contentLeft, top + trackHeight - 1, right, top + trackHeight, 0xFF303541);
 
         if (track == Track.CAMERA) {
@@ -236,14 +236,14 @@ final class BossShowTimelineWidget extends AbstractWidget {
         }
     }
 
-    private void drawCue(GuiGraphics g, int tick, String text, int top, int trackHeight, int color) {
+    private void drawCue(GuiGraphicsExtractor g, int tick, String text, int top, int trackHeight, int color) {
         int x = tickToX(tick);
         int next = tickToX(Math.min(BossShowEditorState.frameCount() - 1, tick + 1));
         if (x < contentLeft() - 8 || x > getX() + getWidth()) return;
         int width = Math.max(7, next - x);
         g.fill(Math.max(contentLeft(), x), top + 3, Math.min(getX() + getWidth(), x + width), top + trackHeight - 3, color);
         if (width > 26 && text != null) {
-            g.drawString(Minecraft.getInstance().font,
+            g.text(Minecraft.getInstance().font,
                 Component.literal(text), Math.max(contentLeft(), x) + 3,
                 top + Math.max(3, (trackHeight - Minecraft.getInstance().font.lineHeight) / 2), 0xFF101217, false);
         }

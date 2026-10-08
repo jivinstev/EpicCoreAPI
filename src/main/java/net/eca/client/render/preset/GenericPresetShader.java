@@ -1,13 +1,13 @@
 package net.eca.client.render.preset;
 
-import com.mojang.blaze3d.shaders.Uniform;
+import com.mojang.blaze3d.opengl.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -17,14 +17,13 @@ import net.neoforged.api.distmarker.OnlyIn;
    （id+"_entity"，NEW_ENTITY）服务 NEW_ENTITY 顶点格式的 RenderType（Boss 实体层 / 物品层 / 实体效果层）。
    两 profile 共享同一 fsh，但必须各按匹配的 VertexFormat 编译，不能共用单一实例。
    reload 在每次 RegisterShadersEvent（或注册晚于该事件时）重建两个 EcaShaderInstance（自带 Iris 深度颜色解锁）。 */
-@OnlyIn(Dist.CLIENT)
 @SuppressWarnings("removal")
 final class GenericPresetShader {
 
     private final Profile block;
     private final Profile entity;
 
-    GenericPresetShader(ResourceLocation id) {
+    GenericPresetShader(Identifier id) {
         this.block = new Profile(suffixed(id, "block"), DefaultVertexFormat.BLOCK);
         this.entity = new Profile(suffixed(id, "entity"), DefaultVertexFormat.NEW_ENTITY);
     }
@@ -44,8 +43,8 @@ final class GenericPresetShader {
     }
 
     //逻辑预设 id → 单 profile 的 core shader id：eca:foo + "block" → eca:foo_block，对齐作者端导出命名
-    private static ResourceLocation suffixed(ResourceLocation id, String suffix) {
-        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_" + suffix);
+    private static Identifier suffixed(Identifier id, String suffix) {
+        return Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_" + suffix);
     }
 
     /* 单个 profile 的着色器持有者：持有该 profile 的 core shader id、匹配的顶点格式、当前 ShaderInstance 与一组标准
@@ -53,7 +52,7 @@ final class GenericPresetShader {
        applyUniforms 按帧喂 GameTime / 相机朝向 / 抠像 / 物品图集。 */
     static final class Profile {
 
-        private final ResourceLocation location;
+        private final Identifier location;
         private final VertexFormat format;
 
         private ShaderInstance shader;
@@ -65,7 +64,7 @@ final class GenericPresetShader {
         private Uniform localUvMinUniform;
         private Uniform localUvScaleUniform;
 
-        Profile(ResourceLocation location, VertexFormat format) {
+        Profile(Identifier location, VertexFormat format) {
             this.location = location;
             this.format = format;
         }

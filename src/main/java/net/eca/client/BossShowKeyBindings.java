@@ -12,7 +12,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import org.lwjgl.glfw.GLFW;
 
 //ECA 客户端按键绑定注册
-@OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class BossShowKeyBindings {
 

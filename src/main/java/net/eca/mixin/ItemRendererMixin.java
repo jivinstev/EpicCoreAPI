@@ -20,7 +20,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 @Mixin(ItemRenderer.class)
 public abstract class ItemRendererMixin {
 

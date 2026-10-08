@@ -3,7 +3,7 @@ package net.eca.client.gui;
 import net.eca.util.shader_generator.ai.ShaderAiProtocol;
 import net.eca.util.shader_generator.ai.ShaderAiSettings;
 import net.eca.util.shader_generator.ai.ShaderAiSettingsCodec;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -293,7 +293,7 @@ final class ShaderAiSettingsScreen extends Screen {
             return;
         }
         parent.settingsSaved(saved);
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private Component validate(ProfileDraft profile) {
@@ -374,7 +374,7 @@ final class ShaderAiSettingsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0xFF111315);
         graphics.fill(left - 8, top - 4, left + dialogWidth + 8, height - 4, 0xFF202225);
         graphics.renderOutline(
@@ -396,10 +396,10 @@ final class ShaderAiSettingsScreen extends Screen {
                 statusError ? 0xFFFF6B6B : 0xFF8FE388
             );
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void drawVisibleLabel(GuiGraphics graphics, int row, String key) {
+    private void drawVisibleLabel(GuiGraphicsExtractor graphics, int row, String key) {
         if (row < scrollRow || row >= scrollRow + visibleRows()) return;
         graphics.drawString(
             font,
@@ -411,7 +411,7 @@ final class ShaderAiSettingsScreen extends Screen {
         );
     }
 
-    private void drawScrollbar(GuiGraphics graphics) {
+    private void drawScrollbar(GuiGraphicsExtractor graphics) {
         int visibleRows = visibleRows();
         if (visibleRows >= TOTAL_ROWS) return;
         int x = left + dialogWidth - 4;
@@ -436,7 +436,7 @@ final class ShaderAiSettingsScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.setScreenAndShow(parent);
     }
 
     private static final class ProfileDraft {

@@ -9,14 +9,14 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -34,7 +34,7 @@ public final class ShaderPreviewRenderer {
     private static final ItemStack PREVIEW_ITEM = createPreviewItem();
 
     public static void render(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         ShaderPreviewTarget target,
         int left,
@@ -151,7 +151,7 @@ public final class ShaderPreviewRenderer {
     }
 
     private static void renderItem(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         int left,
         int top,
@@ -196,7 +196,7 @@ public final class ShaderPreviewRenderer {
     }
 
     private static void renderEntity(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         int left,
         int top,

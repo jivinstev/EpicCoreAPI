@@ -4,7 +4,7 @@ import net.eca.util.shader_generator.ai.ShaderAiToolRegistry;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
 import net.eca.util.shader_generator.mcp.ShaderMcpSessionInfo;
 import net.eca.util.shader_generator.mcp.ShaderMcpSettings;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -115,7 +115,7 @@ final class ShaderMcpScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0xFF111315);
         graphics.fill(0, 0, width, 26, 0xFF17191C);
         graphics.fill(0, 26, panelRight, height, 0xFF1A1C20);
@@ -237,7 +237,7 @@ final class ShaderMcpScreen extends Screen {
             34,
             normalColor
         );
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     ShaderAiToolResult capturePreview() {
@@ -248,7 +248,7 @@ final class ShaderMcpScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(returnScreen);
+        minecraft.setScreenAndShow(returnScreen);
     }
 
     @Override

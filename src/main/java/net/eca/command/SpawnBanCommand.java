@@ -10,7 +10,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -55,7 +55,7 @@ public class SpawnBanCommand {
             for (EntityType<?> type : types) {
                 if (EcaAPI.banSpawn(level, type, seconds)) {
                     successCount++;
-                    ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+                    Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
                     source.sendSuccess(() -> Component.literal(
                         String.format("§aAdded spawn ban for %s for %d seconds", typeId, seconds)
                     ), true);
@@ -82,7 +82,7 @@ public class SpawnBanCommand {
             EcaAPI.unbanAllSpawns(level);
 
             source.sendSuccess(() -> Component.literal(
-                String.format("§aCleared %d spawn ban(s) in %s", count, level.dimension().location())
+                String.format("§aCleared %d spawn ban(s) in %s", count, level.dimension().identifier())
             ), true);
 
             return count;

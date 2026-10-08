@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * 客户端不持有 RaidInstance，这张表是渲染层判断"这条血条属于哪场袭击、
  * 袭击进行到什么程度"的唯一依据，由 RaidBossBarSyncPacket 维护。
  */
-@OnlyIn(Dist.CLIENT)
 public final class RaidClientState {
 
     private static final Map<UUID, RaidBarState> BAR_STATES = new ConcurrentHashMap<>();

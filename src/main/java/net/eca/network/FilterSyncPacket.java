@@ -7,7 +7,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class FilterSyncPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<FilterSyncPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "filter_sync_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "filter_sync_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, FilterSyncPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> FilterSyncPacket.encode(msg, buf), FilterSyncPacket::decode);
 
@@ -52,7 +52,7 @@ public class FilterSyncPacket implements CustomPacketPayload {
             if (context.flow() != PacketFlow.CLIENTBOUND) {
                 return;
             }
-            if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onSync(msg);
+            if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onSync(msg);
         });
     }
 

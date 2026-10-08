@@ -3,8 +3,8 @@ package net.eca.client.render;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -14,7 +14,6 @@ import net.neoforged.api.distmarker.OnlyIn;
  * @deprecated Use {@link ShaderMaskRenderQueue}; all extension domains now share that queue.
  */
 @Deprecated
-@OnlyIn(Dist.CLIENT)
 public final class EntityLayerRenderQueue {
 
     private EntityLayerRenderQueue() {
@@ -31,14 +30,14 @@ public final class EntityLayerRenderQueue {
     }
 
     public static void enqueue(RenderType renderType, BufferBuilder builder,
-                               MeshData renderedBuffer, ResourceLocation maskTexture,
+                               MeshData renderedBuffer, Identifier maskTexture,
                                int maskColor, float maskTolerance) {
         ShaderMaskPass pass = ShaderMaskPass.masked(renderType, maskTexture, maskColor, maskTolerance, 1.0f);
         ShaderMaskRenderQueue.enqueue(pass, builder, renderedBuffer, MaskUvTransform.IDENTITY);
     }
 
     public static void drawNow(RenderType renderType, BufferBuilder builder,
-                               MeshData renderedBuffer, ResourceLocation maskTexture,
+                               MeshData renderedBuffer, Identifier maskTexture,
                                int maskColor, float maskTolerance) {
         ShaderMaskPass pass = ShaderMaskPass.masked(renderType, maskTexture, maskColor, maskTolerance, 1.0f);
         ShaderMaskRenderQueue.drawNow(pass, builder, renderedBuffer, MaskUvTransform.IDENTITY);

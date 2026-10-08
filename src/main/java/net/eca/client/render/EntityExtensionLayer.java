@@ -11,12 +11,12 @@ import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.eca.blender.client.entity.BlenderEntityBindings;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FastColor;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
@@ -24,7 +24,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraft.client.model.EntityModel<T>>
     extends RenderLayer<T, M> {
 
@@ -51,7 +50,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
             return;
         }
 
-        ResourceLocation texture = layerExtension.getTexture();
+        Identifier texture = layerExtension.getTexture();
         List<ShaderMaskPass> shaderPasses = layerExtension.getShaderPasses();
         if (shaderPasses == null) {
             shaderPasses = List.of();

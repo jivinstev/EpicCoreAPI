@@ -1,12 +1,11 @@
 package net.eca.util.entity_extension;
 
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BossBarExtension {
 
     public boolean enabled() {
@@ -46,11 +45,11 @@ public class BossBarExtension {
         return entity == null ? null : entity.getMaxHealth();
     }
 
-    public ResourceLocation getFrameTexture() {
+    public Identifier getFrameTexture() {
         return null;
     }
 
-    public ResourceLocation getFillTexture() {
+    public Identifier getFillTexture() {
         return null;
     }
 

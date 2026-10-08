@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /** Explicit core bindings take precedence over the optional compatibility resolver. */
-@OnlyIn(Dist.CLIENT)
 public final class BlenderEntityBindings {
     private static final Map<EntityType<?>, BlenderEntityBinding> BINDINGS = new ConcurrentHashMap<>();
     private static final Set<Class<?>> FAILURES = ConcurrentHashMap.newKeySet();

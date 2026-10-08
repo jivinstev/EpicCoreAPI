@@ -209,7 +209,7 @@ public class HealthLockManager {
                                                   EntityDataAccessor<String> encField,
                                                   EntityDataAccessor<String> keyField,
                                                   EntityDataAccessor<String> checkField) {
-        if (entity.level().isClientSide || records.containsKey(entity.getUUID())) return;
+        if (entity.level().isClientSide() || records.containsKey(entity.getUUID())) return;
         Float value = readPresentation(entity, encField, keyField, checkField);
         if (value != null) {
             records.put(entity.getUUID(), new LockRecord(entity.getUUID(), encodeFloatPayload(value), domain));
@@ -353,7 +353,7 @@ public class HealthLockManager {
     }
 
     public static void prepareForSave(LivingEntity entity) {
-        if (entity == null || entity.level().isClientSide) return;
+        if (entity == null || entity.level().isClientSide()) return;
         Float healthLock = readAuthoritative(entity, HEALTH_LOCKS.get(entity.getUUID()), HEALTH_LOCK_DOMAIN);
         repairPresentation(entity, healthLock,
                 EntityUtil.HEALTH_LOCK_VALUE, EntityUtil.HEALTH_LOCK_KEY, EntityUtil.HEALTH_LOCK_CHECK);
@@ -392,11 +392,11 @@ public class HealthLockManager {
     }
 
     private static Float readNbtDecrypt(CompoundTag data, String encKey, String keyKey, String checkKey) {
-        String encryptedValue = data.contains(encKey, Tag.TAG_STRING)
-                ? data.getString(encKey) : String.valueOf(data.getInt(encKey));
+        String encryptedValue = data.getString(encKey).isPresent()
+                ? data.getStringOr(encKey, "") : String.valueOf(data.getIntOr(encKey, 0));
         int encrypted   = parseEncryptedPayload(encryptedValue);
-        int key         = data.getInt(keyKey);
-        int storedCheck = data.getInt(checkKey);
+        int key         = data.getIntOr(keyKey, 0);
+        int storedCheck = data.getIntOr(checkKey, 0);
         if (encrypted == 0 && key == 0 && storedCheck == 0) return null;
         int expected;
         try {
@@ -422,7 +422,7 @@ public class HealthLockManager {
 
     public static void setLock(LivingEntity entity, float value) {
         if (entity == null || !isValidLockValue(value)) return;
-        if (!entity.level().isClientSide) {
+        if (!entity.level().isClientSide()) {
             HEALTH_LOCKS.put(entity.getUUID(),
                     new LockRecord(entity.getUUID(), encodeFloatPayload(value), HEALTH_LOCK_DOMAIN));
         }
@@ -439,7 +439,7 @@ public class HealthLockManager {
 
     public static void removeLock(LivingEntity entity) {
         if (entity == null) return;
-        if (!entity.level().isClientSide) HEALTH_LOCKS.remove(entity.getUUID());
+        if (!entity.level().isClientSide()) HEALTH_LOCKS.remove(entity.getUUID());
         if (EntityUtil.HEALTH_LOCK_VALUE != null
                 && EntityUtil.HEALTH_LOCK_KEY != null
                 && EntityUtil.HEALTH_LOCK_CHECK != null) {
@@ -455,7 +455,7 @@ public class HealthLockManager {
 
     public static Float getLock(LivingEntity entity) {
         if (entity == null) return null;
-        if (!entity.level().isClientSide) {
+        if (!entity.level().isClientSide()) {
             // 直接检查权威表，避免空闲时按实体查表，也避免维护独立的无锁标记。
             if (HEALTH_LOCKS.isEmpty()) return null;
             LockRecord record = HEALTH_LOCKS.get(entity.getUUID());
@@ -484,7 +484,7 @@ public class HealthLockManager {
 
     public static void setMaxHealthLock(LivingEntity entity, float value) {
         if (entity == null || !isValidLockValue(value)) return;
-        if (!entity.level().isClientSide) {
+        if (!entity.level().isClientSide()) {
             MAX_HEALTH_LOCKS.put(entity.getUUID(),
                     new LockRecord(entity.getUUID(), encodeFloatPayload(value), MAX_HEALTH_LOCK_DOMAIN));
         }
@@ -501,7 +501,7 @@ public class HealthLockManager {
 
     public static void removeMaxHealthLock(LivingEntity entity) {
         if (entity == null) return;
-        if (!entity.level().isClientSide) MAX_HEALTH_LOCKS.remove(entity.getUUID());
+        if (!entity.level().isClientSide()) MAX_HEALTH_LOCKS.remove(entity.getUUID());
         if (EntityUtil.MAX_HEALTH_LOCK_VALUE != null
                 && EntityUtil.MAX_HEALTH_LOCK_KEY != null
                 && EntityUtil.MAX_HEALTH_LOCK_CHECK != null) {
@@ -517,7 +517,7 @@ public class HealthLockManager {
 
     public static Float getMaxHealthLock(LivingEntity entity) {
         if (entity == null) return null;
-        if (!entity.level().isClientSide) {
+        if (!entity.level().isClientSide()) {
             if (MAX_HEALTH_LOCKS.isEmpty()) return null;
             LockRecord record = MAX_HEALTH_LOCKS.get(entity.getUUID());
             Float value = readAuthoritative(entity, record, MAX_HEALTH_LOCK_DOMAIN);
@@ -574,7 +574,7 @@ public class HealthLockManager {
         if (EntityUtil.HEAL_BAN_VALUE != null) {
             encrypted = readSynchedSafely(entity, EntityUtil.HEAL_BAN_VALUE);
         } else {
-            encrypted = entity.getPersistentData().getString(NBT_HEAL_BAN_VALUE);
+            encrypted = entity.getPersistentData().getStringOr(NBT_HEAL_BAN_VALUE, "");
         }
         if (encrypted == null || encrypted.isEmpty()) return null;
         try { return Float.parseFloat(encrypted) + ENCRYPTION_OFFSET; }

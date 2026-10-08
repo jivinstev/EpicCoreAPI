@@ -142,27 +142,27 @@ LivingEntityMixin {
         }
         // 锁血（新加密格式 int）
         if (tag.contains(NBT_HEALTH_LOCK_ENC)) {
-            String encrypted = tag.contains(NBT_HEALTH_LOCK_ENC, Tag.TAG_STRING)
-                    ? tag.getString(NBT_HEALTH_LOCK_ENC)
-                    : String.valueOf(tag.getInt(NBT_HEALTH_LOCK_ENC));
+            String encrypted = tag.getString(NBT_HEALTH_LOCK_ENC).isPresent()
+                    ? tag.getStringOr(NBT_HEALTH_LOCK_ENC, "")
+                    : String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_ENC, 0));
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_VALUE, encrypted);
-            entity.getEntityData().set(EntityUtil.HEALTH_LOCK_KEY,   String.valueOf(tag.getInt(NBT_HEALTH_LOCK_KEY)));
-            entity.getEntityData().set(EntityUtil.HEALTH_LOCK_CHECK, String.valueOf(tag.getInt(NBT_HEALTH_LOCK_CHECK)));
+            entity.getEntityData().set(EntityUtil.HEALTH_LOCK_KEY,   String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_KEY, 0)));
+            entity.getEntityData().set(EntityUtil.HEALTH_LOCK_CHECK, String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_CHECK, 0)));
         }
         if (tag.contains(NBT_HEAL_BAN_VALUE, 8)) {
             // TODO(1.1.6): 删除此迁移；将 1.1.5 前老哨兵 "-1024.0" 归一化为空串，避免被误判为 healBan=0
-            String healBan = tag.getString(NBT_HEAL_BAN_VALUE);
+            String healBan = tag.getStringOr(NBT_HEAL_BAN_VALUE, "");
             if ("-1024.0".equals(healBan)) healBan = "";
             entity.getEntityData().set(EntityUtil.HEAL_BAN_VALUE, healBan);
         }
         // 最大血量锁定（新加密格式 int）
         if (tag.contains(NBT_MAX_HEALTH_LOCK_ENC)) {
-            String encrypted = tag.contains(NBT_MAX_HEALTH_LOCK_ENC, Tag.TAG_STRING)
-                    ? tag.getString(NBT_MAX_HEALTH_LOCK_ENC)
-                    : String.valueOf(tag.getInt(NBT_MAX_HEALTH_LOCK_ENC));
+            String encrypted = tag.getString(NBT_MAX_HEALTH_LOCK_ENC).isPresent()
+                    ? tag.getStringOr(NBT_MAX_HEALTH_LOCK_ENC, "")
+                    : String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_ENC, 0));
             entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_VALUE, encrypted);
-            entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_KEY,   String.valueOf(tag.getInt(NBT_MAX_HEALTH_LOCK_KEY)));
-            entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_CHECK, String.valueOf(tag.getInt(NBT_MAX_HEALTH_LOCK_CHECK)));
+            entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_KEY,   String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_KEY, 0)));
+            entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_CHECK, String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_CHECK, 0)));
         }
 
         // NBT 恢复完成后建立服务端权威锁记录，并恢复禁疗快速路径。
@@ -209,7 +209,7 @@ LivingEntityMixin {
         }
 
         if (invulnerable) {
-            if (!self.level().isClientSide && !self.getActiveEffects().isEmpty()) {
+            if (!self.level().isClientSide() && !self.getActiveEffects().isEmpty()) {
                 for (MobEffectInstance effectInstance : new ArrayList<>(self.getActiveEffects())) {
                     if (effectInstance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL) {
                         self.removeEffect(effectInstance.getEffect());
@@ -221,7 +221,7 @@ LivingEntityMixin {
 
         // 阵营目标验证：每 tick 检查当前目标是否仍然可攻击
         // 防止关系变更后（如命令设置友好）已锁定的目标继续被攻击
-        if (!self.level().isClientSide && self instanceof Mob mob && mob.getTarget() != null) {
+        if (!self.level().isClientSide() && self instanceof Mob mob && mob.getTarget() != null) {
             if (!FactionUtil.canTarget(mob, mob.getTarget())) {
                 mob.setTarget(null);
             }
@@ -361,7 +361,7 @@ LivingEntityMixin {
 
     // 向攻击者玩家发送动作栏阵营提示
     private static void eca$sendFactionActionBar(Entity attacker, Entity target) {
-        if (!target.level().isClientSide
+        if (!target.level().isClientSide()
                 && attacker instanceof Player player
                 && EcaConfiguration.getFactionActionBarMessagesSafely()) {
             player.displayClientMessage(

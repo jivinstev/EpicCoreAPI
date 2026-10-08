@@ -45,7 +45,7 @@ import java.lang.annotation.Target;
  *
  *     @Override
  *     public List&lt;ShaderMaskPass&gt; getShaderPasses() {
- *         ResourceLocation mask = texture("item/diamond_sword_mask.png");
+ *         Identifier mask = texture("item/diamond_sword_mask.png");
  *         return List.of(
  *             ShaderMaskPass.masked(ArcaneRenderTypes.ITEM, mask, 0x000000, 0.05f, 1.0f),
  *             ShaderMaskPass.masked(VolcanoRenderTypes.ITEM, mask, 0xFF0000, 0.05f, 1.0f)

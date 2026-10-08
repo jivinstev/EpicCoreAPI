@@ -1,7 +1,7 @@
 package net.eca.client.render.shader;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -17,7 +17,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -86,7 +86,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/sketch"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/sketch"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> sketchShader = instance
@@ -94,7 +94,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/spotlight"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/spotlight"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> spotlightShader = instance
@@ -102,7 +102,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/matrix"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/matrix"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> matrixShader = instance
@@ -110,7 +110,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/rain"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/rain"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> rainShader = instance
@@ -118,7 +118,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/desert"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/desert"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> desertShader = instance
@@ -126,7 +126,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/snow"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/snow"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> snowShader = instance
@@ -134,7 +134,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/toxic"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/toxic"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> toxicShader = instance
@@ -142,7 +142,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/cosmos"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/cosmos"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> cosmosShader = instance
@@ -150,7 +150,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/boss_show_effect"),
+                        Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/boss_show_effect"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> bossShowEffectShader = instance

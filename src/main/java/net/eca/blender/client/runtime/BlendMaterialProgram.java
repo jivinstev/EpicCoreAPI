@@ -13,8 +13,8 @@ import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import org.joml.Matrix4f;
@@ -38,28 +38,28 @@ import static net.eca.blender.client.runtime.BlendFile.require;
 
 @SuppressWarnings("removal")
 public final class BlendMaterialProgram implements AutoCloseable {
-    interface ImageResolver { ResourceLocation resolve(BlendFile.View image) throws IOException; }
-    private final ResourceLocation id;
+    interface ImageResolver { Identifier resolve(BlendFile.View image) throws IOException; }
+    private final Identifier id;
     private final ResourceProvider provider;
-    private final List<ResourceLocation> textures;
+    private final List<Identifier> textures;
     private final List<BlendTimeDriver> drivers;
     private EcaShaderInstance shader;
     private RenderType type;
     private MultiBufferSource.BufferSource buffers;
     private ByteBufferBuilder byteBuffer;
 
-    private BlendMaterialProgram(ResourceLocation id, ResourceProvider provider, List<ResourceLocation> textures,
+    private BlendMaterialProgram(Identifier id, ResourceProvider provider, List<Identifier> textures,
                                  List<BlendTimeDriver> drivers) {
         this.id = id; this.provider = provider; this.textures = List.copyOf(textures);
         this.drivers = List.copyOf(drivers);
     }
 
-    static BlendMaterialProgram compile(Expr root, ResourceLocation id, ResourceProvider fallback,
+    static BlendMaterialProgram compile(Expr root, Identifier id, ResourceProvider fallback,
                                          Resource original, ImageResolver images) throws IOException {
         Compiler compiler = new Compiler(images);
         String result = compiler.surface(root);
         String library;
-        try (InputStream stream = fallback.getResourceOrThrow(ResourceLocation.fromNamespaceAndPath("eca", "shaders/include/blend_nodes.glsl")).open()) {
+        try (InputStream stream = fallback.getResourceOrThrow(Identifier.fromNamespaceAndPath("eca", "shaders/include/blend_nodes.glsl")).open()) {
             library = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
         StringBuilder samplers = new StringBuilder();
@@ -136,7 +136,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
                 generatedPosition = (localPosition - EcaBoundsMin) / max(EcaBoundsSize, vec3(0.000001));
             }
             """;
-        Map<ResourceLocation, byte[]> files = new HashMap<>();
+        Map<Identifier, byte[]> files = new HashMap<>();
         files.put(shaderPath(id, ".vsh"), vertex.getBytes(StandardCharsets.UTF_8));
         files.put(shaderPath(id, ".fsh"), fragment.getBytes(StandardCharsets.UTF_8));
         files.put(shaderPath(id, ".json"), json(id, compiler.textures.size(), compiler.drivers.size()).getBytes(StandardCharsets.UTF_8));
@@ -147,8 +147,8 @@ public final class BlendMaterialProgram implements AutoCloseable {
         return new BlendMaterialProgram(id, provider, compiler.textures, compiler.drivers);
     }
 
-    private static ResourceLocation shaderPath(ResourceLocation id, String extension) {
-        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "shaders/core/" + id.getPath() + extension);
+    private static Identifier shaderPath(Identifier id, String extension) {
+        return Identifier.fromNamespaceAndPath(id.getNamespace(), "shaders/core/" + id.getPath() + extension);
     }
 
     public void load() throws IOException {
@@ -206,7 +206,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
         byteBuffer = null;
     }
 
-    private static String json(ResourceLocation id, int imageCount, int driverCount) {
+    private static String json(Identifier id, int imageCount, int driverCount) {
         JsonObject root = new JsonObject();
         root.addProperty("vertex", id.toString()); root.addProperty("fragment", id.toString());
         JsonArray attributes = new JsonArray();
@@ -239,7 +239,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
 
     private static final class Compiler {
         final ImageResolver images;
-        final List<ResourceLocation> textures = new ArrayList<>();
+        final List<Identifier> textures = new ArrayList<>();
         final List<BlendTimeDriver> drivers = new ArrayList<>();
         final Map<Expr, String> expressions = new IdentityHashMap<>();
         final Map<Expr, String> surfaces = new IdentityHashMap<>();
@@ -379,7 +379,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
             require(interpolation == 0 || interpolation == 1, e.label() + ": only linear/closest image interpolation is supported");
             require(extension == 0 || extension == 1 || extension == 2, e.label() + ": unsupported image extension");
             BlendFile.View image = e.data().ref("id");
-            ResourceLocation texture = images.resolve(image);
+            Identifier texture = images.resolve(image);
             int index = textures.indexOf(texture);
             if (index < 0) { index = textures.size(); textures.add(texture); }
             String colorSpace = image.embedded("colorspace_settings").text("name");

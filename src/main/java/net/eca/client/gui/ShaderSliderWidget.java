@@ -1,7 +1,7 @@
 package net.eca.client.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -163,13 +163,13 @@ public final class ShaderSliderWidget extends AbstractWidget {
 
     @Override
     protected void renderWidget(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
     ) {
         if (editing) {
-            field.render(graphics, mouseX, mouseY, partialTick);
+            field.extractRenderState(graphics, mouseX, mouseY, partialTick);
             return;
         }
         graphics.fill(getX(), getY(), getX() + width, getY() + height, TRACK_BG);
