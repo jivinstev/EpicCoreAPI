@@ -35,7 +35,7 @@ public final class TransformerWhitelist {
         // JDK
         "java.", "javax.", "sun.", "jdk.", "com.sun.",
         // Minecraft & Mod API
-        "net.minecraft.", "com.mojang.", "net.minecraftforge.", "cpw.mods.", "net.minecrell.",
+        "net.minecraft.", "com.mojang.", "net.neoforged.", "cpw.mods.", "net.minecrell.",
         "net.fabricmc.", "org.sinytra.connector.",
         // 核心库
         "org.lwjgl.", "com.google.", "org.apache.", "io.netty.", "it.unimi.", "org.slf4j.",

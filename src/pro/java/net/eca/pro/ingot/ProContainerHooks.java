@@ -7,7 +7,7 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import net.eca.agent.AgentLogWriter;
 import net.eca.coremod.EcaContainers;
 import net.eca.util.reflect.ObfuscationMapping;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

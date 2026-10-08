@@ -90,7 +90,7 @@ public class EntityUtil {
     private static final List<String> VANILLA_ALLOWED_PREFIXES = List.of(
             "java.", "sun.", "jdk.", "com.sun.",
             "net.minecraft.", "com.mojang.",
-            "net.minecraftforge.", "cpw.mods.",
+            "net.neoforged.", "cpw.mods.",
             "org.spongepowered.asm.",
             "net.eca."
     );
