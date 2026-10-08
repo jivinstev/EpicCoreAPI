@@ -353,7 +353,7 @@ final class ObjectGraphSnapshot {
                 || name.startsWith("sun.")
                 || name.startsWith("jdk.")
                 || name.startsWith("net.minecraft.")
-                || name.startsWith("net.minecraftforge.")
+                || name.startsWith("net.neoforged.")
                 || name.startsWith("com.mojang.")
                 || name.startsWith("org.objectweb.")
                 || name.startsWith("org.slf4j.")

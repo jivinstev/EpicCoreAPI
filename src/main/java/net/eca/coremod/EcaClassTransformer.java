@@ -480,7 +480,7 @@ public final class EcaClassTransformer implements ClassFileTransformer {
                 || className.startsWith("org/spongepowered/")
                 || className.startsWith("cpw/mods/")
                 || className.startsWith("net/minecraft/")
-                || className.startsWith("net/minecraftforge/");
+                || className.startsWith("net/neoforged/");
     }
 
     private byte[] doTransform(String className, byte[] classfileBuffer) {

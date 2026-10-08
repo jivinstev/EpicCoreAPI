@@ -2,7 +2,7 @@ package net.eca.coremod;
 
 /** Keeps optional extension hooks inert in the basic build. */
 public final class RuntimeExtensionBridge {
-    public static final String EARLY_DISPLAY_TARGET = "net/minecraftforge/fml/earlydisplay/DisplayWindow";
+    public static final String EARLY_DISPLAY_TARGET = "net/neoforged/fml/earlydisplay/DisplayWindow";
 
     private RuntimeExtensionBridge() {}
 

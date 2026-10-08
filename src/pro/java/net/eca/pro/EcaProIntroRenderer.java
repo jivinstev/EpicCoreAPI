@@ -1,10 +1,10 @@
 package net.eca.pro;
 
 import net.eca.agent.AgentLogWriter;
-import net.minecraftforge.fml.earlydisplay.ElementShader;
-import net.minecraftforge.fml.earlydisplay.QuadHelper;
-import net.minecraftforge.fml.earlydisplay.RenderElement;
-import net.minecraftforge.fml.earlydisplay.SimpleBufferBuilder;
+import net.neoforged.fml.earlydisplay.ElementShader;
+import net.neoforged.fml.earlydisplay.QuadHelper;
+import net.neoforged.fml.earlydisplay.RenderElement;
+import net.neoforged.fml.earlydisplay.SimpleBufferBuilder;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.STBImage;
 

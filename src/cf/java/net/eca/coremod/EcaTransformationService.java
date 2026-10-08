@@ -3,7 +3,7 @@ package net.eca.coremod;
 import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.IModuleLayerManager;
-import cpw.mods.modlauncher.api.ITransformationService;
+import cpw.mods.modlauncher.api.ITransformationService.Resource;
 import cpw.mods.modlauncher.api.ITransformer;
 import org.jetbrains.annotations.NotNull;
 import sun.misc.Unsafe;
@@ -20,7 +20,7 @@ import java.util.*;
  * Responsibilities: select one transformation backend and prevent dual loading.
  */
 @SuppressWarnings("unchecked")
-public class EcaTransformationService implements ITransformationService {
+public class EcaTransformationService {
 
     private static final Class<?>[] PRELOADED = preloadAll(
         "net.eca.coremod.EcaCoreTransformer",
@@ -64,30 +64,24 @@ public class EcaTransformationService implements ITransformationService {
     private static String ecaModuleName;
     private static Path ecaJarPath;
 
-    @Override
     public @NotNull String name() {
         return SERVICE_NAME;
     }
 
-    @Override
     public void onLoad(@NotNull IEnvironment env, @NotNull Set<String> otherServices) {
     }
 
-    @Override
     public void initialize(@NotNull IEnvironment environment) {
     }
 
-    @Override
     public @NotNull List<Resource> beginScanning(@NotNull IEnvironment environment) {
         return List.of();
     }
 
-    @Override
     public @NotNull List<Resource> completeScan(@NotNull IModuleLayerManager layerManager) {
         return List.of();
     }
 
-    @Override
     @SuppressWarnings("rawtypes")
     public @NotNull List<ITransformer> transformers() {
         if (PRELOADED[0] == null) {
@@ -154,7 +148,7 @@ public class EcaTransformationService implements ITransformationService {
     private static void removeEcaFromTransformerDiscovery() {
         try {
             Class<?> discovererClass = Class.forName(
-                    "net.minecraftforge.fml.loading.ModDirTransformerDiscoverer");
+                    "net.neoforged.fml.loading.ModDirTransformerDiscoverer");
 
             VarHandle foundHandle = MethodHandles
                     .privateLookupIn(discovererClass, MethodHandles.lookup())

@@ -6,9 +6,10 @@ import net.eca.init.ModConfigs;
 import net.eca.network.NetworkHandler;
 import net.eca.util.selector.EcaSelectorRegistry;
 import net.eca.util.entity_extension.ForceLoadingManager;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 
 @SuppressWarnings("removal")
 @Mod(EcaMod.MOD_ID)
@@ -20,13 +21,13 @@ public final class EcaMod {
 
     public static void setLoadComplete(boolean value) { loadComplete = value; }
 
-    public EcaMod() {
+    public EcaMod(IEventBus modEventBus, ModContainer modContainer) {
         ModConfigs.register();
-        NetworkHandler.register();
-        MinecraftForge.EVENT_BUS.register(new EcaEventHandler());
+        modEventBus.addListener(NetworkHandler::register);
+        NeoForge.EVENT_BUS.register(new EcaEventHandler());
         EcaSelectorRegistry.register();
-        ForceLoadingManager.registerValidationCallback();
+        modEventBus.addListener(ForceLoadingManager::registerValidationCallback);
         LoadCompleteHandler loadCompleteHandler = new LoadCompleteHandler();
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(loadCompleteHandler::onLoadComplete);
+        modEventBus.addListener(loadCompleteHandler::onLoadComplete);
     }
 }

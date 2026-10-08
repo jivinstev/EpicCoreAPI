@@ -7,7 +7,7 @@ import net.eca.util.faction.FactionManager;
 import net.eca.util.health.EcaSetHealthManager;
 import net.eca.util.health.HealthDataFlow;
 import net.eca.util.raid.RaidManager;
-import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
+import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 
 /** Completes common registry work after Forge has loaded the mod. */
 public final class LoadCompleteHandler {

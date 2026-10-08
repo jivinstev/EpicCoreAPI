@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 final class CoremodServiceTransformer implements ClassFileTransformer {
     private static final String SERVICE_TARGET = "cpw/mods/modlauncher/TransformationServicesHandler";
-    private static final String EXCLUSION_TARGET = "net/minecraftforge/fml/loading/ModDirTransformerDiscoverer";
+    private static final String EXCLUSION_TARGET = "net/neoforged/fml/loading/ModDirTransformerDiscoverer";
     private static final String DISCOVERY_DESCRIPTOR =
             "(Lcpw/mods/modlauncher/ArgumentHandler$DiscoveryData;)V";
     private static final String FILTER = "net/eca/agent/CoremodServiceFilter";

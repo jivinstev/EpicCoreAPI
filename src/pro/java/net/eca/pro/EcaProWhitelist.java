@@ -19,7 +19,7 @@ import java.util.Set;
 final class EcaProWhitelist {
     private static final List<String> PLATFORM_PACKAGES = List.of(
             "java.", "javax.", "jdk.", "sun.", "com.sun.",
-            "net.minecraft.", "com.mojang.", "net.minecraftforge.", "cpw.mods.", "net.minecrell.",
+            "net.minecraft.", "com.mojang.", "net.neoforged.", "cpw.mods.", "net.minecrell.",
             "org.lwjgl.", "org.spongepowered.", "org.objectweb.asm.", "io.netty.", "com.google.",
             "it.unimi.", "org.slf4j.", "org.apache.", "org.joml.", "com.electronwill."
     );

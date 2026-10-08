@@ -1,7 +1,7 @@
 package net.eca.pro;
 
 import net.eca.coremod.RuntimeExtensionBridge;
-import net.minecraftforge.fml.loading.ImmediateWindowProvider;
+import net.neoforged.neoforgespi.earlywindow.ImmediateWindowProvider;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -61,5 +61,9 @@ public final class EcaProImmediateWindowProvider implements ImmediateWindowProvi
     @Override
     public String getGLVersion() {
         return "3.2";
+    }
+
+    @Override
+    public void crash(String message) {
     }
 }

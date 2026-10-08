@@ -27,7 +27,7 @@ public final class CoremodServiceFilter {
     private static final String ECA_PREFIX = "net.eca.";
     private static final List<String> PLATFORM_PREFIXES = List.of(
             "cpw.mods.modlauncher.",
-            "net.minecraftforge.",
+            "net.neoforged.",
             "org.spongepowered.",
             "com.mojang.",
             "net.minecraft."

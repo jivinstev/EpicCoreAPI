@@ -4353,7 +4353,7 @@ public final class HealthDataflowAnalyzer {
         if (call.name.startsWith("<")) return false;
         if (call.owner.startsWith("java/") || call.owner.startsWith("javax/")
                 || call.owner.startsWith("jdk/") || call.owner.startsWith("com/google/")) return false;
-        if (call.owner.startsWith("net/minecraftforge/") || call.owner.startsWith("org/spongepowered/")) {
+        if (call.owner.startsWith("net/neoforged/") || call.owner.startsWith("org/spongepowered/")) {
             return false;
         }
         return !call.owner.startsWith("net/minecraft/") || isHealthLifecycleCall(call);
@@ -4401,7 +4401,7 @@ public final class HealthDataflowAnalyzer {
         if (call.owner.startsWith("java/") || call.owner.startsWith("javax/") || call.owner.startsWith("jdk/")) {
             return null;
         }
-        if (call.owner.startsWith("net/minecraftforge/") || call.owner.startsWith("org/spongepowered/")
+        if (call.owner.startsWith("net/neoforged/") || call.owner.startsWith("org/spongepowered/")
                 || call.owner.startsWith("com/google/")) return null;
         Class<?> referencedOwner = loadClass(call.owner);
         if (referencedOwner == null) return null;
