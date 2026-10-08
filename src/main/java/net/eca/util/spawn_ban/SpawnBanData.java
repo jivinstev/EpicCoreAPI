@@ -1,5 +1,8 @@
 package net.eca.util.spawn_ban;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.core.HolderLookup;
+
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -51,7 +54,7 @@ public class SpawnBanData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         CompoundTag bansTag = new CompoundTag();
         for (Map.Entry<ResourceLocation, Integer> entry : bans.entrySet()) {
             bansTag.putInt(entry.getKey().toString(), entry.getValue());

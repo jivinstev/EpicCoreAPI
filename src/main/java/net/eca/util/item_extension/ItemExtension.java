@@ -8,8 +8,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.Collections;
 import java.util.List;
@@ -176,7 +176,7 @@ public abstract class ItemExtension {
             return null;
         }
         String normalized = path.startsWith("textures/") ? path : "textures/" + path;
-        return new ResourceLocation(getModId(), normalized);
+        return ResourceLocation.fromNamespaceAndPath(getModId(), normalized);
     }
 
     @Override

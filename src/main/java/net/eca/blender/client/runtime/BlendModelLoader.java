@@ -353,7 +353,7 @@ public final class BlendModelLoader {
             require(value.ref("adt") == null, value.idName() + ": material animation is unsupported");
             if (value.ref("nodetree") != null) {
                 program = BlendMaterialProgram.compile(new BlendNodeGraph(file, value.ref("nodetree")).material(),
-                    new ResourceLocation(id.getNamespace(), "eca_blend/" + id.getPath() + "/material_" + index),
+                    ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "eca_blend/" + id.getPath() + "/material_" + index),
                     resources, source, this::image);
             } else { r = value.scalar("r"); g = value.scalar("g"); b = value.scalar("b"); a = value.scalar("a"); }
         }
@@ -380,11 +380,11 @@ public final class BlendModelLoader {
             if (path.startsWith("//")) path = path.substring(2);
             require(!path.startsWith("/") && !path.contains(":") && !path.contains(".."), "Texture must be packed or resource-relative: " + path);
             String folder = location.getPath().substring(0, location.getPath().lastIndexOf('/') + 1);
-            try (InputStream stream = resources.getResourceOrThrow(new ResourceLocation(location.getNamespace(), folder + path)).open()) {
+            try (InputStream stream = resources.getResourceOrThrow(ResourceLocation.fromNamespaceAndPath(location.getNamespace(), folder + path)).open()) {
                 bytes = stream.readAllBytes();
             }
         }
-        ResourceLocation texture = new ResourceLocation(id.getNamespace(), "eca/blender_runtime/" + id.getPath() + "/blend_image_" + textures.size());
+        ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "eca/blender_runtime/" + id.getPath() + "/blend_image_" + textures.size());
         textures.add(new BlenderModelAsset.TextureData(texture, bytes));
         imageLocations.put(image.address(), texture);
         return texture;

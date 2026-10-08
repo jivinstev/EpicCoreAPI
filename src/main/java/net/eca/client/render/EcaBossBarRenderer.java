@@ -17,8 +17,8 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 
 import java.math.BigDecimal;
@@ -234,10 +234,10 @@ public final class EcaBossBarRenderer {
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferBuilder clearBuilder = Tesselator.getInstance().getBuilder();
         clearBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        clearBuilder.vertex(matrix, x, y + drawHeight, 0).color(0, 0, 0, 255).endVertex();
-        clearBuilder.vertex(matrix, x + drawWidth, y + drawHeight, 0).color(0, 0, 0, 255).endVertex();
-        clearBuilder.vertex(matrix, x + drawWidth, y, 0).color(0, 0, 0, 255).endVertex();
-        clearBuilder.vertex(matrix, x, y, 0).color(0, 0, 0, 255).endVertex();
+        clearBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 255);
+        clearBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 255);
+        clearBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 255);
+        clearBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 255);
         BufferUploader.drawWithShader(clearBuilder.end());
         RenderSystem.colorMask(true, true, true, true);
 
@@ -253,10 +253,10 @@ public final class EcaBossBarRenderer {
         float texV1 = fullHeight <= 0 ? 0.0f : (float) drawHeight / (float) fullHeight;
         BufferBuilder texBuilder = Tesselator.getInstance().getBuilder();
         texBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        texBuilder.vertex(matrix, x, y + drawHeight, 0).uv(0.0f, texV1).endVertex();
-        texBuilder.vertex(matrix, x + drawWidth, y + drawHeight, 0).uv(texU1, texV1).endVertex();
-        texBuilder.vertex(matrix, x + drawWidth, y, 0).uv(texU1, 0.0f).endVertex();
-        texBuilder.vertex(matrix, x, y, 0).uv(0.0f, 0.0f).endVertex();
+        texBuilder.addVertex(matrix, x, y + drawHeight, 0).setUv(0.0f, texV1);
+        texBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setUv(texU1, texV1);
+        texBuilder.addVertex(matrix, x + drawWidth, y, 0).setUv(texU1, 0.0f);
+        texBuilder.addVertex(matrix, x, y, 0).setUv(0.0f, 0.0f);
         BufferUploader.drawWithShader(texBuilder.end());
 
         // 将 alpha 缩放到 0.5，使着色器半透明叠加在贴图上
@@ -269,10 +269,10 @@ public final class EcaBossBarRenderer {
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         BufferBuilder scaleBuilder = Tesselator.getInstance().getBuilder();
         scaleBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        scaleBuilder.vertex(matrix, x, y + drawHeight, 0).color(0, 0, 0, 127).endVertex();
-        scaleBuilder.vertex(matrix, x + drawWidth, y + drawHeight, 0).color(0, 0, 0, 127).endVertex();
-        scaleBuilder.vertex(matrix, x + drawWidth, y, 0).color(0, 0, 0, 127).endVertex();
-        scaleBuilder.vertex(matrix, x, y, 0).color(0, 0, 0, 127).endVertex();
+        scaleBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 127);
+        scaleBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 127);
+        scaleBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 127);
+        scaleBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 127);
         BufferUploader.drawWithShader(scaleBuilder.end());
         RenderSystem.colorMask(true, true, true, true);
 
@@ -286,10 +286,10 @@ public final class EcaBossBarRenderer {
         int light = LightTexture.FULL_BRIGHT;
         BufferBuilder shaderBuilder = Tesselator.getInstance().getBuilder();
         shaderBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
-        shaderBuilder.vertex(matrix, x, y + drawHeight, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(0.0f, 1.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
-        shaderBuilder.vertex(matrix, x + drawWidth, y + drawHeight, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(shaderU1, 1.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
-        shaderBuilder.vertex(matrix, x + drawWidth, y, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(shaderU1, 0.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
-        shaderBuilder.vertex(matrix, x, y, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(0.0f, 0.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
+        shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         BufferUploader.drawWithShader(shaderBuilder.end());
         renderType.clearRenderState();
 
@@ -302,10 +302,10 @@ public final class EcaBossBarRenderer {
         Matrix4f matrix = graphics.pose().last().pose();
         VertexConsumer consumer = graphics.bufferSource().getBuffer(renderType);
         int light = LightTexture.FULL_BRIGHT;
-        consumer.vertex(matrix, x, y + height, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(0.0f, 1.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
-        consumer.vertex(matrix, x + width, y + height, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(u1, 1.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
-        consumer.vertex(matrix, x + width, y, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(u1, 0.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
-        consumer.vertex(matrix, x, y, 0).color(1.0f, 1.0f, 1.0f, 1.0f).uv(0.0f, 0.0f).uv2(light).normal(0.0f, 0.0f, 1.0f).endVertex();
+        consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         graphics.flush();
     }
 }

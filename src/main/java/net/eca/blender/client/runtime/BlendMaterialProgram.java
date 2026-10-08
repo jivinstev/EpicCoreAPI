@@ -58,7 +58,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
         Compiler compiler = new Compiler(images);
         String result = compiler.surface(root);
         String library;
-        try (InputStream stream = fallback.getResourceOrThrow(new ResourceLocation("eca", "shaders/include/blend_nodes.glsl")).open()) {
+        try (InputStream stream = fallback.getResourceOrThrow(ResourceLocation.fromNamespaceAndPath("eca", "shaders/include/blend_nodes.glsl")).open()) {
             library = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
         StringBuilder samplers = new StringBuilder();
@@ -147,7 +147,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
     }
 
     private static ResourceLocation shaderPath(ResourceLocation id, String extension) {
-        return new ResourceLocation(id.getNamespace(), "shaders/core/" + id.getPath() + extension);
+        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "shaders/core/" + id.getPath() + extension);
     }
 
     public void load() throws IOException {

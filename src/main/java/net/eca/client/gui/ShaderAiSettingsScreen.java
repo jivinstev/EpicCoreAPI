@@ -424,14 +424,14 @@ final class ShaderAiSettingsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         if (delta == 0.0D || visibleRows() >= TOTAL_ROWS) {
-            return super.mouseScrolled(mouseX, mouseY, delta);
+            return super.mouseScrolled(mouseX, mouseY, scrollX, delta);
         }
         int previous = scrollRow;
         scrollRow += delta > 0.0D ? -1 : 1;
         updateScrollWidgets();
-        return previous != scrollRow || super.mouseScrolled(mouseX, mouseY, delta);
+        return previous != scrollRow || super.mouseScrolled(mouseX, mouseY, scrollX, delta);
     }
 
     @Override

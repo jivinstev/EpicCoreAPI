@@ -174,7 +174,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         int maxScroll = Math.max(0, visibleParameters.size() - visibleRows);
         int next = Math.max(0, Math.min(maxScroll, scroll + (delta > 0.0 ? -1 : 1)));
         if (next != scroll) {
@@ -186,7 +186,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - PANEL_WIDTH) / 2;
         /* 颜色色块：紧跟在标题下方，与颜色按钮的 y=44（或含导入则 y=70）对齐 */
         int swatchY = effect.definition().id().equals("image_element") ? 70 : 44;

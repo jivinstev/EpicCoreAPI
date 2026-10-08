@@ -5,8 +5,8 @@ import net.eca.blender.client.entity.BlenderEntityRenderer;
 import net.eca.util.entity_extension.BlenderModelExtension;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 /** Compatibility entry point for existing entity extensions. */
 @OnlyIn(Dist.CLIENT)

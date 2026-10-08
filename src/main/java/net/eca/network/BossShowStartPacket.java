@@ -1,5 +1,7 @@
 package net.eca.network;
 
+import net.minecraft.core.registries.Registries;
+
 import net.eca.util.bossshow.BossShowClientState;
 import net.eca.util.bossshow.BossShowDefinition;
 import net.eca.util.bossshow.BossShowDefinition.Frame;
@@ -10,18 +12,30 @@ import net.eca.util.bossshow.BossShowNetCodec;
 import net.eca.util.bossshow.Trigger;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 //S→C：开始播放一个 BossShow 演出
-public class BossShowStartPacket {
+public class BossShowStartPacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<BossShowStartPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_start_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BossShowStartPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> BossShowStartPacket.encode(msg, buf), BossShowStartPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<BossShowStartPacket> type() {
+        return TYPE;
+    }
+
 
     private final ResourceLocation cutsceneId;
     private final ResourceLocation targetTypeId;
@@ -112,10 +126,8 @@ public class BossShowStartPacket {
             cine, frames, eventCues, subtitleCues, effectCues);
     }
 
-    public static void handle(BossShowStartPacket msg, Supplier<NetworkEvent.Context> ctxSup) {
-        NetworkEvent.Context ctx = ctxSup.get();
-        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandlerRef.onStart(msg)));
-        ctx.setPacketHandled(true);
+    public static void handle(BossShowStartPacket msg, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onStart(msg); });
     }
 
     public ResourceLocation cutsceneId() { return cutsceneId; }

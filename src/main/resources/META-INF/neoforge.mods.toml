@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[47,)"
+loaderVersion = "[4,)"
 license = "MIT"
 
 [[mods]]
@@ -17,15 +17,18 @@ A library mod that provides powerful entity manipulation APIs through CoreMod (I
 '''
 
 [[dependencies.eca]]
-modId = "forge"
-mandatory = true
-versionRange = "[47,)"
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.eca]]
 modId = "minecraft"
-mandatory = true
-versionRange = "[1.20.1,)"
+type = "required"
+versionRange = "[1.21.1,1.22)"
 ordering = "NONE"
 side = "BOTH"
+
+[[mixins]]
+config = "eca.mixins.json"

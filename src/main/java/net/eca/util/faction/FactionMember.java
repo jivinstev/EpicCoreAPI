@@ -1,5 +1,7 @@
 package net.eca.util.faction;
 
+import net.minecraft.core.registries.Registries;
+
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;

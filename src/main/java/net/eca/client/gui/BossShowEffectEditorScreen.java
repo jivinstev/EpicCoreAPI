@@ -224,7 +224,7 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, height / 2 - 112, 0xFFFFFFFF);
         int y = height / 2 - 86;
         graphics.drawString(font, Component.translatable("gui.eca.bossshow.effect.duration"), width / 2 - 154, y + 22, 0xFFAAAAAA);

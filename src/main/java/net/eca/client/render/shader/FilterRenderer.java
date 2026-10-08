@@ -21,13 +21,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.client.event.RegisterShadersEvent;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.fml.common.Mod;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
@@ -40,7 +40,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.Consumer;
 @SuppressWarnings("removal")
-@Mod.EventBusSubscriber(modid = EcaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class FilterRenderer {
 
     private static ShaderInstance sketchShader;
@@ -86,7 +86,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/sketch"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/sketch"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> sketchShader = instance
@@ -94,7 +94,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/spotlight"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/spotlight"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> spotlightShader = instance
@@ -102,7 +102,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/matrix"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/matrix"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> matrixShader = instance
@@ -110,7 +110,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/rain"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/rain"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> rainShader = instance
@@ -118,7 +118,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/desert"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/desert"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> desertShader = instance
@@ -126,7 +126,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/snow"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/snow"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> snowShader = instance
@@ -134,7 +134,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/toxic"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/toxic"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> toxicShader = instance
@@ -142,7 +142,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/cosmos"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/cosmos"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> cosmosShader = instance
@@ -150,7 +150,7 @@ public class FilterRenderer {
         event.registerShader(
                 EcaShaderInstance.create(
                         event.getResourceProvider(),
-                        new ResourceLocation(EcaMod.MOD_ID, "filters/boss_show_effect"),
+                        ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "filters/boss_show_effect"),
                         DefaultVertexFormat.POSITION_TEX
                 ),
                 instance -> bossShowEffectShader = instance
@@ -651,10 +651,10 @@ public class FilterRenderer {
     private static void drawFullscreenQuad(int width, int height) {
         BufferBuilder builder = Tesselator.getInstance().getBuilder();
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        builder.vertex(0.0f, 0.0f, 0.0f).uv(0.0f, 0.0f).endVertex();
-        builder.vertex((float) width, 0.0f, 0.0f).uv(1.0f, 0.0f).endVertex();
-        builder.vertex((float) width, (float) height, 0.0f).uv(1.0f, 1.0f).endVertex();
-        builder.vertex(0.0f, (float) height, 0.0f).uv(0.0f, 1.0f).endVertex();
+        builder.addVertex((float) (0.0f), (float) (0.0f), (float) (0.0f)).setUv(0.0f, 0.0f);
+        builder.addVertex((float) width, 0.0f, 0.0f).setUv(1.0f, 0.0f);
+        builder.addVertex((float) width, (float) height, 0.0f).setUv(1.0f, 1.0f);
+        builder.addVertex(0.0f, (float) height, 0.0f).setUv(0.0f, 1.0f);
         BufferUploader.drawWithShader(builder.end());
     }
 

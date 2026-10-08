@@ -45,7 +45,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import net.minecraft.util.ClassInstanceMultiMap;
 import net.minecraft.world.level.entity.EntityTickList;
-import net.minecraftforge.entity.PartEntity;
+import net.neoforged.neoforge.entity.PartEntity;
 import net.eca.util.selector.EcaEntitySelector;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -1531,17 +1531,17 @@ public class EntityUtil {
     private static double reverseCalculateBaseValue(AttributeInstance instance, double target) {
         //收集三层 modifier 的叠加系数
         double additionSum = 0.0;
-        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.ADDITION)) {
+        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.ADD_VALUE)) {
             additionSum += mod.getAmount();
         }
 
         double multiplyBaseSum = 0.0;
-        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.MULTIPLY_BASE)) {
+        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.ADD_MULTIPLIED_BASE)) {
             multiplyBaseSum += mod.getAmount();
         }
 
         double multiplyTotalProduct = 1.0;
-        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.MULTIPLY_TOTAL)) {
+        for (AttributeModifier mod : instance.getModifiers(AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)) {
             multiplyTotalProduct *= (1.0 + mod.getAmount());
         }
 

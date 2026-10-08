@@ -2,11 +2,14 @@ package net.eca.network;
 
 import net.eca.client.HealthClientSync;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 import java.util.UUID;
 
 /*
@@ -14,7 +17,17 @@ import java.util.UUID;
  * 自定义存储型实体客户端也有独立一份存储，服务端改动不会自动同步；
  * 客户端重跑同一条逆向链打穿本地存储，使其血条/显示随之刷新。
  */
-public final class SetHealthClientSyncPacket {
+public final class SetHealthClientSyncPacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<SetHealthClientSyncPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "set_health_client_sync_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SetHealthClientSyncPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> SetHealthClientSyncPacket.encode(msg, buf), SetHealthClientSyncPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<SetHealthClientSyncPacket> type() {
+        return TYPE;
+    }
+
 
     private final int entityId;
     private final float health;
@@ -41,11 +54,9 @@ public final class SetHealthClientSyncPacket {
         return new SetHealthClientSyncPacket(id, buf.readUUID(), buf.readUUID(), health);
     }
 
-    public static void handle(SetHealthClientSyncPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
+    public static void handle(SetHealthClientSyncPacket msg, IPayloadContext context) {
         context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandlerRef.apply(msg)));
-        context.setPacketHandled(true);
+                { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.apply(msg); });
     }
 
     // 公共包处理器不直接加载客户端队列。

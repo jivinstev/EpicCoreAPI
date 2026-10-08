@@ -3,9 +3,9 @@ package net.eca.util.item_extension;
 import net.eca.api.RegisterItemExtension;
 import net.eca.util.EcaLogger;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.fml.ModList;
 import net.minecraftforge.forgespi.language.IModInfo;
 
 import java.util.Collections;

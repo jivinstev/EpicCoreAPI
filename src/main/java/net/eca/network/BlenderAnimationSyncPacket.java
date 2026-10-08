@@ -3,15 +3,28 @@ package net.eca.network;
 import net.eca.blender.client.animation.BlenderAnimationClientState;
 import net.eca.blender.animation.BlenderPlaybackState;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public record BlenderAnimationSyncPacket(UUID entityId, long revision, BlenderPlaybackState state) {
+public record BlenderAnimationSyncPacket(UUID entityId, long revision, BlenderPlaybackState state) implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<BlenderAnimationSyncPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "blender_animation_sync_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BlenderAnimationSyncPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> BlenderAnimationSyncPacket.encode(msg, buf), BlenderAnimationSyncPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<BlenderAnimationSyncPacket> type() {
+        return TYPE;
+    }
+
     public static void encode(BlenderAnimationSyncPacket message, FriendlyByteBuf buffer) {
         buffer.writeUUID(message.entityId);
         buffer.writeLong(message.revision);
@@ -44,10 +57,8 @@ public record BlenderAnimationSyncPacket(UUID entityId, long revision, BlenderPl
         return new BlenderAnimationSyncPacket(entityId, revision, state);
     }
 
-    public static void handle(BlenderAnimationSyncPacket message, Supplier<NetworkEvent.Context> context) {
-        NetworkEvent.Context ctx = context.get();
-        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandler.apply(message)));
-        ctx.setPacketHandled(true);
+    public static void handle(BlenderAnimationSyncPacket message, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandler.apply(message); });
     }
 
     @OnlyIn(Dist.CLIENT)

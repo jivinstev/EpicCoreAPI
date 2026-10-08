@@ -1,5 +1,7 @@
 package net.eca.command;
 
+import net.minecraft.core.registries.Registries;
+
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import net.eca.api.EcaAPI;
@@ -149,7 +151,7 @@ public class EntityExtensionCommand {
 
         try {
             ServerLevel level = source.getLevel();
-            ResourceLocation presetId = new ResourceLocation("eca", preset);
+            ResourceLocation presetId = ResourceLocation.fromNamespaceAndPath("eca", preset);
 
             SkyboxData data = new SkyboxData(
                 false, null,

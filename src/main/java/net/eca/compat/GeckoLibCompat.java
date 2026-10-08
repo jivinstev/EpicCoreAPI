@@ -2,9 +2,9 @@ package net.eca.compat;
 
 import net.eca.client.render.GeoEntityExtensionLayer;
 import net.eca.client.render.GeoBlockExtensionLayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.MinecraftForge;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.world.entity.Entity;
 import software.bernie.geckolib.event.GeoRenderEvent;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
@@ -15,9 +15,9 @@ import software.bernie.geckolib.renderer.GeoReplacedEntityRenderer;
 public class GeckoLibCompat {
 
     public static void register() {
-        MinecraftForge.EVENT_BUS.addListener(GeckoLibCompat::onGeoCompileRenderLayers);
-        MinecraftForge.EVENT_BUS.addListener(GeckoLibCompat::onGeoReplacedCompileRenderLayers);
-        MinecraftForge.EVENT_BUS.addListener(GeckoLibCompat::onGeoBlockCompileRenderLayers);
+        NeoForge.EVENT_BUS.addListener(GeckoLibCompat::onGeoCompileRenderLayers);
+        NeoForge.EVENT_BUS.addListener(GeckoLibCompat::onGeoReplacedCompileRenderLayers);
+        NeoForge.EVENT_BUS.addListener(GeckoLibCompat::onGeoBlockCompileRenderLayers);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

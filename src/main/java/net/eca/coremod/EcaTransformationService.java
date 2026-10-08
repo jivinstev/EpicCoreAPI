@@ -195,7 +195,7 @@ public class EcaTransformationService implements ITransformationService {
     private static void removeEcaFromTransformerDiscovery() {
         try {
             Class<?> discovererClass = Class.forName(
-                    "net.minecraftforge.fml.loading.ModDirTransformerDiscoverer");
+                    "net.neoforged.fml.loading.ModDirTransformerDiscoverer");
 
             VarHandle foundHandle = MethodHandles
                     .privateLookupIn(discovererClass, MethodHandles.lookup())

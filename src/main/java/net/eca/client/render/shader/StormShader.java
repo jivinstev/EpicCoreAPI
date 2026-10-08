@@ -6,7 +6,7 @@ import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 import java.io.IOException;
 
@@ -25,7 +25,7 @@ public class StormShader {
     public static void register(RegisterShadersEvent event) throws IOException {
         ShaderInstance stormShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
-            new ResourceLocation("eca", "storm"),
+            ResourceLocation.fromNamespaceAndPath("eca", "storm"),
             DefaultVertexFormat.BLOCK
         );
         event.registerShader(stormShader, instance -> {

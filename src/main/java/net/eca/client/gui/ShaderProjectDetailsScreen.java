@@ -89,7 +89,7 @@ public final class ShaderProjectDetailsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - DIALOG_WIDTH) / 2;
         int top = height / 2 - 72;
         graphics.fill(left, top, left + DIALOG_WIDTH, top + 144, 0xFF202225);

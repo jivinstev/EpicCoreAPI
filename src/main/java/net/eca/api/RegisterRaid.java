@@ -1,5 +1,7 @@
 package net.eca.api;
 
+import net.minecraft.core.registries.Registries;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -31,7 +33,7 @@ import java.lang.annotation.Target;
  *     @Override public String getRaiderFactionId() { return "undead_legion"; }
  *
  *     @Override public ResourceKey<Structure> getTargetStructure() {
- *         return ResourceKey.create(Registries.STRUCTURE, new ResourceLocation("minecraft", "village_plains"));
+ *         return ResourceKey.create(Registries.STRUCTURE, ResourceLocation.fromNamespaceAndPath("minecraft", "village_plains"));
  *     }
  *
  *     @Override public List<RaidWave> getWaves() {

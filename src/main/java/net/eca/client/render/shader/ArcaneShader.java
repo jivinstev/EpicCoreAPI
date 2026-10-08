@@ -6,7 +6,7 @@ import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 import java.io.IOException;
 @SuppressWarnings("removal")
@@ -24,7 +24,7 @@ public class ArcaneShader {
     public static void register(RegisterShadersEvent event) throws IOException {
         ShaderInstance arcaneShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
-            new ResourceLocation("eca", "arcane"),
+            ResourceLocation.fromNamespaceAndPath("eca", "arcane"),
             DefaultVertexFormat.BLOCK
         );
         event.registerShader(arcaneShader, instance -> {

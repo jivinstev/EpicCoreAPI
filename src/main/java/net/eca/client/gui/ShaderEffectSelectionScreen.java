@@ -107,7 +107,7 @@ public final class ShaderEffectSelectionScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         if (selectedCategory == null) {
             return false;
         }
@@ -123,7 +123,7 @@ public final class ShaderEffectSelectionScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         Component heading = selectedCategory == null
             ? title
             : Component.translatable(selectedCategory.translationKey());

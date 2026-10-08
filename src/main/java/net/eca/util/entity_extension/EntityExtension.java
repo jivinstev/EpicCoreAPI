@@ -4,8 +4,8 @@ import net.eca.blender.animation.controller.BlenderControllerSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 @SuppressWarnings("removal")
 public abstract class EntityExtension {
@@ -163,7 +163,7 @@ public abstract class EntityExtension {
             return null;
         }
         String normalized = path.startsWith("textures/") ? path : "textures/" + path;
-        return new ResourceLocation(getModId(), normalized);
+        return ResourceLocation.fromNamespaceAndPath(getModId(), normalized);
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -171,7 +171,7 @@ public abstract class EntityExtension {
         if (path == null || path.isBlank()) {
             return null;
         }
-        return new ResourceLocation(getModId(), path);
+        return ResourceLocation.fromNamespaceAndPath(getModId(), path);
     }
 
     @Override

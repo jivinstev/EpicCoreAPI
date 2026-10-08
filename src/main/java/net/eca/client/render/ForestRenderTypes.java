@@ -5,15 +5,15 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.ForestShader;
 @SuppressWarnings("removal")
 @OnlyIn(Dist.CLIENT)
 public class ForestRenderTypes {
 
-    private static final ResourceLocation LEAVES_TEXTURE = new ResourceLocation("eca", "textures/shader/forest_leaves.png");
+    private static final ResourceLocation LEAVES_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/forest_leaves.png");
 
     private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(ForestShader::getShader) {
         @Override

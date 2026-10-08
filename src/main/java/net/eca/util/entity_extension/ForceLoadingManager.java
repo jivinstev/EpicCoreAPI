@@ -11,7 +11,7 @@ import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.level.entity.EntitySection;
 import net.minecraft.world.level.entity.PersistentEntitySectionManager;
 import net.minecraft.core.SectionPos;
-import net.minecraftforge.common.world.ForgeChunkManager;
+import net.neoforged.neoforge.common.world.ForgeChunkManager;
 
 import net.minecraft.world.entity.Entity;
 

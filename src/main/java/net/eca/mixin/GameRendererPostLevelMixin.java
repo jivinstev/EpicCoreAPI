@@ -19,8 +19,8 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.material.FogType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -116,10 +116,10 @@ public class GameRendererPostLevelMixin {
             rotateToFace(poseStack, i);
             Matrix4f matrix = poseStack.last().pose();
             bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
-            bufferBuilder.vertex(matrix, -size, -size, -size).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(0.0f, 1.0f, 0.0f).endVertex();
-            bufferBuilder.vertex(matrix, -size, -size, size).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(0.0f, 1.0f, 0.0f).endVertex();
-            bufferBuilder.vertex(matrix, size, -size, size).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(0.0f, 1.0f, 0.0f).endVertex();
-            bufferBuilder.vertex(matrix, size, -size, -size).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(0.0f, 1.0f, 0.0f).endVertex();
+            bufferBuilder.addVertex(matrix, -size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
+            bufferBuilder.addVertex(matrix, -size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
+            bufferBuilder.addVertex(matrix, size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
+            bufferBuilder.addVertex(matrix, size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             BufferUploader.drawWithShader(bufferBuilder.end());
             poseStack.popPose();
         }

@@ -3,19 +3,16 @@ import java.util.jar.JarFile
 plugins {
     id 'maven-publish'
     id 'idea'
-    id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
-    id 'org.spongepowered.mixin' version '0.7.+'
+    id 'net.neoforged.moddev' version '2.0.146'
 }
 
 version = project.mod_version
 group = project.maven_group
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 base {
     archivesName = project.archives_name
 }
-
-jarJar.enable()
 
 // The native extension has no Minecraft references and is isolated from the standard artifact.
 sourceSets {
@@ -32,70 +29,63 @@ sourceSets {
 }
 
 repositories {
-    maven { url = "https://maven.minecraftforge.net/" }
-    maven { url = "https://cursemaven.com"; content { includeGroup "curse.maven" } }
+    maven { url = "https://maven.neoforged.net/releases" }
+    maven { name = "GeckoLib"; url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
     maven { name = "Progwml6"; url = "https://dvs1.progwml6.com/files/maven/" }
     maven { name = "BlameJared"; url = "https://maven.blamejared.com/" }
     maven { name = "ModMaven"; url = "https://modmaven.dev" }
-    maven { name = "SpongePowered"; url = "https://repo.spongepowered.org/repository/maven-public/" }
 }
 
-minecraft {
-    mappings channel: 'official', version: project.minecraft_version
-    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
-    copyIdeResources = true
+neoForge {
+    version = project.neo_version
+    accessTransformers = files('src/main/resources/META-INF/accesstransformer.cfg')
 
     runs {
         client {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            mods { eca { source sourceSets.main } }
+            client()
+            gameDirectory = project.file('run')
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            systemProperty 'forge.logging.console.level', 'debug'
         }
         server {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            mods { eca { source sourceSets.main } }
+            server()
+            gameDirectory = project.file('run')
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            systemProperty 'forge.logging.console.level', 'debug'
         }
+    }
+
+    mods {
+        eca { sourceSet sourceSets.main }
     }
 }
 
 dependencies {
     jvmtiCompileOnly 'net.java.dev.jna:jna:5.12.1'
     proImplementation files('lib/forgevm-0.7.0.jar')
-    minecraft "net.minecraftforge:forge:${project.forge_version}"
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     implementation 'org.reflections:reflections:0.9.12'
     implementation 'org.ow2.asm:asm:9.7.1'
     implementation 'org.ow2.asm:asm-commons:9.7.1'
     implementation 'org.ow2.asm:asm-tree:9.7.1'
     implementation 'org.ow2.asm:asm-analysis:9.7.1'
-    implementation jarJar('io.netty:netty-codec-http:[4.1.82.Final,4.1.83.Final)') {
+    implementation('io.netty:netty-codec-http:4.1.82.Final') { transitive = false }
+    jarJar('io.netty:netty-codec-http') {
         transitive = false
-        jarJar.pin(it, '4.1.82.Final')
+        version { strictly '[4.1.82.Final,4.1.83.Final)'; prefer '4.1.82.Final' }
     }
-    minecraftLibrary('io.netty:netty-codec-http:4.1.82.Final') {
+    implementation('io.airlift:aircompressor:0.27') { transitive = false }
+    jarJar('io.airlift:aircompressor') {
         transitive = false
+        version { strictly '[0.27,0.28)'; prefer '0.27' }
     }
-    implementation jarJar('io.airlift:aircompressor:[0.27,0.28)') {
-        transitive = false
-        jarJar.pin(it, '0.27')
-    }
-    minecraftLibrary('io.airlift:aircompressor:0.27') { transitive = false }
-    implementation fg.deobf("curse.maven:geckolib-388172:7553267")
+    implementation "software.bernie.geckolib:geckolib-neoforge-${project.minecraft_version}:${project.geckolib_version}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
-}
-
-mixin {
-    add sourceSets.main, "mixins.eca.refmap.json"
-    config "eca.mixins.json"
 }
 
 processResources {
     filteringCharset = 'UTF-8'
     inputs.property 'mod_version', project.mod_version
-    filesMatching('META-INF/mods.toml') {
+    filesMatching('META-INF/neoforge.mods.toml') {
         expand 'mod_version': project.mod_version
     }
 }
@@ -103,34 +93,30 @@ processResources {
 tasks.named('processCfResources') {
     filteringCharset = 'UTF-8'
     inputs.property 'mod_version', project.mod_version
-    filesMatching('META-INF/mods.toml') {
+    filesMatching('META-INF/neoforge.mods.toml') {
         expand 'mod_version': project.mod_version
     }
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    it.options.release = 17
+    it.options.release = 21
 }
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }
 
+// ModDevGradle embeds the jarJar libraries in the main jar, so it is the _base jar the variants start from.
 tasks.jar {
-    destinationDirectory = layout.buildDirectory.dir('intermediates/slim')
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    exclude 'eca.mixins.dev.json'
-}
-
-tasks.named('jarJar') {
     archiveFileName.set("${project.archives_name}-${project.version}_base.jar")
     destinationDirectory = layout.buildDirectory.dir('intermediates/base')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude 'eca.mixins.dev.json'
 }
 
@@ -156,15 +142,6 @@ tasks.register('agentJar', Jar) {
     }
 }
 
-tasks.named('jarJar') {
-    dependsOn tasks.named('agentJar')
-
-    from(tasks.named('agentJar').flatMap { it.archiveFile }) {
-        into 'net/eca/agent'
-        rename { 'agent.jar' }
-    }
-}
-
 tasks.named('jar') {
     dependsOn tasks.named('agentJar')
 
@@ -177,12 +154,12 @@ tasks.named('jar') {
 tasks.register('cfJar', Jar) {
     group = 'build'
     description = 'Builds the CoreMod and Mixin variant without the optional runtime backends.'
-    dependsOn tasks.named('reobfJarJar'), tasks.named('cfClasses')
+    dependsOn tasks.named('jar'), tasks.named('cfClasses')
     archiveFileName.set("${project.archives_name}-${project.version}_cf.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    from({ zipTree(tasks.named('jarJar').get().archiveFile.get().asFile) }) {
-        exclude 'META-INF/MANIFEST.MF', 'META-INF/mods.toml'
+    from({ zipTree(tasks.named('jar').get().archiveFile.get().asFile) }) {
+        exclude 'META-INF/MANIFEST.MF', 'META-INF/neoforge.mods.toml'
         exclude 'net/eca/agent/**', 'net/eca/coremod/NativeRuntimeBridge*'
         exclude 'net/eca/coremod/EcaClassTransformer*', 'net/eca/coremod/AllReturnTransformer*'
         exclude 'net/eca/coremod/ContainerReplacementTransformer*', 'net/eca/coremod/LoadingScreenTransformer*'
@@ -192,7 +169,7 @@ tasks.register('cfJar', Jar) {
     }
     from sourceSets.cf.output
     doFirst {
-        def standardJar = tasks.named('jarJar').get().archiveFile.get().asFile
+        def standardJar = tasks.named('jar').get().archiveFile.get().asFile
         new JarFile(standardJar).withCloseable { archive ->
             archive.manifest.mainAttributes.each { key, value ->
                 manifest.attributes([(key.toString()): value.toString()])
@@ -214,14 +191,14 @@ tasks.register('jvmtiBackendJar', Jar) {
 tasks.register('devJar', Jar) {
     group = 'build'
     description = 'Builds the MCreator development variant with JVMTI and development mixins.'
-    dependsOn tasks.named('classes'), tasks.named('agentJar'), tasks.named('jarJar'), tasks.named('jvmtiBackendJar')
+    dependsOn tasks.named('classes'), tasks.named('agentJar'), tasks.named('jar'), tasks.named('jvmtiBackendJar')
     archiveFileName.set("${project.archives_name}-${project.version}_dev.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     from(sourceSets.main.output) {
         exclude 'eca.mixins.json'
     }
-    from({ zipTree(tasks.named('jarJar').get().archiveFile.get().asFile) }) {
+    from({ zipTree(tasks.named('jar').get().archiveFile.get().asFile) }) {
         include 'META-INF/jarjar/**'
     }
 
@@ -243,15 +220,15 @@ tasks.register('devJar', Jar) {
 tasks.register('mrJar', Jar) {
     group = 'build'
     description = 'Builds the Modrinth variant from the CurseForge variant plus JVMTI.'
-    dependsOn tasks.named('reobfJarJar'), tasks.named('jvmtiBackendJar')
+    dependsOn tasks.named('jar'), tasks.named('jvmtiBackendJar')
     archiveFileName.set("${project.archives_name}-${project.version}_mr.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from({ zipTree(tasks.named('jarJar').get().archiveFile.get().asFile) }) {
+    from({ zipTree(tasks.named('jar').get().archiveFile.get().asFile) }) {
         exclude 'META-INF/MANIFEST.MF'
     }
     // Preserve the production manifest, including Mixin configuration, after reobfuscation.
     doFirst {
-        def standardJar = tasks.named('jarJar').get().archiveFile.get().asFile
+        def standardJar = tasks.named('jar').get().archiveFile.get().asFile
         new JarFile(standardJar).withCloseable { archive ->
             archive.manifest.mainAttributes.each { key, value ->
                 manifest.attributes([(key.toString()): value.toString()])
@@ -291,11 +268,11 @@ tasks.register('proAgentJar', Jar) {
 tasks.register('proJar', Jar) {
     group = 'build'
     description = 'Builds the Pro variant from the Modrinth feature set plus Pro runtime components.'
-    dependsOn tasks.named('reobfJarJar'), tasks.named('jvmtiBackendJar'), tasks.named('proClasses'),
+    dependsOn tasks.named('jar'), tasks.named('jvmtiBackendJar'), tasks.named('proClasses'),
             tasks.named('proAgentJar')
     archiveFileName.set("${project.archives_name}-${project.version}_pro.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from({ zipTree(tasks.named('jarJar').get().archiveFile.get().asFile) }) {
+    from({ zipTree(tasks.named('jar').get().archiveFile.get().asFile) }) {
         exclude 'META-INF/MANIFEST.MF', 'logo.png', 'net/eca/agent/agent.jar'
     }
     from sourceSets.pro.output
@@ -310,7 +287,7 @@ tasks.register('proJar', Jar) {
         rename { 'agent.jar' }
     }
     doFirst {
-        def standardJar = tasks.named('jarJar').get().archiveFile.get().asFile
+        def standardJar = tasks.named('jar').get().archiveFile.get().asFile
         new JarFile(standardJar).withCloseable { archive ->
             archive.manifest.mainAttributes.each { key, value ->
                 manifest.attributes([(key.toString()): value.toString()])

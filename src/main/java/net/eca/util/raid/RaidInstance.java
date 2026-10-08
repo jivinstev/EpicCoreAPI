@@ -472,7 +472,7 @@ public class RaidInstance {
             if (!level.hasChunksAt(x - 10, z - 10, x + 10, z + 10)) continue;
             if (!level.isPositionEntityTicking(mutable)) continue;
             boolean validGround = NaturalSpawner.isSpawnPositionOk(
-                    SpawnPlacements.Type.ON_GROUND, level, mutable, type);
+                    net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND, level, mutable, type);
             boolean validSnowSurface = level.getBlockState(mutable.below()).is(Blocks.SNOW)
                     && level.getBlockState(mutable).isAir();
             if (!validGround && !validSnowSurface) continue;

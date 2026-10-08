@@ -2,13 +2,14 @@ package net.eca.network;
 
 import net.eca.EcaMod;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.neoforged.neoforge.network.registration.HandlerThread;
 
 /**
  * Network handler for ECA mod.
@@ -19,12 +20,6 @@ public class NetworkHandler {
 
     private static final String PROTOCOL_VERSION = "3";
 
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(EcaMod.MOD_ID, "main"),
-            () -> PROTOCOL_VERSION,
-            PROTOCOL_VERSION::equals,
-            PROTOCOL_VERSION::equals
-    );
 
     private static int packetId = 0;
 
@@ -36,171 +31,68 @@ public class NetworkHandler {
      * Register all network packets.
      * Called during mod initialization.
      */
-    public static void register() {
-        CHANNEL.messageBuilder(ClientRemovePacket.class, id())
-                .encoder(ClientRemovePacket::encode)
-                .decoder(ClientRemovePacket::decode)
-                .consumerMainThread(ClientRemovePacket::handle)
-                .add();
+    public static void register(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar(PROTOCOL_VERSION);
+        registrar.playToClient(ClientRemovePacket.TYPE, ClientRemovePacket.STREAM_CODEC, ClientRemovePacket::handle);
 
-        CHANNEL.messageBuilder(EntityExtensionActiveTypePacket.class, id())
-                .encoder(EntityExtensionActiveTypePacket::encode)
-                .decoder(EntityExtensionActiveTypePacket::decode)
-                .consumerMainThread(EntityExtensionActiveTypePacket::handle)
-                .add();
+        registrar.playToClient(EntityExtensionActiveTypePacket.TYPE, EntityExtensionActiveTypePacket.STREAM_CODEC, EntityExtensionActiveTypePacket::handle);
 
-        CHANNEL.messageBuilder(EntityExtensionBossEventTypePacket.class, id())
-                .encoder(EntityExtensionBossEventTypePacket::encode)
-                .decoder(EntityExtensionBossEventTypePacket::decode)
-                .consumerMainThread(EntityExtensionBossEventTypePacket::handle)
-                .add();
+        registrar.playToClient(EntityExtensionBossEventTypePacket.TYPE, EntityExtensionBossEventTypePacket.STREAM_CODEC, EntityExtensionBossEventTypePacket::handle);
 
-        CHANNEL.messageBuilder(EntityExtensionOverridePacket.class, id())
-                .encoder(EntityExtensionOverridePacket::encode)
-                .decoder(EntityExtensionOverridePacket::decode)
-                .consumerMainThread(EntityExtensionOverridePacket::handle)
-                .add();
+        registrar.playBidirectional(EntityExtensionOverridePacket.TYPE, EntityExtensionOverridePacket.STREAM_CODEC, EntityExtensionOverridePacket::handle);
 
-        CHANNEL.messageBuilder(EntityContainerCheckRequestPacket.class, id())
-                .encoder(EntityContainerCheckRequestPacket::encode)
-                .decoder(EntityContainerCheckRequestPacket::decode)
-                .consumerMainThread(EntityContainerCheckRequestPacket::handle)
-                .add();
+        registrar.playToClient(EntityContainerCheckRequestPacket.TYPE, EntityContainerCheckRequestPacket.STREAM_CODEC, EntityContainerCheckRequestPacket::handle);
 
-        CHANNEL.messageBuilder(EntityContainerCheckResponsePacket.class, id())
-                .encoder(EntityContainerCheckResponsePacket::encode)
-                .decoder(EntityContainerCheckResponsePacket::decode)
-                .consumerNetworkThread(EntityContainerCheckResponsePacket::handle)
-                .add();
+        registrar.executesOn(HandlerThread.NETWORK).playToServer(EntityContainerCheckResponsePacket.TYPE, EntityContainerCheckResponsePacket.STREAM_CODEC, EntityContainerCheckResponsePacket::handle);
 
-        CHANNEL.messageBuilder(BossShowStartPacket.class, id())
-                .encoder(BossShowStartPacket::encode)
-                .decoder(BossShowStartPacket::decode)
-                .consumerMainThread(BossShowStartPacket::handle)
-                .add();
+        registrar.playToClient(BossShowStartPacket.TYPE, BossShowStartPacket.STREAM_CODEC, BossShowStartPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowStopPacket.class, id())
-                .encoder(BossShowStopPacket::encode)
-                .decoder(BossShowStopPacket::decode)
-                .consumerMainThread(BossShowStopPacket::handle)
-                .add();
+        registrar.playToClient(BossShowStopPacket.TYPE, BossShowStopPacket.STREAM_CODEC, BossShowStopPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowSkipPacket.class, id())
-                .encoder(BossShowSkipPacket::encode)
-                .decoder(BossShowSkipPacket::decode)
-                .consumerMainThread(BossShowSkipPacket::handle)
-                .add();
+        registrar.playToServer(BossShowSkipPacket.TYPE, BossShowSkipPacket.STREAM_CODEC, BossShowSkipPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowOpenEditorHomePacket.class, id())
-                .encoder(BossShowOpenEditorHomePacket::encode)
-                .decoder(BossShowOpenEditorHomePacket::decode)
-                .consumerMainThread(BossShowOpenEditorHomePacket::handle)
-                .add();
+        registrar.playToClient(BossShowOpenEditorHomePacket.TYPE, BossShowOpenEditorHomePacket.STREAM_CODEC, BossShowOpenEditorHomePacket::handle);
 
-        CHANNEL.messageBuilder(BossShowExitEditorPacket.class, id())
-                .encoder(BossShowExitEditorPacket::encode)
-                .decoder(BossShowExitEditorPacket::decode)
-                .consumerMainThread(BossShowExitEditorPacket::handle)
-                .add();
+        registrar.playToServer(BossShowExitEditorPacket.TYPE, BossShowExitEditorPacket.STREAM_CODEC, BossShowExitEditorPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowSaveEditorPacket.class, id())
-                .encoder(BossShowSaveEditorPacket::encode)
-                .decoder(BossShowSaveEditorPacket::decode)
-                .consumerMainThread(BossShowSaveEditorPacket::handle)
-                .add();
+        registrar.playToServer(BossShowSaveEditorPacket.TYPE, BossShowSaveEditorPacket.STREAM_CODEC, BossShowSaveEditorPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowDeleteEditorPacket.class, id())
-                .encoder(BossShowDeleteEditorPacket::encode)
-                .decoder(BossShowDeleteEditorPacket::decode)
-                .consumerMainThread(BossShowDeleteEditorPacket::handle)
-                .add();
+        registrar.playToServer(BossShowDeleteEditorPacket.TYPE, BossShowDeleteEditorPacket.STREAM_CODEC, BossShowDeleteEditorPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowPlaySelectionPacket.class, id())
-                .encoder(BossShowPlaySelectionPacket::encode)
-                .decoder(BossShowPlaySelectionPacket::decode)
-                .consumerMainThread(BossShowPlaySelectionPacket::handle)
-                .add();
+        registrar.playToServer(BossShowPlaySelectionPacket.TYPE, BossShowPlaySelectionPacket.STREAM_CODEC, BossShowPlaySelectionPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowSubtitlePacket.class, id())
-                .encoder(BossShowSubtitlePacket::encode)
-                .decoder(BossShowSubtitlePacket::decode)
-                .consumerMainThread(BossShowSubtitlePacket::handle)
-                .add();
+        registrar.playToClient(BossShowSubtitlePacket.TYPE, BossShowSubtitlePacket.STREAM_CODEC, BossShowSubtitlePacket::handle);
 
-        CHANNEL.messageBuilder(ShaderGeneratorOpenPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(ShaderGeneratorOpenPacket::encode)
-                .decoder(ShaderGeneratorOpenPacket::decode)
-                .consumerMainThread(ShaderGeneratorOpenPacket::handle)
-                .add();
+        registrar.playToClient(ShaderGeneratorOpenPacket.TYPE, ShaderGeneratorOpenPacket.STREAM_CODEC, ShaderGeneratorOpenPacket::handle);
 
-        CHANNEL.messageBuilder(FilterSyncPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(FilterSyncPacket::encode)
-                .decoder(FilterSyncPacket::decode)
-                .consumerMainThread(FilterSyncPacket::handle)
-                .add();
+        registrar.playToClient(FilterSyncPacket.TYPE, FilterSyncPacket.STREAM_CODEC, FilterSyncPacket::handle);
 
-        CHANNEL.messageBuilder(SetHealthClientSyncPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(SetHealthClientSyncPacket::encode)
-                .decoder(SetHealthClientSyncPacket::decode)
-                .consumerMainThread(SetHealthClientSyncPacket::handle)
-                .add();
+        registrar.playToClient(SetHealthClientSyncPacket.TYPE, SetHealthClientSyncPacket.STREAM_CODEC, SetHealthClientSyncPacket::handle);
 
-        CHANNEL.messageBuilder(FactionGlowSyncPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(FactionGlowSyncPacket::encode)
-                .decoder(FactionGlowSyncPacket::decode)
-                .consumerMainThread(FactionGlowSyncPacket::handle)
-                .add();
+        registrar.playToClient(FactionGlowSyncPacket.TYPE, FactionGlowSyncPacket.STREAM_CODEC, FactionGlowSyncPacket::handle);
 
-        CHANNEL.messageBuilder(RaidBossBarSyncPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(RaidBossBarSyncPacket::encode)
-                .decoder(RaidBossBarSyncPacket::decode)
-                .consumerMainThread(RaidBossBarSyncPacket::handle)
-                .add();
+        registrar.playToClient(RaidBossBarSyncPacket.TYPE, RaidBossBarSyncPacket.STREAM_CODEC, RaidBossBarSyncPacket::handle);
 
         // 新包一律追加在末尾，插在中间会让其后所有包的 ID 顺移
-        CHANNEL.messageBuilder(ClientReviveContainersPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(ClientReviveContainersPacket::encode)
-                .decoder(ClientReviveContainersPacket::decode)
-                .consumerMainThread(ClientReviveContainersPacket::handle)
-                .add();
+        registrar.playToClient(ClientReviveContainersPacket.TYPE, ClientReviveContainersPacket.STREAM_CODEC, ClientReviveContainersPacket::handle);
 
-        CHANNEL.messageBuilder(BossShowEditorHeartbeatPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .encoder(BossShowEditorHeartbeatPacket::encode)
-                .decoder(BossShowEditorHeartbeatPacket::decode)
-                .consumerMainThread(BossShowEditorHeartbeatPacket::handle)
-                .add();
+        registrar.playToServer(BossShowEditorHeartbeatPacket.TYPE, BossShowEditorHeartbeatPacket.STREAM_CODEC, BossShowEditorHeartbeatPacket::handle);
 
-        CHANNEL.messageBuilder(HealthSyncResponsePacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .encoder(HealthSyncResponsePacket::encode)
-                .decoder(HealthSyncResponsePacket::decode)
-                .consumerMainThread(HealthSyncResponsePacket::handle)
-                .add();
+        registrar.playToServer(HealthSyncResponsePacket.TYPE, HealthSyncResponsePacket.STREAM_CODEC, HealthSyncResponsePacket::handle);
 
-        CHANNEL.messageBuilder(BlenderAnimationSyncPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(BlenderAnimationSyncPacket::encode)
-                .decoder(BlenderAnimationSyncPacket::decode)
-                .consumerMainThread(BlenderAnimationSyncPacket::handle)
-                .add();
+        registrar.playToClient(BlenderAnimationSyncPacket.TYPE, BlenderAnimationSyncPacket.STREAM_CODEC, BlenderAnimationSyncPacket::handle);
 
-        CHANNEL.messageBuilder(EntityTeleportSyncPacket.class, id(), NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(EntityTeleportSyncPacket::encode)
-                .decoder(EntityTeleportSyncPacket::decode)
-                .consumerMainThread(EntityTeleportSyncPacket::handle)
-                .add();
+        registrar.playToClient(EntityTeleportSyncPacket.TYPE, EntityTeleportSyncPacket.STREAM_CODEC, EntityTeleportSyncPacket::handle);
 
-        CHANNEL.messageBuilder(EntityTeleportAckPacket.class, id(), NetworkDirection.PLAY_TO_SERVER)
-                .encoder(EntityTeleportAckPacket::encode)
-                .decoder(EntityTeleportAckPacket::decode)
-                .consumerMainThread(EntityTeleportAckPacket::handle)
-                .add();
+        registrar.playToServer(EntityTeleportAckPacket.TYPE, EntityTeleportAckPacket.STREAM_CODEC, EntityTeleportAckPacket::handle);
     }
 
     /**
      * Send a message to the server.
      * @param message the message to send
      */
-    public static <MSG> void sendToServer(MSG message) {
-        CHANNEL.sendToServer(message);
+    public static <MSG extends CustomPacketPayload> void sendToServer(MSG message) {
+        PacketDistributor.sendToServer(message);
     }
 
     /**
@@ -208,8 +100,8 @@ public class NetworkHandler {
      * @param message the message to send
      * @param player the target player
      */
-    public static <MSG> void sendToPlayer(MSG message, ServerPlayer player) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), message);
+    public static <MSG extends CustomPacketPayload> void sendToPlayer(MSG message, ServerPlayer player) {
+        PacketDistributor.sendToPlayer(player, message);
     }
 
     /**
@@ -217,12 +109,9 @@ public class NetworkHandler {
      * @param message the message to send
      * @param entity the entity being tracked
      */
-    public static <MSG> void sendToTrackingClients(MSG message, Entity entity) {
+    public static <MSG extends CustomPacketPayload> void sendToTrackingClients(MSG message, Entity entity) {
         if (entity.level() instanceof ServerLevel) {
-            CHANNEL.send(
-                    PacketDistributor.TRACKING_ENTITY.with(() -> entity),
-                    message
-            );
+            PacketDistributor.sendToPlayersTrackingEntity(entity, message);
         }
     }
 
@@ -231,9 +120,9 @@ public class NetworkHandler {
      * @param message the message to send
      * @param entity the tracked entity
      */
-    public static <MSG> void sendToTrackingClientsAndSelf(MSG message, Entity entity) {
+    public static <MSG extends CustomPacketPayload> void sendToTrackingClientsAndSelf(MSG message, Entity entity) {
         if (entity.level() instanceof ServerLevel) {
-            CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity), message);
+            PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, message);
         }
     }
 
@@ -242,10 +131,7 @@ public class NetworkHandler {
      * @param message the message to send
      * @param level the server level (dimension)
      */
-    public static <MSG> void sendToDimension(MSG message, ServerLevel level) {
-        CHANNEL.send(
-                PacketDistributor.DIMENSION.with(() -> level.dimension()),
-                message
-        );
+    public static <MSG extends CustomPacketPayload> void sendToDimension(MSG message, ServerLevel level) {
+        PacketDistributor.sendToPlayersInDimension(level, message);
     }
 }

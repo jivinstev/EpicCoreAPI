@@ -6,10 +6,10 @@ import net.eca.util.entity_extension.GlobalEffectRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceProvider;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RegisterShadersEvent;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.neoforged.fml.ModList;
 import net.minecraftforge.forgespi.language.IModInfo;
 
 import java.io.IOException;
@@ -84,7 +84,7 @@ public final class ShaderPresetRegistry {
                         if (!Files.isDirectory(presetDir)) continue;
                         String name = presetDir.getFileName().toString();
                         if (hasPresetFiles(presetDir, name)) {
-                            ResourceLocation id = new ResourceLocation(namespace, name);
+                            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(namespace, name);
                             register(id);
                         }
                     }

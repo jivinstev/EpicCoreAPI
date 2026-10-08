@@ -2,20 +2,33 @@ package net.eca.network;
 
 import net.eca.client.ClientEntityUtil;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /**
  * Client-side entity removal packet.
  * Sent from server to client to notify entity removal.
  */
-public class ClientRemovePacket {
+public class ClientRemovePacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<ClientRemovePacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "client_remove_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ClientRemovePacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> ClientRemovePacket.encode(msg, buf), ClientRemovePacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<ClientRemovePacket> type() {
+        return TYPE;
+    }
+
 
     private final int entityId;
     private final List<UUID> bossEventUUIDs;
@@ -58,11 +71,9 @@ public class ClientRemovePacket {
      * @param msg the packet to handle
      * @param ctx the network context
      */
-    public static void handle(ClientRemovePacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
+    public static void handle(ClientRemovePacket msg, IPayloadContext context) {
         context.enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandlerRef.apply(msg)));
-        context.setPacketHandled(true);
+                { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.apply(msg); });
     }
 
     // 客户端引用隔离在独立内部类中，实际逻辑委托给 @OnlyIn(Dist.CLIENT) 的 ClientEntityUtil

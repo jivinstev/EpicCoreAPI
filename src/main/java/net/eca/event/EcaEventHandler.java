@@ -28,14 +28,16 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.server.ServerStoppedEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
 
 import java.util.HashMap;
 import java.util.List;
@@ -137,30 +139,36 @@ public class EcaEventHandler {
     }
 
     @SubscribeEvent
-    public void onLevelTick(TickEvent.LevelTickEvent event) {
-        if (!(event.level instanceof ServerLevel serverLevel)) {
+    public void onLevelTickPre(LevelTickEvent.Pre event) {
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
             return;
         }
 
         //START 相位：抢在 ServerLevel.tick() 的 entityManager.tick() 之前校正位置
         //防止字段脏写攻击导致实体被迁移到远方 section、进而触发 pending unload 失锁
-        if (event.phase == TickEvent.Phase.START) {
-            EntityLocationManager.checkLockedEntities(serverLevel);
+        EntityLocationManager.checkLockedEntities(serverLevel);
+        return;
+
+    }
+
+    @SubscribeEvent
+    public void onLevelTick(LevelTickEvent.Post event) {
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
             return;
         }
 
-        if (event.phase == TickEvent.Phase.END) {
-            EntityExtensionManager.tickDimension(serverLevel);
-            ForceLoadingManager.tickDimension(serverLevel);
-            RaidManager.tickDimension(serverLevel);
-            FactionManager.tickHostileTargeting(serverLevel);
-        }
+        //START 相位：抢在 ServerLevel.tick() 的 entityManager.tick() 之前校正位置
+        //防止字段脏写攻击导致实体被迁移到远方 section、进而触发 pending unload 失锁
+
+        EntityExtensionManager.tickDimension(serverLevel);
+        ForceLoadingManager.tickDimension(serverLevel);
+        RaidManager.tickDimension(serverLevel);
+        FactionManager.tickHostileTargeting(serverLevel);
     }
 
     //服务端全局 tick：推进 BossShow 会话 + 扫描 range 触发器（每 tick 一次，与维度数量无关）
     @SubscribeEvent
-    public void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public void onServerTick(ServerTickEvent.Post event) {
         BossShowPlaybackTracker.onServerTick(event.getServer());
         BossShowEditorSessionManager.onServerTick(event.getServer());
         //END 相位在实体 tick 之后，此处复查才能看到防护逻辑对改血的回滚
@@ -172,9 +180,8 @@ public class EcaEventHandler {
 
     // 每位玩家周期性的阵营发光扫描
     @SubscribeEvent
-    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (!(event.player instanceof ServerPlayer player)) return;
+    public void onPlayerTick(PlayerTickEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
         // 观察者模式跳过
         if (player.isSpectator()) return;
         if (!EcaConfiguration.getFactionGlowEnabledSafely()) return;

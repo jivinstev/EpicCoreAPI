@@ -1,11 +1,13 @@
 package net.eca.util.raid;
 
+import net.minecraft.core.registries.Registries;
+
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.List;
 
@@ -37,7 +39,7 @@ import java.util.List;
  *     @Override public String getRaiderFactionId() { return "undead_legion"; }
  *
  *     @Override public ResourceKey<Structure> getTargetStructure() {
- *         return ResourceKey.create(Registries.STRUCTURE, new ResourceLocation("minecraft", "village_plains"));
+ *         return ResourceKey.create(Registries.STRUCTURE, ResourceLocation.fromNamespaceAndPath("minecraft", "village_plains"));
  *     }
  *
  *     @Override public List<RaidWave> getWaves() {

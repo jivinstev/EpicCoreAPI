@@ -3,14 +3,27 @@ package net.eca.network;
 import net.eca.client.render.shader.FilterRenderer;
 import net.eca.util.filter.FilterType;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkDirection;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class FilterSyncPacket {
+public class FilterSyncPacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<FilterSyncPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "filter_sync_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, FilterSyncPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> FilterSyncPacket.encode(msg, buf), FilterSyncPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<FilterSyncPacket> type() {
+        return TYPE;
+    }
+
 
     private final int filterOrdinal;
     private final boolean enable;
@@ -34,15 +47,13 @@ public class FilterSyncPacket {
         return new FilterSyncPacket(buf.readVarInt(), buf.readBoolean());
     }
 
-    public static void handle(FilterSyncPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
+    public static void handle(FilterSyncPacket msg, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.getDirection() != NetworkDirection.PLAY_TO_CLIENT) {
+            if (context.flow() != PacketFlow.CLIENTBOUND) {
                 return;
             }
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandlerRef.onSync(msg));
+            if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onSync(msg);
         });
-        context.setPacketHandled(true);
     }
 
     private static final class ClientHandlerRef {

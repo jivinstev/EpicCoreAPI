@@ -2,20 +2,22 @@ package net.eca.blender.animation;
 
 import net.eca.EcaMod;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingDamageEvent;
-import net.minecraftforge.event.entity.living.LivingEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
 
-@Mod.EventBusSubscriber(modid = EcaMod.MOD_ID)
+@EventBusSubscriber(modid = EcaMod.MOD_ID)
 public final class BlenderControllerEvents {
     private BlenderControllerEvents() { }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onLivingTick(LivingEvent.LivingTickEvent event) {
-        if (event.getEntity().level() instanceof ServerLevel) BlenderControllers.discover(event.getEntity());
+    public static void onLivingTick(EntityTickEvent.Pre event) {
+        if (!(event.getEntity() instanceof net.minecraft.world.entity.LivingEntity living)) return;
+        if (living.level() instanceof ServerLevel) BlenderControllers.discover(living);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
@@ -26,7 +28,7 @@ public final class BlenderControllerEvents {
     }
 
     @SubscribeEvent
-    public static void onLevelTick(TickEvent.LevelTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel level) BlenderControllers.tick(level);
+    public static void onLevelTick(LevelTickEvent.Post event) {
+        if (event.getLevel() instanceof ServerLevel level) BlenderControllers.tick(level);
     }
 }

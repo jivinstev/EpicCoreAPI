@@ -5,7 +5,7 @@ import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.commands.arguments.selector.EntitySelectorParser;
 import net.minecraft.commands.arguments.selector.options.EntitySelectorOptions;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.common.command.IEntitySelectorType;
+import net.neoforged.neoforge.common.command.IEntitySelectorType;
 
 public class EcaGlobalSelectorType implements IEntitySelectorType {
 

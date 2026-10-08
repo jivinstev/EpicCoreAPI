@@ -21,8 +21,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.entity.*;
 import net.minecraft.world.level.gameevent.DynamicGameEventListener;
-import net.minecraftforge.entity.PartEntity;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.neoforge.entity.PartEntity;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

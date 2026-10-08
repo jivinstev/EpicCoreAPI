@@ -2,8 +2,8 @@ package net.eca.mixin;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
-import net.minecraftforge.common.capabilities.CapabilityDispatcher;
-import net.minecraftforge.common.util.INBTSerializable;
+import net.neoforged.neoforge.common.capabilities.CapabilityDispatcher;
+import net.neoforged.neoforge.common.util.INBTSerializable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;

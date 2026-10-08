@@ -1,5 +1,7 @@
 package net.eca.network;
 
+import net.minecraft.core.registries.Registries;
+
 import net.eca.util.bossshow.BossShowDefinition;
 import net.eca.util.bossshow.BossShowDefinition.Frame;
 import net.eca.util.bossshow.BossShowDefinition.EventCue;
@@ -10,18 +12,30 @@ import net.eca.util.bossshow.BossShowEffectCue;
 import net.eca.util.bossshow.Trigger;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.function.Supplier;
 
 //C→S：客户端把当前编辑中的 BossShow 定义提交保存
-public class BossShowSaveEditorPacket {
+public class BossShowSaveEditorPacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<BossShowSaveEditorPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_save_editor_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BossShowSaveEditorPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> BossShowSaveEditorPacket.encode(msg, buf), BossShowSaveEditorPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<BossShowSaveEditorPacket> type() {
+        return TYPE;
+    }
+
 
     private final ResourceLocation cutsceneId;
     private final ResourceLocation targetTypeId;
@@ -86,10 +100,9 @@ public class BossShowSaveEditorPacket {
             eventCues, subtitleCues, effectCues);
     }
 
-    public static void handle(BossShowSaveEditorPacket msg, Supplier<NetworkEvent.Context> ctxSup) {
-        NetworkEvent.Context ctx = ctxSup.get();
+    public static void handle(BossShowSaveEditorPacket msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
+            ServerPlayer player = ((ServerPlayer) ctx.player());
             if (player == null) return;
             EntityType<?> type = (msg.targetTypeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(msg.targetTypeId))
                 ? BuiltInRegistries.ENTITY_TYPE.get(msg.targetTypeId)
@@ -105,7 +118,6 @@ public class BossShowSaveEditorPacket {
                 player.sendSystemMessage(Component.literal("§cFailed to save BossShow " + msg.cutsceneId + " (see server log)"));
             }
         });
-        ctx.setPacketHandled(true);
     }
 
     private static List<EventCue> deriveEventCues(List<Frame> frames) {

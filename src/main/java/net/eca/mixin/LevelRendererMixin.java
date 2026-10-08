@@ -241,10 +241,10 @@ public abstract class LevelRendererMixin {
             rotateToFace(poseStack, i);
             Matrix4f matrix = poseStack.last().pose();
             bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-            bufferBuilder.vertex(matrix, -size, -size, -size).uv(0.0f, 0.0f).color(red, green, blue, alphaInt).endVertex();
-            bufferBuilder.vertex(matrix, -size, -size, size).uv(0.0f, uvScale).color(red, green, blue, alphaInt).endVertex();
-            bufferBuilder.vertex(matrix, size, -size, size).uv(uvScale, uvScale).color(red, green, blue, alphaInt).endVertex();
-            bufferBuilder.vertex(matrix, size, -size, -size).uv(uvScale, 0.0f).color(red, green, blue, alphaInt).endVertex();
+            bufferBuilder.addVertex(matrix, -size, -size, -size).setUv(0.0f, 0.0f).setColor(red, green, blue, alphaInt);
+            bufferBuilder.addVertex(matrix, -size, -size, size).setUv(0.0f, uvScale).setColor(red, green, blue, alphaInt);
+            bufferBuilder.addVertex(matrix, size, -size, size).setUv(uvScale, uvScale).setColor(red, green, blue, alphaInt);
+            bufferBuilder.addVertex(matrix, size, -size, -size).setUv(uvScale, 0.0f).setColor(red, green, blue, alphaInt);
             BufferUploader.drawWithShader(bufferBuilder.end());
             poseStack.popPose();
         }
@@ -285,10 +285,10 @@ public abstract class LevelRendererMixin {
                 float x2 = (float) Math.cos(theta2);
                 float z2 = (float) Math.sin(theta2);
 
-                bufferBuilder.vertex(matrix, x1 * r1, y1, z1 * r1).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(x1, y1 / radius, z1).endVertex();
-                bufferBuilder.vertex(matrix, x1 * r2, y2, z1 * r2).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(x1, y2 / radius, z1).endVertex();
-                bufferBuilder.vertex(matrix, x2 * r2, y2, z2 * r2).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(x2, y2 / radius, z2).endVertex();
-                bufferBuilder.vertex(matrix, x2 * r1, y1, z2 * r1).color(255, 255, 255, alphaInt).uv(0.0f, 0.0f).uv2(light).normal(x2, y1 / radius, z2).endVertex();
+                bufferBuilder.addVertex(matrix, x1 * r1, y1, z1 * r1).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x1, y1 / radius, z1);
+                bufferBuilder.addVertex(matrix, x1 * r2, y2, z1 * r2).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x1, y2 / radius, z1);
+                bufferBuilder.addVertex(matrix, x2 * r2, y2, z2 * r2).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x2, y2 / radius, z2);
+                bufferBuilder.addVertex(matrix, x2 * r1, y1, z2 * r1).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x2, y1 / radius, z2);
             }
         }
 

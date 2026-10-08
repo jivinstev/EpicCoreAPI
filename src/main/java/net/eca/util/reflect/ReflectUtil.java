@@ -1,7 +1,7 @@
 package net.eca.util.reflect;
 
 import net.eca.util.EcaLogger;
-import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.neoforged.fml.util.ObfuscationReflectionHelper;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

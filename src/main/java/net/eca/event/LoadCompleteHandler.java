@@ -15,7 +15,7 @@ import net.eca.util.faction.FactionManager;
 import net.eca.util.health.EcaSetHealthManager;
 import net.eca.util.health.HealthDataFlow;
 import net.eca.util.raid.RaidManager;
-import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
+import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -46,11 +46,11 @@ public final class LoadCompleteHandler {
     private static volatile boolean hasDelayedRetransform = false;
 
     private static final String[][] RADICAL_METHODS = {
-        {"m_21223_", "()F", "getHealth"},
-        {"m_21233_", "()F", "getMaxHealth"},
-        {"m_21224_", "()Z", "isDeadOrDying"},
-        {"m_6084_", "()Z", "isAlive"},
-        {"m_213877_", "()Z", "isRemoved"}
+        {"getHealth", "()F", "getHealth"},
+        {"getMaxHealth", "()F", "getMaxHealth"},
+        {"isDeadOrDying", "()Z", "isDeadOrDying"},
+        {"isAlive", "()Z", "isAlive"},
+        {"isRemoved", "()Z", "isRemoved"}
     };
     private static final String LIVING_ENTITY_INTERNAL_NAME = "net/minecraft/world/entity/LivingEntity";
     private static final String PLAYER_INTERNAL_NAME = "net/minecraft/world/entity/player/Player";

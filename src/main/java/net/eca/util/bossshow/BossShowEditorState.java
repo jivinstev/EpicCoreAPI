@@ -1,5 +1,7 @@
 package net.eca.util.bossshow;
 
+import net.minecraft.core.registries.Registries;
+
 import net.minecraft.world.phys.Vec3;
 
 import net.eca.client.BossShowScreenEffectState;
@@ -858,10 +860,10 @@ public final class BossShowEditorState {
         ResourceLocation typeId = type != null ? BuiltInRegistries.ENTITY_TYPE.getKey(type) : null;
         String namespace = typeId != null ? typeId.getNamespace() : "eca";
         String basePath = typeId != null ? typeId.getPath() : "anchor";
-        ResourceLocation candidate = new ResourceLocation(namespace, basePath);
+        ResourceLocation candidate = ResourceLocation.fromNamespaceAndPath(namespace, basePath);
         int n = 2;
         while (idTaken(candidate)) {
-            candidate = new ResourceLocation(namespace, basePath + "_" + n);
+            candidate = ResourceLocation.fromNamespaceAndPath(namespace, basePath + "_" + n);
             n++;
         }
         return candidate;

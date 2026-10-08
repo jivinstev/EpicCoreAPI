@@ -1,6 +1,6 @@
 package net.eca.compat;
 
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import java.util.ArrayList;
 import java.util.List;

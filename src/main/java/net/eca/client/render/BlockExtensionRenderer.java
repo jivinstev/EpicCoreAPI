@@ -17,12 +17,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.level.ChunkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.ChunkEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,9 +42,9 @@ public final class BlockExtensionRenderer {
     }
 
     public static void register() {
-        MinecraftForge.EVENT_BUS.addListener(BlockExtensionRenderer::onChunkLoad);
-        MinecraftForge.EVENT_BUS.addListener(BlockExtensionRenderer::onChunkUnload);
-        MinecraftForge.EVENT_BUS.addListener(BlockExtensionRenderer::onRenderLevel);
+        NeoForge.EVENT_BUS.addListener(BlockExtensionRenderer::onChunkLoad);
+        NeoForge.EVENT_BUS.addListener(BlockExtensionRenderer::onChunkUnload);
+        NeoForge.EVENT_BUS.addListener(BlockExtensionRenderer::onRenderLevel);
     }
 
     public static void onBlockChanged(ClientLevel level, BlockPos pos, BlockState state) {

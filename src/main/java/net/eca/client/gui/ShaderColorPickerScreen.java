@@ -87,7 +87,7 @@ public final class ShaderColorPickerScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 104;
         int top = height / 2 - PICKER_SIZE / 2;
         graphics.drawCenteredString(font, title, width / 2, top - 16, 0xFFFFFFFF);

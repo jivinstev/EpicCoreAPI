@@ -628,7 +628,7 @@ public final class MethodProbe {
 
     private static boolean isSetHealthMethod(Method method) {
         if (method.getReturnType() != void.class || method.getParameterTypes()[0] != float.class) return false;
-        return method.getName().equals("setHealth") || method.getName().equals("m_21153_");
+        return method.getName().equals("setHealth") || method.getName().equals("setHealth");
     }
 
     /* 反射缓存可能被目标主动清空；字段元数据仍在 classfile 中，作为无反射后备。 */

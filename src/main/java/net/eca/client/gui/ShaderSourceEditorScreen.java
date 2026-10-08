@@ -588,7 +588,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         if (openDropdown == MENU_NAVIGATION
                 && mouseX >= navigationMenuX
                 && mouseX < navigationMenuX + navigationMenuWidth
@@ -604,12 +604,12 @@ public final class ShaderSourceEditorScreen extends Screen {
             ));
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, delta);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, CONTENT_TOP - 2, 0xFF202225);
         graphics.fill(6, CONTENT_TOP - 2, editorRight, height - 6, 0xFF08090B);
         graphics.fill(previewLeft, CONTENT_TOP, width - 8, previewBottom, 0xFF08090B);

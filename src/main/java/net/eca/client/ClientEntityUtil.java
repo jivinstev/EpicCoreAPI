@@ -20,9 +20,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.level.entity.EntitySection;
 import net.minecraft.world.level.entity.TransientEntitySectionManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.entity.PartEntity;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.entity.PartEntity;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -284,7 +284,7 @@ public final class ClientEntityUtil {
             /* 走原版收到生成包时的同一条路径：一次补齐 byUuid/byId、section、
                levelCallback、players/partEntities 与 tickingEntities。 */
             entityStorage.addEntity(entity);
-            entity.onAddedToWorld();
+            entity.onAddedToLevel();
 
             EcaLogger.info("[ClientReviveContainers] re-registered client entity uuid={} id={}",
                     entityUuid, entity.getId());

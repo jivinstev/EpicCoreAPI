@@ -1,51 +1,51 @@
 package net.eca.config;
 
 import net.eca.compat.FriendModCheck;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class EcaConfiguration {
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
 
-    public static ForgeConfigSpec.ConfigValue<Boolean> FORCE_COMPATIBILITY_MODE;
-    public static ForgeConfigSpec.ConfigValue<Boolean> ATTACK_ENABLE_RADICAL_LOGIC;
-    public static ForgeConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_CONST_OVERRIDE;
-    public static ForgeConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_EXTERNAL_SCAN;
-    public static ForgeConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_METHOD_PROBE;
-    public static ForgeConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_NUMERIC_INVERSION;
-    public static ForgeConfigSpec.ConfigValue<String> HEALTH_REPORT_LANGUAGE;
-    public static ForgeConfigSpec.ConfigValue<Boolean> DEFENCE_ENABLE_RADICAL_LOGIC;
-    public static ForgeConfigSpec.ConfigValue<Boolean> DEFENCE_INVULNERABLE_UNTARGETABLE;
-    public static ForgeConfigSpec.IntValue RESURRECTION_MAX_DISPLACEMENT;
-    public static ForgeConfigSpec.ConfigValue<Boolean> ATTRIBUTE_UNLOCK_LIMITS;
-    public static ForgeConfigSpec.ConfigValue<Boolean> ENABLE_CUSTOM_LOADING_BACKGROUND;
+    public static ModConfigSpec.ConfigValue<Boolean> FORCE_COMPATIBILITY_MODE;
+    public static ModConfigSpec.ConfigValue<Boolean> ATTACK_ENABLE_RADICAL_LOGIC;
+    public static ModConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_CONST_OVERRIDE;
+    public static ModConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_EXTERNAL_SCAN;
+    public static ModConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_METHOD_PROBE;
+    public static ModConfigSpec.ConfigValue<Boolean> ATTACK_SETHEALTH_ENABLE_NUMERIC_INVERSION;
+    public static ModConfigSpec.ConfigValue<String> HEALTH_REPORT_LANGUAGE;
+    public static ModConfigSpec.ConfigValue<Boolean> DEFENCE_ENABLE_RADICAL_LOGIC;
+    public static ModConfigSpec.ConfigValue<Boolean> DEFENCE_INVULNERABLE_UNTARGETABLE;
+    public static ModConfigSpec.IntValue RESURRECTION_MAX_DISPLACEMENT;
+    public static ModConfigSpec.ConfigValue<Boolean> ATTRIBUTE_UNLOCK_LIMITS;
+    public static ModConfigSpec.ConfigValue<Boolean> ENABLE_CUSTOM_LOADING_BACKGROUND;
     /* 该值会被顶成透视矩阵的远平面（GameRendererPostLevelMixin）。近平面固定 0.05，
        一旦 float 在远平面处的间距超过 2 倍近平面，(zFar+zNear)/(zNear-zFar) 会舍成精确的 -1，
        抽取出的远平面法线归零，JOML 归一化时除以 0 得到 NaN，此后视锥对一切返回不可见：
        剔除循环不收敛、地形整片消失。临界点在 zFar = 2^20，上限取在其内。 */
     public static final int FORCE_LOADING_MAX_RENDER_DISTANCE_LIMIT = 1_000_000;
 
-    public static ForgeConfigSpec.IntValue FORCE_LOADING_MAX_RENDER_DISTANCE;
-    public static ForgeConfigSpec.BooleanValue FORCE_LOADING_HIDE_OCCLUDING_CLOUDS;
-    public static ForgeConfigSpec.IntValue BOSSSHOW_MAX_SUBTITLE_DURATION_TICKS;
-    public static ForgeConfigSpec.IntValue BOSSSHOW_RANGE_SCAN_INTERVAL_TICKS;
-    public static ForgeConfigSpec.IntValue BOSSSHOW_ENTITY_SELECTION_RANGE;
-    public static ForgeConfigSpec.BooleanValue BOSSSHOW_RECORDING_FLIGHT_INERTIA;
+    public static ModConfigSpec.IntValue FORCE_LOADING_MAX_RENDER_DISTANCE;
+    public static ModConfigSpec.BooleanValue FORCE_LOADING_HIDE_OCCLUDING_CLOUDS;
+    public static ModConfigSpec.IntValue BOSSSHOW_MAX_SUBTITLE_DURATION_TICKS;
+    public static ModConfigSpec.IntValue BOSSSHOW_RANGE_SCAN_INTERVAL_TICKS;
+    public static ModConfigSpec.IntValue BOSSSHOW_ENTITY_SELECTION_RANGE;
+    public static ModConfigSpec.BooleanValue BOSSSHOW_RECORDING_FLIGHT_INERTIA;
 
     // Faction Configuration | 阵营系统配置
-    public static ForgeConfigSpec.BooleanValue FACTION_ACTION_BAR_MESSAGES;
-    public static ForgeConfigSpec.BooleanValue FACTION_GLOW_ENABLED;
-    public static ForgeConfigSpec.IntValue FACTION_GLOW_RANGE;
-    public static ForgeConfigSpec.IntValue FACTION_GLOW_UPDATE_INTERVAL_TICKS;
-    public static ForgeConfigSpec.ConfigValue<String> FACTION_GLOW_HOSTILE_COLOR;
-    public static ForgeConfigSpec.ConfigValue<String> FACTION_GLOW_FRIENDLY_COLOR;
-    public static ForgeConfigSpec.ConfigValue<String> FACTION_GLOW_NEUTRAL_COLOR;
-    public static ForgeConfigSpec.ConfigValue<String> FACTION_GLOW_SAME_FACTION_COLOR;
-    public static ForgeConfigSpec.BooleanValue FACTION_ALERT_ENABLED;
-    public static ForgeConfigSpec.IntValue FACTION_ALERT_RANGE;
-    public static ForgeConfigSpec.BooleanValue FACTION_IMMEDIATE_MEMBER_ALERT;
-    public static ForgeConfigSpec.BooleanValue FACTION_LEADER_PROTECTION_ENABLED;
-    public static ForgeConfigSpec.BooleanValue FACTION_IMMEDIATE_LEADER_PROTECTION;
+    public static ModConfigSpec.BooleanValue FACTION_ACTION_BAR_MESSAGES;
+    public static ModConfigSpec.BooleanValue FACTION_GLOW_ENABLED;
+    public static ModConfigSpec.IntValue FACTION_GLOW_RANGE;
+    public static ModConfigSpec.IntValue FACTION_GLOW_UPDATE_INTERVAL_TICKS;
+    public static ModConfigSpec.ConfigValue<String> FACTION_GLOW_HOSTILE_COLOR;
+    public static ModConfigSpec.ConfigValue<String> FACTION_GLOW_FRIENDLY_COLOR;
+    public static ModConfigSpec.ConfigValue<String> FACTION_GLOW_NEUTRAL_COLOR;
+    public static ModConfigSpec.ConfigValue<String> FACTION_GLOW_SAME_FACTION_COLOR;
+    public static ModConfigSpec.BooleanValue FACTION_ALERT_ENABLED;
+    public static ModConfigSpec.IntValue FACTION_ALERT_RANGE;
+    public static ModConfigSpec.BooleanValue FACTION_IMMEDIATE_MEMBER_ALERT;
+    public static ModConfigSpec.BooleanValue FACTION_LEADER_PROTECTION_ENABLED;
+    public static ModConfigSpec.BooleanValue FACTION_IMMEDIATE_LEADER_PROTECTION;
 
     static {
         // Compatibility Configuration | 兼容性配置
@@ -245,7 +245,7 @@ public class EcaConfiguration {
     }
 
     // Safe Config Access Methods | 安全的配置访问方法
-    private static <T> T safeGet(ForgeConfigSpec.ConfigValue<T> configValue, T defaultValue) {
+    private static <T> T safeGet(ModConfigSpec.ConfigValue<T> configValue, T defaultValue) {
         try {
             return configValue != null ? configValue.get() : defaultValue;
         } catch (IllegalStateException | NullPointerException e) {

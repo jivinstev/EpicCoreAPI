@@ -3,8 +3,8 @@ package net.eca.client.render.preset;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 /* 一个自定义预设的多目标 RenderType 集合，由双 profile 五文件组成。
    BLOCK profile（<name>_block.vsh/.json）→ skybox / boss bar / block。

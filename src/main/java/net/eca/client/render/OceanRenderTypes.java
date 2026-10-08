@@ -5,8 +5,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.OceanShader;
 
@@ -14,7 +14,7 @@ import net.eca.client.render.shader.OceanShader;
 @OnlyIn(Dist.CLIENT)
 public class OceanRenderTypes {
 
-    private static final ResourceLocation BUBBLE_TEXTURE = new ResourceLocation("eca", "textures/shader/ocean_bubble.png");
+    private static final ResourceLocation BUBBLE_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/ocean_bubble.png");
 
     private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(OceanShader::getShader) {
         @Override

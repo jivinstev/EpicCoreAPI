@@ -11,7 +11,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.ITeleporter;
+import net.neoforged.neoforge.common.util.ITeleporter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -131,13 +131,13 @@ public class EntityMixin {
         EntityUtil.finishDimensionChange((Entity) (Object) this);
     }
 
-    @Inject(method = "changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraftforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;",
+    @Inject(method = "changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/neoforged/neoforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;",
             at = @At("HEAD"), remap = false)
     private void eca$beforeCustomDimensionChange(ServerLevel destination, ITeleporter teleporter, CallbackInfoReturnable<Entity> cir) {
         EntityUtil.beginDimensionChange((Entity) (Object) this);
     }
 
-    @Inject(method = "changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraftforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;",
+    @Inject(method = "changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/neoforged/neoforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;",
             at = @At("RETURN"), remap = false)
     private void eca$afterCustomDimensionChange(ServerLevel destination, ITeleporter teleporter, CallbackInfoReturnable<Entity> cir) {
         EntityUtil.finishDimensionChange((Entity) (Object) this);

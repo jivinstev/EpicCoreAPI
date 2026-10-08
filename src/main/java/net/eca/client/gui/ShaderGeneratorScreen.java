@@ -48,9 +48,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.fml.loading.FMLPaths;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import org.joml.Quaternionf;
@@ -810,7 +810,7 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         /* 滚轮在视口内缩放画布，并以光标为锚点 */
         if (openDropdown < 0 && previewViewport().contains(mouseX, mouseY)) {
             zoomCanvasAt(mouseX, mouseY, delta > 0.0 ? CANVAS_ZOOM_STEP : 1.0 / CANVAS_ZOOM_STEP);
@@ -864,7 +864,7 @@ public final class ShaderGeneratorScreen extends Screen {
                 return true;
             }
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, delta);
     }
 
     private boolean beginScrollbarDrag(double mouseX, double mouseY) {

@@ -2,8 +2,8 @@ package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 /**
  * Compatibility facade that converts legacy item Color-Key state into shader mask passes.

@@ -31,92 +31,92 @@ public final class ObfuscationMapping {
         Map<String, String> fields = new HashMap<>();
 
         // Entity
-        fields.put("Entity.removalReason", "f_146795_");
-        fields.put("Entity.levelCallback", "f_146801_");
+        fields.put("Entity.removalReason", "removalReason");
+        fields.put("Entity.levelCallback", "levelCallback");
 
         // LivingEntity teleport interpolation
-        fields.put("LivingEntity.lerpSteps", "f_20903_");
-        fields.put("LivingEntity.lerpX", "f_20904_");
-        fields.put("LivingEntity.lerpY", "f_20905_");
-        fields.put("LivingEntity.lerpZ", "f_20906_");
-        fields.put("LivingEntity.lerpYRot", "f_20907_");
-        fields.put("LivingEntity.lerpXRot", "f_20908_");
+        fields.put("LivingEntity.lerpSteps", "lerpSteps");
+        fields.put("LivingEntity.lerpX", "lerpX");
+        fields.put("LivingEntity.lerpY", "lerpY");
+        fields.put("LivingEntity.lerpZ", "lerpZ");
+        fields.put("LivingEntity.lerpYRot", "lerpYRot");
+        fields.put("LivingEntity.lerpXRot", "lerpXRot");
 
         // Boat teleport interpolation
-        fields.put("Boat.lerpSteps", "f_38267_");
-        fields.put("Boat.lerpX", "f_38268_");
-        fields.put("Boat.lerpY", "f_38269_");
-        fields.put("Boat.lerpZ", "f_38270_");
-        fields.put("Boat.lerpYRot", "f_38271_");
-        fields.put("Boat.lerpXRot", "f_38272_");
+        fields.put("Boat.lerpSteps", "lerpSteps");
+        fields.put("Boat.lerpX", "lerpX");
+        fields.put("Boat.lerpY", "lerpY");
+        fields.put("Boat.lerpZ", "lerpZ");
+        fields.put("Boat.lerpYRot", "lerpYRot");
+        fields.put("Boat.lerpXRot", "lerpXRot");
 
         // AbstractMinecart teleport interpolation
-        fields.put("AbstractMinecart.lSteps", "f_38070_");
-        fields.put("AbstractMinecart.lx", "f_38071_");
-        fields.put("AbstractMinecart.ly", "f_38072_");
-        fields.put("AbstractMinecart.lz", "f_38073_");
-        fields.put("AbstractMinecart.lyr", "f_38074_");
-        fields.put("AbstractMinecart.lxr", "f_38075_");
+        fields.put("AbstractMinecart.lSteps", "lSteps");
+        fields.put("AbstractMinecart.lx", "lx");
+        fields.put("AbstractMinecart.ly", "ly");
+        fields.put("AbstractMinecart.lz", "lz");
+        fields.put("AbstractMinecart.lyr", "lyr");
+        fields.put("AbstractMinecart.lxr", "lxr");
 
         // ServerLevel
-        fields.put("ServerLevel.players", "f_8546_");
-        fields.put("ServerLevel.chunkSource", "f_8547_");
-        fields.put("ServerLevel.entityTickList", "f_143243_");
-        fields.put("ServerLevel.entityManager", "f_143244_");
-        fields.put("ServerLevel.navigatingMobs", "f_143246_");
+        fields.put("ServerLevel.players", "players");
+        fields.put("ServerLevel.chunkSource", "chunkSource");
+        fields.put("ServerLevel.entityTickList", "entityTickList");
+        fields.put("ServerLevel.entityManager", "entityManager");
+        fields.put("ServerLevel.navigatingMobs", "navigatingMobs");
 
         // DimensionDataStorage
-        fields.put("DimensionDataStorage.cache", "f_78144_");
+        fields.put("DimensionDataStorage.cache", "cache");
 
         // EntityTickList
-        fields.put("EntityTickList.active", "f_156903_");
-        fields.put("EntityTickList.passive", "f_156904_");
-        fields.put("EntityTickList.iterated", "f_156905_");
+        fields.put("EntityTickList.active", "active");
+        fields.put("EntityTickList.passive", "passive");
+        fields.put("EntityTickList.iterated", "iterated");
 
         // ServerChunkCache
-        fields.put("ServerChunkCache.chunkMap", "f_8325_");
+        fields.put("ServerChunkCache.chunkMap", "chunkMap");
 
         // ChunkMap
-        fields.put("ChunkMap.entityMap", "f_140150_");
-        fields.put("ChunkMap.updatingChunkMap", "f_140129_");
-        fields.put("ChunkMap.pendingUnloads", "f_140131_");
-        fields.put("ChunkMap.entitiesInLevel", "f_140132_");
-        fields.put("ChunkMap.TrackedEntity.seenBy", "f_140475_");
+        fields.put("ChunkMap.entityMap", "entityMap");
+        fields.put("ChunkMap.updatingChunkMap", "updatingChunkMap");
+        fields.put("ChunkMap.pendingUnloads", "pendingUnloads");
+        fields.put("ChunkMap.entitiesInLevel", "entitiesInLevel");
+        fields.put("ChunkMap.TrackedEntity.seenBy", "seenBy");
 
         // PersistentEntitySectionManager
-        fields.put("PersistentEntitySectionManager.visibleEntityStorage", "f_157494_");
-        fields.put("PersistentEntitySectionManager.knownUuids", "f_157491_");
-        fields.put("PersistentEntitySectionManager.sectionStorage", "f_157495_");
-        fields.put("PersistentEntitySectionManager.callbacks", "f_157492_");
-        fields.put("PersistentEntitySectionManager.loadingInbox", "f_157500_");
-        fields.put("PersistentEntitySectionManager.chunkVisibility", "f_157497_");
-        fields.put("PersistentEntitySectionManager.chunksToUnload", "f_157499_");
-        fields.put("PersistentEntitySectionManager.chunkLoadStatuses", "f_157498_");
+        fields.put("PersistentEntitySectionManager.visibleEntityStorage", "visibleEntityStorage");
+        fields.put("PersistentEntitySectionManager.knownUuids", "knownUuids");
+        fields.put("PersistentEntitySectionManager.sectionStorage", "sectionStorage");
+        fields.put("PersistentEntitySectionManager.callbacks", "callbacks");
+        fields.put("PersistentEntitySectionManager.loadingInbox", "loadingInbox");
+        fields.put("PersistentEntitySectionManager.chunkVisibility", "chunkVisibility");
+        fields.put("PersistentEntitySectionManager.chunksToUnload", "chunksToUnload");
+        fields.put("PersistentEntitySectionManager.chunkLoadStatuses", "chunkLoadStatuses");
 
         // EntityLookup
-        fields.put("EntityLookup.byUuid", "f_156808_");
-        fields.put("EntityLookup.byId", "f_156807_");
+        fields.put("EntityLookup.byUuid", "byUuid");
+        fields.put("EntityLookup.byId", "byId");
 
         // EntitySectionStorage
-        fields.put("EntitySectionStorage.sections", "f_156852_");
-        fields.put("EntitySectionStorage.intialSectionVisibility", "f_156851_");
-        fields.put("EntitySectionStorage.sectionIds", "f_156853_");
+        fields.put("EntitySectionStorage.sections", "sections");
+        fields.put("EntitySectionStorage.intialSectionVisibility", "intialSectionVisibility");
+        fields.put("EntitySectionStorage.sectionIds", "sectionIds");
 
         // EntitySection
-        fields.put("EntitySection.storage", "f_156827_");
+        fields.put("EntitySection.storage", "storage");
 
         // ClassInstanceMultiMap
-        fields.put("ClassInstanceMultiMap.byClass", "f_13527_");
-        fields.put("ClassInstanceMultiMap.allInstances", "f_13529_");
+        fields.put("ClassInstanceMultiMap.byClass", "byClass");
+        fields.put("ClassInstanceMultiMap.allInstances", "allInstances");
 
         // ClientLevel
-        fields.put("ClientLevel.tickingEntities", "f_171630_");
-        fields.put("ClientLevel.entityStorage", "f_171631_");
-        fields.put("ClientLevel.players", "f_104566_");
+        fields.put("ClientLevel.tickingEntities", "tickingEntities");
+        fields.put("ClientLevel.entityStorage", "entityStorage");
+        fields.put("ClientLevel.players", "players");
 
         // TransientEntitySectionManager
-        fields.put("TransientEntitySectionManager.entityStorage", "f_157637_");
-        fields.put("TransientEntitySectionManager.sectionStorage", "f_157638_");
+        fields.put("TransientEntitySectionManager.entityStorage", "entityStorage");
+        fields.put("TransientEntitySectionManager.sectionStorage", "sectionStorage");
 
         FIELD_MAPPINGS.put(CURRENT_VERSION, fields);
     }
@@ -126,63 +126,63 @@ public final class ObfuscationMapping {
         Map<String, String> methods = new HashMap<>();
 
         // LivingEntity
-        methods.put("LivingEntity.dropAllDeathLoot", "m_6668_");
-        methods.put("LivingEntity.getRecordMaxHp", "m_21233_");
-        methods.put("LivingEntity.getHealth", "m_21223_");
-        methods.put("LivingEntity.getMaxHealth", "m_21233_");
-        methods.put("LivingEntity.actuallyHurt", "m_6475_");
-        methods.put("LivingEntity.hurt", "m_6469_");
-        methods.put("LivingEntity.setHealth", "m_21153_");
-        methods.put("LivingEntity.isDeadOrDying", "m_21224_");
-        methods.put("LivingEntity.isAlive", "m_6084_");
-        methods.put("LivingEntity.aiStep", "m_8107_");
-        methods.put("LivingEntity.tickDeath", "m_6153_");
+        methods.put("LivingEntity.dropAllDeathLoot", "dropAllDeathLoot");
+        methods.put("LivingEntity.getRecordMaxHp", "getMaxHealth");
+        methods.put("LivingEntity.getHealth", "getHealth");
+        methods.put("LivingEntity.getMaxHealth", "getMaxHealth");
+        methods.put("LivingEntity.actuallyHurt", "actuallyHurt");
+        methods.put("LivingEntity.hurt", "hurt");
+        methods.put("LivingEntity.setHealth", "setHealth");
+        methods.put("LivingEntity.isDeadOrDying", "isDeadOrDying");
+        methods.put("LivingEntity.isAlive", "isAlive");
+        methods.put("LivingEntity.aiStep", "aiStep");
+        methods.put("LivingEntity.tickDeath", "tickDeath");
 
         // Entity
-        methods.put("Entity.getId", "m_19879_");
-        methods.put("Entity.getUUID", "m_20148_");
-        methods.put("Entity.level", "m_9236_");
-        methods.put("Entity.setRemoved", "m_142467_");
-        methods.put("Entity.tick", "m_8119_");
-        methods.put("Entity.baseTick", "m_6075_");
-        methods.put("Entity.onSyncedDataUpdated", "m_7350_");
-        methods.put("Entity.positionRider", "m_19956_");
+        methods.put("Entity.getId", "getId");
+        methods.put("Entity.getUUID", "getUUID");
+        methods.put("Entity.level", "level");
+        methods.put("Entity.setRemoved", "setRemoved");
+        methods.put("Entity.tick", "tick");
+        methods.put("Entity.baseTick", "baseTick");
+        methods.put("Entity.onSyncedDataUpdated", "onSyncedDataUpdated");
+        methods.put("Entity.positionRider", "positionRider");
 
         // Entity storage
-        methods.put("EntityLookup.add", "m_156814_");
-        methods.put("EntitySection.add", "m_188346_");
-        methods.put("EntityTickList.add", "m_156908_");
-        methods.put("PersistentEntitySectionManager.addEntity", "m_157538_");
-        methods.put("PersistentEntitySectionManager.addNewEntity", "m_157533_");
-        methods.put("TransientEntitySectionManager.addEntity", "m_157653_");
-        methods.put("ChunkMap.addEntity", "m_140199_");
-        methods.put("ServerLevel.addEntity", "m_8872_");
-        methods.put("ServerLevel.addFreshEntity", "m_7967_");
-        methods.put("ServerLevel.addWithUUID", "m_8847_");
-        methods.put("ServerLevel.addDuringTeleport", "m_143334_");
+        methods.put("EntityLookup.add", "add");
+        methods.put("EntitySection.add", "add");
+        methods.put("EntityTickList.add", "add");
+        methods.put("PersistentEntitySectionManager.addEntity", "addEntity");
+        methods.put("PersistentEntitySectionManager.addNewEntity", "addNewEntity");
+        methods.put("TransientEntitySectionManager.addEntity", "addEntity");
+        methods.put("ChunkMap.addEntity", "addEntity");
+        methods.put("ServerLevel.addEntity", "addEntity");
+        methods.put("ServerLevel.addFreshEntity", "addFreshEntity");
+        methods.put("ServerLevel.addWithUUID", "addWithUUID");
+        methods.put("ServerLevel.addDuringTeleport", "addDuringTeleport");
 
         // CompoundTag
-        methods.put("CompoundTag.getBoolean", "m_128471_");
-        methods.put("CompoundTag.getByte", "m_128445_");
-        methods.put("CompoundTag.getShort", "m_128448_");
-        methods.put("CompoundTag.getInt", "m_128451_");
-        methods.put("CompoundTag.getLong", "m_128454_");
-        methods.put("CompoundTag.getFloat", "m_128457_");
-        methods.put("CompoundTag.getDouble", "m_128459_");
-        methods.put("CompoundTag.getString", "m_128461_");
-        methods.put("CompoundTag.putBoolean", "m_128379_");
-        methods.put("CompoundTag.putByte", "m_128344_");
-        methods.put("CompoundTag.putShort", "m_128376_");
-        methods.put("CompoundTag.putInt", "m_128405_");
-        methods.put("CompoundTag.putLong", "m_128356_");
-        methods.put("CompoundTag.putFloat", "m_128350_");
-        methods.put("CompoundTag.putDouble", "m_128347_");
-        methods.put("CompoundTag.putString", "m_128359_");
+        methods.put("CompoundTag.getBoolean", "getBoolean");
+        methods.put("CompoundTag.getByte", "getByte");
+        methods.put("CompoundTag.getShort", "getShort");
+        methods.put("CompoundTag.getInt", "getInt");
+        methods.put("CompoundTag.getLong", "getLong");
+        methods.put("CompoundTag.getFloat", "getFloat");
+        methods.put("CompoundTag.getDouble", "getDouble");
+        methods.put("CompoundTag.getString", "getString");
+        methods.put("CompoundTag.putBoolean", "putBoolean");
+        methods.put("CompoundTag.putByte", "putByte");
+        methods.put("CompoundTag.putShort", "putShort");
+        methods.put("CompoundTag.putInt", "putInt");
+        methods.put("CompoundTag.putLong", "putLong");
+        methods.put("CompoundTag.putFloat", "putFloat");
+        methods.put("CompoundTag.putDouble", "putDouble");
+        methods.put("CompoundTag.putString", "putString");
 
         // Mth
-        methods.put("Mth.clampInt", "m_14045_");
-        methods.put("Mth.clampFloat", "m_14036_");
-        methods.put("Mth.clampDouble", "m_14008_");
+        methods.put("Mth.clampInt", "clamp");
+        methods.put("Mth.clampFloat", "clamp");
+        methods.put("Mth.clampDouble", "clamp");
 
         METHOD_MAPPINGS.put(CURRENT_VERSION, methods);
     }

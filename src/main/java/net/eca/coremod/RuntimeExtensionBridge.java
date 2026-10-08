@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
  * Optional runtime-extension bridge. Platform artifacts contain only this inert boundary.
  */
 public final class RuntimeExtensionBridge {
-    public static final String EARLY_DISPLAY_TARGET = "net/minecraftforge/fml/earlydisplay/DisplayWindow";
+    public static final String EARLY_DISPLAY_TARGET = "net/neoforged/fml/earlydisplay/DisplayWindow";
     private static final String PROVIDER = "net.eca.pro.EcaProRuntime";
     private static final String EARLY_DISPLAY_TRANSFORMER = "net.eca.coremod.LoadingScreenTransformer";
     private static volatile Class<?> provider;

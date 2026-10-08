@@ -15,8 +15,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("removal")
 @OnlyIn(Dist.CLIENT)
 public final class BlenderModelRenderer {
-    private static final ResourceLocation WHITE_TEXTURE = new ResourceLocation("textures/misc/white.png");
+    private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.parse("textures/misc/white.png");
     private static final BlenderModelAsset.Material DEFAULT_MATERIAL =
         new BlenderModelAsset.Material(1.0f, 1.0f, 1.0f, 1.0f, null, false);
     private static final Set<ResourceLocation> LOGGED_MODEL_FAILURES = ConcurrentHashMap.newKeySet();
@@ -388,14 +388,13 @@ public final class BlenderModelRenderer {
         float v = uvOffset + 1 < primitive.texCoords().length ? primitive.texCoords()[uvOffset + 1] : 0.0f;
         Matrix4f position = pose.pose();
         Matrix3f normal = pose.normal();
-        consumer.vertex(position, deformed.positions()[positionOffset], deformed.positions()[positionOffset + 1],
+        consumer.addVertex(position, deformed.positions()[positionOffset], deformed.positions()[positionOffset + 1],
                 deformed.positions()[positionOffset + 2])
-            .color(material.red(), material.green(), material.blue(), material.alpha())
-            .uv(u, v)
-            .overlayCoords(overlay)
-            .uv2(packedLight)
-            .normal(normal, nx, ny, nz)
-            .endVertex();
+            .setColor(material.red(), material.green(), material.blue(), material.alpha())
+            .setUv(u, v)
+            .setOverlay(overlay)
+            .setLight(packedLight)
+            .normal(normal, nx, ny, nz);
     }
 
     private static final class AnimatedTransform {

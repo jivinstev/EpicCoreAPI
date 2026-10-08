@@ -2,8 +2,8 @@ package net.eca.blender.client.animation;
 
 import net.eca.blender.animation.BlenderPlaybackState;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.Map;
 import java.util.UUID;

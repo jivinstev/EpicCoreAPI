@@ -7,8 +7,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -77,55 +77,43 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public VertexConsumer vertex(double x, double y, double z) {
-        direct().vertex(x, y, z);
+    public VertexConsumer addVertex(float x, float y, float z) {
+        direct().addVertex(x, y, z);
         return this;
     }
 
     @Override
-    public VertexConsumer color(int red, int green, int blue, int alpha) {
-        direct().color(red, green, blue, alpha);
+    public VertexConsumer setColor(int red, int green, int blue, int alpha) {
+        direct().setColor(red, green, blue, alpha);
         return this;
     }
 
     @Override
-    public VertexConsumer uv(float u, float v) {
-        direct().uv(u, v);
+    public VertexConsumer setUv(float u, float v) {
+        direct().setUv(u, v);
         return this;
     }
 
     @Override
-    public VertexConsumer overlayCoords(int u, int v) {
-        direct().overlayCoords(u, v);
+    public VertexConsumer setUv1(int u, int v) {
+        direct().setUv1(u, v);
         return this;
     }
 
     @Override
-    public VertexConsumer uv2(int u, int v) {
-        direct().uv2(u, v);
+    public VertexConsumer setUv2(int u, int v) {
+        direct().setUv2(u, v);
         return this;
     }
 
     @Override
-    public VertexConsumer normal(float x, float y, float z) {
-        direct().normal(x, y, z);
+    public VertexConsumer setNormal(float x, float y, float z) {
+        direct().setNormal(x, y, z);
         return this;
     }
 
-    @Override
-    public void endVertex() {
-        direct().endVertex();
-    }
 
-    @Override
-    public void defaultColor(int red, int green, int blue, int alpha) {
-        direct().defaultColor(red, green, blue, alpha);
-    }
 
-    @Override
-    public void unsetDefaultColor() {
-        direct().unsetDefaultColor();
-    }
 
     public record SpriteBatch(BufferBuilder builder, MaskUvTransform uvTransform) {
     }

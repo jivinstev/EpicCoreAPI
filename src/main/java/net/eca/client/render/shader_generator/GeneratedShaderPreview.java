@@ -141,12 +141,12 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         try {
             blockShader = EcaShaderInstance.create(
                 provider,
-                new ResourceLocation(namespace, path + "_block"),
+                ResourceLocation.fromNamespaceAndPath(namespace, path + "_block"),
                 DefaultVertexFormat.BLOCK
             );
             entityShader = EcaShaderInstance.create(
                 provider,
-                new ResourceLocation(namespace, path + "_entity"),
+                ResourceLocation.fromNamespaceAndPath(namespace, path + "_entity"),
                 DefaultVertexFormat.NEW_ENTITY
             );
             ImportedTextureBindings importedBindings = bindImportedTextures(

@@ -2,13 +2,16 @@ package net.eca.network;
 
 import net.eca.client.FactionGlowData;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 /*
  * 服务端 → 客户端：同步玩家周围实体的阵营发光颜色映射。
@@ -17,7 +20,17 @@ import java.util.function.Supplier;
  * 通过此包发送到客户端。客户端存储在 FactionGlowData 中，由 EntityMixin
  * 注入 isCurrentlyGlowing / getTeamColor 消费。
  */
-public final class FactionGlowSyncPacket {
+public final class FactionGlowSyncPacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<FactionGlowSyncPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "faction_glow_sync_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, FactionGlowSyncPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> FactionGlowSyncPacket.encode(msg, buf), FactionGlowSyncPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<FactionGlowSyncPacket> type() {
+        return TYPE;
+    }
+
 
     private final Map<Integer, Integer> glowMap;
     private final int durationTicks;
@@ -47,10 +60,7 @@ public final class FactionGlowSyncPacket {
         return new FactionGlowSyncPacket(map, durationTicks);
     }
 
-    public static void handle(FactionGlowSyncPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                Dist.CLIENT, () -> () -> FactionGlowData.update(msg.glowMap, msg.durationTicks)));
-        context.setPacketHandled(true);
+    public static void handle(FactionGlowSyncPacket msg, IPayloadContext context) {
+        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) FactionGlowData.update(msg.glowMap, msg.durationTicks); });
     }
 }

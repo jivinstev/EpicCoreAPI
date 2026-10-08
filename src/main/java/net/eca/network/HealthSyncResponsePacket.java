@@ -2,14 +2,27 @@ package net.eca.network;
 
 import net.eca.util.health.report.HealthReportManager;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /** Client observations affect diagnostics only, never server health or mutation success. */
-public record HealthSyncResponsePacket(UUID request, UUID entityUuid, boolean verified, float actual) {
+public record HealthSyncResponsePacket(UUID request, UUID entityUuid, boolean verified, float actual) implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<HealthSyncResponsePacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "health_sync_response_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, HealthSyncResponsePacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> HealthSyncResponsePacket.encode(msg, buf), HealthSyncResponsePacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<HealthSyncResponsePacket> type() {
+        return TYPE;
+    }
+
     public static void encode(HealthSyncResponsePacket message, FriendlyByteBuf buffer) {
         buffer.writeUUID(message.request());
         buffer.writeUUID(message.entityUuid());
@@ -21,13 +34,11 @@ public record HealthSyncResponsePacket(UUID request, UUID entityUuid, boolean ve
         return new HealthSyncResponsePacket(buffer.readUUID(), buffer.readUUID(), buffer.readBoolean(), buffer.readFloat());
     }
 
-    public static void handle(HealthSyncResponsePacket message, Supplier<NetworkEvent.Context> supplier) {
-        NetworkEvent.Context context = supplier.get();
-        ServerPlayer sender = context.getSender();
+    public static void handle(HealthSyncResponsePacket message, IPayloadContext context) {
+        ServerPlayer sender = ((ServerPlayer) context.player());
         context.enqueueWork(() -> {
             if (sender != null) HealthReportManager.completeClientSync(
                     message.request(), message.entityUuid(), sender, message.verified(), message.actual());
         });
-        context.setPacketHandled(true);
     }
 }

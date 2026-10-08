@@ -5,8 +5,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.DreamSakuraShader;
 
@@ -14,7 +14,7 @@ import net.eca.client.render.shader.DreamSakuraShader;
 @OnlyIn(Dist.CLIENT)
 public class DreamSakuraRenderTypes {
 
-    private static final ResourceLocation DREAM_SAKURA_TEXTURE = new ResourceLocation("eca", "textures/shader/dream_sakura.png");
+    private static final ResourceLocation DREAM_SAKURA_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/dream_sakura.png");
 
     private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(DreamSakuraShader::getShader) {
         @Override

@@ -4,9 +4,9 @@ import net.eca.EcaMod;
 import net.eca.network.FilterSyncPacket;
 import net.eca.network.NetworkHandler;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Mod.EventBusSubscriber(modid = EcaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public class FilterManager {
 
     private static final Map<UUID, Set<FilterType>> ACTIVE_FILTERS = new ConcurrentHashMap<>();

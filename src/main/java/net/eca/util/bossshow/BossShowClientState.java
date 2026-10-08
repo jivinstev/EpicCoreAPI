@@ -1,5 +1,7 @@
 package net.eca.util.bossshow;
 
+import net.minecraft.core.registries.Registries;
+
 import net.eca.client.gui.BossShowEditorHomeScreen;
 import net.eca.client.BossShowScreenEffectState;
 import net.eca.config.EcaConfiguration;
@@ -15,8 +17,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.List;
 import java.util.Comparator;

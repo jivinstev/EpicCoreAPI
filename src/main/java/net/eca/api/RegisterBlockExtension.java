@@ -29,12 +29,12 @@ import java.lang.annotation.Target;
  *
  *     @Override
  *     public ResourceLocation getShaderPresetId() {
- *         return new ResourceLocation("example", "amethyst_glow");
+ *         return ResourceLocation.fromNamespaceAndPath("example", "amethyst_glow");
  *     }
  *
  *     @Override
  *     public List&lt;ShaderMaskPass&gt; getBlockShaderPasses() {
- *         ResourceLocation mask = new ResourceLocation("example", "textures/block/amethyst_mask.png");
+ *         ResourceLocation mask = ResourceLocation.fromNamespaceAndPath("example", "textures/block/amethyst_mask.png");
  *         return List.of(
  *             ShaderMaskPass.masked(getBlockRenderType(), mask, 0x000000, 0.05f, 1.0f),
  *             ShaderMaskPass.masked(CustomRenderTypes.BLOCK_FIRE, mask, 0xFF0000, 0.05f, 1.0f)

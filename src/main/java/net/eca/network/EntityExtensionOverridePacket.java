@@ -6,13 +6,25 @@ import net.eca.util.entity_extension.GlobalEffectRegistry;
 import net.eca.util.entity_extension.GlobalFogExtension;
 import net.eca.util.entity_extension.GlobalSkyboxExtension;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.function.Supplier;
 
-public class EntityExtensionOverridePacket {
+public class EntityExtensionOverridePacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<EntityExtensionOverridePacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_extension_override_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, EntityExtensionOverridePacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> EntityExtensionOverridePacket.encode(msg, buf), EntityExtensionOverridePacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<EntityExtensionOverridePacket> type() {
+        return TYPE;
+    }
+
 
     private static final byte ACTION_NONE = 0;
     private static final byte ACTION_SET = 1;
@@ -106,8 +118,7 @@ public class EntityExtensionOverridePacket {
         return new EntityExtensionOverridePacket(dimensionId, fogAction, fogData, skyboxAction, skyboxData, musicAction, musicData);
     }
 
-    public static void handle(EntityExtensionOverridePacket msg, Supplier<NetworkEvent.Context> context) {
-        NetworkEvent.Context ctx = context.get();
+    public static void handle(EntityExtensionOverridePacket msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (msg.fogAction == ACTION_SET && msg.fogData != null) {
                 EntityExtensionClientState.setActiveFog(msg.dimensionId, msg.fogData.toExtension(), true);
@@ -127,7 +138,6 @@ public class EntityExtensionOverridePacket {
                 EntityExtensionClientState.setActiveMusic(msg.dimensionId, null, true);
             }
         });
-        ctx.setPacketHandled(true);
     }
 
     // ==================== 数据载体 ====================

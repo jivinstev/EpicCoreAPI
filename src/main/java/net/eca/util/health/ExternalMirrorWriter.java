@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
-import net.minecraftforge.common.util.DummySavedData;
+import net.neoforged.neoforge.common.util.DummySavedData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

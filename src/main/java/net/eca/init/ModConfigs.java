@@ -1,14 +1,14 @@
 package net.eca.init;
 
 import net.eca.config.EcaConfiguration;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
+import net.neoforged.fml.ModLoadingContext;
+import net.neoforged.fml.config.ModConfig;
 
 @SuppressWarnings("removal")
 //Mod配置注册类
 public class ModConfigs {
     public static void register() {
-        ModLoadingContext.get().registerConfig(
+        ModLoadingContext.get().getActiveContainer().registerConfig(
             ModConfig.Type.COMMON,
             EcaConfiguration.SPEC,
             "eca.toml"

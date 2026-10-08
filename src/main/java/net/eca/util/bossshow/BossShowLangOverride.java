@@ -6,11 +6,11 @@ import com.google.gson.JsonParser;
 import net.eca.EcaMod;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 //客户端字幕翻译的整合包覆盖层：读 config/eca/bossshow/lang/<locale>.json
 //优先级在 vanilla I18n 之上；当前 locale 未命中 → 返回 null，由调用方回退到 I18n
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = EcaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class BossShowLangOverride {
 
     private static final Path LANG_DIR = Paths.get("config", "eca", "bossshow", "lang");

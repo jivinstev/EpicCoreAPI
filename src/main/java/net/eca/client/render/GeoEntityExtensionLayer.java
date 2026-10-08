@@ -15,10 +15,10 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.core.animatable.GeoAnimatable;
+import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.renderer.GeoRenderer;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
@@ -103,11 +103,11 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
             BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
             builder.begin(VertexFormat.Mode.QUADS, type.format());
             this.renderer.reRender(bakedModel, poseStack, rt -> builder, animatable, type, builder,
-                    partialTick, light, overlay, 1.0f, 1.0f, 1.0f, alpha);
+                    partialTick, light, overlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
             ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(type, 1.0f), builder, builder.end());
         } else {
             this.renderer.reRender(bakedModel, poseStack, bufferSource, animatable, type,
-                    bufferSource.getBuffer(type), partialTick, light, overlay, 1.0f, 1.0f, 1.0f, alpha);
+                    bufferSource.getBuffer(type), partialTick, light, overlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
         }
     }
 
@@ -119,7 +119,7 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
         BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
         builder.begin(VertexFormat.Mode.QUADS, type.format());
         this.renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, type, builder,
-            partialTick, light, overlay, 1.0f, 1.0f, 1.0f, 1.0f);
+            partialTick, light, overlay, -1);
         if (oculus) {
             ShaderMaskRenderQueue.enqueue(pass, builder, builder.end());
         } else {

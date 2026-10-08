@@ -1,5 +1,7 @@
 package net.eca.network;
 
+import net.minecraft.core.registries.Registries;
+
 import net.eca.client.gui.BossShowEditorHomeScreen;
 import net.eca.util.bossshow.BossShowDefinition;
 import net.eca.util.bossshow.BossShowDefinition.Frame;
@@ -10,20 +12,32 @@ import net.eca.util.bossshow.BossShowEffectCue;
 import net.eca.util.bossshow.Trigger;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 
 //S→C：打开 BossShow 编辑器 Home 界面，携带服务端当前所有定义的完整数据
-public class BossShowOpenEditorHomePacket {
+public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<BossShowOpenEditorHomePacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_open_editor_home_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BossShowOpenEditorHomePacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> BossShowOpenEditorHomePacket.encode(msg, buf), BossShowOpenEditorHomePacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<BossShowOpenEditorHomePacket> type() {
+        return TYPE;
+    }
+
 
     private final List<BossShowDefinition> definitions;
 
@@ -73,10 +87,8 @@ public class BossShowOpenEditorHomePacket {
         return new BossShowOpenEditorHomePacket(defs);
     }
 
-    public static void handle(BossShowOpenEditorHomePacket msg, Supplier<NetworkEvent.Context> ctxSup) {
-        NetworkEvent.Context ctx = ctxSup.get();
-        ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHandlerRef.onOpen(msg)));
-        ctx.setPacketHandled(true);
+    public static void handle(BossShowOpenEditorHomePacket msg, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onOpen(msg); });
     }
 
     public List<BossShowDefinition> definitions() {

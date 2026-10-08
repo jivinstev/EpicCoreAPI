@@ -3,12 +3,15 @@ package net.eca.network;
 import net.eca.util.raid.RaidBarState;
 import net.eca.util.raid.RaidClientState;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
 /*
  * 服务端 → 客户端：同步一条 Boss 血条所属的袭击状态。
@@ -17,7 +20,17 @@ import java.util.function.Supplier;
  * RaidBossBarExtension 条件方法的唯一途径。state 为 null 表示解除映射
  * （袭击结束或玩家离开参与范围）。
  */
-public final class RaidBossBarSyncPacket {
+public final class RaidBossBarSyncPacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<RaidBossBarSyncPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "raid_boss_bar_sync_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, RaidBossBarSyncPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> RaidBossBarSyncPacket.encode(msg, buf), RaidBossBarSyncPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<RaidBossBarSyncPacket> type() {
+        return TYPE;
+    }
+
 
     private final UUID bossEventId;
     private final RaidBarState state;
@@ -41,10 +54,7 @@ public final class RaidBossBarSyncPacket {
         return new RaidBossBarSyncPacket(bossEventId, state);
     }
 
-    public static void handle(RaidBossBarSyncPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context context = ctx.get();
-        context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                Dist.CLIENT, () -> () -> RaidClientState.setBarState(msg.bossEventId, msg.state)));
-        context.setPacketHandled(true);
+    public static void handle(RaidBossBarSyncPacket msg, IPayloadContext context) {
+        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) RaidClientState.setBarState(msg.bossEventId, msg.state); });
     }
 }

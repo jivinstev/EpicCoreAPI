@@ -21,17 +21,17 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 //编辑器可视化：锚点光柱 + 摄像机路径折线 + 关键帧头颅
-@Mod.EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
 public final class BossShowAnchorRenderer {
 
     private static final float BEAM_HEIGHT = 6.0f;
@@ -142,14 +142,12 @@ public final class BossShowAnchorRenderer {
             float nx = (float) dir.x;
             float ny = (float) dir.y;
             float nz = (float) dir.z;
-            vc.vertex(poseMatrix, (float) p1.x, (float) p1.y, (float) p1.z)
-                .color(PATH_R, PATH_G, PATH_B, PATH_A)
-                .normal(normalMatrix, nx, ny, nz)
-                .endVertex();
-            vc.vertex(poseMatrix, (float) p2.x, (float) p2.y, (float) p2.z)
-                .color(PATH_R, PATH_G, PATH_B, PATH_A)
-                .normal(normalMatrix, nx, ny, nz)
-                .endVertex();
+            vc.addVertex(poseMatrix, (float) p1.x, (float) p1.y, (float) p1.z)
+                .setColor(PATH_R, PATH_G, PATH_B, PATH_A)
+                .normal(normalMatrix, nx, ny, nz);
+            vc.addVertex(poseMatrix, (float) p2.x, (float) p2.y, (float) p2.z)
+                .setColor(PATH_R, PATH_G, PATH_B, PATH_A)
+                .normal(normalMatrix, nx, ny, nz);
         }
     }
 

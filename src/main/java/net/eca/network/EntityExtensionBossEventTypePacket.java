@@ -2,13 +2,25 @@ package net.eca.network;
 
 import net.eca.util.entity_extension.EntityExtensionClientState;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class EntityExtensionBossEventTypePacket {
+public class EntityExtensionBossEventTypePacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<EntityExtensionBossEventTypePacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_extension_boss_event_type_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, EntityExtensionBossEventTypePacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> EntityExtensionBossEventTypePacket.encode(msg, buf), EntityExtensionBossEventTypePacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<EntityExtensionBossEventTypePacket> type() {
+        return TYPE;
+    }
+
 
     private final UUID bossEventId;
     private final ResourceLocation typeId;
@@ -41,11 +53,9 @@ public class EntityExtensionBossEventTypePacket {
         return new EntityExtensionBossEventTypePacket(bossEventId, typeId, entityUuid);
     }
 
-    public static void handle(EntityExtensionBossEventTypePacket message, Supplier<NetworkEvent.Context> context) {
-        NetworkEvent.Context ctx = context.get();
+    public static void handle(EntityExtensionBossEventTypePacket message, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             EntityExtensionClientState.setBossEventType(message.bossEventId, message.typeId, message.entityUuid);
         });
-        ctx.setPacketHandled(true);
     }
 }

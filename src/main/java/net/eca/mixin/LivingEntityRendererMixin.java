@@ -14,8 +14,8 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -64,7 +64,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
             eca$blenderReplacedBody = true;
             return;
         }
-        model.renderToBuffer(poseStack, consumer, packedLight, packedOverlay, red, green, blue, alpha);
+        model.renderToBuffer(poseStack, consumer, packedLight, packedOverlay, net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, red, green, blue));
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

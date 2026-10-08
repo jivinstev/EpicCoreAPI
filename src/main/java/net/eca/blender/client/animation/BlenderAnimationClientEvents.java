@@ -1,12 +1,12 @@
 package net.eca.blender.client.animation;
 
 import net.eca.EcaMod;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public final class BlenderAnimationClientEvents {
     private BlenderAnimationClientEvents() {
     }

@@ -7,9 +7,10 @@ import net.eca.init.ModConfigs;
 import net.eca.network.NetworkHandler;
 import net.eca.util.selector.EcaSelectorRegistry;
 import net.eca.util.entity_extension.ForceLoadingManager;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.ModContainer;
 
 @SuppressWarnings("removal")
 @Mod(EcaMod.MOD_ID)
@@ -26,23 +27,23 @@ public final class EcaMod {
         loadComplete = value;
     }
 
-    public EcaMod() {
+    public EcaMod(IEventBus modEventBus, ModContainer modContainer) {
 
         // 从 CoreMod ClassLoader 桥接 Instrumentation 到 GAME layer
         bridgeInstrumentationFromCoremod();
         // 注册配置
         ModConfigs.register();
         // 注册网络处理器
-        NetworkHandler.register();
+        modEventBus.addListener(NetworkHandler::register);
         // 注册事件处理器
-        MinecraftForge.EVENT_BUS.register(new EcaEventHandler());
+        NeoForge.EVENT_BUS.register(new EcaEventHandler());
         // 注册全局 ECA 实体选择器（@eca_e / @eca_p）
         EcaSelectorRegistry.register();
         // 注册强加载区块票据验证回调
         ForceLoadingManager.registerValidationCallback();
         // 注册 Forge 生命周期事件
         LoadCompleteHandler loadCompleteHandler = new LoadCompleteHandler();
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(loadCompleteHandler::onLoadComplete);
+        modEventBus.addListener(loadCompleteHandler::onLoadComplete);
     }
 
     //从 SystemClassLoader（Agent 层）或 CoreMod ClassLoader 获取 Instrumentation 桥接到当前 GAME layer

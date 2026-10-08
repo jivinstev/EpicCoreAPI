@@ -23,11 +23,11 @@ import java.util.Set;
 
 public final class EcaCoreTransformer implements ITransformer<ClassNode> {
 
-    private static final String GET_HEALTH = "m_21223_";
-    private static final String GET_MAX_HEALTH = "m_21233_";
-    private static final String IS_DEAD_OR_DYING = "m_21224_";
-    private static final String IS_ALIVE = "m_6084_";
-    private static final String IS_REMOVED = "m_213877_";
+    private static final String GET_HEALTH = "getHealth";
+    private static final String GET_MAX_HEALTH = "getMaxHealth";
+    private static final String IS_DEAD_OR_DYING = "isDeadOrDying";
+    private static final String IS_ALIVE = "isAlive";
+    private static final String IS_REMOVED = "isRemoved";
     private static final String LIVING_HOOK = "net/eca/coremod/LivingEntityHook";
     private static final String ENTITY_HOOK = "net/eca/coremod/EntityHook";
     private static final String LIVING_ENTITY = "net/minecraft/world/entity/LivingEntity";

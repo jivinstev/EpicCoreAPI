@@ -9,8 +9,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceProvider;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 /* 单个自定义预设的着色器持有者：一个逻辑预设 id 对应两个 ShaderInstance——BLOCK profile（id+"_block"，
    DefaultVertexFormat.BLOCK）服务 BLOCK 顶点格式的 RenderType（天空盒 / Boss 血条），NEW_ENTITY profile
@@ -45,7 +45,7 @@ final class GenericPresetShader {
 
     //逻辑预设 id → 单 profile 的 core shader id：eca:foo + "block" → eca:foo_block，对齐作者端导出命名
     private static ResourceLocation suffixed(ResourceLocation id, String suffix) {
-        return new ResourceLocation(id.getNamespace(), id.getPath() + "_" + suffix);
+        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_" + suffix);
     }
 
     /* 单个 profile 的着色器持有者：持有该 profile 的 core shader id、匹配的顶点格式、当前 ShaderInstance 与一组标准

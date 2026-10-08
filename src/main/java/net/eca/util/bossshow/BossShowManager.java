@@ -1,11 +1,13 @@
 package net.eca.util.bossshow;
 
+import net.minecraft.core.registries.Registries;
+
 import net.eca.api.RegisterBossShow;
 import net.eca.util.EcaLogger;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 import net.minecraftforge.forgespi.language.IModInfo;
 
 import java.io.IOException;

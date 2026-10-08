@@ -15,8 +15,8 @@ import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -59,7 +59,7 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
                 if (start >= end) {
                     throw new IOException("Definition has no model id");
                 }
-                ResourceLocation modelId = new ResourceLocation(definitionLocation.getNamespace(),
+                ResourceLocation modelId = ResourceLocation.fromNamespaceAndPath(definitionLocation.getNamespace(),
                     path.substring(start, end));
                 JsonObject json;
                 try (InputStream input = entry.getValue().open();
@@ -68,7 +68,7 @@ public final class BlenderModelManager extends SimplePreparableReloadListener<Ma
                 }
                 BlenderModelDefinition definition = BlenderModelDefinition.parse(json);
                 String folder = path.substring(0, path.length() - "definition.json".length());
-                ResourceLocation modelLocation = new ResourceLocation(definitionLocation.getNamespace(),
+                ResourceLocation modelLocation = ResourceLocation.fromNamespaceAndPath(definitionLocation.getNamespace(),
                     folder + definition.modelFile());
                 BlenderModelAsset asset = definition.modelFile().endsWith(".blend")
                     ? BlendModelLoader.load(resourceManager, modelLocation, modelId, definition)

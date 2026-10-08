@@ -1,6 +1,9 @@
 package net.eca.mixin;
 
+import net.minecraft.core.registries.Registries;
+
 import net.eca.util.item_extension.EcaTooltipLine;
+import net.eca.ItemNbt;
 import net.eca.util.item_extension.EcaTooltipPosition;
 import net.eca.util.item_extension.ItemExtension;
 import net.eca.util.item_extension.ItemExtensionManager;
@@ -10,8 +13,8 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -72,8 +75,8 @@ public class ItemStackClientMixin {
         int fallback = lines.size();
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         String disabled = Component.translatable("item.disabled").getString();
-        String nbtTags = stack.hasTag()
-            ? Component.translatable("item.nbt_tags", stack.getTag().getAllKeys().size()).getString()
+        String nbtTags = ItemNbt.hasTag(stack)
+            ? Component.translatable("item.nbt_tags", ItemNbt.getTag(stack).getAllKeys().size()).getString()
             : null;
         for (int i = 1; i < lines.size(); i++) {
             String text = lines.get(i).getString();

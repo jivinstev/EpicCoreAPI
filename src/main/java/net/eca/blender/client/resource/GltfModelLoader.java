@@ -287,7 +287,7 @@ final class GltfModelLoader {
         for (int i = 0; i < images.size(); i++) {
             JsonObject image = images.get(i).getAsJsonObject();
             byte[] bytes = readImage(image);
-            ResourceLocation location = new ResourceLocation(modelId.getNamespace(),
+            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(modelId.getNamespace(),
                 "eca/blender_runtime/" + modelId.getPath() + "/image_" + i);
             output.add(new BlenderModelAsset.TextureData(location, bytes));
             imagesByIndex.put(i, location);
@@ -320,7 +320,7 @@ final class GltfModelLoader {
             throw new IOException("Invalid image path in " + modelLocation);
         }
         String parent = modelLocation.getPath().substring(0, modelLocation.getPath().lastIndexOf('/') + 1);
-        ResourceLocation imageLocation = new ResourceLocation(modelLocation.getNamespace(), parent + uri);
+        ResourceLocation imageLocation = ResourceLocation.fromNamespaceAndPath(modelLocation.getNamespace(), parent + uri);
         Resource resource = resources.getResource(imageLocation)
             .orElseThrow(() -> new IOException("Missing image resource " + imageLocation));
         try (InputStream input = resource.open()) {

@@ -13,10 +13,10 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.core.animatable.GeoAnimatable;
+import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
@@ -79,7 +79,7 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
         BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder();
         builder.begin(VertexFormat.Mode.QUADS, renderType.format());
         renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, renderType, builder,
-            partialTick, light, OverlayTexture.NO_OVERLAY, 1.0f, 1.0f, 1.0f, 1.0f);
+            partialTick, light, OverlayTexture.NO_OVERLAY, -1);
         if (queued) {
             ShaderMaskRenderQueue.enqueue(pass, builder, builder.end());
         } else {

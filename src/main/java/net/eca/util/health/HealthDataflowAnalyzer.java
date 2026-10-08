@@ -72,16 +72,16 @@ public final class HealthDataflowAnalyzer {
 
     private static final String DAMAGE_SOURCE_DESC = "Lnet/minecraft/world/damagesource/DamageSource;";
     private static final String ENTITY_DATA_ACCESSOR_DESC = "Lnet/minecraft/network/syncher/EntityDataAccessor;";
-    public static final McMethod GET_HEALTH       = new McMethod("m_21223_", "getHealth", "()F");
-    public static final McMethod GET_MAX_HEALTH   = new McMethod("m_21233_", "getMaxHealth", "()F");
-    public static final McMethod IS_ALIVE         = new McMethod("m_6084_", "isAlive", "()Z");
-    public static final McMethod IS_DEAD_OR_DYING = new McMethod("m_21224_", "isDeadOrDying", "()Z");
-    public static final McMethod HURT             = new McMethod("m_6469_", "hurt", "(" + DAMAGE_SOURCE_DESC + "F)Z");
-    public static final McMethod ACTUALLY_HURT    = new McMethod("m_6475_", "actuallyHurt", "(" + DAMAGE_SOURCE_DESC + "F)V");
-    public static final McMethod SET_HEALTH       = new McMethod("m_21153_", "setHealth", "(F)V");
-    public static final McMethod TICK             = new McMethod("m_8119_", "tick", "()V");
-    public static final McMethod BASE_TICK        = new McMethod("m_6075_", "baseTick", "()V");
-    public static final McMethod AI_STEP          = new McMethod("m_8107_", "aiStep", "()V");
+    public static final McMethod GET_HEALTH       = new McMethod("getHealth", "getHealth", "()F");
+    public static final McMethod GET_MAX_HEALTH   = new McMethod("getMaxHealth", "getMaxHealth", "()F");
+    public static final McMethod IS_ALIVE         = new McMethod("isAlive", "isAlive", "()Z");
+    public static final McMethod IS_DEAD_OR_DYING = new McMethod("isDeadOrDying", "isDeadOrDying", "()Z");
+    public static final McMethod HURT             = new McMethod("hurt", "hurt", "(" + DAMAGE_SOURCE_DESC + "F)Z");
+    public static final McMethod ACTUALLY_HURT    = new McMethod("actuallyHurt", "actuallyHurt", "(" + DAMAGE_SOURCE_DESC + "F)V");
+    public static final McMethod SET_HEALTH       = new McMethod("setHealth", "setHealth", "(F)V");
+    public static final McMethod TICK             = new McMethod("tick", "tick", "()V");
+    public static final McMethod BASE_TICK        = new McMethod("baseTick", "baseTick", "()V");
+    public static final McMethod AI_STEP          = new McMethod("aiStep", "aiStep", "()V");
 
     /* ==================== 外部扫描：isAlive/isDeadOrDying 数据流逆向 ==================== */
 
@@ -1491,7 +1491,7 @@ public final class HealthDataflowAnalyzer {
     }
 
     private static boolean isDamageAmountCall(Call call) {
-        return call.owner().startsWith("net/minecraftforge/event/entity/living/")
+        return call.owner().startsWith("net/neoforged/neoforge/event/entity/living/")
                 && call.name().equals("getAmount");
     }
 
@@ -2102,10 +2102,10 @@ public final class HealthDataflowAnalyzer {
         registerIdentityCall("java/lang/Long", "valueOf", "(J)Ljava/lang/Long;");
 
         // Minecraft CompoundTag getXxx (identity,写回由 sink IO 完成)
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "m_128457_", "(Ljava/lang/String;)F");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "m_128451_", "(Ljava/lang/String;)I");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "m_128454_", "(Ljava/lang/String;)J");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "m_128459_", "(Ljava/lang/String;)D");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDouble", "(Ljava/lang/String;)D");
         registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
         registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
         registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
@@ -4362,10 +4362,10 @@ public final class HealthDataflowAnalyzer {
     private static boolean isNbtPut(MethodInsnNode call) {
         if (!call.owner.equals("net/minecraft/nbt/CompoundTag")) return false;
         return switch (call.name) {
-            case "putBoolean", "m_128379_", "putByte", "m_128344_",
-                    "putShort", "m_128376_", "putInt", "m_128405_",
-                    "putLong", "m_128356_", "putFloat", "m_128350_",
-                    "putDouble", "m_128347_", "putString", "m_128359_" -> true;
+            case "putBoolean", "putBoolean", "putByte", "putByte",
+                    "putShort", "putShort", "putInt", "putInt",
+                    "putLong", "putLong", "putFloat", "putFloat",
+                    "putDouble", "putDouble", "putString", "putString" -> true;
             default -> false;
         };
     }
@@ -4883,7 +4883,7 @@ public final class HealthDataflowAnalyzer {
 
     private static boolean isSynchedDataSet(MethodInsnNode call) {
         return call.owner.equals("net/minecraft/network/syncher/SynchedEntityData")
-                && (call.name.equals("m_135381_") || call.name.equals("set"));
+                && (call.name.equals("set") || call.name.equals("set"));
     }
 
     private static boolean isMapPut(MethodInsnNode call) {
@@ -6271,7 +6271,7 @@ public final class HealthDataflowAnalyzer {
 
             // SynchedEntityData.get
             if (m.owner.equals("net/minecraft/network/syncher/SynchedEntityData")
-                && (m.name.equals("m_135370_") || m.name.equals("get"))
+                && (m.name.equals("get") || m.name.equals("get"))
                 && values.size() >= 2) {
                 Expr accExpr = values.get(1).expr;
                 if (accExpr instanceof Reference ref && ref.value() instanceof EntityDataAccessor<?> acc) {
@@ -6953,8 +6953,8 @@ public final class HealthDataflowAnalyzer {
     private static MapEntrySource.KeyKind detectKeyKind(Expr key) {
         if (key == EntityParamMarker.I) return MapEntrySource.KeyKind.ENTITY;
         if (key instanceof Call call && call.args().size() == 1 && call.args().get(0) == EntityParamMarker.I) {
-            if (call.name().equals("m_19879_") || call.name().equals("getId")) return MapEntrySource.KeyKind.ENTITY_ID;
-            if (call.name().equals("m_20148_") || call.name().equals("getUUID")) return MapEntrySource.KeyKind.ENTITY_UUID;
+            if (call.name().equals("getId") || call.name().equals("getId")) return MapEntrySource.KeyKind.ENTITY_ID;
+            if (call.name().equals("getUUID") || call.name().equals("getUUID")) return MapEntrySource.KeyKind.ENTITY_UUID;
         }
         return MapEntrySource.KeyKind.UNKNOWN;
     }

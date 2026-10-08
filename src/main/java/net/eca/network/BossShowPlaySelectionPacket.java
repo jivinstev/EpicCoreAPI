@@ -4,21 +4,33 @@ import net.eca.util.bossshow.BossShowDefinition;
 import net.eca.util.bossshow.BossShowManager;
 import net.eca.util.bossshow.BossShowPlaybackTracker;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 //C→S：玩家在编辑器 Home 点击 Play 后，对选中的实体请求播放某个 cutscene
-public class BossShowPlaySelectionPacket {
+public class BossShowPlaySelectionPacket implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<BossShowPlaySelectionPacket> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_play_selection_packet"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, BossShowPlaySelectionPacket> STREAM_CODEC =
+            StreamCodec.of((buf, msg) -> BossShowPlaySelectionPacket.encode(msg, buf), BossShowPlaySelectionPacket::decode);
+
+    @Override
+    public CustomPacketPayload.Type<BossShowPlaySelectionPacket> type() {
+        return TYPE;
+    }
+
 
     //和 /eca bossShow edit 保持一致的 64 格扫描半径
     private static final double SCAN_RADIUS = 64.0;
@@ -40,10 +52,9 @@ public class BossShowPlaySelectionPacket {
         return new BossShowPlaySelectionPacket(buf.readResourceLocation(), buf.readUUID());
     }
 
-    public static void handle(BossShowPlaySelectionPacket msg, Supplier<NetworkEvent.Context> ctxSup) {
-        NetworkEvent.Context ctx = ctxSup.get();
+    public static void handle(BossShowPlaySelectionPacket msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
+            ServerPlayer player = ((ServerPlayer) ctx.player());
             if (player == null) return;
 
             BossShowDefinition def = BossShowManager.get(msg.defId);
@@ -70,6 +81,5 @@ public class BossShowPlaySelectionPacket {
                 player.sendSystemMessage(Component.literal("§cFailed to start BossShow (already playing or empty definition)"));
             }
         });
-        ctx.setPacketHandled(true);
     }
 }

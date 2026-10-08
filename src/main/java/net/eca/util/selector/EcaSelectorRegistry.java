@@ -1,7 +1,7 @@
 package net.eca.util.selector;
 
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.common.command.EntitySelectorManager;
+import net.neoforged.neoforge.common.command.EntitySelectorManager;
 
 public final class EcaSelectorRegistry {
 

@@ -59,7 +59,7 @@ public final class ShaderProjectSelectionScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         int maxScroll = Math.max(0, projects.size() - visibleRows);
         int next = Math.max(0, Math.min(maxScroll, scroll + (delta > 0.0 ? -1 : 1)));
         if (next != scroll) {
@@ -71,7 +71,7 @@ public final class ShaderProjectSelectionScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
         if (projects.isEmpty()) {
             graphics.drawCenteredString(

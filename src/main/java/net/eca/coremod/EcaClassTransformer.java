@@ -44,11 +44,11 @@ public final class EcaClassTransformer implements ClassFileTransformer {
 
     // ==================== SRG 方法名 ====================
 
-    private static final String GET_HEALTH         = "m_21223_";
-    private static final String GET_MAX_HEALTH     = "m_21233_";
-    private static final String IS_DEAD_OR_DYING   = "m_21224_";
-    private static final String IS_ALIVE           = "m_6084_";
-    private static final String IS_REMOVED         = "m_213877_";
+    private static final String GET_HEALTH         = "getHealth";
+    private static final String GET_MAX_HEALTH     = "getMaxHealth";
+    private static final String IS_DEAD_OR_DYING   = "isDeadOrDying";
+    private static final String IS_ALIVE           = "isAlive";
+    private static final String IS_REMOVED         = "isRemoved";
 
     // ==================== Hook 类路径 ====================
 
@@ -67,7 +67,7 @@ public final class EcaClassTransformer implements ClassFileTransformer {
         "net/minecraft/server/level/ServerLevel"
     );
 
-    /* 必须在注册 Transformer 前从磁盘读取，避免类加载回调进入 ForgeConfigSpec 而与 ModuleClassLoader 死锁。 */
+    /* 必须在注册 Transformer 前从磁盘读取，避免类加载回调进入 ModConfigSpec 而与 ModuleClassLoader 死锁。 */
     private static final boolean FORCE_COMPATIBILITY_MODE = readForceCompatibilityMode();
 
     private static volatile int transformCount = 0;

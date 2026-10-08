@@ -6,7 +6,7 @@ import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.client.event.RegisterShadersEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
 import java.io.IOException;
 
@@ -25,7 +25,7 @@ public class TheLastEndShader {
     public static void register(RegisterShadersEvent event) throws IOException {
         ShaderInstance theLastEndShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
-            new ResourceLocation("eca", "the_last_end"),
+            ResourceLocation.fromNamespaceAndPath("eca", "the_last_end"),
             DefaultVertexFormat.BLOCK
         );
         event.registerShader(theLastEndShader, instance -> {

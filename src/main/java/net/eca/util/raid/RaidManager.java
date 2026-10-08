@@ -12,7 +12,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 import net.minecraftforge.forgespi.language.IModInfo;
 
 import java.util.ArrayList;

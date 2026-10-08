@@ -20,13 +20,13 @@ import java.security.ProtectionDomain;
  */
 public final class LoadingScreenTransformer implements ClassFileTransformer {
 
-    public static final String TARGET_CLASS = "net/minecraftforge/fml/earlydisplay/DisplayWindow";
+    public static final String TARGET_CLASS = "net/neoforged/fml/earlydisplay/DisplayWindow";
     public static final boolean ENABLED = true;
 
     private static final String PAINT_METHOD  = "paintFramebuffer";
     private static final String PAINT_DESC    = "()V";
     private static final String CONTEXT_FIELD = "context";
-    private static final String CONTEXT_TYPE  = "net/minecraftforge/fml/earlydisplay/RenderElement$DisplayContext";
+    private static final String CONTEXT_TYPE  = "net/neoforged/fml/earlydisplay/RenderElement$DisplayContext";
     private static final String CONTEXT_DESC  = "L" + CONTEXT_TYPE + ";";
     private static final String GL            = "org/lwjgl/opengl/GL11C";
     private static final String INTRO_CALLBACK_KEY = "net.eca.pro.intro.callback";

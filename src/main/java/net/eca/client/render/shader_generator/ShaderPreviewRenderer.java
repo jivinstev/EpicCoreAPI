@@ -143,12 +143,11 @@ public final class ShaderPreviewRenderer {
         float u,
         float v
     ) {
-        builder.vertex(x, y, 0.5F)
-            .color(255, 255, 255, 255)
-            .uv(u, v)
-            .uv2(0xF000F0)
-            .normal(0.0F, 0.0F, 1.0F)
-            .endVertex();
+        builder.addVertex((float) (x), (float) (y), (float) (0.5F))
+            .setColor(255, 255, 255, 255)
+            .setUv(u, v)
+            .setLight(0xF000F0)
+            .setNormal(0.0F, 0.0F, 1.0F);
     }
 
     private static void renderItem(

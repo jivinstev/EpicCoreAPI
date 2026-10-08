@@ -1,5 +1,7 @@
 package net.eca.util.entity_extension;
 
+import net.minecraft.core.registries.Registries;
+
 import net.eca.api.RegisterEntityExtension;
 import net.eca.api.EcaAPI;
 import net.eca.util.EntityUtil;
@@ -17,7 +19,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 import net.minecraftforge.forgespi.language.IModInfo;
 
 import java.util.ArrayList;
