@@ -113,6 +113,7 @@ public final class JvmTiBackend {
                 try (Memory callbacks = callbacks(prepareCallback, 6)) {
                     if (ok(function(collectorEnv, SET_EVENT_CALLBACKS).invokeInt(new Object[]{
                             collectorEnv, callbacks, CALLBACKS_SIZE}), "Collector callbacks")) {
+                        warmDispatch();
                         ok(notifyEvent(collectorEnv, CLASS_PREPARE, true), "ClassPrepare enable");
                     }
                 }
@@ -139,6 +140,7 @@ public final class JvmTiBackend {
                 if (!ok(function(transformEnv, SET_EVENT_CALLBACKS).invokeInt(new Object[]{
                         transformEnv, callbacks, CALLBACKS_SIZE}), "Transform callbacks")) return false;
             }
+            warmDispatch();
             active = true;
             if (!ok(notifyEvent(transformEnv, CLASS_FILE_LOAD_HOOK, true), "ClassFileLoadHook enable")) {
                 active = false;
@@ -150,6 +152,31 @@ public final class JvmTiBackend {
             active = false;
             log("Activation failed: " + t);
             return false;
+        }
+    }
+
+    /**
+     * Runs JNA's native-to-Java callback dispatch once while ClassFileLoadHook is still OFF. Dispatch loads
+     * JNA and JDK classes lazily the first time it runs (argument conversion, the reflective invoke, the
+     * uncaught-exception handler); if that first time is inside the hook, each of those class definitions fires
+     * the hook again, which dispatches again, before the inCallback guard in onClassFileLoad can run -- an
+     * unbounded defineClass -> invokeCallback recursion that hangs mod loading or, once it unwinds on a
+     * NoClassDefFoundError, leaves a lock held so the JVM hangs at exit. Calling the callback's own native stub
+     * from Java takes exactly the dispatch path the JVM will take, so every class it needs is loaded here, with
+     * `active` still false so the callback returns at its first line. Run before EITHER hook is enabled.
+     */
+    private void warmDispatch() {
+        try {
+            Native.getCallbackExceptionHandler();
+            Class.forName("com.sun.jna.Callback$UncaughtExceptionHandler", true, Callback.class.getClassLoader());
+            // both callbacks return at their first line here: jni/klass are null, and `active` is still false
+            Function.getFunction(CallbackReference.getFunctionPointer(prepareCallback)).invoke(Void.class, new Object[]{
+                    Pointer.NULL, Pointer.NULL, Pointer.NULL, Pointer.NULL});
+            Function.getFunction(CallbackReference.getFunctionPointer(loadCallback)).invoke(Void.class, new Object[]{
+                    Pointer.NULL, Pointer.NULL, Pointer.NULL, Pointer.NULL, "net/eca/jvmti/Warm",
+                    Pointer.NULL, 0, Pointer.NULL, Pointer.NULL, Pointer.NULL});
+        } catch (Throwable t) {
+            log("Callback warm-up failed (continuing): " + t);
         }
     }
 
