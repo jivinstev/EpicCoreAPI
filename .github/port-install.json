@@ -9,8 +9,8 @@
       "role": "self",
       "modid": "eca",
       "name": "epic-core-api-1.1.8-fix-fix_mr.jar",
-      "url": "https://github.com/jivinstev/EpicCoreAPI/releases/download/eca-1.1.8-fix-fix-mc1.21.1-r3/epic-core-api-1.1.8-fix-fix_mr.jar",
-      "sha256": "9e9abcfd2da83feb1be8fc5b6c029c37832c5b547903fe7357778f6368c33589"
+      "url": "https://github.com/jivinstev/EpicCoreAPI/releases/download/eca-1.1.8-fix-fix-mc1.21.1-r4/epic-core-api-1.1.8-fix-fix_mr.jar",
+      "sha256": "0708591ee4eecd070e7eb00b64c6b6ec9aa7e17655a5ed713a617df3388edf46"
     },
     {
       "role": "extra",
