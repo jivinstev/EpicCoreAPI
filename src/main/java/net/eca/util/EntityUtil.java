@@ -1254,8 +1254,14 @@ public class EntityUtil {
 
     //从 loadingInbox 清理正在加载的实体
     private static void removeFromLoadingInbox(PersistentEntitySectionManager<Entity> entityManager, Entity entity) {
+        // ChunkEntities.entities is an ImmutableList (EntityStorage builds it so, on 1.20.1 too): remove() always
+        // throws, which aborted every later step of removeFromServerContainers whenever any chunk was loading.
+        // Replace the one entry that holds the entity with a copy without it; leave every other entry alone.
         for (ChunkEntities<Entity> chunkEntities : entityManager.loadingInbox) {
-            chunkEntities.entities.remove(entity);
+            if (chunkEntities.entities.contains(entity) && entityManager.loadingInbox.remove(chunkEntities)) {
+                entityManager.loadingInbox.add(new ChunkEntities<>(chunkEntities.getPos(),
+                        chunkEntities.entities.stream().filter(e -> e != entity).collect(ImmutableList.toImmutableList())));
+            }
         }
     }
 
