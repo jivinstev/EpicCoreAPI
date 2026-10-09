@@ -46,11 +46,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
-      - name: Port CI kit v2 (pinned by sha256)
+      - name: Port CI kit v3 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v2/port-ci-kit-v2.tar.gz"
-          echo "f9337b546fc374714c532c7c4c1246604e29062f4de71277f620331073451917  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v3/port-ci-kit-v3.tar.gz"
+          echo "9c9655203a549ba319714969a26b1abb2042b3203f38b05013b6efe47ed8d636  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -63,7 +63,7 @@ jobs:
         run: |
           git fetch --no-tags origin "master"
           python3 .port-tools/tools/ci-gates.py --repo . --modid "eca" --base "origin/master" \
-            --gatec "launch,spawn" --env "${{ matrix.env }}" --work-dir "$RUNNER_TEMP/port-ci" --summary "$RUNNER_TEMP/gates.md"
+            --gatec "launch,spawn,battle,gauntlet" --env "${{ matrix.env }}" --work-dir "$RUNNER_TEMP/port-ci" --summary "$RUNNER_TEMP/gates.md"
       - name: Gate summary
         if: always()
         run: cat "$RUNNER_TEMP/gates.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
