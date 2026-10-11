@@ -25,6 +25,7 @@
     "FallingBlockRendererMixin"
   ],
   "mixins": [
+    "NetworkCodecMixin",
     "ChunkMapMixin",
     "GenerationChunkHolderMixin",
     "ClassInstanceMultiMapMixin",
