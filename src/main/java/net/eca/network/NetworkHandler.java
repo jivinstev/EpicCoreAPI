@@ -16,7 +16,7 @@ import net.neoforged.neoforge.network.registration.HandlerThread;
 @SuppressWarnings("removal")
 public class NetworkHandler {
 
-    private static final String PROTOCOL_VERSION = "3";
+    private static final String PROTOCOL_VERSION = "4";
 
     /**
      * Register all network packets.
