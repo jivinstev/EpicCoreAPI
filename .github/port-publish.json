@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "permission": "https://github.com/CJiangqiu/EpicCoreAPI/issues/9",
+  "auto": true,
+  "modid": "eca",
+  "title": "Epic Core API - Community Port",
+  "summary": "Unofficial NeoForge port of Epic Core API by CJiangqiu to newer Minecraft, maintained by the community with the author's permission.",
+  "body_file": ".github/port-publish/description.md",
+  "icon": "src/main/resources/logo.png",
+  "license": "MIT",
+  "categories": [
+    "library",
+    "utility"
+  ],
+  "additional_categories": [],
+  "ledger_issues": [
+    "jivinstev/EpicCoreAPI#1",
+    "jivinstev/EpicCoreAPI#2",
+    "jivinstev/EpicCoreAPI#3"
+  ],
+  "dependencies": [],
+  "modrinth": {
+    "slug": "epic-core-api-neoforge",
+    "asset": "_mr.jar"
+  },
+  "curseforge": {
+    "project_id": null,
+    "slug": "epic-core-api-neoforge",
+    "asset": "_cf.jar"
+  }
+}
