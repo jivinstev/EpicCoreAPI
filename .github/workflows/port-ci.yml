@@ -22,14 +22,20 @@
 # in the GitHub UI publishes too, and publish = <tag> publishes one by hand. publish_setup = true creates the
 # Modrinth draft project once. Publishing refuses a pre-release, a build with an open S1 in its fix ledger, and
 # a dependency not yet published; it never runs on a pull request.
+#
+# Layer branch: when the fork has a multi-version layer branch (.multiversion/, templates/fork-layer), this SAME
+# file is installed on both branches -- the layer branch may differ from the port branch only inside .multiversion/
+# and one commented line in build.gradle, so it cannot carry a workflow of its own. The layer-* jobs at the end run
+# only on the layer branch (and only where .multiversion/ exists): isolation, inertness, a compile-only pass of
+# every middle target, and the full gates on the newest target (tools/layer-ci.py, tools/port-ci.py --layer-branch).
 name: Port CI (NeoForge 21.1.228 (Minecraft 1.21.1))
 
 on:
   push:
-    branches: ["neoforge-1.21.1"]
+    branches: ["neoforge-1.21.1", "neoforge-1.21.x"]
     tags: ["*-mc1.21.1"]
   pull_request:
-    branches: ["neoforge-1.21.1"]
+    branches: ["neoforge-1.21.1", "neoforge-1.21.x"]
   release:
     types: [released]
   workflow_dispatch:
@@ -80,11 +86,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
-      - name: Port CI kit v8 (pinned by sha256)
+      - name: Port CI kit v9 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v8/port-ci-kit-v8.tar.gz"
-          echo "95835f32b3757867aeeaa066711a3ca60a535f1ca844b24a2118ec9c6f79d744  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v9/port-ci-kit-v9.tar.gz"
+          echo "4d376addfa5c83c35ca486f7fe6e30d37f3b0177c3a87fa58a1c0a4ef39b4ac9  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -228,11 +234,11 @@ jobs:
         with:
           ref: "neoforge-1.21.1"
           fetch-depth: 0          # tags and history, to prove the tag was built from this branch
-      - name: Port CI kit v8 (pinned by sha256)
+      - name: Port CI kit v9 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v8/port-ci-kit-v8.tar.gz"
-          echo "95835f32b3757867aeeaa066711a3ca60a535f1ca844b24a2118ec9c6f79d744  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v9/port-ci-kit-v9.tar.gz"
+          echo "4d376addfa5c83c35ca486f7fe6e30d37f3b0177c3a87fa58a1c0a4ef39b4ac9  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Publish to Modrinth and CurseForge
         env:
@@ -253,14 +259,178 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: "neoforge-1.21.1"
-      - name: Port CI kit v8 (pinned by sha256)
+      - name: Port CI kit v9 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v8/port-ci-kit-v8.tar.gz"
-          echo "95835f32b3757867aeeaa066711a3ca60a535f1ca844b24a2118ec9c6f79d744  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v9/port-ci-kit-v9.tar.gz"
+          echo "4d376addfa5c83c35ca486f7fe6e30d37f3b0177c3a87fa58a1c0a4ef39b4ac9  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Create the Modrinth draft project
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         run: python3 .port-tools/tools/port-publish.py modrinth-create --repo .
 
+  # ---- Multi-version layer jobs (tools/layer-ci.py). Installed with --layer-branch neoforge-1.21.x; they run only on
+  # that branch (and on pull requests into it), and only where .multiversion/ exists, so the port branch's own
+  # jobs above behave exactly as without a layer. On neoforge-1.21.1 every job below is skipped.
+  #   layer-plan       which targets exist: the newest (by version, 1.21.11 > 1.21.8) and the middle ones
+  #   layer-isolation  the branch differs from neoforge-1.21.1 only in .multiversion/ and the one commented hook line
+  #   layer-inertness  the authors' jars are entry-for-entry identical with and without that hook line
+  #   layer-compile    each MIDDLE target: every source set compiles, the mixin and event-listener audits are clean
+  #   layer-gates      the NEWEST target: all gates, Gate C included, plus the shipped jar when the fork records one
+  # The neoforge-1.21.1 gates above also run on the layer branch: they are its 1.21.1 bookend.
+  layer-plan:
+    name: layer plan
+    if: ${{ (github.ref_name == 'neoforge-1.21.x' || github.base_ref == 'neoforge-1.21.x') && github.event_name != 'release' && !inputs.promote && !inputs.publish && !inputs.publish_setup }}
+    runs-on: ubuntu-24.04
+    outputs:
+      layer: ${{ steps.plan.outputs.layer }}
+      newest: ${{ steps.plan.outputs.newest }}
+      newest_java: ${{ steps.plan.outputs.newest_java }}
+      has_middle: ${{ steps.plan.outputs.has_middle }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      shipped: ${{ steps.plan.outputs.shipped }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Plan the layer's jobs
+        id: plan
+        run: |
+          if [ ! -f .multiversion/base.properties ]; then
+            echo "no .multiversion/ in this checkout: the layer jobs are skipped"
+            echo "layer=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v9/port-ci-kit-v9.tar.gz"
+          echo "4d376addfa5c83c35ca486f7fe6e30d37f3b0177c3a87fa58a1c0a4ef39b4ac9  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+          mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
+          python3 .port-tools/tools/layer-ci.py plan --repo . --github-output "$GITHUB_OUTPUT"
+
+  layer-isolation:
+    name: layer isolation (only .multiversion/ and the hook differ from neoforge-1.21.1)
+    needs: layer-plan
+    if: ${{ needs.layer-plan.outputs.layer == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Isolation against origin/neoforge-1.21.1
+        run: |
+          git fetch --no-tags origin "neoforge-1.21.1"
+          python3 .multiversion/tools/layer.py isolation --base "origin/neoforge-1.21.1"
+
+  layer-inertness:
+    name: layer inertness (the hook changes no jar)
+    needs: layer-plan
+    if: ${{ needs.layer-plan.outputs.layer == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Port CI kit v9 (pinned by sha256)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v9/port-ci-kit-v9.tar.gz"
+          echo "4d376addfa5c83c35ca486f7fe6e30d37f3b0177c3a87fa58a1c0a4ef39b4ac9  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+          mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build the jars with and without the hook line, compare them
+        run: python3 .port-tools/tools/layer-ci.py inertness --repo . --work "$RUNNER_TEMP/inertness"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-inertness
+          path: ${{ runner.temp }}/inertness/*.log
+          if-no-files-found: ignore
+
+  layer-compile:
+    # Compile-only: a change on neoforge-1.21.1 that breaks one middle target's overlay shows here, in minutes, without
+    # booting Minecraft once per target. The newest target gets the full gates in layer-gates.
+    name: layer compile (${{ matrix.t }})
+    needs: layer-plan
+    if: ${{ needs.layer-plan.outputs.layer == 'true' && needs.layer-plan.outputs.has_middle == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.layer-plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Port CI kit v9 (pinned by sha256)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v9/port-ci-kit-v9.tar.gz"
+          echo "4d376addfa5c83c35ca486f7fe6e30d37f3b0177c3a87fa58a1c0a4ef39b4ac9  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+          mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+
+      - name: Compile every source set, then the mixin and event-listener audits
+        env:
+          TARGET: ${{ matrix.t }}
+        run: python3 .port-tools/tools/layer-ci.py compile --repo . --mc "$TARGET" --work "$RUNNER_TEMP/layer-$TARGET" --summary "$RUNNER_TEMP/layer-$TARGET.md"
+      - name: Summary
+        if: always()
+        env:
+          TARGET: ${{ matrix.t }}
+        run: cat "$RUNNER_TEMP/layer-$TARGET.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-compile-${{ matrix.t }}
+          path: |
+            ${{ runner.temp }}/layer-${{ matrix.t }}/*.log
+            ${{ runner.temp }}/layer-${{ matrix.t }}.md
+          if-no-files-found: ignore
+
+  layer-gates:
+    name: layer gates (newest target ${{ needs.layer-plan.outputs.newest }})
+    needs: layer-plan
+    if: ${{ needs.layer-plan.outputs.layer == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
+      - name: Port CI kit v9 (pinned by sha256)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v9/port-ci-kit-v9.tar.gz"
+          echo "4d376addfa5c83c35ca486f7fe6e30d37f3b0177c3a87fa58a1c0a4ef39b4ac9  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+          mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ needs.layer-plan.outputs.newest_java }}
+      - name: Software OpenGL for the client gate
+        run: sudo apt-get update && sudo apt-get install -y xvfb mesa-utils libgl1-mesa-dri
+
+      - name: All gates on the newest target
+        env:
+          NEWEST: ${{ needs.layer-plan.outputs.newest }}
+          SHIPPED: ${{ needs.layer-plan.outputs.shipped }}
+        run: |
+          git fetch --no-tags origin "master"
+          extra=""; [ "$SHIPPED" = true ] && extra="--shipped"
+          python3 .port-tools/tools/ci-gates.py --repo . --modid "eca" --base "origin/master" --mc "$NEWEST" $extra \
+            --gatec "launch,spawn,battle,gauntlet" --work-dir "$RUNNER_TEMP/layer-gates" --summary "$RUNNER_TEMP/layer-gates.md"
+      - name: Gate summary
+        if: always()
+        run: cat "$RUNNER_TEMP/layer-gates.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-gates-${{ needs.layer-plan.outputs.newest }}
+          path: |
+            ${{ runner.temp }}/layer-gates/*.log
+            ${{ runner.temp }}/layer-gates/*.jsonl
+            ${{ runner.temp }}/layer-gates/shipped/**
+            ${{ runner.temp }}/layer-gates.md
+          if-no-files-found: ignore
