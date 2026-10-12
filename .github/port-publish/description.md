@@ -10,13 +10,9 @@ Published with the original author's permission (https://github.com/CJiangqiu/Ep
 - Source: https://github.com/CJiangqiu/EpicCoreAPI
 - On Modrinth: https://modrinth.com/mod/epic-core-api (Forge, 1.20.1)
 
-## What this port changes
+## How it differs from the original
 
 - Runs on **NeoForge 1.21.1**.
-- Carries fixes for defects found while porting and playing it. Each is tracked, with its evidence and which release fixes it, in an issue:
-  - [Pre-existing: force-removal aborts half-way when any chunk is loading entities (removeFromLoadingInbox throws on an immutable list)](https://github.com/jivinstev/EpicCoreAPI/issues/1)
-  - [Pre-existing: summoning The Last Sword's TEST ENTITY switches off every other content mod (global AllReturn) and disconnects the player](https://github.com/jivinstev/EpicCoreAPI/issues/2)
-  - [Pre-existing: with The Last Sword loaded, the JVMTI backend recurses inside its own class-load hook (hang at load or on exit)](https://github.com/jivinstev/EpicCoreAPI/issues/3)
 
 ## Requirements
 
