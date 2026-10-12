@@ -76,12 +76,37 @@ if (mvAt != null) {
 }
 
 def mvRanges = mvProps.stringPropertyNames().findAll { it.startsWith('toml.') }.collectEntries { [(it.substring(5)): mvProps.getProperty(it)] }
+// mixin_add.<config file>=<array>:<Class>,<Class>;<array>:<Class> -- mixins that exist only on this target (and
+// those it inherits), added to the authors' config at processResources so the config itself is never copied.
+def mvMixinAdds = [:]
+mvChain.each { t ->
+    def p = new Properties()
+    file(".multiversion/targets/${t}/target.properties").withInputStream { p.load(it) }
+    p.stringPropertyNames().findAll { it.startsWith('mixin_add.') }.each { k ->
+        def cfg = k.substring('mixin_add.'.length())
+        p.getProperty(k).split(';').each { spec ->
+            def (array, classes) = spec.split(':', 2) as List
+            classes.split(',').each { c -> ((mvMixinAdds[cfg] ?: (mvMixinAdds[cfg] = [:]))[array.trim()] ?: (mvMixinAdds[cfg][array.trim()] = [])).add(c.trim()) }
+        }
+    }
+}
 tasks.withType(ProcessResources).configureEach {
     inputs.property('mvRanges', mvRanges.toString())
+    inputs.property('mvMixinAdds', mvMixinAdds.toString())
     doLast {
         destinationDir.eachFileRecurse { f ->
             if (f.name == 'neoforge.mods.toml') {
                 f.text = mvRewriteToml(f.text, mvRanges)
+            }
+            def adds = mvMixinAdds[f.name]
+            if (adds) {
+                def json = new groovy.json.JsonSlurper().parseText(f.getText('UTF-8'))
+                adds.each { array, classes ->
+                    def list = (json[array] ?: []) as List
+                    classes.each { c -> if (!list.contains(c)) list.add(c) }
+                    json[array] = list
+                }
+                f.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json)), 'UTF-8')
             }
         }
     }

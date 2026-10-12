@@ -11,7 +11,6 @@ re:TextureStateShard\(([^,()]+), false, false\)	TextureStateShard(\1, net.minecr
 re:\bBuiltInRegistries\.(\w+)\.get\(	BuiltInRegistries.\1.getValue(
 re:[ \t]*RenderSystem\.applyModelViewMatrix\(\);[ \t]*\n	
 re:RenderSystem\.setShader\(GameRenderer::getPositionColorShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR)
-re:RenderSystem\.setShader\(GameRenderer::getPositionTexColorShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX_COLOR)
 re:RenderSystem\.setShader\(GameRenderer::getPositionTexShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX)
 re:GlStateManager\._clear\(([^;]*), false\);	GlStateManager._clear(\1);
 re:\bLevelRenderer\.renderLineBox\(	net.minecraft.client.renderer.ShapeRenderer.renderLineBox(
@@ -41,9 +40,13 @@ re:graphics\.blit\(texture, 	graphics.blit(net.minecraft.client.renderer.RenderT
 re:graphics\.bufferSource\(\)	graphics.bufferSource
 re:RenderSystem\.runAsFancy\(	net.eca.mv.Mv.run(
 re:(dispatcher\.render\(\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,)\s*[^,()]+,	\1
-re:AABB box = entity\.getBoundingBoxForCulling\(\);	AABB box = net.eca.mv.Mv.cullingBox(entity);
-re:EntityRenderer<\? super Entity> renderer = 	EntityRenderer<? super Entity, ?> renderer = 
 re:(VertexConsumer buffer, float partialTick,\s*int packedLight, int packedOverlay)\) \{	\1, int renderColor) {
 # fog state is one FogParameters value in 1.21.2 (LevelRendererMixin's force-loaded-entity fog bypass)
-re:eca\$savedFogStart = RenderSystem\.getShaderFogStart\(\);\s*eca\$savedFogEnd = RenderSystem\.getShaderFogEnd\(\);\s*RenderSystem\.setShaderFogStart\(Float\.MAX_VALUE\);\s*RenderSystem\.setShaderFogEnd\(Float\.MAX_VALUE\);	net.eca.mv.Mv.suspendFog();
-re:RenderSystem\.setShaderFogStart\(eca\$savedFogStart\);\s*RenderSystem\.setShaderFogEnd\(eca\$savedFogEnd\);	net.eca.mv.Mv.restoreFog();
+# ---- mixin targets (invisible to javac; checked by audit-mixin-targets.py against the 1.21.3 sources)
+re:@Inject\(method = "hurt",([^\n]*)\n(\s*)private void ([\w$]+)\(DamageSource source,	@Inject(method = "hurtServer",\1\n\2private void \3(net.minecraft.server.level.ServerLevel eca$hurtLevel, DamageSource source,
+re:@Inject\(method = "actuallyHurt",([^\n]*)\n(\s*)private void ([\w$]+)\(DamageSource source,	@Inject(method = "actuallyHurt",\1\n\2private void \3(net.minecraft.server.level.ServerLevel eca$hurtLevel, DamageSource source,
+re:LevelRenderer;renderLevel\(Lnet/minecraft/client/DeltaTracker;	LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;
+# 1.21.1 ItemRenderer.render did push/transform/render/pop inline; 1.21.2 moved that body to renderItemModelRaw
+re:@Inject\(method = "render",(\s*at = @At\(value = "INVOKE",\s*target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose\(\)V")	@Inject(method = "renderItemModelRaw",\1
+re:(int combinedLight, int combinedOverlay, BakedModel model,)(\s*)CallbackInfo ci\)	\1 boolean eca$flat, float eca$depth,\2CallbackInfo ci)
+re:"changeDimension\(Lnet/minecraft/world/level/portal/DimensionTransition;\)Lnet/minecraft/world/entity/Entity;"	"teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/world/entity/Entity;"
