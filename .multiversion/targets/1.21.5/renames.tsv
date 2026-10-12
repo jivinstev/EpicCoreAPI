@@ -1,1 +1,13 @@
 # 1.21.5: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
+# NBT getters whose KEY is a variable (the shared 1.21.5 rows only take a string literal or CONSTANT, because a byte-offset
+# read like ByteBuffer.getInt(at) looks the same). The receivers below are this fork's own tags/lists, named by what the
+# compiler reported -- a new one shows up as an Optional<...> error, not silently.
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getInt\((\w+)\)	\1.getIntOr(\2, 0)
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getString\((\w+)\)	\1.getStringOr(\2, "")
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getCompound\((\w+)\)	\1.getCompoundOrEmpty(\2)
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getList\(([\w.()]+),\s*Tag\.TAG_\w+\)	\1.getListOrEmpty(\2)
+# 1.21.5: LivingEntity.lastHurtByPlayerTime is lastHurtByPlayerMemoryTime and setLastHurtByPlayer(player, ticks) is public
+# (the 1.21.1 comment about it writing tickCount no longer holds: it now writes the 100-tick memory directly)
+re:entity\.lastHurtByPlayer = credit;\s*entity\.lastHurtByPlayerTime = 100;	entity.setLastHurtByPlayer(credit, 100);
+# 1.21.5: lerpSteps/lerpX/... and Minecart.lerpTo became an InterpolationHandler; cancelling it is "lerpSteps = 0"
+re:(?s)if \(entity instanceof LivingEntity\) \{\s*LivingEntity livingEntity = \(LivingEntity\) entity;\s*livingEntity\.lerpSteps = 0;.*?minecart\.lerpTo\([^;]*\);\s*\}	net.minecraft.world.entity.InterpolationHandler interpolation = entity.getInterpolation();\n        if (interpolation != null) {\n            interpolation.cancel();\n        }

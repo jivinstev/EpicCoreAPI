@@ -4,5 +4,7 @@ re:EcaContainers\.rawGet\((\w+)\.partEntities, (\w+)\)	net.eca.mv.PartEntities.b
 re:EcaContainers\.rawValues\((\w+)\.partEntities\)	\1.dragonParts()
 # shader preview: 1.21.4 resolves items into an ItemStackRenderState (shared helper ItemModels); renderStatic
 # re-resolves the same item, so the model argument of 1.21.1's render(...) is not needed
+#!exhaustive  # live on 1.21.4; dead on 1.21.5, whose ShaderPreviewRenderer is an overlay (no BakedModel there)
 re:itemRenderer\.getModel\((\w+), (\w+), ([\w.]+), (\d+)\)	net.eca.mv.ItemModels.resolve(\1, \2, \3, \4)
 re:itemRenderer\.render\(\s*(\w+),\s*(ItemDisplayContext\.\w+),\s*(\w+),\s*([^,]+),\s*(\w+),\s*(\w+),\s*([\w.]+),\s*model\s*\)	itemRenderer.renderStatic(null, \1, \2, \3, \4, \5, level, \6, \7, 0)
+#!strict
