@@ -86,11 +86,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
-      - name: Port CI kit v10 (pinned by sha256)
+      - name: Port CI kit v12 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v10/port-ci-kit-v10.tar.gz"
-          echo "f5158132b875dcba8d03183841ca3cc4930fcd6adf5c2b920a5f5ab929f8b4f6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -234,11 +234,11 @@ jobs:
         with:
           ref: "neoforge-1.21.1"
           fetch-depth: 0          # tags and history, to prove the tag was built from this branch
-      - name: Port CI kit v10 (pinned by sha256)
+      - name: Port CI kit v12 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v10/port-ci-kit-v10.tar.gz"
-          echo "f5158132b875dcba8d03183841ca3cc4930fcd6adf5c2b920a5f5ab929f8b4f6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Publish to Modrinth and CurseForge
         env:
@@ -259,11 +259,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: "neoforge-1.21.1"
-      - name: Port CI kit v10 (pinned by sha256)
+      - name: Port CI kit v12 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v10/port-ci-kit-v10.tar.gz"
-          echo "f5158132b875dcba8d03183841ca3cc4930fcd6adf5c2b920a5f5ab929f8b4f6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Create the Modrinth draft project
         env:
@@ -278,6 +278,8 @@ jobs:
   #   layer-inertness  the authors' jars are entry-for-entry identical with and without that hook line
   #   layer-compile    each MIDDLE target: every source set compiles, the mixin and event-listener audits are clean
   #   layer-gates      the NEWEST target: all gates, Gate C included, plus the shipped jar when the fork records one
+  #   layer-gates-extra  a RELEASED middle target the fork lists in .multiversion/ci.properties (full_gates=1.21.4,...):
+  #                    the same full gates. Absent or empty = this job never runs (the default).
   # The neoforge-1.21.1 gates above also run on the layer branch: they are its 1.21.1 bookend.
   layer-plan:
     name: layer plan
@@ -300,8 +302,8 @@ jobs:
             echo "layer=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v10/port-ci-kit-v10.tar.gz"
-          echo "f5158132b875dcba8d03183841ca3cc4930fcd6adf5c2b920a5f5ab929f8b4f6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
           python3 .port-tools/tools/layer-ci.py plan --repo . --github-output "$GITHUB_OUTPUT"
 
@@ -327,11 +329,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Port CI kit v10 (pinned by sha256)
+      - name: Port CI kit v12 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v10/port-ci-kit-v10.tar.gz"
-          echo "f5158132b875dcba8d03183841ca3cc4930fcd6adf5c2b920a5f5ab929f8b4f6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -360,11 +362,11 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - name: Port CI kit v10 (pinned by sha256)
+      - name: Port CI kit v12 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v10/port-ci-kit-v10.tar.gz"
-          echo "f5158132b875dcba8d03183841ca3cc4930fcd6adf5c2b920a5f5ab929f8b4f6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -399,11 +401,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
-      - name: Port CI kit v10 (pinned by sha256)
+      - name: Port CI kit v12 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v10/port-ci-kit-v10.tar.gz"
-          echo "f5158132b875dcba8d03183841ca3cc4930fcd6adf5c2b920a5f5ab929f8b4f6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -433,4 +435,58 @@ jobs:
             ${{ runner.temp }}/layer-gates/*.jsonl
             ${{ runner.temp }}/layer-gates/shipped/**
             ${{ runner.temp }}/layer-gates.md
+            build/mc${{ needs.layer-plan.outputs.newest }}/libs/*.jar   # the target's own file (named -mc<target>): what publish-port uploads
+          if-no-files-found: ignore
+
+  layer-gates-extra:
+    # CI policy: bookends fully gated, middle targets compile + audits; a middle target that is RELEASED is also fully
+    # gated. The list is data (.multiversion/ci.properties full_gates), read by layer-ci.py plan; empty = no job.
+    name: layer gates (released middle target ${{ matrix.t }})
+    needs: layer-plan
+    if: ${{ needs.layer-plan.outputs.layer == 'true' && needs.layer-plan.outputs.has_full == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.layer-plan.outputs.full_matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Port CI kit v12 (pinned by sha256)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v12/port-ci-kit-v12.tar.gz"
+          echo "81043b043c1f26893663c2452ede91dfb307fdb8929be8717f8f5a4fe6abca50  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+          mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+      - name: Software OpenGL for the client gate
+        run: sudo apt-get update && sudo apt-get install -y xvfb mesa-utils libgl1-mesa-dri
+
+      - name: All gates on this target
+        env:
+          TARGET: ${{ matrix.t }}
+        run: |
+          git fetch --no-tags origin "master"
+          extra=""
+          if [ -f ".multiversion/shipped-expect-$TARGET.txt" ] || [ -f .multiversion/shipped-expect.txt ]; then extra="--shipped"; fi
+          python3 .port-tools/tools/ci-gates.py --repo . --modid "eca" --base "origin/master" --mc "$TARGET" $extra \
+            --gatec "launch,spawn,battle,gauntlet" --work-dir "$RUNNER_TEMP/layer-gates-$TARGET" --summary "$RUNNER_TEMP/layer-gates-$TARGET.md"
+      - name: Gate summary
+        if: always()
+        env:
+          TARGET: ${{ matrix.t }}
+        run: cat "$RUNNER_TEMP/layer-gates-$TARGET.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-gates-${{ matrix.t }}
+          path: |
+            ${{ runner.temp }}/layer-gates-${{ matrix.t }}/*.log
+            ${{ runner.temp }}/layer-gates-${{ matrix.t }}/*.jsonl
+            ${{ runner.temp }}/layer-gates-${{ matrix.t }}/shipped/**
+            ${{ runner.temp }}/layer-gates-${{ matrix.t }}.md
           if-no-files-found: ignore
