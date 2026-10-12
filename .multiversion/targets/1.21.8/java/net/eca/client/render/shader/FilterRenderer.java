@@ -207,8 +207,24 @@ public class FilterRenderer {
         return orthoBuffer.getBuffer(ortho);
     }
 
+    // RenderLevelStageEvent is abstract on 1.21.8 (the bus refuses a listener for it): one listener per stage this
+    // filter reads, all sharing the authors' single handler body below (CATALOG X33)
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+    public static void onAfterOpaqueBlocks(RenderLevelStageEvent.AfterOpaqueBlocks event) {
+        onRenderLevelStage(event);
+    }
+
+    @SubscribeEvent
+    public static void onAfterEntities(RenderLevelStageEvent.AfterEntities event) {
+        onRenderLevelStage(event);
+    }
+
+    @SubscribeEvent
+    public static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
+        onRenderLevelStage(event);
+    }
+
+    private static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (activeFilters.isEmpty() && bossShowFilter == null) return;
 
         boolean afterLevel = event instanceof RenderLevelStageEvent.AfterLevel;
@@ -278,9 +294,8 @@ public class FilterRenderer {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBossShowEffectRender(RenderLevelStageEvent event) {
-        if (!(event instanceof RenderLevelStageEvent.AfterLevel)
-            || !BossShowScreenEffectState.hasShaderEffects()) return;
+    public static void onBossShowEffectRender(RenderLevelStageEvent.AfterLevel event) {
+        if (!BossShowScreenEffectState.hasShaderEffects()) return;
         float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         renderFilterPass(bossShowEffectShader, shader -> {
             Minecraft mc = Minecraft.getInstance();

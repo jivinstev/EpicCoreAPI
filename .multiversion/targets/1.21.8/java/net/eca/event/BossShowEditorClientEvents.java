@@ -216,8 +216,7 @@ public final class BossShowEditorClientEvents {
     }
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (!(event instanceof RenderLevelStageEvent.AfterTranslucentBlocks)) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (!BossShowEditorState.isAnySelectionMode()) return;
         Entity target = cachedHovered;
         if (target == null || target.isRemoved()) return;

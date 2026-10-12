@@ -53,8 +53,7 @@ public final class BossShowAnchorRenderer {
     private BossShowAnchorRenderer() {}
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (!(event instanceof RenderLevelStageEvent.AfterTranslucentBlocks)) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (!BossShowEditorState.isActive()) return;
         if (!BossShowEditorState.hasAnchor()) return;
 

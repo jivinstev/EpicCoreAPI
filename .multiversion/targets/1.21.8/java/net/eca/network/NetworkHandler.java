@@ -31,7 +31,9 @@ public class NetworkHandler {
 
         registrar.playToClient(EntityExtensionBossEventTypePacket.TYPE, EntityExtensionBossEventTypePacket.STREAM_CODEC, EntityExtensionBossEventTypePacket::handle);
 
-        registrar.playBidirectional(EntityExtensionOverridePacket.TYPE, EntityExtensionOverridePacket.STREAM_CODEC, EntityExtensionOverridePacket::handle);
+        // 1.21.8: the 3-arg form registers only the SERVER handler (the client one must come from RegisterClientPayloadHandlersEvent) and the
+        // client refuses to load; the handler is side-neutral, so it serves both (CATALOG V81)
+        registrar.playBidirectional(EntityExtensionOverridePacket.TYPE, EntityExtensionOverridePacket.STREAM_CODEC, EntityExtensionOverridePacket::handle, EntityExtensionOverridePacket::handle);
 
         registrar.playToClient(EntityContainerCheckRequestPacket.TYPE, EntityContainerCheckRequestPacket.STREAM_CODEC, EntityContainerCheckRequestPacket::handle);
 

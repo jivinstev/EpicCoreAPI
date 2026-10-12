@@ -48,10 +48,7 @@ public final class GlobalSkyboxHook {
     // ==================== 全局天空盒渲染 ====================
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (!(event instanceof RenderLevelStageEvent.AfterSky)) {
-            return;
-        }
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterSky event) {
         Matrix4f frustumMatrix = event.getModelViewMatrix();
         Camera camera = event.getCamera();
         Minecraft minecraft = Minecraft.getInstance();

@@ -110,10 +110,7 @@ public final class BlockExtensionRenderer {
         }
     }
 
-    private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (!(event instanceof RenderLevelStageEvent.AfterTranslucentBlocks)) {
-            return;
-        }
+    private static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
         if (level == null || SECTION_BLOCKS.isEmpty()) {
