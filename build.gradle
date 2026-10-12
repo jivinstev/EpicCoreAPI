@@ -307,3 +307,8 @@ publishing {
         }
     }
 }
+
+// Multi-version layer (community fork only; not the authors' code). Builds other Minecraft versions from
+// .multiversion/ when run with -Pmc=<version>; without -Pmc it does nothing. Deleting this line removes
+// multi-version support and leaves the base build exactly as it was.
+apply from: '.multiversion/layer.gradle'
