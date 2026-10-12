@@ -1,19 +1,20 @@
-// Fork multi-version layer: 1.21.10 version of the authors' file (GeckoLib 5.3: a layer SUBMITS render tasks that run later,
-// at draw time, instead of drawing into a buffer it is handed; there is no reRender). Built on the 1.21.5 overlay (GeckoLib 5:
-// the extension lookup lives in addRenderData and is parked on the GeoRenderState).
+// Fork multi-version layer: 1.21.11 version of the authors' file (GeckoLib 5.4). Built on the 1.21.10 overlay, whose design is
+// kept: a layer SUBMITS render tasks that run later, at draw time, and every overlay pass is drawn by a custom-geometry task
+// submitted under the model's own RenderType, so for one entity the order stays model -> overlay passes.
 //
-// What changed in how the authors' drawing is driven, and why it is arranged this way:
-//  * GeckoLib 5.3 submits the model as custom geometry and renders it LATER, after every entity has been submitted, and it
-//    re-poses the shared BakedGeoModel at that moment. Bone visibility is live state on the shared model, so it can no longer
-//    be hidden around a call. Instead the hide / restore steps are themselves custom-geometry tasks submitted under the SAME
-//    RenderType as the model: the collector runs one RenderType's tasks in submission order, so for every entity the order is
-//    hide -> GeckoLib's model task -> overlay passes -> restore, which is the order the 1.21.1 code ran in.
-//  * The passes that draw into the mod's own BufferBuilder (the shader-mask passes, and the textured pass when Oculus shaders
-//    are active) are drawn inside such a task, with GeckoLib's own renderBone, and are always QUEUED
-//    (ShaderMaskRenderQueue.enqueue, flushed after the level) -- the old non-Oculus path called endBatch() and drawNow(),
-//    and endBatch() in the middle of a feature renderer's own batch would close the buffer it is still writing into.
-//  * The plain textured pass (no Oculus) is a second GeckoLib model task with the translucent render type, bracketed by the
-//    same hide / restore tasks.
+// What GeckoLib 5.4 changed under that design:
+//  * A layer hook gets one RenderPassInfo<R> (state, pose stack, baked model, camera, willRender) instead of eight loose
+//    parameters; addPerBoneRender is the third hook and is not needed here.
+//  * Bone hiding is no longer state on the shared GeoBone. A pass owns BoneSnapshots (GeoBone.frameSnapshot, live only inside
+//    RenderPassInfo.renderPosed), so the configured bones are hidden by a BoneUpdater added in preRender -- which hides them for
+//    the model's own task as well, as before -- and each overlay draw runs inside renderPosed and flips / restores the
+//    overlay-only flags (restrictOverlay) itself. See GeoBoneVisibilityController.
+//  * GeoRenderer.buildRenderTask / renderBone are gone. The overlay draws exactly what GeckoLib's own task does
+//    (pose-stack push, set to the task's pose, renderPosed -> BakedGeoModel.render), with the layer's light / overlay / colour.
+//  * The plain textured pass (no Oculus) is a task of its own at order(1), like GeckoLib's TextureLayerGeoLayer, so the
+//    translucent pass lands over the models; with Oculus, and for the shader-mask passes, the geometry goes into the mod's own
+//    BufferBuilder and is QUEUED (ShaderMaskRenderQueue.enqueue, flushed after the level) -- endBatch() in the middle of a
+//    feature renderer's own batch would close the buffer it is still writing into.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -26,22 +27,19 @@ import net.eca.util.entity_extension.EntityExtensionManager;
 import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import software.bernie.geckolib.animatable.GeoAnimatable;
-import software.bernie.geckolib.cache.model.BakedGeoModel;
-import software.bernie.geckolib.cache.model.GeoBone;
 import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.renderer.base.GeoRenderState;
 import software.bernie.geckolib.renderer.base.GeoRenderer;
+import software.bernie.geckolib.renderer.base.RenderPassInfo;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
@@ -67,27 +65,21 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
         renderState.addGeckolibData(EXTENSION, findExtension(entityResolver.apply(animatable, relatedObject)));
     }
 
-    /** Before GeckoLib submits the model: queue the bone hiding to run right before the model's own task. */
+    /** Before GeckoLib submits the model: hide the configured bones in the pass's snapshots, for every task of the pass. */
     @Override
-    public void preRender(R renderState, PoseStack poseStack, BakedGeoModel bakedModel, SubmitNodeCollector renderTasks,
-                          CameraRenderState cameraState, int packedLight, int packedOverlay, int renderColor,
-                          boolean didRenderModel) {
-        EntityLayerExtension extension = renderState.getGeckolibData(EXTENSION);
-        RenderType modelType = extension != null && didRenderModel ? modelRenderType(renderState) : null;
-        if (modelType == null) {
+    public void preRender(RenderPassInfo<R> renderPassInfo, SubmitNodeCollector renderTasks) {
+        EntityLayerExtension extension = renderPassInfo.getGeckolibData(EXTENSION);
+        if (extension == null || !renderPassInfo.willRender()) {
             return;
         }
-        renderTasks.submitCustomGeometry(poseStack, modelType,
-            (pose, ignored) -> boneVisibility.begin(bakedModel, extension));
+        renderPassInfo.addBoneUpdater((info, snapshots) -> GeoBoneVisibilityController.hideInPass(snapshots, extension.hiddenGeoBones()));
     }
 
-    /** After GeckoLib submitted the model: queue the overlay passes, then the restore, behind it. */
+    /** After GeckoLib submitted the model: queue the overlay passes behind it. */
     @Override
-    public void submitRenderTask(R renderState, PoseStack poseStack, BakedGeoModel bakedModel, SubmitNodeCollector renderTasks,
-                                 CameraRenderState cameraState, int packedLight, int packedOverlay, int renderColor,
-                                 boolean didRenderModel) {
-        EntityLayerExtension extension = renderState.getGeckolibData(EXTENSION);
-        RenderType modelType = extension != null && didRenderModel ? modelRenderType(renderState) : null;
+    public void submitRenderTask(RenderPassInfo<R> renderPassInfo, SubmitNodeCollector renderTasks) {
+        EntityLayerExtension extension = renderPassInfo.getGeckolibData(EXTENSION);
+        RenderType modelType = extension != null && renderPassInfo.willRender() ? modelRenderType(renderPassInfo.renderState()) : null;
         if (modelType == null) {
             return;
         }
@@ -97,49 +89,35 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
         if (shaderPasses == null) shaderPasses = List.of();
         boolean hasTexture = texture != null;
         if (shaderPasses.isEmpty() && !hasTexture) {
-            // nothing to draw; still undo the hiding preRender queued
-            renderTasks.submitCustomGeometry(poseStack, modelType, (pose, ignored) -> boneVisibility.restore());
             return;
         }
 
-        int light = extension.isGlow() ? 15728880 : packedLight;
-        int overlay = extension.isHurtOverlay() ? packedOverlay : OverlayTexture.NO_OVERLAY;
+        int light = extension.isGlow() ? 15728880 : renderPassInfo.packedLight();
+        int overlay = extension.isHurtOverlay() ? renderPassInfo.packedOverlay() : OverlayTexture.NO_OVERLAY;
         int alphaColor = ARGB.colorFromFloat(extension.getAlpha(), 1.0f, 1.0f, 1.0f);
         boolean oculus = EcaShaderInstance.isOculusShadersActive();
-        RenderType texturedType = hasTexture ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(texture) : null;
+        RenderType texturedType = hasTexture ? RenderTypes.entityTranslucent(texture) : null;
         List<ShaderMaskPass> passes = shaderPasses;
 
-        // the plain textured pass is a model task of its own, in its own render type's list, so it carries its own bone
-        // visibility (hide the configured bones, keep only the overlay roots) and undoes it afterwards
         if (texturedType != null && !oculus) {
             // order 1: after every order-0 task, like GeckoLib's own texture layer, so the translucent pass lands over the models
             OrderedSubmitNodeCollector later = renderTasks.order(1);
-            later.submitCustomGeometry(poseStack, texturedType, (pose, ignored) -> {
-                boneVisibility.begin(bakedModel, extension);
-                boneVisibility.restrictOverlay(bakedModel, extension.overlayGeoBones());
-            });
-            this.renderer.buildRenderTask(renderState, poseStack, bakedModel, this.renderer.getGeoModel(), later,
-                cameraState, texturedType, light, overlay, alphaColor, null);
-            later.submitCustomGeometry(poseStack, texturedType, (pose, ignored) -> boneVisibility.restore());
+            later.submitCustomGeometry(renderPassInfo.poseStack(), texturedType,
+                (pose, consumer) -> drawModel(renderPassInfo, extension, pose, consumer, light, overlay, alphaColor));
         }
 
         // everything that draws into the mod's own builder runs behind the model's task in the model's own list
-        renderTasks.submitCustomGeometry(poseStack, modelType, (pose, ignored) -> {
-            try {
-                boneVisibility.restrictOverlay(bakedModel, extension.overlayGeoBones());
-                if (texturedType != null && oculus) {
-                    BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedType.format());
-                    drawModel(pose, renderState, bakedModel, cameraState, builder, light, overlay, alphaColor);
-                    ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedType, 1.0f), builder, builder.buildOrThrow());
-                }
-                for (ShaderMaskPass pass : passes) {
-                    if (pass == null || pass.alpha() <= 0.0f) continue;
-                    BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
-                    drawModel(pose, renderState, bakedModel, cameraState, builder, light, overlay, -1);
-                    ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
-                }
-            } finally {
-                boneVisibility.restore();
+        renderTasks.submitCustomGeometry(renderPassInfo.poseStack(), modelType, (pose, ignored) -> {
+            if (texturedType != null && oculus) {
+                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedType.format());
+                drawModel(renderPassInfo, extension, pose, builder, light, overlay, alphaColor);
+                ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedType, 1.0f), builder, builder.buildOrThrow());
+            }
+            for (ShaderMaskPass pass : passes) {
+                if (pass == null || pass.alpha() <= 0.0f) continue;
+                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
+                drawModel(renderPassInfo, extension, pose, builder, light, overlay, -1);
+                ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
             }
         });
     }
@@ -149,14 +127,26 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
         return this.renderer.getRenderType(renderState, this.renderer.getTextureLocation(renderState));
     }
 
-    /** GeckoLib's draw callback for one model (the bones, from the pose the task was submitted with) into a buffer of ours. */
-    private void drawModel(PoseStack.Pose pose, R renderState, BakedGeoModel bakedModel, CameraRenderState cameraState,
+    /**
+     * GeckoLib's own model task (its GeoRenderer.submitRenderTasks), into a consumer of ours: push the pass's pose stack, set it
+     * to the pose the task was submitted with, and draw inside renderPosed, where the bones' snapshots are live. The overlay-only
+     * bone flags are flipped there and restored before the snapshots go back to the next task.
+     */
+    private void drawModel(RenderPassInfo<R> renderPassInfo, EntityLayerExtension extension, PoseStack.Pose pose,
                            VertexConsumer consumer, int light, int overlay, int color) {
-        PoseStack stack = new PoseStack();
-        stack.last().set(pose);
-        for (GeoBone bone : bakedModel.topLevelBones()) {
-            this.renderer.renderBone(renderState, stack, bone, consumer, cameraState, light, overlay, color);
-        }
+        PoseStack poseStack = renderPassInfo.poseStack();
+        poseStack.pushPose();
+        poseStack.last().set(pose);
+        renderPassInfo.renderPosed(() -> {
+            try {
+                boneVisibility.begin(renderPassInfo.model(), extension);
+                boneVisibility.restrictOverlay(renderPassInfo.model(), extension.overlayGeoBones());
+                renderPassInfo.model().render(renderPassInfo, consumer, light, overlay, color);
+            } finally {
+                boneVisibility.restore();
+            }
+        });
+        poseStack.popPose();
     }
 
     private EntityLayerExtension findExtension(Entity entity) {

@@ -32,10 +32,11 @@ import org.joml.Vector4f;
 @Mixin(FogRenderer.class)
 public class FogRendererMixin {
 
+    // Fork multi-version layer, 1.21.11: setupFog no longer takes the thickFog flag, so the callback does not either.
     // Fork multi-version layer, 1.21.8: setupFog returns the clear colour; the fog colour/distances that reach
     // the shaders are the arguments of FogRenderer.updateBuffer (uniform buffer upload).
     @Inject(method = "setupFog", at = @At("RETURN"), cancellable = true)
-    private void eca$applyGlobalFogColor(Camera camera, int renderDistanceChunks, boolean thickFog, DeltaTracker deltaTracker,
+    private void eca$applyGlobalFogColor(Camera camera, int renderDistanceChunks, DeltaTracker deltaTracker,
                                          float darkenWorldAmount, ClientLevel level, CallbackInfoReturnable<Vector4f> cir) {
         float[] strengthHolder = new float[]{0.0f};
         GlobalFogExtension fog = eca$resolveFogContext(level, camera, strengthHolder);

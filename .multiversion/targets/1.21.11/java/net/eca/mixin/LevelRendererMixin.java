@@ -99,7 +99,8 @@ public abstract class LevelRendererMixin {
 
     // 1.21.2: clouds are a frame-graph pass; net.eca.mixin.CloudRendererMixin cancels them (fork layer).
 
-    @Inject(method = "isSectionCompiled", at = @At("HEAD"), cancellable = true)
+    // 1.21.11: isSectionCompiled became isSectionCompiledAndVisible (compiled AND faded in); forcing true keeps the same effect.
+    @Inject(method = "isSectionCompiledAndVisible", at = @At("HEAD"), cancellable = true)
     private void eca$forceLoadedChunkCheck(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
         Entity entity = ForceLoadingManager.getCurrentRenderingEntity();
         if (entity != null && ForceLoadingManager.shouldForceLoad(entity)) {
