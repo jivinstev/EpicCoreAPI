@@ -1,0 +1,127 @@
+// Fork multi-version layer: 1.21.4 version of the authors' file (MetadataSectionSerializer was replaced by MetadataSectionType).
+package net.eca.client.render.shader_generator;
+
+import net.eca.util.shader_generator.ShaderExportBundle;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.packs.PackResources;
+import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.metadata.MetadataSectionType;
+import net.minecraft.server.packs.repository.PackSource;
+import net.minecraft.server.packs.resources.IoSupplier;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceProvider;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+@SuppressWarnings("removal")
+final class MemoryShaderResourceProvider implements ResourceProvider {
+
+    private final Map<ResourceLocation, byte[]> resources = new HashMap<>();
+    private final ResourceProvider fallback;
+    private final Map<ResourceLocation, Path> externalResources;
+    private final Map<String, Path> externalResourcesByPath;
+    private final PackResources pack = new MemoryPackResources();
+
+    MemoryShaderResourceProvider(
+        String namespace,
+        ShaderExportBundle bundle,
+        ResourceProvider fallback,
+        Map<ResourceLocation, Path> externalResources
+    ) {
+        this.fallback = fallback;
+        this.externalResources = externalResources == null ? Map.of() : Map.copyOf(externalResources);
+        Map<String, Path> byPath = new HashMap<>();
+        Set<String> ambiguousPaths = new HashSet<>();
+        this.externalResources.forEach((location, path) -> {
+            if (byPath.putIfAbsent(location.getPath(), path) != null) ambiguousPaths.add(location.getPath());
+        });
+        ambiguousPaths.forEach(byPath::remove);
+        this.externalResourcesByPath = Map.copyOf(byPath);
+        String prefix = "assets/" + namespace + "/";
+        for (ShaderExportBundle.File file : bundle.files()) {
+            if (!file.relativePath().startsWith(prefix)) {
+                continue;
+            }
+            String path = file.relativePath().substring(prefix.length());
+            byte[] content = file.content().getBytes(StandardCharsets.UTF_8);
+            resources.put(ResourceLocation.fromNamespaceAndPath(namespace, path), content);
+            String presetPrefix = "eca/shader_presets/";
+            if (path.startsWith(presetPrefix)) {
+                resources.put(ResourceLocation.fromNamespaceAndPath(namespace,
+                    "shaders/core/" + path.substring(presetPrefix.length())), content);
+            }
+        }
+    }
+
+    @Override
+    public Optional<Resource> getResource(ResourceLocation location) {
+        byte[] bytes = resources.get(location);
+        if (bytes != null) {
+            return Optional.of(new Resource(pack, () -> new ByteArrayInputStream(bytes)));
+        }
+        Path external = externalResources.get(location);
+        if (external == null) external = externalResourcesByPath.get(location.getPath());
+        if (external != null && Files.isRegularFile(external)) {
+            Path resourcePath = external;
+            return Optional.of(new Resource(pack, () -> Files.newInputStream(resourcePath)));
+        }
+        return fallback.getResource(location);
+    }
+
+    private static final class MemoryPackResources implements PackResources {
+
+        @Override
+        public IoSupplier<InputStream> getRootResource(String... path) {
+            return null;
+        }
+
+        @Override
+        public IoSupplier<InputStream> getResource(PackType type, ResourceLocation location) {
+            return null;
+        }
+
+        @Override
+        public void listResources(
+            PackType type,
+            String namespace,
+            String path,
+            ResourceOutput output
+        ) {
+        }
+
+        @Override
+        public Set<String> getNamespaces(PackType type) {
+            return Set.of("eca_preview");
+        }
+
+        @Override
+        public <T> T getMetadataSection(MetadataSectionType<T> type) throws IOException {
+            return null;
+        }
+
+        @Override
+        public PackLocationInfo location() {
+            return new PackLocationInfo(
+                "eca_shader_generator_memory",
+                Component.literal("eca_shader_generator_memory"),
+                PackSource.BUILT_IN,
+                Optional.empty()
+            );
+        }
+
+        @Override
+        public void close() {
+        }
+    }
+}
