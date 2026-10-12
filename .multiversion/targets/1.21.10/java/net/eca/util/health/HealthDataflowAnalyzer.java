@@ -1,0 +1,7712 @@
+package net.eca.util.health;
+
+import net.eca.util.health.report.HealthReportText;
+
+import static net.eca.util.health.report.HealthReportText.tr;
+
+import net.eca.config.EcaConfiguration;
+import net.eca.coremod.EcaTransformerManager;
+import net.eca.util.EcaLogger;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.analysis.Analyzer;
+import org.objectweb.asm.tree.analysis.AnalyzerException;
+import org.objectweb.asm.tree.analysis.Frame;
+import org.objectweb.asm.tree.analysis.Interpreter;
+import org.objectweb.asm.tree.analysis.Value;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandleInfo;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.invoke.VarHandle;
+import java.lang.ref.SoftReference;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+/*
+ * ECA数据流逆向分析器
+ * 通过从指定方法的字节码进行反向遍历指令序列构造 Expr 树,然后按 DualityTable 反推 sink 应写值
+ */
+public final class HealthDataflowAnalyzer {
+    private static final BoundedReadEvaluator BOUNDED_READ =
+            new BoundedReadEvaluator(HealthDataflowAnalyzer::classNode, HealthDataflowAnalyzer::loadClass);
+
+    private static final int DEFAULT_MAX_DEPTH = 6;
+    private static final int DEFAULT_INLINE_BUDGET = 500;
+    //表达式节点总预算：构造组合表达式时递减，耗尽即坍缩为 Unknown，防止复杂/互递归 getHealth 把表达式树撑爆导致分析卡死
+    private static final int DEFAULT_NODE_BUDGET = 500_000;
+    //控制流汇合处 Choice 分支上限，超出即加宽为 Unknown，保证格有限高、数据流分析收敛
+    private static final int MAX_CHOICE_ALTS = 16;
+
+    /* ==================== MC 实体方法表 ==================== */
+
+    /* MC 实体方法元数据：携带同名方法的 SRG/MCP 双名 + JVM 描述符。Mojang 反混淆切换映射时只需改本表，
+       调用者一律按 GET_HEALTH/IS_ALIVE/... 查表，避免常量散落各处与拼接漂移。 */
+    public record McMethod(String srg, String mcp, String desc) {
+        //在指定类的字节码中按 SRG 优先 MCP 后备查找本方法，未定义返回 null
+        public String matchIn(Class<?> cls) {
+            if (classDefinesMethod(cls, srg, desc)) return srg;
+            if (classDefinesMethod(cls, mcp, desc)) return mcp;
+            return null;
+        }
+    }
+
+    private static final String DAMAGE_SOURCE_DESC = "Lnet/minecraft/world/damagesource/DamageSource;";
+    private static final String ENTITY_DATA_ACCESSOR_DESC = "Lnet/minecraft/network/syncher/EntityDataAccessor;";
+    public static final McMethod GET_HEALTH       = new McMethod("getHealth", "getHealth", "()F");
+    public static final McMethod GET_MAX_HEALTH   = new McMethod("getMaxHealth", "getMaxHealth", "()F");
+    public static final McMethod IS_ALIVE         = new McMethod("isAlive", "isAlive", "()Z");
+    public static final McMethod IS_DEAD_OR_DYING = new McMethod("isDeadOrDying", "isDeadOrDying", "()Z");
+    public static final McMethod HURT             = new McMethod("hurt", "hurt", "(" + DAMAGE_SOURCE_DESC + "F)Z");
+    public static final McMethod ACTUALLY_HURT    = new McMethod("actuallyHurt", "actuallyHurt", "(" + DAMAGE_SOURCE_DESC + "F)V");
+    public static final McMethod SET_HEALTH       = new McMethod("setHealth", "setHealth", "(F)V");
+    public static final McMethod TICK             = new McMethod("tick", "tick", "()V");
+    public static final McMethod BASE_TICK        = new McMethod("baseTick", "baseTick", "()V");
+    public static final McMethod AI_STEP          = new McMethod("aiStep", "aiStep", "()V");
+
+    /* ==================== 外部扫描：isAlive/isDeadOrDying 数据流逆向 ==================== */
+
+    private static final Map<Class<?>, SemanticExternalScan> EXTERNAL_SCAN_CACHE = new ConcurrentHashMap<>();
+    /* 周期维护写入必须与语义观测树分开保存。把两者拼成 Choice 会让无关 tick 字段成为血量候选，
+       并使每次改血都重复遍历一棵可能指数膨胀的表达式树。 */
+    private static final Map<Class<?>, MaintenancePlan> MAINTENANCE_PLAN_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, MaintenanceParts> MAINTENANCE_PARTS_CACHE = new ConcurrentHashMap<>();
+    private static final Set<Class<?>> EXTERNAL_SCAN_DIAG_DUMPED = ConcurrentHashMap.newKeySet();
+    private static final Set<Class<?>> MAINTENANCE_SCAN_DIAG_DUMPED = ConcurrentHashMap.newKeySet();
+    /* 单个扫描入口抛出的诊断去重(每类每入口一次) */
+    private static final Set<String> EXTERNAL_ENTRY_FAILURE_DUMPED = ConcurrentHashMap.newKeySet();
+
+    private HealthDataflowAnalyzer() {}
+
+    public interface ClassBytesProvider {
+        byte[] get(Class<?> clazz);
+    }
+    private static volatile ClassBytesProvider bytesProvider = HealthDataflowAnalyzer::defaultClassBytes;
+    public static void setClassBytesProvider(ClassBytesProvider provider) {
+        if (provider != null) bytesProvider = provider;
+    }
+
+    /* 覆写血量查表钩子：覆写表由外部持有，ConstOverrideSource.read() 据此按 holder 取覆写值。
+       未注入时恒无覆写，read 回退原常数。 */
+    public interface OverrideLookup {
+        Float get(Object holder);
+    }
+    private static volatile OverrideLookup overrideLookup = holder -> null;
+    public static void setOverrideLookup(OverrideLookup lookup) {
+        if (lookup != null) overrideLookup = lookup;
+    }
+
+    /* 注入式包装剥离：调用者登记注入 getHealth 的 hook owner 与透明静态源 label 前缀，
+       分析时从结果树中剥离，避免把调用者自己的逻辑误当作真实血量。独立运行不调用即默认不剥离。 */
+    private static final Set<String> WRAPPER_CALL_OWNERS = ConcurrentHashMap.newKeySet();
+    private static final Set<String> WRAPPER_SOURCE_LABEL_PREFIXES = ConcurrentHashMap.newKeySet();
+    private static final Set<String> WRAPPER_REFERENCE_VALUES = ConcurrentHashMap.newKeySet();
+    public static void setStripConfig(Set<String> wrapperCallOwners, Set<String> wrapperSourceLabelPrefixes) {
+        setStripConfig(wrapperCallOwners, wrapperSourceLabelPrefixes, Set.of());
+    }
+
+    public static void setStripConfig(Set<String> wrapperCallOwners, Set<String> wrapperSourceLabelPrefixes,
+                                      Set<String> wrapperReferenceValues) {
+        WRAPPER_CALL_OWNERS.clear();
+        WRAPPER_SOURCE_LABEL_PREFIXES.clear();
+        WRAPPER_REFERENCE_VALUES.clear();
+        if (wrapperCallOwners != null) WRAPPER_CALL_OWNERS.addAll(wrapperCallOwners);
+        if (wrapperSourceLabelPrefixes != null) WRAPPER_SOURCE_LABEL_PREFIXES.addAll(wrapperSourceLabelPrefixes);
+        if (wrapperReferenceValues != null) WRAPPER_REFERENCE_VALUES.addAll(wrapperReferenceValues);
+    }
+
+    /* 默认字节码源：ClassLoader 资源 + CodeSource JAR 回退，调用者可注入运行期转换后字节码 */
+    public static byte[] defaultClassBytes(Class<?> clazz) {
+        if (clazz == null) return null;
+        ClassLoader cl = clazz.getClassLoader();
+        if (cl == null) cl = ClassLoader.getSystemClassLoader();
+        String path = internalName(clazz) + ".class";
+        try (java.io.InputStream is = cl.getResourceAsStream(path)) {
+            if (is != null) return is.readAllBytes();
+        } catch (Throwable ignored) { if (ignored instanceof VirtualMachineError e) throw e; }
+        try {
+            java.security.CodeSource cs = clazz.getProtectionDomain().getCodeSource();
+            if (cs != null && cs.getLocation() != null) {
+                try (java.util.jar.JarFile jar = new java.util.jar.JarFile(cs.getLocation().getPath())) {
+                    java.util.jar.JarEntry entry = jar.getJarEntry(path);
+                    if (entry != null) {
+                        try (java.io.InputStream jis = jar.getInputStream(entry)) {
+                            return jis.readAllBytes();
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) { if (ignored instanceof VirtualMachineError e) throw e; }
+        return null;
+    }
+
+    /* ==================== 对外：字节码分析入口 ==================== */
+
+    /* 外部语义扫描入口：只分析 isAlive/isDeadOrDying/hurt/actuallyHurt。tick 维护扫描由独立
+       入口稍后执行，不能阻塞真实血量候选发布。 */
+    public static AnalysisResult resolveExternalScanResult(Class<?> entityClass) {
+        if (entityClass == null) return null;
+        SemanticExternalScan scan = EXTERNAL_SCAN_CACHE.computeIfAbsent(entityClass,
+                HealthDataflowAnalyzer::analyzeSemanticExternalScan);
+        AnalysisResult ar = scan.result();
+        if (ar == null || ar.isEmpty() || ar.sources.isEmpty()) return null;
+        return ar;
+    }
+
+    /* 仅查外部扫描缓存、绝不触发分析(供运行期非阻塞查询)。重量级分析由调用者在后台线程经
+       resolveExternalScanResult 预填，从而不阻塞服务器线程。 */
+    public static AnalysisResult peekExternalScanResult(Class<?> entityClass) {
+        if (entityClass == null) return null;
+        SemanticExternalScan scan = EXTERNAL_SCAN_CACHE.get(entityClass);
+        AnalysisResult ar = scan == null ? null : scan.result();
+        if (ar == null || ar.isEmpty() || ar.sources.isEmpty()) return null;
+        return ar;
+    }
+
+    /* 兼容入口：依次补齐两个维护分支。运行期管理器使用下方两个独立入口并行执行。 */
+    public static MaintenancePlan resolveMaintenancePlan(Class<?> entityClass) {
+        if (entityClass == null) return MaintenancePlan.EMPTY;
+        resolveTickMaintenancePlan(entityClass);
+        resolveAuthorityMaintenancePlan(entityClass);
+        return peekMaintenancePlan(entityClass);
+    }
+
+    public static MaintenancePlan resolveTickMaintenancePlan(Class<?> entityClass) {
+        return resolveMaintenancePart(entityClass, true);
+    }
+
+    public static MaintenancePlan resolveAuthorityMaintenancePlan(Class<?> entityClass) {
+        return resolveMaintenancePart(entityClass, false);
+    }
+
+    /* 只读查询已分析出的周期维护计划；计划未就绪时不触发同步分析。 */
+    public static MaintenancePlan peekMaintenancePlan(Class<?> entityClass) {
+        if (entityClass == null) return MaintenancePlan.EMPTY;
+        return MAINTENANCE_PLAN_CACHE.getOrDefault(entityClass, MaintenancePlan.EMPTY);
+    }
+
+    /* 维护扫描抓到的写入落点，去重后按 tick/权威扫描顺序保留。
+       它由字节码写入扫描独立得出，与比较表达式无关，因此可以作为有效血量模型的候选来源
+       而不构成"存储与校验同出一源"的闭环——后者会使写入与回读互为逆运算而恒等通过。
+       真实血量存储未必被任何改血通道写过，只认写入记录会形成"不提名就没记录、没记录就不提名"的死锁。 */
+    public static List<Source> maintenanceSinks(Class<?> entityClass) {
+        if (entityClass == null) return List.of();
+        return MAINTENANCE_SINKS_CACHE.getOrDefault(entityClass, List.of());
+    }
+
+    /* 周期维护把某个单元整体重算自另一个单元时，前者只是后者的镜像：写镜像活不过一次维护，
+       而生死判定读的是权威。recomputeExpr 为维护期重算镜像所用的表达式，反解它即得权威应写的值。 */
+    public record MirrorLink(Source mirror, Source authority, Expr recomputeExpr) {}
+
+    private static final Map<Class<?>, Map<String, MirrorLink>> MAINTENANCE_MIRROR_CACHE = new ConcurrentHashMap<>();
+
+    /* 只读查询某落点是否为周期镜像；维护扫描未就绪时返回 null，调用方按未知处理而非按非镜像处理。 */
+    public static MirrorLink peekMirrorLink(Class<?> entityClass, Source sink) {
+        if (entityClass == null || sink == null) return null;
+        Map<String, MirrorLink> links = MAINTENANCE_MIRROR_CACHE.get(entityClass);
+        return links == null ? null : links.get(sink.canonicalKey());
+    }
+
+    /* 供报告展示结构线索，不作为具体血量落点已存在恢复来源的证据。 */
+    public static boolean hasMirrorAuthority(Class<?> entityClass) {
+        Map<String, MirrorLink> links = entityClass == null ? null : MAINTENANCE_MIRROR_CACHE.get(entityClass);
+        return links != null && !links.isEmpty();
+    }
+
+    public static boolean isMaintenancePlanResolved(Class<?> entityClass) {
+        MaintenanceParts parts = entityClass == null ? null : MAINTENANCE_PARTS_CACHE.get(entityClass);
+        return parts != null && parts.tickResolved && parts.authorityResolved;
+    }
+
+    public static boolean isTickMaintenanceResolved(Class<?> entityClass) {
+        MaintenanceParts parts = entityClass == null ? null : MAINTENANCE_PARTS_CACHE.get(entityClass);
+        return parts != null && parts.tickResolved;
+    }
+
+    public static boolean isAuthorityMaintenanceResolved(Class<?> entityClass) {
+        MaintenanceParts parts = entityClass == null ? null : MAINTENANCE_PARTS_CACHE.get(entityClass);
+        return parts != null && parts.authorityResolved;
+    }
+
+    static void clearMaintenancePlans() {
+        MAINTENANCE_PLAN_CACHE.clear();
+        MAINTENANCE_PARTS_CACHE.clear();
+        MAINTENANCE_SINKS_CACHE.clear();
+        MAINTENANCE_MIRROR_CACHE.clear();
+        MAINTENANCE_SCAN_DIAG_DUMPED.clear();
+    }
+
+    public static boolean verifyExternalDataflow(Expr root, LivingEntity entity, float expected, Source sink) {
+        if (entity == null) return false;
+        boolean expressionMatches = externalExpressionMatches(root, sink, expected, newContext(entity));
+        if (expected <= 0.0f) {
+            /* 生死观测口与 getHealth 同属一组可被重写的观测出口：锚点已证明解耦时，
+               它们同样不可采信，不能用来否决一次符合表达式的写入。 */
+            if (EcaSetHealthManager.isAnchorUntrusted(entity)) return expressionMatches;
+            return expressionMatches && (!entity.isAlive() || entity.isDeadOrDying());
+        }
+        if (!expressionMatches || entity.isRemoved()) return false;
+        // ConstOverride 在外部扫描中是高危假阳性(覆写辅助方法常数不一定改变真实血量)，
+        // 须额外通过 getHealth 校验；普通字段/SynchedData 写入信任 expressionMatches
+        if (sink instanceof ConstOverrideSource) {
+            return EcaSetHealthManager.verify(entity, expected);
+        }
+        return true;
+    }
+
+    private static final Set<String> EXTERNAL_EVAL_DIAG = ConcurrentHashMap.newKeySet();
+
+    private static boolean externalExpressionMatches(Expr expression, Source sink, float expected, EvalContext context) {
+        if (expression instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) {
+                if ((sink == null || containsSink(alternative, sink))
+                        && externalExpressionMatches(alternative, sink, expected, context)) return true;
+            }
+            return false;
+        }
+        // StoreWrite 是纯副作用写入(如无敌帧/击退计数)，不代表该字段是血量读取源
+        if (expression instanceof StoreWrite write) {
+            if (sink != null && sameSource(write.sink(), sink) && !containsSinkInReadPosition(write.valueExpr(), sink))
+                return false;
+        }
+        if (sink != null && !containsSink(expression, sink)) return false;
+        Object value = safeEvaluate(expression, context);
+        if (!(value instanceof Number number)) {
+            if (sink != null && EXTERNAL_EVAL_DIAG.add(sink.label + "|eval=" + value))
+                EcaLogger.info("[ExternalScan] eval non-numeric sink={} value={} expr={}",
+                        sink.label, value, HealthDataFlow.expressionSummary(expression));
+            return false;
+        }
+        float actual = number.floatValue();
+        boolean matches = HealthValueSemantics.matches(actual, expected);
+        if (!matches && sink != null && EXTERNAL_EVAL_DIAG.add(sink.label + "|actual=" + actual))
+            EcaLogger.info("[ExternalScan] eval mismatch sink={} actual={} expected={}", sink.label, actual, expected);
+        return matches;
+    }
+
+    /* sink 是否出现在读取位置(作为调用参数/运算操作数等)，而非仅作为 StoreWrite 的写入目标 */
+    private static boolean containsSinkInReadPosition(Expr e, Source sink) {
+        if (sameSource(e, sink)) return true;
+        if (e instanceof Op op) {
+            for (Expr a : op.args()) if (containsSinkInReadPosition(a, sink)) return true;
+        }
+        if (e instanceof Call call) {
+            for (Expr a : call.args()) if (containsSinkInReadPosition(a, sink)) return true;
+        }
+        if (e instanceof Choice c) {
+            for (Expr a : c.alternatives()) if (containsSinkInReadPosition(a, sink)) return true;
+        }
+        return false;
+    }
+
+    /* ==================== Expr 类型系统 ==================== */
+
+    public interface Expr {}
+
+    // 重建表达式不代表发现新位置；只有真实运行期引用保留对象身份。
+    private static final ThreadLocal<KeyBuild> KEY_BUILD = new ThreadLocal<>();
+    private static final int MAX_KEY_LENGTH = 131072;
+
+    private static final class KeyBuild {
+        final Map<Expr, String> memo = new IdentityHashMap<>();
+        int depth;
+        int nodes;
+        int characters;
+    }
+
+    private static String boundedKey(Expr expression, Supplier<String> builder) {
+        KeyBuild state = KEY_BUILD.get();
+        boolean root = state == null;
+        if (root) {
+            state = new KeyBuild();
+            KEY_BUILD.set(state);
+        }
+        try {
+            AnalysisRun.checkCurrent();
+            String cached = state.memo.get(expression);
+            if (cached != null) return cached;
+            if (++state.nodes > 8192 || ++state.depth > 128) throw incompleteAnalysis(true);
+            String key;
+            try {
+                key = builder.get();
+            } finally {
+                state.depth--;
+            }
+            state.characters += key.length();
+            if (key.length() > MAX_KEY_LENGTH || state.characters > 4_194_304) throw incompleteAnalysis(true);
+            state.memo.put(expression, key);
+            return key;
+        } finally {
+            if (root) KEY_BUILD.remove();
+        }
+    }
+
+    static String evidenceKey(Expr expr) {
+        if (expr instanceof Source source) return source.canonicalKey();
+        return boundedKey(expr, () -> buildEvidenceKey(expr));
+    }
+
+    private static String buildEvidenceKey(Expr expr) {
+        if (expr == null) return "null";
+        if (expr instanceof Source source) return source.canonicalKey();
+        if (expr instanceof Reference reference) {
+            Object value = reference.value();
+            return "ref:" + reference.className() + ":" + (value == null || value instanceof String
+                    || value instanceof Number || value instanceof Boolean || value instanceof Character
+                    ? String.valueOf(value) : System.identityHashCode(value));
+        }
+        if (expr instanceof Op op) return "op:" + op.opcode() + evidenceKeys(op.args());
+        if (expr instanceof Call call) return "call:" + call.owner() + ":" + call.caller() + ":"
+                + call.name() + call.desc() + ":" + call.opcode() + evidenceKeys(call.args());
+        if (expr instanceof Choice choice) return "choice:" + evidenceKeys(choice.alternatives());
+        if (expr instanceof Closure closure) return "closure:" + closure.implementation() + ":"
+                + closure.samName() + closure.samDesc() + evidenceKeys(closure.captured());
+        if (expr instanceof StoreWrite write) return "write:" + evidenceKey(write.sink()) + ":" + evidenceKey(write.valueExpr());
+        if (expr instanceof OptionalContentExpr optional) return "optional:" + evidenceKey(optional.optionalExpr());
+        return expr.toString();
+    }
+
+    private static String evidenceKeys(List<Expr> expressions) {
+        StringBuilder key = new StringBuilder("[");
+        for (Expr expression : expressions) {
+            String part = evidenceKey(expression);
+            if (key.length() + part.length() + 16 > MAX_KEY_LENGTH) throw incompleteAnalysis(true);
+            key.append(part.length()).append(':').append(part);
+        }
+        return key.append(']').toString();
+    }
+
+    /* 字面常量,jvmType 标记 IJFD/CSB/Z 等 JVM 类型字符。
+       origin 记录常数加载指令在字节码中的来源(类/方法/指令下标 + 持有方法 receiver)，供常数覆写精准 patch 定位;
+       origin 只是旁路信息,不参与 equals/hashCode——常数仍按值去重,不破坏 Op 折叠语义。 */
+    public static final class Primitive implements Expr {
+        private final Number value;
+        private final char jvmType;
+        private final ConstProvenance origin;
+        public Primitive(Number value, char jvmType) { this(value, jvmType, null); }
+        public Primitive(Number value, char jvmType, ConstProvenance origin) {
+            this.value = value; this.jvmType = jvmType; this.origin = origin;
+        }
+        public Number value() { return value; }
+        public char jvmType() { return jvmType; }
+        public ConstProvenance origin() { return origin; }
+        @Override public boolean equals(Object o) {
+            return o instanceof Primitive p && jvmType == p.jvmType && Objects.equals(value, p.value);
+        }
+        @Override public int hashCode() { return Objects.hash(value, jvmType); }
+        @Override public String toString() { return "Primitive[" + value + ":" + jvmType + "]"; }
+    }
+
+    /* 常数来源坐标:持有常数加载指令的 类内部名/方法名/方法描述符/指令下标,
+       外加该持有方法的 receiver 表达式(local 0,运行期据此定位覆写表的 holder 对象)。 */
+    public record ConstProvenance(String ownerInternal, String methodName, String methodDesc,
+                                  int insnIndex, boolean holderIsStatic, Expr receiver) {}
+
+    //分析期已确定的对象引用(如 GETSTATIC EntityDataAccessor / 静态 Map)
+    public record Reference(Object value, String className) implements Expr {}
+
+    //JVM 算术/位/类型转换指令
+    public record Op(int opcode, List<Expr> args) implements Expr {
+        public Op { args = List.copyOf(args); }
+        @Override public boolean equals(Object o) {
+            AnalysisRun.checkCurrent();
+            return this == o || (o instanceof Op other && opcode == other.opcode && args.equals(other.args));
+        }
+        @Override public int hashCode() { return opcode * 31 + args.hashCode(); }
+    }
+
+    // 方法调用必须保留 JVM 分派方式；否则 super 调用在运行期反射求值时会错误落到子类覆写
+    public record Call(String owner, String caller, String name, String desc, int opcode,
+                       List<Expr> args) implements Expr {
+        public Call { args = List.copyOf(args); }
+        public Call(String owner, String name, String desc, List<Expr> args) {
+            this(owner, null, name, desc,
+                    args.size() == Type.getArgumentTypes(desc).length
+                            ? Opcodes.INVOKESTATIC : Opcodes.INVOKEVIRTUAL,
+                    args);
+        }
+    }
+
+    public record Closure(Handle implementation, String samName, String samDesc, List<Expr> captured) implements Expr {
+        public Closure { captured = List.copyOf(captured); }
+    }
+
+    public record StoreWrite(Source sink, Expr valueExpr) implements Expr {}
+
+    public record WriteInput(int index, char jvmType) implements Expr {}
+
+    public record ArrayAllocExpr(int id) implements Expr {}
+
+    public record OptionalContentExpr(Expr optionalExpr) implements Expr {}
+
+    //控制流汇合 / 多 return 路径的并集
+    public record Choice(List<Expr> alternatives) implements Expr {
+        public Choice { alternatives = List.copyOf(alternatives); }
+        @Override public boolean equals(Object other) {
+            AnalysisRun.checkCurrent();
+            return this == other || other instanceof Choice choice && alternatives.equals(choice.alternatives);
+        }
+        @Override public int hashCode() { return alternatives.hashCode(); }
+    }
+
+    //分析期无法符号化的节点
+    public record UnknownExpr(String provenance) implements Expr {
+        public static final UnknownExpr UNKNOWN = new UnknownExpr("");
+    }
+
+    /* 数据源(sink 候选)：仅描述位置 + 求解期 read 代入，equals 按 canonicalKey。
+       写入实体的副作用由调用者按 instanceof 分发到对应实现，本类不承担写入。 */
+    public static abstract class Source implements Expr {
+        private volatile String cachedCanonicalKey;
+        public final Class<?> valueType;
+        public final String label;
+        protected Source(Class<?> valueType, String label) {
+            this.valueType = valueType;
+            this.label = label;
+        }
+        public abstract Object read(LivingEntity entity);
+        protected abstract String buildCanonicalKey();
+
+        protected final String canonicalKey() {
+            AnalysisRun.checkCurrent();
+            String key = cachedCanonicalKey;
+            if (key == null) {
+                key = boundedKey(this, this::buildCanonicalKey);
+                cachedCanonicalKey = key;
+            }
+            return key;
+        }
+
+        /* 数值反演默认使用 read() 的结果作为运行期对象锚点。
+           容器类型的子类应同时提供容器或根对象，避免依赖具体容器结构。 */
+        public void collectDescentAnchors(EvalContext ctx, Consumer<Object> sink) {
+            sink.accept(read(ctx.entity()));
+        }
+        @Override public boolean equals(Object o) {
+            return this == o || o instanceof Source s && canonicalKey().equals(s.canonicalKey());
+        }
+        @Override public int hashCode() { return canonicalKey().hashCode(); }
+        @Override public String toString() { return label; }
+    }
+
+    /* ==================== Source 子类 ==================== */
+
+    public record FieldStep(String ownerInternal, String name, String desc) {}
+
+    //this.a.b.c 字段链,可指向任意类型字段(数值/String/Object)
+    public static final class FieldChainSource extends Source {
+        public final List<FieldStep> chain;
+        public final VarHandle[] handles;
+
+        public FieldChainSource(List<FieldStep> chain, VarHandle[] handles, Class<?> valueType) {
+            super(valueType, "F:" + describe(chain));
+            this.chain = List.copyOf(chain);
+            this.handles = handles;
+        }
+
+        private static String describe(List<FieldStep> chain) {
+            StringBuilder sb = new StringBuilder();
+            for (FieldStep s : chain) { if (sb.length() > 0) sb.append('.'); sb.append(s.name()); }
+            return sb.toString();
+        }
+
+        @Override public Object read(LivingEntity entity) {
+            try {
+                Object cur = entity;
+                for (VarHandle vh : handles) {
+                    if (cur == null) return null;
+                    cur = vh.get(cur);
+                }
+                return cur;
+            } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+        }
+
+
+        @Override protected String buildCanonicalKey() {
+            StringBuilder sb = new StringBuilder("FC:");
+            for (FieldStep s : chain) sb.append(s.ownerInternal()).append('.').append(s.name()).append(';');
+            return sb.toString();
+        }
+    }
+
+    /* 常数覆写源：把 getHealth 逆向中某个被精准 patch 的常数点建模为可写源。
+       read/write 先 evaluate(receiver) 求出 holder 对象(① 实体本体 ② 实体的 health manager)，
+       按其 identity 读写覆写表，与被 patch 字节码里的 resolveHealth(this,...) 落在同一 holder 上。 */
+    public static final class ConstOverrideSource extends Source {
+        public final Expr receiver;
+        public final float original;
+        public final ConstProvenance provenance;
+
+        public ConstOverrideSource(Expr receiver, float original, ConstProvenance provenance) {
+            super(float.class, "CO:" + provenance.ownerInternal() + "#" + provenance.methodName()
+                    + "@" + provenance.insnIndex());
+            this.receiver = receiver;
+            this.original = original;
+            this.provenance = provenance;
+        }
+
+        // 求 holder 对象：receiver 为 EntityParamMarker 时即实体，否则按字段链等表达式求值
+        public Object holder(LivingEntity entity) {
+            try {
+                return evaluate(receiver, newContext(entity));
+            } catch (Throwable t) { if (t instanceof VirtualMachineError e) throw e; return null; }
+        }
+
+        @Override public Object read(LivingEntity entity) {
+            Object h = holder(entity);
+            if (h == null) return original;
+            Float ov = overrideLookup.get(h);
+            return ov != null ? ov : original;
+        }
+
+        @Override protected String buildCanonicalKey() {
+            return "CO:" + provenance.ownerInternal() + "#" + provenance.methodName()
+                    + "#" + provenance.methodDesc() + "@" + provenance.insnIndex();
+        }
+    }
+
+    public static final class StaticFieldSource extends Source {
+        public final Field field;
+
+        public StaticFieldSource(Field field) {
+            super(field.getType(), "SF:" + field.getDeclaringClass().getName() + "." + field.getName());
+            this.field = field;
+            this.field.setAccessible(true);
+        }
+
+        @Override
+        public Object read(LivingEntity entity) {
+            try {
+                return field.get(null);
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+                return null;
+            }
+        }
+
+        @Override
+        protected String buildCanonicalKey() {
+            return "SF:" + field.getDeclaringClass().getName() + "." + field.getName();
+        }
+    }
+
+    //在非 this 受体上做字段链：root 是任意 Expr,运行时 eval 得到受体对象,再走 chain
+    public static final class ChainedFieldSource extends Source {
+        public final Expr root;
+        public final List<FieldStep> chain;
+
+        public ChainedFieldSource(Expr root, List<FieldStep> chain, Class<?> valueType) {
+            super(valueType, "CF:" + describe(chain));
+            this.root = root;
+            this.chain = List.copyOf(chain);
+        }
+
+        private static String describe(List<FieldStep> chain) {
+            StringBuilder sb = new StringBuilder();
+            for (FieldStep s : chain) { if (sb.length() > 0) sb.append('.'); sb.append(s.name()); }
+            return sb.toString();
+        }
+
+        @Override public Object read(LivingEntity entity) {
+            try {
+                Object cur = evaluate(root, new SimpleEvalContext(entity));
+                for (FieldStep s : chain) {
+                    if (cur == null) return null;
+                    cur = readField(cur, s);
+                }
+                return cur;
+            } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+        }
+
+        @Override public void collectDescentAnchors(EvalContext ctx, Consumer<Object> sink) {
+            sink.accept(read(ctx.entity()));
+            sink.accept(safeEvaluate(root, ctx));
+        }
+
+        @Override protected String buildCanonicalKey() {
+            StringBuilder sb = new StringBuilder("CFS:").append(evidenceKey(root)).append(':');
+            for (FieldStep s : chain) sb.append(s.ownerInternal()).append('.').append(s.name()).append(';');
+            return sb.toString();
+        }
+    }
+
+    //SynchedEntityData.get(accessor) - 读写 DataItem.value
+    public static final class CapabilityDataSource extends Source {
+        public final Expr containerExpr;
+        public final Expr keyExpr;
+        public final List<FieldStep> chain;
+
+        public CapabilityDataSource(Expr containerExpr, Expr keyExpr, List<FieldStep> chain, Class<?> valueType) {
+            super(valueType, "CAP:" + (chain.isEmpty() ? "value" : describeCapabilityChain(chain)));
+            this.containerExpr = containerExpr;
+            this.keyExpr = keyExpr;
+            this.chain = List.copyOf(chain);
+        }
+
+        private static String describeCapabilityChain(List<FieldStep> chain) {
+            StringBuilder sb = new StringBuilder();
+            for (FieldStep step : chain) {
+                if (sb.length() > 0) sb.append('.');
+                sb.append(step.name());
+            }
+            return sb.toString();
+        }
+
+        @Override public Object read(LivingEntity entity) {
+            try {
+                EvalContext ctx = new SimpleEvalContext(entity);
+                Object slot = readCapabilitySlot(ctx);
+                for (FieldStep step : chain) {
+                    if (slot == null) return null;
+                    slot = readField(slot, step);
+                }
+                return slot;
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+                return null;
+            }
+        }
+
+        private Object readCapabilitySlot(EvalContext ctx) {
+            Object container = evaluate(containerExpr, ctx);
+            Object key = evaluate(keyExpr, ctx);
+            return container == null || key == null ? null : readCapabilitySlot(container, key);
+        }
+
+        private static Object readCapabilitySlot(Object container, Object key) {
+            Object value = invokeCompatible(container, "getValue", key);
+            return value == InvokeFailed.INSTANCE ? null : value;
+        }
+
+        @Override public void collectDescentAnchors(EvalContext ctx, Consumer<Object> sink) {
+            sink.accept(read(ctx.entity()));
+            sink.accept(safeEvaluate(containerExpr, ctx));
+        }
+
+        @Override protected String buildCanonicalKey() {
+            StringBuilder sb = new StringBuilder("CAP:")
+                    .append(evidenceKey(containerExpr)).append(':')
+                    .append(evidenceKey(keyExpr)).append(':');
+            for (FieldStep step : chain) sb.append(step.ownerInternal()).append('.').append(step.name()).append(';');
+            return sb.toString();
+        }
+    }
+
+    public static final class SynchedDataSource extends Source {
+        public final EntityDataAccessor<?> accessor;
+
+        public SynchedDataSource(EntityDataAccessor<?> accessor, Class<?> valueType) {
+            super(valueType, "SD:" + accessor.id());
+            this.accessor = accessor;
+        }
+
+        @SuppressWarnings("rawtypes")
+        @Override public Object read(LivingEntity entity) {
+            try {
+                SynchedEntityData.DataItem<?>[] items = entity.getEntityData().itemsById;
+                int slot = accessor.id();
+                SynchedEntityData.DataItem item = slot >= 0 && slot < items.length ? items[slot] : null;
+                return item == null ? null : item.value;
+            } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+        }
+
+        @Override protected String buildCanonicalKey() { return "SD:" + accessor.id(); }
+    }
+
+    //在某个容器对象上做 .get(key)。ownerClassInternal 非空时启用兄弟表联写,对抗影子表回滚
+    public static final class MapEntrySource extends Source {
+        public final Expr containerExpr;
+        public final Expr keyExpr;
+        public final KeyKind keyKind;
+        public final String ownerClassInternal;
+
+        public enum KeyKind { ENTITY, ENTITY_UUID, ENTITY_ID, UNKNOWN }
+
+        public MapEntrySource(Expr containerExpr, Expr keyExpr, KeyKind keyKind,
+                              String ownerClassInternal, Class<?> valueType, String label) {
+            super(valueType, "M:" + label);
+            this.containerExpr = containerExpr;
+            this.keyExpr = keyExpr;
+            this.keyKind = keyKind;
+            this.ownerClassInternal = ownerClassInternal;
+        }
+
+        /* read 提供当前匹配 entry 的值供求解使用；相关 Map 的同步写入由调用者完成。
+           容器既支持 java.util.Map，也鸭子类型支持不实现 Map 的自定义容器(仅依赖只读 containsKey/get 访问器)。 */
+        @Override public Object read(LivingEntity entity) {
+            try {
+                ResolvedMapEntry location = resolveLocation(new SimpleEvalContext(entity));
+                if (location != null) return location.map().get(location.key());
+                if (ambiguousLocation(containerExpr) || ambiguousLocation(keyExpr)) return null;
+                Object container = safeEvaluate(containerExpr, new SimpleEvalContext(entity));
+                Object key = safeEvaluate(keyExpr, new SimpleEvalContext(entity));
+                return container == null || container instanceof Map<?, ?> || key == null
+                        ? null : duckMapGet(container, new Object[]{key});
+            } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+        }
+
+        @Override public void collectDescentAnchors(EvalContext ctx, Consumer<Object> sink) {
+            ResolvedMapEntry location = resolveLocation(ctx);
+            if (location != null) {
+                sink.accept(location.map().get(location.key()));
+                sink.accept(location.map());
+            } else {
+                // Custom containers expose the selected value, never their entire backing table.
+                sink.accept(read(ctx.entity()));
+            }
+        }
+
+        record ResolvedMapEntry(Map<?, ?> map, Object key) {}
+
+        ResolvedMapEntry resolveLocation(EvalContext context) {
+            HealthMutationContext shared = HealthMutationContext.current();
+            ResolvedMapEntry saved = shared == null ? null : shared.mapLocation(this);
+            if (saved != null) return saved;
+            if (ambiguousLocation(containerExpr) || ambiguousLocation(keyExpr)) {
+                HealthMutationContext.recordEvidence(tr("map.ambiguous"));
+                return null;
+            }
+            Object container = safeEvaluate(containerExpr, context);
+            if (!(container instanceof Map<?, ?> map)) {
+                HealthMutationContext.recordEvidence(tr("map.no_container"));
+                return null;
+            }
+            Object key = resolveKey(map, context);
+            if (key == null) {
+                HealthMutationContext.recordEvidence(tr("map.no_key"));
+                return null;
+            }
+            ResolvedMapEntry location = new ResolvedMapEntry(map, key);
+            if (shared != null) shared.rememberMapLocation(this, location);
+            Object value = map.get(key);
+            HealthMutationContext.recordEvidence(tr("map.resolved", value instanceof Enum<?> ? tr("value.enum") : value == null ? "null" : tr("value.non_enum")));
+            return location;
+        }
+
+        private static boolean ambiguousLocation(Expr expression) {
+            if (expression instanceof Choice || expression instanceof UnknownExpr) return true;
+            if (expression instanceof Call call) return call.args().stream().anyMatch(MapEntrySource::ambiguousLocation);
+            if (expression instanceof Op operation) return operation.args().stream().anyMatch(MapEntrySource::ambiguousLocation);
+            if (expression instanceof ChainedFieldSource field) return ambiguousLocation(field.root);
+            return false;
+        }
+
+        @Override protected String buildCanonicalKey() {
+            return "ME:" + evidenceKeys(Arrays.asList(containerExpr, keyExpr)) + ":" + keyKind;
+        }
+
+        // 明确的键表达式未命中时不猜其他键，避免改到同表的另一条记录。
+        Object resolveKey(Map<?, ?> map, EvalContext context) {
+            Object key = safeEvaluate(keyExpr, context);
+            if (key != null) return map.containsKey(key) ? key : null;
+            if (keyExpr != null && !(keyExpr instanceof UnknownExpr)) return null;
+            key = switch (keyKind) {
+                case ENTITY -> context.entity();
+                case ENTITY_UUID -> context.entity().getUUID();
+                case ENTITY_ID -> context.entity().getId();
+                case UNKNOWN -> null;
+            };
+            return key != null && map.containsKey(key) ? key : null;
+        }
+
+        /* 鸭子类型读取自定义 map 容器：按容器类缓存 containsKey/get 只读访问器，逐一尝试候选键。
+           仅调用只读访问器(无写入/写锁副作用)，使不实现 java.util.Map 的容器也能交出 entry 值供反演下探。 */
+        private static final Map<Class<?>, Method[]> DUCK_ACCESSORS = new ConcurrentHashMap<>();
+        private static final Method[] NO_DUCK_ACCESSORS = new Method[0];
+
+        private static Object duckMapGet(Object container, Object[] keys) {
+            Method[] acc = DUCK_ACCESSORS.computeIfAbsent(container.getClass(), cls -> {
+                Method containsKey = findDuckAccessor(cls, "containsKey");
+                Method get = findDuckAccessor(cls, "get");
+                if (containsKey == null || get == null) return NO_DUCK_ACCESSORS;
+                containsKey.setAccessible(true);
+                get.setAccessible(true);
+                return new Method[]{containsKey, get};
+            });
+            if (acc == NO_DUCK_ACCESSORS) return null;
+            try {
+                for (Object k : keys) {
+                    if (k == null) continue;
+                    if (Boolean.TRUE.equals(acc[0].invoke(container, k))) return acc[1].invoke(container, k);
+                }
+            } catch (Throwable t) { if (t instanceof VirtualMachineError e) throw e; }
+            return null;
+        }
+
+        // 找擦除后的泛型 map 只读访问器：单参、非原始参数(排除 get(int) 索引器)，优先 Object 参数
+        private static Method findDuckAccessor(Class<?> cls, String name) {
+            Method fallback = null;
+            for (Class<?> c = cls; c != null && c != Object.class; c = c.getSuperclass()) {
+                for (Method m : c.getDeclaredMethods()) {
+                    if (!m.getName().equals(name) || m.getParameterCount() != 1) continue;
+                    Class<?> pt = m.getParameterTypes()[0];
+                    if (pt.isPrimitive()) continue;
+                    if (pt == Object.class) return m;
+                    if (fallback == null) fallback = m;
+                }
+            }
+            return fallback;
+        }
+    }
+
+    //arr[i] - arrayExpr 和 indexExpr 都是 Expr
+    public static final class ArrayElementSource extends Source {
+        public final Expr arrayExpr;
+        public final Expr indexExpr;
+
+        public ArrayElementSource(Expr arrayExpr, Expr indexExpr, Class<?> valueType, String label) {
+            super(valueType, "A:" + label);
+            this.arrayExpr = arrayExpr;
+            this.indexExpr = indexExpr;
+        }
+
+        @Override public Object read(LivingEntity entity) {
+            try {
+                EvalContext ctx = new SimpleEvalContext(entity);
+                Object arr = evaluate(arrayExpr, ctx);
+                Object idx = evaluate(indexExpr, ctx);
+                if (arr == null || !(idx instanceof Number n)) return null;
+                return Array.get(arr, n.intValue());
+            } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+        }
+
+        @Override public void collectDescentAnchors(EvalContext ctx, Consumer<Object> sink) {
+            sink.accept(read(ctx.entity()));
+            sink.accept(safeEvaluate(arrayExpr, ctx));
+        }
+
+        @Override protected String buildCanonicalKey() {
+            return "AE:" + evidenceKey(arrayExpr) + ":" + evidenceKey(indexExpr);
+        }
+    }
+
+    public static final class MethodCallSource extends Source {
+        public final String ownerInternal;
+        public final String name;
+        public final String desc;
+        public final List<Expr> args;
+        public final int valueArgIndex;
+
+        public MethodCallSource(String ownerInternal, String name, String desc, List<Expr> args, int valueArgIndex) {
+            super(float.class, "MC:" + ownerInternal + "#" + name + desc + "[" + valueArgIndex + "]");
+            this.ownerInternal = ownerInternal;
+            this.name = name;
+            this.desc = desc;
+            this.args = args;
+            this.valueArgIndex = valueArgIndex;
+        }
+
+        @Override public Object read(LivingEntity entity) {
+            return null;
+        }
+
+        @Override protected String buildCanonicalKey() {
+            return "MC:" + ownerInternal + "#" + name + "#" + desc + "#" + valueArgIndex;
+        }
+    }
+
+    /* ==================== 求逆接口与对偶表 ==================== */
+
+    public interface Inverter {
+        Object invert(Object target, List<Expr> args, int sinkArgIdx, EvalContext ctx);
+    }
+
+    public interface EvalContext {
+        Object eval(Expr e);
+        LivingEntity entity();
+    }
+
+    public static final class DualityTable {
+        private final Map<Integer, Inverter> opRules = new HashMap<>();
+        private final Map<String, Inverter> callRules = new HashMap<>();
+        public void registerOp(int opcode, Inverter inv) { opRules.put(opcode, inv); }
+        public void registerCall(String owner, String name, String desc, Inverter inv) {
+            callRules.put(owner + "#" + name + "#" + desc, inv);
+        }
+        public Inverter lookupOp(int opcode) { return opRules.get(opcode); }
+        public Inverter lookupCall(String owner, String name, String desc) {
+            return callRules.get(owner + "#" + name + "#" + desc);
+        }
+    }
+
+    public static final DualityTable TABLE = new DualityTable();
+    static { initDefaultRules(); }
+
+    /* 运行期发现的编解码对偶：仅在激进逻辑开启时，允许把同一工具类中已存在的 encode(P)->E
+       作为 decode(E)->P 的逆，明文 P 可为数字或文本。它不尝试破译密钥，只复用目标自身的合法编码器。 */
+    private static final Map<String, Inverter> DISCOVERED_CODEC_INVERTERS = new ConcurrentHashMap<>();
+    private static final Map<String, String> CODEC_DISCOVERY_FAILED = new ConcurrentHashMap<>();
+
+    private static Inverter lookupCallInverter(Call call) {
+        Inverter known = TABLE.lookupCall(call.owner(), call.name(), call.desc());
+        if (known != null) return known;
+        // Call IR 为实例调用额外携带 receiver；动态编码器只接受无 receiver 的静态工具方法。
+        if (call.args().size() != Type.getArgumentTypes(call.desc()).length) return null;
+        if (!EcaConfiguration.getAttackEnableRadicalLogicSafely()) return null;
+        String key = call.owner() + "#" + call.name() + "#" + call.desc();
+        Inverter cached = DISCOVERED_CODEC_INVERTERS.get(key);
+        HealthMutationContext shared = HealthMutationContext.current();
+        String evidence = shared == null ? "" : shared.codecEvidenceKey();
+        if (cached != null || evidence.equals(CODEC_DISCOVERY_FAILED.get(key))) return cached;
+        Inverter discovered = discoverCodecInverter(call.owner(), call.name(), call.desc());
+        if (discovered == null) {
+            CODEC_DISCOVERY_FAILED.put(key, evidence);
+            return null;
+        }
+        Inverter existing = DISCOVERED_CODEC_INVERTERS.putIfAbsent(key, discovered);
+        return existing != null ? existing : discovered;
+    }
+
+    private static Inverter discoverCodecInverter(String ownerInternal, String decoderName, String decoderDesc) {
+        try {
+            Type[] decoderArgs = Type.getArgumentTypes(decoderDesc);
+            Type decoderReturn = Type.getReturnType(decoderDesc);
+            if (decoderArgs.length != 1 || decoderArgs[0].getSort() != Type.OBJECT) return null;
+            /* 明文可以是数字，也可以是文本：密文串先解成明文串，再由上层 parseXxx 取数，
+               此时解码器形如 (String)->String，不能只认数值返回。 */
+            boolean numericPlain = isNumericAsmType(decoderReturn);
+            if (!numericPlain && decoderReturn.getSort() != Type.OBJECT) return null;
+            Class<?> owner = loadClass(ownerInternal);
+            Class<?> encodedType = asmTypeToClass(decoderArgs[0]);
+            Class<?> plainType = asmTypeToClass(decoderReturn);
+            if (owner == null || encodedType == null || plainType == null) return null;
+            Method decoder = findDeclaredStatic(owner, decoderName, encodedType, plainType);
+            if (decoder == null) return null;
+            for (Method encoder : owner.getDeclaredMethods()) {
+                // 明密文同类型时解码器自身也符合编码器形状，必须排除
+                if (encoder.equals(decoder) || !Modifier.isStatic(encoder.getModifiers())
+                        || encoder.getParameterCount() != 1 || encoder.getReturnType() != encodedType) continue;
+                Class<?> plainInput = encoder.getParameterTypes()[0];
+                if (numericPlain ? !isNumericClass(plainInput) : plainInput != plainType) continue;
+                encoder.setAccessible(true);
+                decoder.setAccessible(true);
+                if (validCodecPair(decoder, encoder, numericPlain)) {
+                    return (target, args, sinkArgIdx, ctx) -> encodeCodecTarget(encoder, target);
+                }
+            }
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+        }
+        return null;
+    }
+
+    /* 从属性 getter 中定位解码调用并复用其配对编码器。复合存储重建必须生成目标自己的合法密文，
+       不能把明文直接塞进完整性校验覆盖的记录。 */
+    static Object encodeMethodPropertyTarget(Method getter, Object target) {
+        if (getter == null) return null;
+        try {
+            ClassNode node = classNode(getter.getDeclaringClass());
+            MethodNode method = findMethodNode(node, getter.getName(), Type.getMethodDescriptor(getter));
+            if (method == null) return null;
+            for (AbstractInsnNode instruction : method.instructions) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKESTATIC) continue;
+                Inverter inverter = discoverCodecInverter(call.owner, call.name, call.desc);
+                if (inverter == null) continue;
+                Object encoded = inverter.invert(target, List.of(), 0, null);
+                if (encoded != null) return encoded;
+            }
+        } catch (Throwable throwable) {
+            if (throwable instanceof VirtualMachineError error) throw error;
+        }
+        return null;
+    }
+
+    private static Method findDeclaredStatic(Class<?> owner, String name, Class<?> parameter, Class<?> returnType) {
+        for (Method method : owner.getDeclaredMethods()) {
+            if (Modifier.isStatic(method.getModifiers()) && method.getName().equals(name)
+                    && method.getReturnType() == returnType && method.getParameterCount() == 1
+                    && method.getParameterTypes()[0] == parameter) return method;
+        }
+        return null;
+    }
+
+    private static boolean isNumericClass(Class<?> type) {
+        return type == byte.class || type == short.class || type == int.class || type == long.class
+                || type == float.class || type == double.class || type == Byte.class || type == Short.class
+                || type == Integer.class || type == Long.class || type == Float.class || type == Double.class
+                || type == Number.class;
+    }
+
+    /* 以探针值验证 decode(encode(p)) == p。数值明文按容差比较，文本明文按内容比较。
+       文本探针覆盖零和多个正数；血量存储可以合法拒绝负数，不能把有符号域当作必要条件。 */
+    private static boolean validCodecPair(Method decoder, Method encoder, boolean numericPlain) {
+        try {
+            if (numericPlain) {
+                for (float probe : new float[]{1.25f, 17.5f, 73.75f}) {
+                    Object input = coerceForType(Float.valueOf(probe), encoder.getParameterTypes()[0]);
+                    if (input == null) return false;
+                    Object decoded = decoder.invoke(null, encoder.invoke(null, input));
+                    if (!(decoded instanceof Number number) || !Float.isFinite(number.floatValue())) return false;
+                    if (Math.abs(number.floatValue() - probe) > Math.max(0.01f, Math.abs(probe) * 0.001f)) return false;
+                }
+                return true;
+            }
+            for (String probe : new String[]{"0.0", "1.25", "73.75"}) {
+                Object input = coerceForType(probe, encoder.getParameterTypes()[0]);
+                if (input == null) return false;
+                Object encoded = encoder.invoke(null, input);
+                if (encoded == null) return false;
+                Object decoded = decoder.invoke(null, encoded);
+                if (decoded == null || !probe.equals(decoded.toString())) return false;
+            }
+            return true;
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return false;
+        }
+    }
+
+    private static Object encodeCodecTarget(Method encoder, Object target) {
+        try {
+            Object input = coerceForType(target, encoder.getParameterTypes()[0]);
+            return input == null ? null : encoder.invoke(null, input);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        }
+    }
+
+    /* ==================== Solve / Evaluate ==================== */
+
+    public static Object solveFor(Expr root, Source sink, Object target, EvalContext ctx) {
+        return solveDetailed(root, sink, target, ctx).value();
+    }
+
+    public static HealthSolveResult solveDetailed(Expr root, Source sink, Object target, EvalContext ctx) {
+        return HealthMutationContext.retainFailure(solveDetailedInternal(root, sink, target, ctx), root, sink, target);
+    }
+
+    private static HealthSolveResult solveDetailedInternal(Expr root, Source sink, Object target, EvalContext ctx) {
+        if (root == null || sink == null) {
+            return HealthSolveResult.failure(HealthSolveFailure.LOCATION_NOT_FOUND, "root or sink is null");
+        }
+        if (containsDiscreteCall(root)) {
+            int[] budget = {2048};
+            List<Object> candidates = solveDiscrete(root, sink, target, ctx, 8, budget, 0);
+            return candidates.isEmpty()
+                    ? HealthSolveResult.failure(budget[0] <= 0 ? HealthSolveFailure.BUDGET_EXHAUSTED : HealthSolveFailure.VALUE_NOT_REPRESENTABLE,
+                            "discrete inverse found no verified candidate within budget")
+                    : HealthSolveResult.success(candidates.get(0));
+        }
+        if (root instanceof StoreWrite write) {
+            if (!sameSource(write.sink(), sink)) {
+                return HealthSolveResult.failure(HealthSolveFailure.LOCATION_NOT_FOUND, "sink is absent from store write");
+            }
+            Object value = solveStoreWriteValue(write.valueExpr(), target, ctx);
+            return value == null
+                ? HealthSolveResult.failure(HealthSolveFailure.VALUE_NOT_REPRESENTABLE, "store value expression could not be evaluated")
+                : HealthSolveResult.success(value);
+        }
+        if (sameSource(root, sink)) {
+            Object value = coerceForType(target, sink.valueType);
+            return value == null
+                ? HealthSolveResult.failure(HealthSolveFailure.VALUE_NOT_REPRESENTABLE, sink.valueType.getName())
+                : HealthSolveResult.success(value);
+        }
+        if (root instanceof Choice c) {
+            HealthSolveResult last = HealthSolveResult.failure(HealthSolveFailure.LOCATION_NOT_FOUND, "sink is absent from all branches");
+            for (Expr alt : c.alternatives()) {
+                if (!containsSink(alt, sink)) continue;
+                HealthSolveResult result = solveDetailed(alt, sink, target, ctx);
+                if (result.solved()) return result;
+                last = result;
+            }
+            return last;
+        }
+        if (root instanceof Op op) {
+            int idx = findArgWithSinkDetailed(op.args(), sink);
+            if (idx == -2) {
+                Inverter inv = TABLE.lookupOp(op.opcode());
+                if (inv == null) return HealthSolveResult.failure(HealthSolveFailure.INVERTER_MISSING, "opcode=" + op.opcode());
+                for (int i = 0; i < op.args().size(); i++) {
+                    if (!containsSink(op.args().get(i), sink)) continue;
+                    Object newT = inv.invert(target, op.args(), i, ctx);
+                    if (newT == null) continue;
+                    HealthSolveResult result = solveDetailed(op.args().get(i), sink, newT, ctx);
+                    if (result.solved()) return result;
+                }
+                return HealthSolveResult.failure(HealthSolveFailure.MULTI_LOCATION_UNSUPPORTED, "sink occurs in multiple operands");
+            }
+            if (idx < 0) return HealthSolveResult.failure(HealthSolveFailure.LOCATION_NOT_FOUND, "sink is absent from operation");
+            Inverter inv = TABLE.lookupOp(op.opcode());
+            if (inv == null) return HealthSolveResult.failure(HealthSolveFailure.INVERTER_MISSING, "opcode=" + op.opcode());
+            Object newT = inv.invert(target, op.args(), idx, ctx);
+            if (newT == null) return HealthSolveResult.failure(HealthSolveFailure.VALUE_NOT_REPRESENTABLE, "operation inverse rejected target");
+            return solveDetailed(op.args().get(idx), sink, newT, ctx);
+        }
+        if (root instanceof Call call) {
+            int idx = findArgWithSinkDetailed(call.args(), sink);
+            if (idx == -2) {
+                Inverter inv = lookupCallInverter(call);
+                if (inv == null) {
+                    HealthSolveFailure failure = call.owner().startsWith("java/util/function/")
+                        ? HealthSolveFailure.CALL_NOT_RESOLVED : HealthSolveFailure.INVERTER_MISSING;
+                    return HealthSolveResult.failure(failure, call.owner() + "#" + call.name() + call.desc());
+                }
+                for (int i = 0; i < call.args().size(); i++) {
+                    if (!containsSink(call.args().get(i), sink)) continue;
+                    Object newT = inv.invert(target, call.args(), i, ctx);
+                    if (newT == null) continue;
+                    HealthSolveResult result = solveDetailed(call.args().get(i), sink, newT, ctx);
+                    if (result.solved()) return result;
+                }
+                return HealthSolveResult.failure(HealthSolveFailure.MULTI_LOCATION_UNSUPPORTED, "sink occurs in multiple call operands");
+            }
+            if (idx < 0) return HealthSolveResult.failure(HealthSolveFailure.LOCATION_NOT_FOUND, "sink is absent from call");
+            Inverter inv = lookupCallInverter(call);
+            if (inv == null) {
+                HealthSolveFailure failure = call.owner().startsWith("java/util/function/")
+                    ? HealthSolveFailure.CALL_NOT_RESOLVED : HealthSolveFailure.INVERTER_MISSING;
+                return HealthSolveResult.failure(failure, call.owner() + "#" + call.name() + call.desc());
+            }
+            Object newT = inv.invert(target, call.args(), idx, ctx);
+            if (newT == null) return HealthSolveResult.failure(HealthSolveFailure.VALUE_NOT_REPRESENTABLE, "call inverse rejected target");
+            return solveDetailed(call.args().get(idx), sink, newT, ctx);
+        }
+        return HealthSolveResult.failure(HealthSolveFailure.CALL_NOT_RESOLVED, root.getClass().getSimpleName());
+    }
+
+    static Float solveProtocolFloatInput(EffectiveHealthModel model, float target, EvalContext ctx) {
+        if (model == null || model.readExpr() == null || model.storage() == null || ctx == null) return null;
+        if (target <= 0.0f) return 0.0f;
+        Float boundary = solveFloatInputBoundary(
+                model.readExpr(), model.storage(), Float.valueOf(target), ctx);
+        if (boundary == null || !Float.isFinite(boundary) || boundary == 0.0f) {
+            boundary = readFloatInputBoundary(model.readExpr(), model.storage(), ctx);
+        }
+        if (boundary == null || !Float.isFinite(boundary) || boundary == 0.0f) return null;
+        return Math.copySign(target, boundary);
+    }
+
+    static Float readProtocolFloatBoundary(EffectiveHealthModel model, EvalContext ctx) {
+        if (model == null || model.readExpr() == null || model.storage() == null || ctx == null) return null;
+        return readFloatInputBoundary(model.readExpr(), model.storage(), ctx);
+    }
+
+    private static Float readFloatInputBoundary(Expr root, Source sink, EvalContext ctx) {
+        if (root instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) {
+                if (!containsSink(alternative, sink)) continue;
+                Float value = readFloatInputBoundary(alternative, sink, ctx);
+                if (value != null) return value;
+            }
+            return null;
+        }
+        if (root instanceof Op op) {
+            for (Expr argument : op.args()) {
+                if (!containsSink(argument, sink)) continue;
+                Float value = readFloatInputBoundary(argument, sink, ctx);
+                if (value != null) return value;
+            }
+            return null;
+        }
+        if (root instanceof Call call) {
+            int sinkIndex = findArgWithSinkDetailed(call.args(), sink);
+            if (sinkIndex < 0) return null;
+            Type returnType = Type.getReturnType(call.desc());
+            Type[] argumentTypes = Type.getArgumentTypes(call.desc());
+            if (call.args().size() == argumentTypes.length
+                    && sinkIndex < argumentTypes.length
+                    && returnType.getSort() == Type.FLOAT
+                    && argumentTypes[sinkIndex].getSort() == Type.INT) {
+                Object value = evaluate(call, ctx);
+                if (value instanceof Number number) {
+                    float result = number.floatValue();
+                    return Float.isFinite(result) ? result : null;
+                }
+                return null;
+            }
+            return readFloatInputBoundary(call.args().get(sinkIndex), sink, ctx);
+        }
+        return null;
+    }
+
+    private static Float solveFloatInputBoundary(Expr root, Source sink, Object target, EvalContext ctx) {
+        if (root instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) {
+                if (!containsSink(alternative, sink)) continue;
+                Float solved = solveFloatInputBoundary(alternative, sink, target, ctx);
+                if (solved != null) return solved;
+            }
+            return null;
+        }
+        if (root instanceof Op op) {
+            Inverter inverter = TABLE.lookupOp(op.opcode());
+            if (inverter == null) return null;
+            for (int i = 0; i < op.args().size(); i++) {
+                if (!containsSink(op.args().get(i), sink)) continue;
+                Object next = inverter.invert(target, op.args(), i, ctx);
+                if (next == null) continue;
+                Float solved = solveFloatInputBoundary(op.args().get(i), sink, next, ctx);
+                if (solved != null) return solved;
+            }
+            return null;
+        }
+        if (root instanceof Call call) {
+            int sinkIndex = findArgWithSinkDetailed(call.args(), sink);
+            if (sinkIndex < 0) return null;
+            Type returnType = Type.getReturnType(call.desc());
+            Type[] argumentTypes = Type.getArgumentTypes(call.desc());
+            if (call.args().size() == argumentTypes.length
+                    && sinkIndex < argumentTypes.length
+                    && returnType.getSort() == Type.FLOAT
+                    && argumentTypes[sinkIndex].getSort() == Type.INT
+                    && target instanceof Number number) {
+                float value = number.floatValue();
+                return Float.isFinite(value) ? value : null;
+            }
+            Inverter inverter = lookupCallInverter(call);
+            if (inverter == null) return null;
+            Object next = inverter.invert(target, call.args(), sinkIndex, ctx);
+            return next == null ? null : solveFloatInputBoundary(call.args().get(sinkIndex), sink, next, ctx);
+        }
+        return null;
+    }
+
+    private static Object solveStoreWriteValue(Expr valueExpr, Object target, EvalContext ctx) {
+        List<Object> candidates = writeInputCandidates(valueExpr, target);
+        for (Object candidate : candidates) {
+            Object value = evaluateWithWriteInput(valueExpr, ctx, candidate);
+            if (value instanceof String s && s.isEmpty()) dumpStoreWriteSolve(valueExpr, target, candidate, "empty-string");
+            if (value != null) return value;
+            dumpStoreWriteSolve(valueExpr, target, candidate, "null");
+        }
+        Object fallback = evaluate(valueExpr, ctx);
+        if (fallback instanceof String s && s.isEmpty()) dumpStoreWriteSolve(valueExpr, target, null, "fallback-empty-string");
+        return fallback;
+    }
+
+    @SuppressWarnings("unused")
+    private static void dumpStoreWriteSolve(Expr valueExpr, Object target, Object candidate, String reason) {
+        // 诊断已迁移至调用者；本占位保留签名以兼容历史调用点，无副作用
+    }
+
+    private static List<Object> writeInputCandidates(Expr valueExpr, Object target) {
+        List<Object> candidates = new ArrayList<>();
+        if (target instanceof Number number && valueExprPrefersNegatedInput(valueExpr)) {
+            candidates.add(negateNumber(number));
+        }
+        candidates.add(target);
+        if (target instanceof Number number) {
+            Object negated = negateNumber(number);
+            if (!candidates.contains(negated)) candidates.add(negated);
+        }
+        return candidates;
+    }
+
+    private static Object negateNumber(Number number) {
+        if (number instanceof Double) return Double.valueOf(-number.doubleValue());
+        if (number instanceof Float) return Float.valueOf(-number.floatValue());
+        if (number instanceof Long) return Long.valueOf(-number.longValue());
+        if (number instanceof Integer || number instanceof Short || number instanceof Byte) {
+            return Integer.valueOf(-number.intValue());
+        }
+        return Float.valueOf(-number.floatValue());
+    }
+
+    private static boolean valueExprPrefersNegatedInput(Expr expr) {
+        if (expr instanceof Op op) {
+            if ((op.opcode() == Opcodes.FNEG || op.opcode() == Opcodes.DNEG
+                    || op.opcode() == Opcodes.INEG || op.opcode() == Opcodes.LNEG)
+                    && !op.args().isEmpty() && containsWriteInput(op.args().get(0))) {
+                return true;
+            }
+            for (Expr arg : op.args()) if (valueExprPrefersNegatedInput(arg)) return true;
+        } else if (expr instanceof Call call) {
+            for (Expr arg : call.args()) if (valueExprPrefersNegatedInput(arg)) return true;
+        } else if (expr instanceof Choice choice) {
+            for (Expr arg : choice.alternatives()) if (valueExprPrefersNegatedInput(arg)) return true;
+        } else if (expr instanceof OptionalContentExpr optional) {
+            return valueExprPrefersNegatedInput(optional.optionalExpr());
+        }
+        return false;
+    }
+
+    private static boolean containsWriteInput(Expr expr) {
+        if (expr instanceof WriteInput) return true;
+        if (expr instanceof Op op) {
+            for (Expr arg : op.args()) if (containsWriteInput(arg)) return true;
+        } else if (expr instanceof Call call) {
+            for (Expr arg : call.args()) if (containsWriteInput(arg)) return true;
+        } else if (expr instanceof Choice choice) {
+            for (Expr arg : choice.alternatives()) if (containsWriteInput(arg)) return true;
+        } else if (expr instanceof OptionalContentExpr optional) {
+            return containsWriteInput(optional.optionalExpr());
+        } else if (expr instanceof StoreWrite write) {
+            return containsWriteInput(write.valueExpr());
+        }
+        return false;
+    }
+
+    private static boolean sameSource(Expr a, Source sink) {
+        return a == sink || (a instanceof Source s && s.canonicalKey().equals(sink.canonicalKey()));
+    }
+
+    public static boolean containsSink(Expr e, Source sink) {
+        if (sameSource(e, sink)) return true;
+        if (e instanceof Op op) {
+            for (Expr a : op.args()) if (containsSink(a, sink)) return true;
+        }
+        if (e instanceof Call call) {
+            for (Expr a : call.args()) if (containsSink(a, sink)) return true;
+        }
+        if (e instanceof Closure closure) {
+            for (Expr a : closure.captured()) if (containsSink(a, sink)) return true;
+        }
+        if (e instanceof StoreWrite write) {
+            return sameSource(write.sink(), sink);
+        }
+        if (e instanceof Choice c) {
+            for (Expr a : c.alternatives()) if (containsSink(a, sink)) return true;
+        }
+        return false;
+    }
+
+    // 递归检查表达式树是否包含 UnknownExpr，用于标记无法符号化的 getHealth 实现
+    static boolean containsUnknown(Expr e) {
+        if (e instanceof UnknownExpr) return true;
+        if (e instanceof Op op) {
+            for (Expr a : op.args()) if (containsUnknown(a)) return true;
+        }
+        if (e instanceof Call call) {
+            for (Expr a : call.args()) if (containsUnknown(a)) return true;
+        }
+        if (e instanceof Closure closure) {
+            for (Expr a : closure.captured()) if (containsUnknown(a)) return true;
+        }
+        if (e instanceof Choice c) {
+            for (Expr a : c.alternatives()) if (containsUnknown(a)) return true;
+        }
+        if (e instanceof OptionalContentExpr o) return containsUnknown(o.optionalExpr());
+        return false;
+    }
+
+    private static int findArgWithSink(List<Expr> args, Source sink) {
+        int detailed = findArgWithSinkDetailed(args, sink);
+        return detailed < 0 ? -1 : detailed;
+    }
+
+    private static int findArgWithSinkDetailed(List<Expr> args, Source sink) {
+        int found = -1;
+        for (int i = 0; i < args.size(); i++) {
+            if (containsSink(args.get(i), sink)) {
+                if (found >= 0) return -2;
+                found = i;
+            }
+        }
+        return found;
+    }
+
+    // 在存储边界停止展开；寻址依赖和副作用落点不能自动升级为血量变量。
+    static Set<Source> healthReadSlice(Expr expression) {
+        Set<Source> result = new LinkedHashSet<>();
+        collectHealthReadSlice(expression, result);
+        return result;
+    }
+
+    private static void collectHealthReadSlice(Expr expression, Set<Source> result) {
+        if (expression instanceof StoreWrite) return;
+        if (expression instanceof Source source) {
+            if (source.valueType != boolean.class && source.valueType != Boolean.class) result.add(source);
+        } else if (expression instanceof Choice choice) {
+            for (Expr branch : choice.alternatives()) collectHealthReadSlice(branch, result);
+        } else if (expression instanceof Op operation) {
+            for (Expr argument : operation.args()) collectHealthReadSlice(argument, result);
+        } else if (expression instanceof Call call) {
+            if (Type.getReturnType(call.desc()).getSort() == Type.BOOLEAN
+                    || call.name().equals(GET_MAX_HEALTH.srg()) || call.name().equals(GET_MAX_HEALTH.mcp())) return;
+            for (Expr argument : call.args()) collectHealthReadSlice(argument, result);
+        } else if (expression instanceof OptionalContentExpr optional) {
+            collectHealthReadSlice(optional.optionalExpr(), result);
+        }
+    }
+
+    static boolean sharesReadConstraint(Expr expression, List<Source> sources) {
+        if (expression instanceof Choice choice)
+            return choice.alternatives().stream().anyMatch(branch -> sharesReadConstraint(branch, sources));
+        if (expression instanceof StoreWrite) return false;
+        if (containsReadChoice(expression)) return false;
+        return healthReadSlice(expression).containsAll(sources);
+    }
+
+    private static boolean containsReadChoice(Expr expression) {
+        if (expression instanceof Choice) return true;
+        if (expression instanceof Op operation) return operation.args().stream().anyMatch(HealthDataflowAnalyzer::containsReadChoice);
+        if (expression instanceof Call call) return call.args().stream().anyMatch(HealthDataflowAnalyzer::containsReadChoice);
+        if (expression instanceof OptionalContentExpr optional) return containsReadChoice(optional.optionalExpr());
+        return false;
+    }
+
+    public static Set<Source> collectSources(Expr e) {
+        Set<Source> out = new LinkedHashSet<>();
+        collect(e, out);
+        return out;
+    }
+
+    /* 有效血量表达式是否依赖"当次伤害量"。血量是实体状态，伤害是方法入参：
+       WriteInput 代表被内联方法的数值形参(hurt/actuallyHurt 的 damage)，伤害事件的 getAmount 同理。
+       含此类节点的式子算的是这一击之后的值而非当前血量，用作锚点会解出偏移一个伤害量的存储值。 */
+    public static boolean dependsOnDamageInput(Expr e) {
+        if (e == null) return false;
+        if (e instanceof WriteInput) return true;
+        if (e instanceof Call call) {
+            if (isDamageAmountCall(call)) return true;
+            for (Expr a : call.args()) if (dependsOnDamageInput(a)) return true;
+            return false;
+        }
+        if (e instanceof Op op) {
+            for (Expr a : op.args()) if (dependsOnDamageInput(a)) return true;
+            return false;
+        }
+        if (e instanceof Choice c) {
+            for (Expr a : c.alternatives()) if (dependsOnDamageInput(a)) return true;
+            return false;
+        }
+        if (e instanceof Closure closure) {
+            for (Expr a : closure.captured()) if (dependsOnDamageInput(a)) return true;
+            return false;
+        }
+        if (e instanceof OptionalContentExpr optional) return dependsOnDamageInput(optional.optionalExpr());
+        if (e instanceof StoreWrite write) return dependsOnDamageInput(write.valueExpr());
+        return false;
+    }
+
+    private static boolean isDamageAmountCall(Call call) {
+        return call.owner().startsWith("net/neoforged/neoforge/event/entity/living/")
+                && call.name().equals("getAmount");
+    }
+
+    private static void collect(Expr e, Set<Source> out) {
+        if (e instanceof Source s) out.add(s);
+        else if (e instanceof Op op) for (Expr a : op.args()) collect(a, out);
+        else if (e instanceof Call call) for (Expr a : call.args()) collect(a, out);
+        else if (e instanceof Closure closure) for (Expr a : closure.captured()) collect(a, out);
+        else if (e instanceof OptionalContentExpr optional) collect(optional.optionalExpr(), out);
+        else if (e instanceof StoreWrite write) out.add(write.sink());
+        else if (e instanceof Choice c) for (Expr a : c.alternatives()) collect(a, out);
+    }
+
+    /* 方案 A 常数覆写重写：仅把返回值顶层、或 Choice 直接分支上的合格 float 常数
+       替换为 ConstOverrideSource，使常数点成为可写 sink；算术内部常数暂不处理。 */
+    private static Expr rewriteConstOverrides(Expr e) {
+        ConstOverrideSource top = asConstOverride(e);
+        if (top != null) return top;
+        if (e instanceof Choice c) {
+            boolean changed = false;
+            List<Expr> rebuilt = new ArrayList<>(c.alternatives().size());
+            for (Expr alt : c.alternatives()) {
+                Expr rewritten = rewriteConstOverrides(alt);
+                if (rewritten != alt) changed = true;
+                rebuilt.add(rewritten);
+            }
+            return changed ? new Choice(rebuilt) : e;
+        }
+        return e;
+    }
+
+    /* 合格判定：带 provenance(可定位 patch)、非静态 holder(patch 需 this)、float 常数(与 resolveHealth 签名一致)
+       → 建覆写源；否则返回 null 表示不替换。 */
+    private static ConstOverrideSource asConstOverride(Expr e) {
+        if (!(e instanceof Primitive p)) return null;
+        ConstProvenance prov = p.origin();
+        if (prov == null || prov.holderIsStatic() || p.jvmType() != 'F') return null;
+        return new ConstOverrideSource(prov.receiver(), p.value().floatValue(), prov);
+    }
+
+    /* 遍历 returnExpr，遇到没有反演器的 Call 或 Op 时，求值其参数并收集运行期对象。
+       收集过程只读，表达式防止重复访问，对象按身份去重。 */
+    public static List<Object> collectDeadEndRoots(Expr root, EvalContext ctx) {
+        List<Object> out = new ArrayList<>();
+        collectDeadEndRoots(root, ctx, out,
+                Collections.newSetFromMap(new IdentityHashMap<>()),
+                Collections.newSetFromMap(new IdentityHashMap<>()));
+        return out;
+    }
+
+    private static final int OPAQUE_ANALYSIS_BOUNDARY = -1;
+
+    static boolean hasBoundedReadBoundary(Expr expression) {
+        return hasBoundedReadBoundary(expression, false);
+    }
+
+    static boolean hasBoundedNumericReadBoundary(Expr expression) {
+        return hasBoundedReadBoundary(expression, true);
+    }
+
+    private static boolean hasBoundedReadBoundary(Expr expression, boolean numericOnly) {
+        if (expression instanceof Call call) {
+            Class<?> owner = loadClass(call.owner());
+            if (owner != null && (!numericOnly || isNumericAsmType(Type.getReturnType(call.desc())))
+                    && BOUNDED_READ.isLoop(owner, call.name(), call.desc())) return true;
+            return call.args().stream().anyMatch(argument -> hasBoundedReadBoundary(argument, numericOnly));
+        }
+        if (expression instanceof Op op) return !numericOnly && op.opcode() == OPAQUE_ANALYSIS_BOUNDARY
+                || op.args().stream().anyMatch(argument -> hasBoundedReadBoundary(argument, numericOnly));
+        if (expression instanceof Choice choice) return choice.alternatives().stream().anyMatch(argument -> hasBoundedReadBoundary(argument, numericOnly));
+        return false;
+    }
+
+    static List<Object> boundedReadRoots(Expr expression, EvalContext context) {
+        List<Object> roots = new ArrayList<>();
+        collectBoundedReadRoots(expression, context, roots);
+        return roots;
+    }
+
+    private static void collectBoundedReadRoots(Expr expression, EvalContext context, List<Object> roots) {
+        if (expression instanceof Call call) {
+            Class<?> owner = loadClass(call.owner());
+            Type type = Type.getReturnType(call.desc());
+            if (owner != null && isNumericAsmType(type) && call.opcode() != Opcodes.INVOKESTATIC
+                    && !call.args().isEmpty() && BOUNDED_READ.isLoop(owner, call.name(), call.desc())) {
+                if (!(safeEvaluate(call, context) instanceof Number)) return;
+                Object receiver = safeEvaluate(call.args().get(0), context);
+                if (receiver != null && !(receiver instanceof Entity) && !(receiver instanceof Number)) roots.add(receiver);
+                return;
+            }
+            for (Expr argument : call.args()) collectBoundedReadRoots(argument, context, roots);
+        } else if (expression instanceof Op op) {
+            for (Expr argument : op.args()) collectBoundedReadRoots(argument, context, roots);
+        } else if (expression instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) collectBoundedReadRoots(alternative, context, roots);
+        }
+    }
+
+    private static void collectDeadEndRoots(Expr e, EvalContext ctx, List<Object> out, Set<Object> seenObjs, Set<Expr> seenExpr) {
+        if (e == null || !seenExpr.add(e)) return;
+        if (e instanceof Call call) {
+            if (!isDiscreteCall(call) && TABLE.lookupCall(call.owner(), call.name(), call.desc()) == null
+                    && !DISCOVERED_CODEC_INVERTERS.containsKey(call.owner() + "#" + call.name() + "#" + call.desc())) {
+                for (Expr arg : call.args()) addDeadEndRoot(arg, ctx, out, seenObjs);
+            } else {
+                for (Expr arg : call.args()) collectDeadEndRoots(arg, ctx, out, seenObjs, seenExpr);
+            }
+        } else if (e instanceof Op op) {
+            if (TABLE.lookupOp(op.opcode()) == null) {
+                for (Expr arg : op.args()) addDeadEndRoot(arg, ctx, out, seenObjs);
+            } else {
+                for (Expr arg : op.args()) collectDeadEndRoots(arg, ctx, out, seenObjs, seenExpr);
+            }
+        } else if (e instanceof Choice c) {
+            for (Expr alt : c.alternatives()) collectDeadEndRoots(alt, ctx, out, seenObjs, seenExpr);
+        }
+    }
+
+    /* 从不可反演参数的子表达式收集运行期对象，供数值反演遍历。
+       Source 提供自身值及相关容器，其他节点以求值结果作为锚点并继续查找嵌套 Source。 */
+    private static void addDeadEndRoot(Expr arg, EvalContext ctx, List<Object> out, Set<Object> seenObjs) {
+        harvestAnchors(arg, ctx, obj -> {
+            if (obj == null || obj instanceof Number || obj instanceof Boolean
+                    || obj instanceof Character || obj instanceof String) return;
+            if (seenObjs.add(obj)) out.add(obj);
+        });
+    }
+
+    private static void harvestAnchors(Expr e, EvalContext ctx, Consumer<Object> sink) {
+        if (e == null) return;
+        if (e instanceof Source s) {
+            try { s.collectDescentAnchors(ctx, sink); }
+            catch (Throwable t) { if (t instanceof VirtualMachineError err) throw err; }
+            return;
+        }
+        sink.accept(safeEvaluate(e, ctx));
+        if (e instanceof Op op) for (Expr a : op.args()) harvestAnchors(a, ctx, sink);
+        else if (e instanceof Call c) for (Expr a : c.args()) harvestAnchors(a, ctx, sink);
+        else if (e instanceof Choice c) for (Expr a : c.alternatives()) harvestAnchors(a, ctx, sink);
+        else if (e instanceof OptionalContentExpr o) harvestAnchors(o.optionalExpr(), ctx, sink);
+    }
+
+    // 锚点求值失败时返回 null，避免自定义解码或结构差异中断收集
+    private static Object safeEvaluate(Expr e, EvalContext ctx) {
+        try { return evaluate(e, ctx); }
+        catch (Throwable t) { if (t instanceof VirtualMachineError err) throw err; return null; }
+    }
+
+    public static Object evaluate(Expr e, EvalContext ctx) {
+        if (e instanceof CandidateValue candidate) return candidate.value;
+        if (e instanceof Primitive p) return p.value();
+        if (e instanceof Reference r) return r.value();
+        //this 占位符解析为接收者实体，使 getHealth = f(this.method(), this.field) 中的 this 方法调用可被 concrete 求值
+        if (e == EntityParamMarker.I) return ctx.entity();
+        if (e instanceof Source s) return s.read(ctx.entity());
+        if (e instanceof OptionalContentExpr optional) {
+            Object container = evaluate(optional.optionalExpr(), ctx);
+            return unwrapOptionalContent(container);
+        }
+        if (e instanceof StoreWrite write) {
+            return evaluate(write.valueExpr(), ctx);
+        }
+        if (e instanceof WriteInput) return null;
+        if (e instanceof Choice c) {
+            for (Expr alt : c.alternatives()) {
+                Object v = evaluate(alt, ctx);
+                if (v != null) return v;
+            }
+            return null;
+        }
+        if (e instanceof Op op) {
+            List<Object> ev = new ArrayList<>(op.args().size());
+            for (Expr a : op.args()) {
+                Object v = evaluate(a, ctx);
+                if (v == null) return null;
+                ev.add(v);
+            }
+            return execOp(op.opcode(), ev);
+        }
+        if (e instanceof Call call) {
+            Object known = evaluateKnownCall(call, ctx, null, false);
+            if (known != UnknownEval.INSTANCE) return known;
+            return invokeCall(call, ctx);
+        }
+        if (e instanceof Closure) return null;
+        return null;
+    }
+
+    private static Object evaluateWithWriteInput(Expr e, EvalContext ctx, Object inputValue) {
+        if (e instanceof WriteInput) return inputValue;
+        if (e instanceof Primitive p) return p.value();
+        if (e instanceof Reference r) return r.value();
+        if (e == EntityParamMarker.I) return ctx.entity();
+        if (e instanceof Source s) return s.read(ctx.entity());
+        if (e instanceof OptionalContentExpr optional) {
+            Object container = evaluateWithWriteInput(optional.optionalExpr(), ctx, inputValue);
+            return unwrapOptionalContent(container);
+        }
+        if (e instanceof Choice choice) {
+            for (Expr alternative : orderedWriteAlternatives(choice)) {
+                Object value = evaluateWithWriteInput(alternative, ctx, inputValue);
+                if (value != null) return value;
+            }
+            return null;
+        }
+        if (e instanceof Op op) {
+            List<Object> values = new ArrayList<>(op.args().size());
+            for (Expr arg : op.args()) {
+                Object value = evaluateWithWriteInput(arg, ctx, inputValue);
+                if (value == null) return null;
+                values.add(value);
+            }
+            return execOp(op.opcode(), values);
+        }
+        if (e instanceof Call call) {
+            Object known = evaluateKnownCall(call, ctx, inputValue, true);
+            if (known != UnknownEval.INSTANCE) return known;
+            List<Expr> args = new ArrayList<>(call.args().size());
+            for (Expr arg : call.args()) {
+                Object value = evaluateWithWriteInput(arg, ctx, inputValue);
+                if (value == null) return null;
+                args.add(new Reference(value, value.getClass().getName().replace('.', '/')));
+            }
+            return invokeCall(new Call(call.owner(), call.caller(), call.name(), call.desc(),
+                    call.opcode(), args), ctx);
+        }
+        if (e instanceof StoreWrite write) return evaluateWithWriteInput(write.valueExpr(), ctx, inputValue);
+        return null;
+    }
+
+    /* 异常兜底分支常在正常载值分支之前汇合。存储写入须优先取绑定活状态与请求输入的表达式，
+       而非字面量默认值。 */
+    private static List<Expr> orderedWriteAlternatives(Choice choice) {
+        List<Expr> alternatives = new ArrayList<>(choice.alternatives());
+        alternatives.sort(Comparator.comparingInt(HealthDataflowAnalyzer::writeBranchScore).reversed());
+        return alternatives;
+    }
+
+    private static int writeBranchScore(Expr expression) {
+        if (expression instanceof WriteInput) return 1_000;
+        if (expression instanceof Source) return 800;
+        if (expression == EntityParamMarker.I) return 600;
+        if (expression instanceof UnknownExpr) return -1_000;
+        if (expression instanceof Primitive) return 0;
+        if (expression instanceof Reference) return 20;
+        if (expression instanceof OptionalContentExpr optional) {
+            return 40 + writeBranchScore(optional.optionalExpr());
+        }
+        if (expression instanceof StoreWrite write) return writeBranchScore(write.valueExpr());
+        if (expression instanceof Op operation) return 60 + childBranchScore(operation.args());
+        if (expression instanceof Call call) return 80 + childBranchScore(call.args());
+        if (expression instanceof Closure closure) return 40 + childBranchScore(closure.captured());
+        if (expression instanceof Choice nested) {
+            int best = -1_000;
+            for (Expr alternative : nested.alternatives()) {
+                best = Math.max(best, writeBranchScore(alternative));
+            }
+            return best;
+        }
+        return 0;
+    }
+
+    private static int childBranchScore(List<Expr> expressions) {
+        int score = 0;
+        for (Expr expression : expressions) {
+            score += Math.max(-200, Math.min(1_000, writeBranchScore(expression)));
+        }
+        return score;
+    }
+
+    private enum UnknownEval { INSTANCE }
+
+    private static Object evaluateKnownCall(Call call, EvalContext ctx, Object inputValue, boolean hasInput) {
+        List<Object> values = new ArrayList<>(call.args().size());
+        for (Expr arg : call.args()) {
+            Object value = hasInput ? evaluateWithWriteInput(arg, ctx, inputValue) : evaluate(arg, ctx);
+            if (value == null) return UnknownEval.INSTANCE;
+            values.add(value);
+        }
+        try {
+            String owner = call.owner();
+            String name = call.name();
+            String desc = call.desc();
+            if (owner.equals("java/lang/Float") && name.equals("toString") && desc.equals("(F)Ljava/lang/String;")) {
+                return Float.toString(((Number) values.get(0)).floatValue());
+            }
+            if (owner.equals("java/lang/Double") && name.equals("toString") && desc.equals("(D)Ljava/lang/String;")) {
+                return Double.toString(((Number) values.get(0)).doubleValue());
+            }
+            if (owner.equals("java/lang/Integer") && name.equals("toString") && desc.equals("(I)Ljava/lang/String;")) {
+                return Integer.toString(((Number) values.get(0)).intValue());
+            }
+            if (owner.equals("java/lang/Long") && name.equals("toString") && desc.equals("(J)Ljava/lang/String;")) {
+                return Long.toString(((Number) values.get(0)).longValue());
+            }
+            if (owner.equals("java/lang/String") && name.equals("valueOf") && values.size() == 1) {
+                return String.valueOf(values.get(0));
+            }
+            if ((owner.equals("java/lang/Float") || owner.equals("java/lang/Double")
+                    || owner.equals("java/lang/Integer") || owner.equals("java/lang/Long"))
+                    && name.equals("valueOf") && values.size() == 1) {
+                return values.get(0);
+            }
+            if (name.equals("floatValue") && desc.equals("()F") && values.get(0) instanceof Number number) {
+                return number.floatValue();
+            }
+            if (name.equals("doubleValue") && desc.equals("()D") && values.get(0) instanceof Number number) {
+                return number.doubleValue();
+            }
+            if (name.equals("intValue") && desc.equals("()I") && values.get(0) instanceof Number number) {
+                return number.intValue();
+            }
+            if (name.equals("longValue") && desc.equals("()J") && values.get(0) instanceof Number number) {
+                return number.longValue();
+            }
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        }
+        return UnknownEval.INSTANCE;
+    }
+
+    /* ==================== 预置对偶规则 ==================== */
+
+    private static void initDefaultRules() {
+        registerArith(Opcodes.IADD, 'I');
+        registerArith(Opcodes.LADD, 'J');
+        registerArith(Opcodes.FADD, 'F');
+        registerArith(Opcodes.DADD, 'D');
+        registerSub(Opcodes.ISUB, 'I');
+        registerSub(Opcodes.LSUB, 'J');
+        registerSub(Opcodes.FSUB, 'F');
+        registerSub(Opcodes.DSUB, 'D');
+        registerMul(Opcodes.IMUL, 'I');
+        registerMul(Opcodes.LMUL, 'J');
+        registerMul(Opcodes.FMUL, 'F');
+        registerMul(Opcodes.DMUL, 'D');
+        registerDiv(Opcodes.IDIV, 'I');
+        registerDiv(Opcodes.LDIV, 'J');
+        registerDiv(Opcodes.FDIV, 'F');
+        registerDiv(Opcodes.DDIV, 'D');
+        registerUnaryNeg(Opcodes.INEG, 'I');
+        registerUnaryNeg(Opcodes.LNEG, 'J');
+        registerUnaryNeg(Opcodes.FNEG, 'F');
+        registerUnaryNeg(Opcodes.DNEG, 'D');
+
+        // XOR 自逆
+        TABLE.registerOp(Opcodes.IXOR, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return Integer.valueOf(((Number) t).intValue() ^ o.intValue());
+        });
+        TABLE.registerOp(Opcodes.LXOR, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return Long.valueOf(((Number) t).longValue() ^ o.longValue());
+        });
+
+        // 移位
+        TABLE.registerOp(Opcodes.ISHL, (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number sh = num(ctx.eval(args.get(1))); if (sh == null) return null;
+            return Integer.valueOf(((Number) t).intValue() >>> sh.intValue());
+        });
+        TABLE.registerOp(Opcodes.LSHL, (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number sh = num(ctx.eval(args.get(1))); if (sh == null) return null;
+            return Long.valueOf(((Number) t).longValue() >>> sh.intValue());
+        });
+        TABLE.registerOp(Opcodes.ISHR, (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number sh = num(ctx.eval(args.get(1))); if (sh == null) return null;
+            return Integer.valueOf(((Number) t).intValue() << sh.intValue());
+        });
+        TABLE.registerOp(Opcodes.LSHR, (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number sh = num(ctx.eval(args.get(1))); if (sh == null) return null;
+            return Long.valueOf(((Number) t).longValue() << sh.intValue());
+        });
+        TABLE.registerOp(Opcodes.IUSHR, (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number sh = num(ctx.eval(args.get(1))); if (sh == null) return null;
+            return Integer.valueOf(((Number) t).intValue() << sh.intValue());
+        });
+        TABLE.registerOp(Opcodes.LUSHR, (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number sh = num(ctx.eval(args.get(1))); if (sh == null) return null;
+            return Long.valueOf(((Number) t).longValue() << sh.intValue());
+        });
+
+        // 位掩码
+        TABLE.registerOp(Opcodes.IAND, (t, args, idx, ctx) -> {
+            Number m = num(ctx.eval(args.get(1 - idx))); if (m == null) return null;
+            int target = ((Number) t).intValue(), mask = m.intValue();
+            if ((target & mask) != target) return null;
+            return Integer.valueOf(target);
+        });
+        TABLE.registerOp(Opcodes.LAND, (t, args, idx, ctx) -> {
+            Number m = num(ctx.eval(args.get(1 - idx))); if (m == null) return null;
+            long target = ((Number) t).longValue(), mask = m.longValue();
+            if ((target & mask) != target) return null;
+            return Long.valueOf(target);
+        });
+        TABLE.registerOp(Opcodes.IOR, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return Integer.valueOf(((Number) t).intValue() & ~o.intValue());
+        });
+        TABLE.registerOp(Opcodes.LOR, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return Long.valueOf(((Number) t).longValue() & ~o.longValue());
+        });
+
+        // 类型转换
+        TABLE.registerOp(Opcodes.I2F, (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue()));
+        TABLE.registerOp(Opcodes.I2L, (t, args, idx, ctx) -> Integer.valueOf((int) ((Number) t).longValue()));
+        TABLE.registerOp(Opcodes.I2D, (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue()));
+        TABLE.registerOp(Opcodes.I2B, (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue() & 0xFF));
+        TABLE.registerOp(Opcodes.I2C, (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue() & 0xFFFF));
+        TABLE.registerOp(Opcodes.I2S, (t, args, idx, ctx) -> Integer.valueOf((short) ((Number) t).intValue()));
+        TABLE.registerOp(Opcodes.L2I, (t, args, idx, ctx) -> Long.valueOf(((Number) t).intValue()));
+        TABLE.registerOp(Opcodes.L2F, (t, args, idx, ctx) -> Long.valueOf((long) ((Number) t).floatValue()));
+        TABLE.registerOp(Opcodes.L2D, (t, args, idx, ctx) -> Long.valueOf((long) ((Number) t).doubleValue()));
+        TABLE.registerOp(Opcodes.F2I, (t, args, idx, ctx) -> Float.valueOf(((Number) t).intValue()));
+        TABLE.registerOp(Opcodes.F2L, (t, args, idx, ctx) -> Float.valueOf(((Number) t).longValue()));
+        TABLE.registerOp(Opcodes.F2D, (t, args, idx, ctx) -> Float.valueOf((float) ((Number) t).doubleValue()));
+        TABLE.registerOp(Opcodes.D2I, (t, args, idx, ctx) -> Double.valueOf(((Number) t).intValue()));
+        TABLE.registerOp(Opcodes.D2L, (t, args, idx, ctx) -> Double.valueOf(((Number) t).longValue()));
+        TABLE.registerOp(Opcodes.D2F, (t, args, idx, ctx) -> Double.valueOf(((Number) t).floatValue()));
+
+        // JDK 位转换
+        TABLE.registerCall("java/lang/Float", "intBitsToFloat", "(I)F",
+            (t, args, idx, ctx) -> Integer.valueOf(Float.floatToRawIntBits(((Number) t).floatValue())));
+        TABLE.registerCall("java/lang/Float", "floatToRawIntBits", "(F)I",
+            (t, args, idx, ctx) -> Float.valueOf(Float.intBitsToFloat(((Number) t).intValue())));
+        TABLE.registerCall("java/lang/Float", "floatToIntBits", "(F)I",
+            (t, args, idx, ctx) -> Float.valueOf(Float.intBitsToFloat(((Number) t).intValue())));
+        TABLE.registerCall("java/lang/Double", "longBitsToDouble", "(J)D",
+            (t, args, idx, ctx) -> Long.valueOf(Double.doubleToRawLongBits(((Number) t).doubleValue())));
+        TABLE.registerCall("java/lang/Double", "doubleToRawLongBits", "(D)J",
+            (t, args, idx, ctx) -> Double.valueOf(Double.longBitsToDouble(((Number) t).longValue())));
+
+        // JDK 位操作 (自逆)
+        TABLE.registerCall("java/lang/Long", "reverse", "(J)J",
+            (t, args, idx, ctx) -> Long.valueOf(Long.reverse(((Number) t).longValue())));
+        TABLE.registerCall("java/lang/Integer", "reverse", "(I)I",
+            (t, args, idx, ctx) -> Integer.valueOf(Integer.reverse(((Number) t).intValue())));
+        TABLE.registerCall("java/lang/Integer", "reverseBytes", "(I)I",
+            (t, args, idx, ctx) -> Integer.valueOf(Integer.reverseBytes(((Number) t).intValue())));
+        TABLE.registerCall("java/lang/Long", "reverseBytes", "(J)J",
+            (t, args, idx, ctx) -> Long.valueOf(Long.reverseBytes(((Number) t).longValue())));
+
+        // 循环移位：rotateLeft(v,n) 的逆是 rotateRight(target,n)，反之亦然。n 必须可求值，且 sink 须在值参(idx==0)
+        TABLE.registerCall("java/lang/Long", "rotateLeft", "(JI)J", (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number n = num(ctx.eval(args.get(1))); if (n == null) return null;
+            return Long.valueOf(Long.rotateRight(((Number) t).longValue(), n.intValue()));
+        });
+        TABLE.registerCall("java/lang/Long", "rotateRight", "(JI)J", (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number n = num(ctx.eval(args.get(1))); if (n == null) return null;
+            return Long.valueOf(Long.rotateLeft(((Number) t).longValue(), n.intValue()));
+        });
+        TABLE.registerCall("java/lang/Integer", "rotateLeft", "(II)I", (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number n = num(ctx.eval(args.get(1))); if (n == null) return null;
+            return Integer.valueOf(Integer.rotateRight(((Number) t).intValue(), n.intValue()));
+        });
+        TABLE.registerCall("java/lang/Integer", "rotateRight", "(II)I", (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number n = num(ctx.eval(args.get(1))); if (n == null) return null;
+            return Integer.valueOf(Integer.rotateLeft(((Number) t).intValue(), n.intValue()));
+        });
+
+        // JDK 文本 <-> 数字
+        TABLE.registerCall("java/lang/Float", "parseFloat", "(Ljava/lang/String;)F",
+            (t, args, idx, ctx) -> Float.toString(((Number) t).floatValue()));
+        TABLE.registerCall("java/lang/Double", "parseDouble", "(Ljava/lang/String;)D",
+            (t, args, idx, ctx) -> Double.toString(((Number) t).doubleValue()));
+        TABLE.registerCall("java/lang/Integer", "parseInt", "(Ljava/lang/String;)I",
+            (t, args, idx, ctx) -> Integer.toString(((Number) t).intValue()));
+        TABLE.registerCall("java/lang/Long", "parseLong", "(Ljava/lang/String;)J",
+            (t, args, idx, ctx) -> Long.toString(((Number) t).longValue()));
+        TABLE.registerCall("java/lang/Integer", "parseInt", "(Ljava/lang/String;I)I",
+            (t, args, idx, ctx) -> {
+                if (idx != 0) return null;
+                Number radix = num(ctx.eval(args.get(1))); if (radix == null) return null;
+                return Integer.toString(((Number) t).intValue(), radix.intValue());
+            });
+        TABLE.registerCall("java/lang/Long", "parseLong", "(Ljava/lang/String;I)J",
+            (t, args, idx, ctx) -> {
+                if (idx != 0) return null;
+                Number radix = num(ctx.eval(args.get(1))); if (radix == null) return null;
+                return Long.toString(((Number) t).longValue(), radix.intValue());
+            });
+        TABLE.registerCall("java/lang/Float", "valueOf", "(Ljava/lang/String;)Ljava/lang/Float;",
+            (t, args, idx, ctx) -> Float.toString(((Number) t).floatValue()));
+        TABLE.registerCall("java/lang/Integer", "valueOf", "(Ljava/lang/String;)Ljava/lang/Integer;",
+            (t, args, idx, ctx) -> Integer.toString(((Number) t).intValue()));
+
+        // JDK 数学函数
+        TABLE.registerCall("java/lang/Math", "sqrt", "(D)D",
+            (t, args, idx, ctx) -> { double x = ((Number) t).doubleValue(); return Double.valueOf(x * x); });
+        TABLE.registerCall("java/lang/Math", "cbrt", "(D)D",
+            (t, args, idx, ctx) -> { double x = ((Number) t).doubleValue(); return Double.valueOf(x * x * x); });
+        TABLE.registerCall("java/lang/Math", "log", "(D)D",
+            (t, args, idx, ctx) -> Double.valueOf(Math.exp(((Number) t).doubleValue())));
+        TABLE.registerCall("java/lang/Math", "exp", "(D)D",
+            (t, args, idx, ctx) -> Double.valueOf(Math.log(((Number) t).doubleValue())));
+        TABLE.registerCall("java/lang/Math", "log10", "(D)D",
+            (t, args, idx, ctx) -> Double.valueOf(Math.pow(10.0, ((Number) t).doubleValue())));
+        // Math.max/min 的两个输入由不同阶段同步写入，此处为当前输入返回相同目标值
+        TABLE.registerCall("java/lang/Math", "max", "(FF)F",
+            (t, args, idx, ctx) -> Float.valueOf(((Number) t).floatValue()));
+        TABLE.registerCall("java/lang/Math", "min", "(FF)F",
+            (t, args, idx, ctx) -> Float.valueOf(((Number) t).floatValue()));
+        TABLE.registerCall("java/lang/Math", "max", "(II)I",
+            (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue()));
+        TABLE.registerCall("java/lang/Math", "min", "(II)I",
+            (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue()));
+        TABLE.registerCall("java/lang/Math", "max", "(DD)D",
+            (t, args, idx, ctx) -> Double.valueOf(((Number) t).doubleValue()));
+        TABLE.registerCall("java/lang/Math", "min", "(DD)D",
+            (t, args, idx, ctx) -> Double.valueOf(((Number) t).doubleValue()));
+        TABLE.registerCall("java/lang/Math", "pow", "(DD)D", (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number exp = num(ctx.eval(args.get(1))); if (exp == null) return null;
+            double e = exp.doubleValue();
+            if (Math.abs(e) < 1e-9) return null;
+            return Double.valueOf(Math.pow(((Number) t).doubleValue(), 1.0 / e));
+        });
+
+        // Math 精确算术：与普通 +/-/×/取负/±1 等价的双射，混淆器常用它伪装成不同形态
+        TABLE.registerCall("java/lang/Math", "addExact", "(II)I", (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return subDomain(t, o, 'I');
+        });
+        TABLE.registerCall("java/lang/Math", "addExact", "(JJ)J", (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return subDomain(t, o, 'J');
+        });
+        TABLE.registerCall("java/lang/Math", "subtractExact", "(II)I", (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return idx == 0 ? addDomain(t, o, 'I') : subDomain(o, (Number) t, 'I');
+        });
+        TABLE.registerCall("java/lang/Math", "subtractExact", "(JJ)J", (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return idx == 0 ? addDomain(t, o, 'J') : subDomain(o, (Number) t, 'J');
+        });
+        TABLE.registerCall("java/lang/Math", "multiplyExact", "(II)I", (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null || isZero(o, 'I')) return null;
+            return divDomain(t, o, 'I');
+        });
+        TABLE.registerCall("java/lang/Math", "multiplyExact", "(JJ)J", (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null || isZero(o, 'J')) return null;
+            return divDomain(t, o, 'J');
+        });
+        TABLE.registerCall("java/lang/Math", "multiplyExact", "(JI)J", (t, args, idx, ctx) -> {
+            if (idx != 0) return null;
+            Number o = num(ctx.eval(args.get(1))); if (o == null || o.longValue() == 0L) return null;
+            return Long.valueOf(((Number) t).longValue() / o.longValue());
+        });
+        TABLE.registerCall("java/lang/Math", "negateExact", "(I)I", (t, args, idx, ctx) -> negDomain((Number) t, 'I'));
+        TABLE.registerCall("java/lang/Math", "negateExact", "(J)J", (t, args, idx, ctx) -> negDomain((Number) t, 'J'));
+        TABLE.registerCall("java/lang/Math", "incrementExact", "(I)I", (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue() - 1));
+        TABLE.registerCall("java/lang/Math", "incrementExact", "(J)J", (t, args, idx, ctx) -> Long.valueOf(((Number) t).longValue() - 1L));
+        TABLE.registerCall("java/lang/Math", "decrementExact", "(I)I", (t, args, idx, ctx) -> Integer.valueOf(((Number) t).intValue() + 1));
+        TABLE.registerCall("java/lang/Math", "decrementExact", "(J)J", (t, args, idx, ctx) -> Long.valueOf(((Number) t).longValue() + 1L));
+        TABLE.registerCall("java/lang/Math", "toIntExact", "(J)I", (t, args, idx, ctx) -> Long.valueOf(((Number) t).intValue()));
+
+        // 字节翻转 / 无符号转换补全（自逆 / 截断回原宽度）
+        TABLE.registerCall("java/lang/Short", "reverseBytes", "(S)S",
+            (t, args, idx, ctx) -> Integer.valueOf(Short.reverseBytes(((Number) t).shortValue())));
+        TABLE.registerCall("java/lang/Integer", "toUnsignedLong", "(I)J",
+            (t, args, idx, ctx) -> Integer.valueOf((int) ((Number) t).longValue()));
+
+        // Base64 解码 → 逆为编码(byte[] → String)。decode 目标是 byte[]，逆推产出可被同款解码器还原的字符串
+        TABLE.registerCall("java/util/Base64$Decoder", "decode", "(Ljava/lang/String;)[B",
+            (t, args, idx, ctx) -> t instanceof byte[] b ? base64EncodeMatching(args, ctx, b) : null);
+        TABLE.registerCall("java/util/Base64$Encoder", "encodeToString", "([B)Ljava/lang/String;",
+            (t, args, idx, ctx) -> t instanceof String s ? Base64.getUrlDecoder().decode(s) : null);
+
+    // String.replace(search, "") 仅在替换串为空且 sink 为 receiver 时可逆，此时将 search 加回目标前缀。
+    // target 包含 search 时变换不是单射，返回 null。
+        TABLE.registerCall("java/lang/String", "replace", "(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Ljava/lang/String;",
+            (t, args, idx, ctx) -> {
+                if (idx != 0 || !(t instanceof String target)) return null;        //sink 须为 receiver
+                Object search = ctx.eval(args.get(1));
+                Object replacement = ctx.eval(args.get(2));
+                if (!(search instanceof CharSequence se) || !(replacement instanceof CharSequence re)) return null;
+                if (re.length() != 0) return null;                                  //仅支持替换为空串(纯删除)
+                String s = se.toString();
+                if (s.isEmpty() || target.contains(s)) return null;                 //保证 (s+target).replace(s,"")==target
+                return s + target;
+            });
+
+        // Number 拆箱 / Wrapper 装箱 (identity)
+        registerIdentityCall("java/lang/Float", "floatValue", "()F");
+        registerIdentityCall("java/lang/Double", "doubleValue", "()D");
+        registerIdentityCall("java/lang/Integer", "intValue", "()I");
+        registerIdentityCall("java/lang/Long", "longValue", "()J");
+        registerIdentityCall("java/lang/Short", "shortValue", "()S");
+        registerIdentityCall("java/lang/Byte", "byteValue", "()B");
+        registerIdentityCall("java/lang/Number", "floatValue", "()F");
+        registerIdentityCall("java/lang/Number", "doubleValue", "()D");
+        registerIdentityCall("java/lang/Number", "intValue", "()I");
+        registerIdentityCall("java/lang/Number", "longValue", "()J");
+        registerIdentityCall("java/lang/Float", "valueOf", "(F)Ljava/lang/Float;");
+        registerIdentityCall("java/lang/Double", "valueOf", "(D)Ljava/lang/Double;");
+        registerIdentityCall("java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;");
+        registerIdentityCall("java/lang/Long", "valueOf", "(J)Ljava/lang/Long;");
+
+        // Minecraft CompoundTag getXxx (identity,写回由 sink IO 完成)
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDouble", "(Ljava/lang/String;)D");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDouble", "(Ljava/lang/String;)D");
+
+        // String.substring(str, begin, end)：sink 在 arg[0] 时，从当前值取前缀/后缀还原完整字符串
+        TABLE.registerCall("java/lang/String", "substring", "(II)Ljava/lang/String;",
+            (t, args, idx, ctx) -> {
+                if (idx != 0 || !(t instanceof String target)) return null;
+                int begin = ((Number) ctx.eval(args.get(1))).intValue();
+                Object endObj = ctx.eval(args.get(2));
+                int end = endObj instanceof Number n ? n.intValue() : -1;
+                if (!(args.get(0) instanceof Source src)) return null;
+                Object cur = src.read(ctx.entity());
+                if (!(cur instanceof String s)) return null;
+                if (end >= 0 && s.length() >= end)
+                    return s.substring(0, begin) + target + s.substring(end);
+                if (end < 0 && s.length() >= begin)
+                    return s.substring(0, begin) + target;
+                return null;
+            });
+
+        /* String.substring(str, begin)：定长前缀式编码(前缀 + 数字字面量)的解码半边。
+           前缀不可从调用本身还原，改由 sink 当前值的前 begin 个字符提供。 */
+        TABLE.registerCall("java/lang/String", "substring", "(I)Ljava/lang/String;",
+            (t, args, idx, ctx) -> {
+                if (idx != 0 || !(t instanceof String target)) return null;
+                Object beginObj = ctx.eval(args.get(1));
+                if (!(beginObj instanceof Number beginNum)) return null;
+                int begin = beginNum.intValue();
+                if (begin < 0) return null;
+                if (!(args.get(0) instanceof Source src)) return null;
+                Object cur = src.read(ctx.entity());
+                if (!(cur instanceof String s) || s.length() < begin) return null;
+                return s.substring(0, begin) + target;
+            });
+    }
+
+    private static void registerArith(int op, char domain) {
+        TABLE.registerOp(op, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            return subDomain(t, o, domain);
+        });
+    }
+    private static void registerSub(int op, char domain) {
+        TABLE.registerOp(op, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            if (idx == 0) return addDomain(t, o, domain);
+            return subDomain(o, (Number) t, domain);
+        });
+    }
+    private static void registerMul(int op, char domain) {
+        TABLE.registerOp(op, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            if (isZero(o, domain)) return null;
+            return mulInvert(t, o, domain);
+        });
+    }
+
+    /* 乘法求逆：浮点用实数除法；整数(I/J)在模 2^n 环上——乘奇数常量可逆(乘其模逆元)，
+       乘偶数常量仅当整除时退化为除法，否则不可逆返回 null。修正了整数乘以整除求逆的错误。 */
+    private static Object mulInvert(Object t, Number o, char d) {
+        switch (d) {
+            case 'F' -> { float f = o.floatValue(); return f == 0f ? null : Float.valueOf(((Number) t).floatValue() / f); }
+            case 'D' -> { double db = o.doubleValue(); return db == 0d ? null : Double.valueOf(((Number) t).doubleValue() / db); }
+            case 'I' -> {
+                int c = o.intValue(), ti = ((Number) t).intValue();
+                if ((c & 1) != 0) return Integer.valueOf(ti * modInverse32(c));   // 奇数：模逆元
+                return c != 0 && ti % c == 0 ? Integer.valueOf(ti / c) : null;     // 偶数：仅整除可逆
+            }
+            case 'J' -> {
+                long c = o.longValue(), tl = ((Number) t).longValue();
+                if ((c & 1L) != 0L) return Long.valueOf(tl * modInverse64(c));
+                return c != 0 && tl % c == 0 ? Long.valueOf(tl / c) : null;
+            }
+            default -> { return null; }
+        }
+    }
+
+    //奇数 a 模 2^32 的逆元(Newton 迭代，每轮翻倍正确低位数)
+    private static int modInverse32(int a) {
+        int x = a;
+        for (int i = 0; i < 5; i++) x *= 2 - a * x;
+        return x;
+    }
+
+    //奇数 a 模 2^64 的逆元
+    private static long modInverse64(long a) {
+        long x = a;
+        for (int i = 0; i < 6; i++) x *= 2 - a * x;
+        return x;
+    }
+
+    /* Base64 解码的逆：产出能被「同一个解码器实例」还原成 target 的字符串。
+       逐个尝试 url/basic/mime × 有无 padding，用真实解码器验证 round-trip，命中即返回，保证正确。 */
+    private static String base64EncodeMatching(List<Expr> args, EvalContext ctx, byte[] target) {
+        try {
+            Object dec = evaluate(args.get(0), ctx);
+            Base64.Encoder[] cands = {
+                Base64.getUrlEncoder().withoutPadding(), Base64.getUrlEncoder(),
+                Base64.getEncoder().withoutPadding(), Base64.getEncoder(),
+                Base64.getMimeEncoder().withoutPadding(), Base64.getMimeEncoder()
+            };
+            if (dec instanceof Base64.Decoder decoder) {
+                for (Base64.Encoder e : cands) {
+                    String s = e.encodeToString(target);
+                    try { if (Arrays.equals(decoder.decode(s), target)) return s; } catch (Throwable ignored) {}
+                }
+            }
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(target);   // 兜底
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+            return null;
+        }
+    }
+    private static void registerDiv(int op, char domain) {
+        TABLE.registerOp(op, (t, args, idx, ctx) -> {
+            Number o = num(ctx.eval(args.get(1 - idx))); if (o == null) return null;
+            if (idx == 0) return mulDomain(t, o, domain);
+            if (isZero((Number) t, domain)) return null;
+            return divDomain(o, (Number) t, domain);
+        });
+    }
+    private static void registerUnaryNeg(int op, char domain) {
+        TABLE.registerOp(op, (t, args, idx, ctx) -> negDomain((Number) t, domain));
+    }
+    private static void registerIdentityCall(String owner, String name, String desc) {
+        TABLE.registerCall(owner, name, desc, (t, args, idx, ctx) -> t);
+    }
+
+    private static Object addDomain(Object t, Number o, char d) {
+        return switch (d) {
+            case 'I' -> Integer.valueOf(((Number) t).intValue() + o.intValue());
+            case 'J' -> Long.valueOf(((Number) t).longValue() + o.longValue());
+            case 'F' -> Float.valueOf(((Number) t).floatValue() + o.floatValue());
+            case 'D' -> Double.valueOf(((Number) t).doubleValue() + o.doubleValue());
+            default -> null;
+        };
+    }
+    private static Object subDomain(Object t, Number o, char d) {
+        return switch (d) {
+            case 'I' -> Integer.valueOf(((Number) t).intValue() - o.intValue());
+            case 'J' -> Long.valueOf(((Number) t).longValue() - o.longValue());
+            case 'F' -> Float.valueOf(((Number) t).floatValue() - o.floatValue());
+            case 'D' -> Double.valueOf(((Number) t).doubleValue() - o.doubleValue());
+            default -> null;
+        };
+    }
+    private static Object mulDomain(Object t, Number o, char d) {
+        return switch (d) {
+            case 'I' -> Integer.valueOf(((Number) t).intValue() * o.intValue());
+            case 'J' -> Long.valueOf(((Number) t).longValue() * o.longValue());
+            case 'F' -> Float.valueOf(((Number) t).floatValue() * o.floatValue());
+            case 'D' -> Double.valueOf(((Number) t).doubleValue() * o.doubleValue());
+            default -> null;
+        };
+    }
+    private static Object divDomain(Object t, Number o, char d) {
+        return switch (d) {
+            case 'I' -> Integer.valueOf(((Number) t).intValue() / o.intValue());
+            case 'J' -> Long.valueOf(((Number) t).longValue() / o.longValue());
+            case 'F' -> Float.valueOf(((Number) t).floatValue() / o.floatValue());
+            case 'D' -> Double.valueOf(((Number) t).doubleValue() / o.doubleValue());
+            default -> null;
+        };
+    }
+    private static Object negDomain(Number t, char d) {
+        return switch (d) {
+            case 'I' -> Integer.valueOf(-t.intValue());
+            case 'J' -> Long.valueOf(-t.longValue());
+            case 'F' -> Float.valueOf(-t.floatValue());
+            case 'D' -> Double.valueOf(-t.doubleValue());
+            default -> null;
+        };
+    }
+    private static boolean isZero(Number n, char d) {
+        return switch (d) {
+            case 'I' -> n.intValue() == 0;
+            case 'J' -> n.longValue() == 0L;
+            case 'F' -> n.floatValue() == 0f;
+            case 'D' -> n.doubleValue() == 0d;
+            default -> false;
+        };
+    }
+
+    private static Number num(Object v) { return v instanceof Number n ? n : null; }
+
+    /* ==================== execOp / invokeCall ==================== */
+
+    private static Object execOp(int op, List<Object> a) {
+        try {
+            return switch (op) {
+                case Opcodes.IADD -> ((Number) a.get(0)).intValue() + ((Number) a.get(1)).intValue();
+                case Opcodes.ISUB -> ((Number) a.get(0)).intValue() - ((Number) a.get(1)).intValue();
+                case Opcodes.IMUL -> ((Number) a.get(0)).intValue() * ((Number) a.get(1)).intValue();
+                case Opcodes.IDIV -> ((Number) a.get(0)).intValue() / ((Number) a.get(1)).intValue();
+                case Opcodes.IREM -> ((Number) a.get(0)).intValue() % ((Number) a.get(1)).intValue();
+                case Opcodes.LADD -> ((Number) a.get(0)).longValue() + ((Number) a.get(1)).longValue();
+                case Opcodes.LSUB -> ((Number) a.get(0)).longValue() - ((Number) a.get(1)).longValue();
+                case Opcodes.LMUL -> ((Number) a.get(0)).longValue() * ((Number) a.get(1)).longValue();
+                case Opcodes.LDIV -> ((Number) a.get(0)).longValue() / ((Number) a.get(1)).longValue();
+                case Opcodes.LREM -> ((Number) a.get(0)).longValue() % ((Number) a.get(1)).longValue();
+                case Opcodes.FADD -> ((Number) a.get(0)).floatValue() + ((Number) a.get(1)).floatValue();
+                case Opcodes.FSUB -> ((Number) a.get(0)).floatValue() - ((Number) a.get(1)).floatValue();
+                case Opcodes.FMUL -> ((Number) a.get(0)).floatValue() * ((Number) a.get(1)).floatValue();
+                case Opcodes.FDIV -> ((Number) a.get(0)).floatValue() / ((Number) a.get(1)).floatValue();
+                case Opcodes.DADD -> ((Number) a.get(0)).doubleValue() + ((Number) a.get(1)).doubleValue();
+                case Opcodes.DSUB -> ((Number) a.get(0)).doubleValue() - ((Number) a.get(1)).doubleValue();
+                case Opcodes.DMUL -> ((Number) a.get(0)).doubleValue() * ((Number) a.get(1)).doubleValue();
+                case Opcodes.DDIV -> ((Number) a.get(0)).doubleValue() / ((Number) a.get(1)).doubleValue();
+                case Opcodes.INEG -> -((Number) a.get(0)).intValue();
+                case Opcodes.LNEG -> -((Number) a.get(0)).longValue();
+                case Opcodes.FNEG -> -((Number) a.get(0)).floatValue();
+                case Opcodes.DNEG -> -((Number) a.get(0)).doubleValue();
+                case Opcodes.IXOR -> ((Number) a.get(0)).intValue() ^ ((Number) a.get(1)).intValue();
+                case Opcodes.LXOR -> ((Number) a.get(0)).longValue() ^ ((Number) a.get(1)).longValue();
+                case Opcodes.IAND -> ((Number) a.get(0)).intValue() & ((Number) a.get(1)).intValue();
+                case Opcodes.LAND -> ((Number) a.get(0)).longValue() & ((Number) a.get(1)).longValue();
+                case Opcodes.IOR  -> ((Number) a.get(0)).intValue() | ((Number) a.get(1)).intValue();
+                case Opcodes.LOR  -> ((Number) a.get(0)).longValue() | ((Number) a.get(1)).longValue();
+                case Opcodes.ISHL -> ((Number) a.get(0)).intValue() << ((Number) a.get(1)).intValue();
+                case Opcodes.LSHL -> ((Number) a.get(0)).longValue() << ((Number) a.get(1)).intValue();
+                case Opcodes.ISHR -> ((Number) a.get(0)).intValue() >> ((Number) a.get(1)).intValue();
+                case Opcodes.LSHR -> ((Number) a.get(0)).longValue() >> ((Number) a.get(1)).intValue();
+                case Opcodes.IUSHR -> ((Number) a.get(0)).intValue() >>> ((Number) a.get(1)).intValue();
+                case Opcodes.LUSHR -> ((Number) a.get(0)).longValue() >>> ((Number) a.get(1)).intValue();
+                case Opcodes.I2F -> (float) ((Number) a.get(0)).intValue();
+                case Opcodes.I2L -> (long)  ((Number) a.get(0)).intValue();
+                case Opcodes.I2D -> (double)((Number) a.get(0)).intValue();
+                case Opcodes.I2B -> (int)(byte) ((Number) a.get(0)).intValue();
+                case Opcodes.I2C -> (int)(char) ((Number) a.get(0)).intValue();
+                case Opcodes.I2S -> (int)(short) ((Number) a.get(0)).intValue();
+                case Opcodes.L2I -> (int)   ((Number) a.get(0)).longValue();
+                case Opcodes.L2F -> (float) ((Number) a.get(0)).longValue();
+                case Opcodes.L2D -> (double)((Number) a.get(0)).longValue();
+                case Opcodes.F2I -> (int)   ((Number) a.get(0)).floatValue();
+                case Opcodes.F2L -> (long)  ((Number) a.get(0)).floatValue();
+                case Opcodes.F2D -> (double)((Number) a.get(0)).floatValue();
+                case Opcodes.D2I -> (int)   ((Number) a.get(0)).doubleValue();
+                case Opcodes.D2L -> (long)  ((Number) a.get(0)).doubleValue();
+                case Opcodes.D2F -> (float) ((Number) a.get(0)).doubleValue();
+                default -> null;
+            };
+        } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+    }
+
+    private static Object invokeCall(Call call, EvalContext ctx) {
+        try {
+            Class<?> owner = loadClass(call.owner());
+            if (owner == null) return null;
+            Type[] argTypes = Type.getArgumentTypes(call.desc());
+            boolean hasRecv = call.args().size() > argTypes.length;
+            int start = hasRecv ? 1 : 0;
+            Object recv = null;
+            if (hasRecv) {
+                recv = evaluate(call.args().get(0), ctx);
+                if (recv == null) recv = inferUnknownReceiver(call.owner(), ctx);
+                if (recv == null) return null;
+            }
+            Class<?>[] pts = new Class<?>[argTypes.length];
+            Object[] pvs = new Object[argTypes.length];
+            for (int i = 0; i < argTypes.length; i++) {
+                pts[i] = asmTypeToClass(argTypes[i]);
+                if (pts[i] == null) return null;
+                Object v = evaluate(call.args().get(start + i), ctx);
+                // 静态方法参数不可符号化时兜底：WorldVariables.get(world) 的 world 是 LevelAccessor，
+                // 分析期 entity.level() 常被拦成 UnknownExpr→null，求值 null 会让 get(null) 返回
+                // 客户端静态替身，写入与模组读取出口不同对象。参数类型能被实体当前 level 满足时用它兜底。
+                if (v == null) v = inferUnknownArg(pts[i], ctx);
+                pvs[i] = v;
+            }
+            if (BOUNDED_READ.isLoop(owner, call.name(), call.desc())) {
+                Class<?> dispatch = recv == null || call.opcode() == Opcodes.INVOKESPECIAL ? owner : recv.getClass();
+                return BOUNDED_READ.evaluate(dispatch, call.name(), call.desc(), recv, pvs);
+            }
+            if (call.opcode() == Opcodes.INVOKESPECIAL) {
+                return invokeSpecialCall(call, owner, recv, pts, pvs);
+            }
+            Class<?> dispatchOwner = recv == null ? owner : recv.getClass();
+            Method m = findMethod(dispatchOwner, call.name(), pts, pvs);
+            if (m == null && dispatchOwner != owner) m = findMethod(owner, call.name(), pts, pvs);
+            if (m == null) return null;
+            m.setAccessible(true);
+            Class<?>[] actualTypes = m.getParameterTypes();
+            for (int i = 0; i < pvs.length; i++) pvs[i] = coerceArg(pvs[i], actualTypes[i]);
+            return m.invoke(recv, pvs);
+        } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+    }
+
+    private static final Set<String> SPECIAL_CALL_FAILURE_DUMPED = ConcurrentHashMap.newKeySet();
+
+    /* Method.invoke 会重新执行虚分派，不能表达 invokespecial。带调用者身份的 findSpecial 才与
+       字节码中的 super/private 调用一致；失败时交出该候选，不得悄悄退回虚调用。 */
+    private static Object invokeSpecialCall(Call call, Class<?> owner, Object receiver,
+                                            Class<?>[] parameterTypes, Object[] arguments) {
+        if (receiver == null || call.caller() == null) return null;
+        String key = call.caller() + "#" + call.owner() + "#" + call.name() + call.desc();
+        try {
+            Class<?> caller = loadClass(call.caller());
+            Class<?> returnType = asmTypeToClass(Type.getReturnType(call.desc()));
+            if (caller == null || returnType == null) return null;
+            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(caller, MethodHandles.lookup());
+            MethodType methodType = MethodType.methodType(returnType, parameterTypes);
+            MethodHandle handle = lookup.findSpecial(owner, call.name(), methodType, caller).bindTo(receiver);
+            return handle.invokeWithArguments(arguments);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            if (SPECIAL_CALL_FAILURE_DUMPED.add(key)) {
+                EcaLogger.info("[HealthDataflow] invokespecial evaluation failed call={} type={} msg={}",
+                        key, t.getClass().getName(), t.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /* 将实体参数上的静态 getter/setter 对视为同一个属性边界。这样即使 getter 内部通过回调、
+       临时数组或运行期改写访问真实存储，事务仍使用目标环境中的公开读写语义。 */
+    public static final class MethodPropertySource extends Source {
+        public final Method getter;
+        public final Method setter;
+        public final Expr entityExpr;
+
+        public MethodPropertySource(Method getter, Method setter, Expr entityExpr) {
+            super(getter.getReturnType(), "MP:" + getter.getDeclaringClass().getName() + "#"
+                    + getter.getName() + "/" + setter.getName());
+            this.getter = getter;
+            this.setter = setter;
+            this.entityExpr = entityExpr;
+        }
+
+        @Override public Object read(LivingEntity entity) {
+            try {
+                Object target = evaluate(entityExpr, new SimpleEvalContext(entity));
+                if (target == null) return null;
+                getter.setAccessible(true);
+                return getter.invoke(null, target);
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+                return null;
+            }
+        }
+
+        @Override protected String buildCanonicalKey() {
+            return "MP:" + getter.getDeclaringClass().getName() + "#"
+                    + getter.getName() + Type.getMethodDescriptor(getter) + "#"
+                    + setter.getName() + Type.getMethodDescriptor(setter);
+        }
+    }
+
+    /* 接收者符号化失败(UnknownExpr→null)时，若方法归属类型能被实体当前 level 满足，用 entity.level() 兜底。
+       按维度 SavedData 经 level.getDataStorage().computeIfAbsent(...) 访问，分析期 level 常不可符号化；
+       不退路会落到客户端静态替身实例，写入与模组读取出口不同对象。 */
+    private static Object inferUnknownReceiver(String ownerInternal, EvalContext ctx) {
+        LivingEntity entity = ctx.entity();
+        if (entity == null) return null;
+        Class<?> owner = loadClass(ownerInternal);
+        if (owner == null) return null;
+        Object level = entity.level();
+        return level != null && owner.isInstance(level) ? level : null;
+    }
+
+    /* 静态方法参数符号化失败(如 WorldVariables.get(world) 的 LevelAccessor 参数)时，
+       若参数类型能被实体当前 level 满足，用 entity.level() 兜底，避免 get(null) 落回客户端静态替身。 */
+    private static Object inferUnknownArg(Class<?> paramType, EvalContext ctx) {
+        if (paramType == null) return null;
+        LivingEntity entity = ctx.entity();
+        if (entity == null) return null;
+        Object level = entity.level();
+        return level != null && paramType.isInstance(level) ? level : null;
+    }
+
+    /* 写源是否位于实体之外：tick 过程收集的 SavedData/静态状态等真实权威不在实体对象上。
+       FieldChainSource/SynchedDataSource 是实体本体存储(EntityParamMarker receiver)，不算。 */
+    public static boolean isExternalStorageSource(Source sink) {
+        if (sink instanceof StaticFieldSource) return true;
+        if (sink instanceof MapEntrySource) return true;
+        if (sink instanceof CapabilityDataSource) return true;
+        if (sink instanceof ArrayElementSource) return true;
+        if (sink instanceof ChainedFieldSource chained) {
+            return chained.root != EntityParamMarker.I;
+        }
+        return false;
+    }
+
+    public enum InvokeFailed { INSTANCE }
+    public static final Object INVOKE_FAILED = InvokeFailed.INSTANCE;
+
+    /* 公开版本：失败哨兵返回 INVOKE_FAILED，供写入侧 capability 读写复用 */
+    public static Object invokeCompatibleSafely(Object receiver, String name, Object... args) {
+        return invokeCompatible(receiver, name, args);
+    }
+
+    private static Object invokeCompatible(Object receiver, String name, Object... args) {
+        if (receiver == null) return InvokeFailed.INSTANCE;
+        try {
+            Method method = findMethodByRuntimeArgs(receiver.getClass(), name, args);
+            if (method == null) return InvokeFailed.INSTANCE;
+            method.setAccessible(true);
+            Class<?>[] types = method.getParameterTypes();
+            Object[] coerced = new Object[args.length];
+            for (int i = 0; i < args.length; i++) coerced[i] = coerceArg(args[i], types[i]);
+            return method.invoke(receiver, coerced);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return InvokeFailed.INSTANCE;
+        }
+    }
+
+    private static Object unwrapOptionalContent(Object container) {
+        if (container == null) return null;
+        try {
+            if (container instanceof Optional<?> optional) return optional.orElse(null);
+            try {
+                Method resolve = container.getClass().getMethod("resolve");
+                Object resolved = resolve.invoke(container);
+                if (resolved instanceof Optional<?> optional) return optional.orElse(null);
+            } catch (NoSuchMethodException ignored) {}
+            try {
+                Method orElse = container.getClass().getMethod("orElse", Object.class);
+                return orElse.invoke(container, new Object[] { null });
+            } catch (NoSuchMethodException ignored) {}
+            return null;
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        }
+    }
+
+    /* ==================== 外部扫描：isAlive/isDeadOrDying 逆推真实血量 ==================== */
+
+    /*
+     * 通用数据流逆推骨架：从指定方法的指令帧提取血量表达式并生成 AnalysisResult。
+     * getHealth 与外部扫描各自只传入 extractor（从 MethodNode + 跑完的 Frame[] 中挑出 Expr），骨架完成其余公共部分。
+     */
+    private static AnalysisResult analyzeForHealthExpr(Class<?> owner, String name, String desc,
+                                                        java.util.function.BiFunction<MethodNode, Frame<TaintValue>[], Expr> extractor) {
+        if (owner == null || owner.getClassLoader() == null) return null;
+        try {
+            String ownerInternal = internalName(owner);
+            MethodNode mn = findMethodNode(classNode(owner), name, desc);
+            if (mn == null || mn.instructions.size() == 0) return null;
+
+            AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, owner);
+            TaintInterpreter interp = new TaintInterpreter(ctx, 0, ownerInternal, mn, null);
+            Analyzer<TaintValue> analyzer = new Analyzer<>(interp);
+            Frame<TaintValue>[] frames = analyzeFrames(analyzer, ownerInternal, mn, ctx);
+
+            Expr raw = extractor.apply(mn, frames);
+            if (raw == null || raw instanceof UnknownExpr) return null;
+            Expr stripped = stripEcaHealthWrappers(raw);
+            if (stripped == null || stripped instanceof UnknownExpr) return null;
+            return AnalysisResult.of(stripped, owner);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+        }
+        return null;
+    }
+
+    private record SemanticExternalScan(AnalysisResult result, List<Source> observedAuthorities,
+                                        AuthorityFingerprint fingerprint) {}
+
+    //按虚调用实际生效的定义方法分析，避免遗漏基类转换结果或混入被覆写的实现
+    private static SemanticExternalScan analyzeSemanticExternalScan(Class<?> entityClass) {
+        try (AnalysisRun run = new AnalysisRun()) {
+            SemanticExternalScan result = analyzeSemanticExternalScanBody(entityClass);
+            run.check();
+            return result;
+        }
+    }
+
+    private static SemanticExternalScan analyzeSemanticExternalScanBody(Class<?> entityClass) {
+        List<AnalysisResult> candidates = new ArrayList<>();
+        List<String> scannedMethods = new ArrayList<>();
+        List<String> entryCosts = new ArrayList<>();
+        long scanStart = System.nanoTime();
+        for (McMethod method : new McMethod[]{IS_ALIVE, IS_DEAD_OR_DYING}) {
+            ClassAndMethod target = findMethodOwner(entityClass, method);
+            if (target == null) continue;
+            String label = target.owner().getName() + "#" + target.name() + method.desc();
+            scannedMethods.add(label);
+            long entryStart = System.nanoTime();
+            int fetchStart = bytesFetchCount();
+            AnalysisResult result = safeExternalEntry(entityClass, label,
+                    () -> analyzeExternalComparisonMethod(target.owner(), target.name(), method.desc()));
+            entryCosts.add(entryCost(target.name(), entryStart, fetchStart));
+            if (result != null && !result.isEmpty() && !result.sources.isEmpty()) candidates.add(result);
+        }
+        for (McMethod method : new McMethod[]{HURT, ACTUALLY_HURT}) {
+            ClassAndMethod target = findMethodOwner(entityClass, method);
+            if (target == null) continue;
+            String label = target.owner().getName() + "#" + target.name() + method.desc();
+            scannedMethods.add(label);
+            long entryStart = System.nanoTime();
+            int fetchStart = bytesFetchCount();
+            AnalysisResult result = safeExternalEntry(entityClass, label,
+                    () -> analyzeDamageWriteMethod(target.owner(), target.name(), target.name(), method.desc()));
+            entryCosts.add(entryCost(target.name(), entryStart, fetchStart));
+            if (result != null && !result.isEmpty() && !result.sources.isEmpty()) candidates.add(result);
+        }
+        /* 权威指纹必须在 tick 收集之前定出来：tick 没有语义锚点，不带指纹进去就会把过程图里
+           每一条写指令都收成候选。指纹取 getHealth 数据流的源与上面四个语义出口的源之并——
+           getHealth 读的正是实体内同步单元镜像，语义出口补上它不读的那部分。 */
+        List<Source> observedAuthorities = observedAuthoritySources(entityClass, candidates);
+        AuthorityFingerprint fingerprint = fingerprintAuthorities(entityClass, observedAuthorities);
+        /* 语义出口是运行期直接写入的唯一候选树。tick/authority writer 只描述跨 tick 维护关系，
+           后续进入独立因果计划，绝不能再合并进这里。 */
+        AnalysisResult combined = combineExternalScanCandidates(entityClass, candidates);
+        if (EXTERNAL_SCAN_DIAG_DUMPED.add(entityClass)) {
+            EcaLogger.info("[ExternalScan] semantic entity={} methods={} candidates={} sources={}",
+                    entityClass.getName(), scannedMethods, candidates.size(),
+                    combined != null ? combined.sources.size() : 0);
+            EcaLogger.info("[ExternalScan]   semantic cost entity={} total={}ms perEntry={}",
+                    entityClass.getName(), millisSince(scanStart), entryCosts);
+        }
+        return new SemanticExternalScan(combined, List.copyOf(observedAuthorities), fingerprint);
+    }
+
+    private static final class MaintenanceParts {
+        List<StoreWrite> tickWrites = List.of();
+        List<StoreWrite> authorityWrites = List.of();
+        volatile boolean tickResolved;
+        volatile boolean authorityResolved;
+        boolean tickRunning;
+        boolean authorityRunning;
+        String tickCost = "tickWrites pending";
+        String authorityCost = "authorityWriters pending";
+        long firstStartedNanos;
+    }
+
+    /* Tick 与 writer 分别发布结果。部分结果也会重建计划，使先找到外部权威的一侧无需等待另一侧。 */
+    private static MaintenancePlan resolveMaintenancePart(Class<?> entityClass, boolean tickPart) {
+        if (entityClass == null) return MaintenancePlan.EMPTY;
+        SemanticExternalScan semantic = EXTERNAL_SCAN_CACHE.computeIfAbsent(entityClass,
+                HealthDataflowAnalyzer::analyzeSemanticExternalScan);
+        MaintenanceParts parts = MAINTENANCE_PARTS_CACHE.computeIfAbsent(entityClass, ignored -> new MaintenanceParts());
+        synchronized (parts) {
+            if (tickPart ? parts.tickResolved || parts.tickRunning
+                    : parts.authorityResolved || parts.authorityRunning) {
+                return MAINTENANCE_PLAN_CACHE.getOrDefault(entityClass, MaintenancePlan.EMPTY);
+            }
+            if (parts.firstStartedNanos == 0L) parts.firstStartedNanos = System.nanoTime();
+            if (tickPart) parts.tickRunning = true;
+            else parts.authorityRunning = true;
+        }
+
+        long partStart = System.nanoTime();
+        BudgetedWrites result;
+        try {
+            result = tickPart
+                    ? collectTickWrites(entityClass, semantic.fingerprint())
+                    : collectAuthorityWriterWrites(entityClass, semantic.fingerprint());
+        } catch (Throwable t) {
+            synchronized (parts) {
+                if (tickPart) parts.tickRunning = false;
+                else parts.authorityRunning = false;
+            }
+            throw t;
+        }
+
+        synchronized (parts) {
+            String name = tickPart ? "tickWrites" : "authorityWriters";
+            String cost = entryCost(name, partStart, 0) + (result.timedOut() ? " TIMEOUT" : "");
+            if (tickPart) {
+                parts.tickWrites = result.writes();
+                parts.tickCost = cost;
+                parts.tickRunning = false;
+                parts.tickResolved = !result.timedOut();
+            } else {
+                parts.authorityWrites = result.writes();
+                parts.authorityCost = cost;
+                parts.authorityRunning = false;
+                parts.authorityResolved = !result.timedOut();
+            }
+            List<StoreWrite> combined = mergeMaintenanceWrites(parts.tickWrites, parts.authorityWrites);
+            MaintenancePlan plan = buildMaintenancePlan(semantic.observedAuthorities(), combined);
+            MAINTENANCE_PLAN_CACHE.put(entityClass, plan);
+            MAINTENANCE_SINKS_CACHE.put(entityClass, distinctSinks(combined));
+            MAINTENANCE_MIRROR_CACHE.put(entityClass, buildMirrorLinks(combined));
+            if (parts.tickResolved && parts.authorityResolved && MAINTENANCE_SCAN_DIAG_DUMPED.add(entityClass)) {
+                List<String> methods = new ArrayList<>();
+                if (!parts.tickWrites.isEmpty()) methods.add("tickWrites");
+                if (!parts.authorityWrites.isEmpty()) methods.add("authorityWriters");
+                EcaLogger.info("[ExternalScan] maintenance entity={} methods={} branches={}",
+                        entityClass.getName(), methods, plan.branches().size());
+                EcaLogger.info("[ExternalScan]   maintenance cost entity={} wall={}ms parallelParts=[{}, {}]",
+                        entityClass.getName(), millisSince(parts.firstStartedNanos), parts.tickCost, parts.authorityCost);
+                AuthorityFingerprint fingerprint = semantic.fingerprint();
+                EcaLogger.info("[ExternalScan]   fingerprint entity={} usable={} scope={} tickWrites={} authorityWrites={} causalWrites={}",
+                        entityClass.getName(), fingerprint.usable(), fingerprint.cacheScope(), parts.tickWrites.size(),
+                        parts.authorityWrites.size(), plan.maintenanceWriteCount());
+                dumpMaintenanceSinks(entityClass, combined, plan);
+            }
+            return plan;
+        }
+    }
+
+    private static final Map<Class<?>, List<Source>> MAINTENANCE_SINKS_CACHE = new ConcurrentHashMap<>();
+
+    // 按 canonicalKey 去重，保留扫描顺序；ECA 自注入的落点在此剔除，不进入候选
+    private static List<Source> distinctSinks(List<StoreWrite> writes) {
+        Map<String, Source> byKey = new LinkedHashMap<>();
+        for (StoreWrite write : writes) {
+            if (write == null || write.sink() == null) continue;
+            Source sink = write.sink();
+            if (isEcaHealthWrapperSource(sink)) continue;
+            byKey.putIfAbsent(sink.canonicalKey(), sink);
+        }
+        return List.copyOf(byKey.values());
+    }
+
+    private static final int MAINTENANCE_SINK_DUMP_LIMIT = 40;
+
+    /* 维护扫描抓到的写入落在哪些存储单元上。计数无法回答"真实血量存储在不在里面"，
+       而这决定了它能否作为有效血量模型的候选来源，故按标签逐一列出。 */
+    private static void dumpMaintenanceSinks(Class<?> entityClass, List<StoreWrite> writes, MaintenancePlan plan) {
+        Set<String> labels = new LinkedHashSet<>();
+        for (StoreWrite write : writes) {
+            if (write == null || write.sink() == null) continue;
+            if (labels.size() >= MAINTENANCE_SINK_DUMP_LIMIT) break;
+            labels.add(write.sink().label);
+        }
+        EcaLogger.info("[ExternalScan]   maintenance sinks entity={} distinct={} {}",
+                entityClass.getName(), labels.size(), labels);
+        for (MaintenanceBranch branch : plan.branches()) {
+            Set<String> causal = new LinkedHashSet<>();
+            for (StoreWrite write : branch.maintenanceWrites()) {
+                if (write != null && write.sink() != null) causal.add(write.sink().label);
+            }
+            EcaLogger.info("[ExternalScan]   causal branch entity={} authority={} causalSinks={} transactionSources={}",
+                    entityClass.getName(), branch.authority().label, causal,
+                    branch.transactionSources().stream().map(source -> source.label).toList());
+        }
+        Map<String, MirrorLink> mirrors = MAINTENANCE_MIRROR_CACHE.getOrDefault(entityClass, Map.of());
+        if (!mirrors.isEmpty()) {
+            List<String> pairs = new ArrayList<>();
+            for (MirrorLink link : mirrors.values()) {
+                pairs.add(link.mirror().label + " <- " + link.authority().label);
+            }
+            EcaLogger.info("[ExternalScan]   mirror links entity={} count={} {}",
+                    entityClass.getName(), pairs.size(), pairs);
+        }
+    }
+
+    /* 维护写入里"整体重算自另一个单元"的落点即镜像：写它必被下一次维护覆盖，判定也不读它。
+       判据只看写值表达式的源集合——落点的每一次维护写入都恰好由同一个别的单元单独决定即成立，
+       任一次写入掺入常数以外的第二个源、或写入自身，都说明它承载独立状态而非镜像。
+       权威反过来依赖镜像时两者互为上下游，重定向会绕回原地，故此时不建链。 */
+    private static Map<String, MirrorLink> buildMirrorLinks(List<StoreWrite> writes) {
+        if (writes == null || writes.isEmpty()) return Map.of();
+        Map<String, List<StoreWrite>> bySink = new LinkedHashMap<>();
+        for (StoreWrite write : writes) {
+            if (write == null || write.sink() == null) continue;
+            if (isEcaHealthWrapperSource(write.sink())) continue;
+            bySink.computeIfAbsent(write.sink().canonicalKey(), ignored -> new ArrayList<>()).add(write);
+        }
+        Map<String, MirrorLink> links = new LinkedHashMap<>();
+        for (Map.Entry<String, List<StoreWrite>> entry : bySink.entrySet()) {
+            MirrorLink link = mirrorLinkOf(entry.getValue());
+            if (link == null) continue;
+            if (dependsOnMirror(bySink.get(link.authority().canonicalKey()), link.mirror())) continue;
+            links.put(entry.getKey(), link);
+        }
+        return links.isEmpty() ? Map.of() : Map.copyOf(links);
+    }
+
+    /* 同一落点的多处维护写入若重算式子形状不一，仍是镜像(写它一样留不住)，但无从判断哪一处最后生效，
+       此时 recomputeExpr 置空表示"已知镜像、不可重定向"，由调用方交出该落点的裁决权。 */
+    private static MirrorLink mirrorLinkOf(List<StoreWrite> sinkWrites) {
+        Source mirror = sinkWrites.get(0).sink();
+        Source authority = null;
+        Expr recompute = null;
+        boolean uniformShape = true;
+        for (StoreWrite write : sinkWrites) {
+            Set<Source> valueSources = collectSources(write.valueExpr());
+            if (valueSources.size() != 1) return null;
+            Source candidate = valueSources.iterator().next();
+            if (candidate.equals(mirror)) return null;
+            if (authority != null && !authority.equals(candidate)) return null;
+            authority = candidate;
+            if (recompute == null) recompute = write.valueExpr();
+            else if (!recompute.equals(write.valueExpr())) uniformShape = false;
+        }
+        if (authority == null) return null;
+        return new MirrorLink(mirror, authority, uniformShape ? recompute : null);
+    }
+
+    private static boolean dependsOnMirror(List<StoreWrite> authorityWrites, Source mirror) {
+        if (authorityWrites == null) return false;
+        for (StoreWrite write : authorityWrites) {
+            if (containsSink(write.valueExpr(), mirror)) return true;
+        }
+        return false;
+    }
+
+    private static List<StoreWrite> mergeMaintenanceWrites(List<StoreWrite> tickWrites,
+                                                            List<StoreWrite> authorityWrites) {
+        List<StoreWrite> combined = new ArrayList<>(tickWrites.size() + authorityWrites.size());
+        for (StoreWrite write : tickWrites) {
+            if (write != null && !combined.contains(write)) combined.add(write);
+        }
+        for (StoreWrite write : authorityWrites) {
+            if (write != null && !combined.contains(write)) combined.add(write);
+        }
+        return combined;
+    }
+
+    private static String entryCost(String name, long startNanos, int fetchStart) {
+        return name + " " + millisSince(startNanos) + "ms bytes=" + (bytesFetchCount() - fetchStart);
+    }
+
+    private static long millisSince(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000L;
+    }
+
+    /* 隔离单个扫描入口的异常：不隔离时第一个抛出的入口会连带废掉其余入口，
+       整条通道对外只表现为"无结果"，无从判断是分析不出来还是中途炸了。
+       VirtualMachineError 按全局约定仍向上抛，由提交侧统一记录栈。 */
+    private static AnalysisResult safeExternalEntry(Class<?> entityClass, String label,
+                                                    Supplier<AnalysisResult> analysis) {
+        try {
+            return analysis.get();
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            if (EXTERNAL_ENTRY_FAILURE_DUMPED.add(entityClass.getName() + "|" + label)) {
+                EcaLogger.info("[ExternalScan] entry threw entity={} entry={} type={} msg={}",
+                        entityClass.getName(), label, t.getClass().getName(), t.getMessage());
+            }
+            return null;
+        }
+    }
+
+    private static AnalysisResult analyzeExternalComparisonMethod(Class<?> owner, String name, String desc) {
+        AnalysisCtx context = new AnalysisCtx(DEFAULT_MAX_DEPTH, owner);
+        Expr expression = analyzeComparisonMethod(owner, name, desc, null, context, 0);
+        if (expression == null || expression instanceof UnknownExpr) return null;
+        Expr stripped = stripEcaHealthWrappers(expression);
+        if (stripped == null || stripped instanceof UnknownExpr) return null;
+        return AnalysisResult.of(stripped, owner);
+    }
+
+    /* ==================== 外部扫描：tick 过程写源收集 ====================
+       实体真实血量常由 tick 过程(baseTick/tick/aiStep)经静态过程链维护，
+       权威存储可能是实体外的 SavedData/静态状态。从这些周期性回调提取 StoreWrite 的 sink，
+       使真实存储成为可写 Source。旧架构经 collectRecurringWrites 完成同样收集，此处对齐移植。 */
+
+    /* 从表达式树递归收集 StoreWrite 的 sink。Choice/Op/Call/Closure 等复合节点逐子遍历。 */
+    private static void collectStoreWrites(Expr expression, List<StoreWrite> writes) {
+        if (expression == null || expression instanceof UnknownExpr) return;
+        if (expression instanceof StoreWrite write) {
+            if (!writes.contains(write)) writes.add(write);
+            collectStoreWrites(write.valueExpr(), writes);
+            return;
+        }
+        if (expression instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) collectStoreWrites(alternative, writes);
+            return;
+        }
+        if (expression instanceof Op operation) {
+            for (Expr argument : operation.args()) collectStoreWrites(argument, writes);
+            return;
+        }
+        if (expression instanceof Call call) {
+            for (Expr argument : call.args()) collectStoreWrites(argument, writes);
+            return;
+        }
+        if (expression instanceof Closure closure) {
+            for (Expr argument : closure.captured()) collectStoreWrites(argument, writes);
+            return;
+        }
+        if (expression instanceof OptionalContentExpr optional) {
+            collectStoreWrites(optional.optionalExpr(), writes);
+        }
+    }
+
+    /* tick 语义入口(显式登记名)或父类覆写的无参 void 方法，判定为周期性回调。
+       与旧版 ProtocolDataflowAnalyzer.isRecurringOverride 语义一致：语义名命中即 true，
+       否则要求父类覆写且无参。 */
+    private static boolean isRecurringOverride(Class<?> owner, MethodNode method) {
+        if (method == null || (method.access & (Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT)) != 0) return false;
+        for (McMethod entry : new McMethod[]{TICK, BASE_TICK, AI_STEP}) {
+            if (entry.desc().equals(method.desc)
+                    && (entry.srg().equals(method.name) || entry.mcp().equals(method.name))) return true;
+        }
+        return isVoidOverride(owner, method) && Type.getArgumentTypes(method.desc).length == 0;
+    }
+
+    /* 父类覆写的 void 方法：模组自定义的周期性回调形态。无参约束由调用方按需施加。 */
+    private static boolean isVoidOverride(Class<?> owner, MethodNode method) {
+        if (owner == null || method == null || method.name.startsWith("<")) return false;
+        if ((method.access & (Opcodes.ACC_STATIC | Opcodes.ACC_ABSTRACT)) != 0) return false;
+        if (Type.getReturnType(method.desc).getSort() != Type.VOID) return false;
+        for (Class<?> parent = owner.getSuperclass(); parent != null && parent != Object.class;
+             parent = parent.getSuperclass()) {
+            if (classDefinesMethod(parent, method.name, method.desc)) return true;
+        }
+        return false;
+    }
+
+    /* 从实体类层次沿 superclass 收集所有 tick 覆写方法分析出的写源，返回 StoreWrite 列表。
+       tick 过程常把血量维护转发给静态过程转发链，默认 500 内联额度不够穿透，
+       故放宽内联预算(仍保留 maxDepth 防环)，使实体外真实存储能暴露为写源。 */
+    private static BudgetedWrites collectTickWrites(Class<?> entityClass, AuthorityFingerprint fingerprint) {
+        List<StoreWrite> writes = new ArrayList<>();
+        if (entityClass == null || entityClass.getClassLoader() == null) {
+            return new BudgetedWrites(List.copyOf(writes), false);
+        }
+        long deadline = System.nanoTime() + MAINTENANCE_HARD_BUDGET_NANOS;
+        boolean timedOut = false;
+        for (Class<?> owner = entityClass; owner != null && owner != LivingEntity.class && !timedOut;
+             owner = owner.getSuperclass()) {
+            ClassNode node;
+            try {
+                node = classNode(owner);
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+                continue;
+            }
+            if (node == null) continue;
+            for (MethodNode method : node.methods) {
+                if (!isRecurringOverride(owner, method)) continue;
+                if (System.nanoTime() > deadline) { timedOut = true; break; }
+                AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, entityClass);
+                ctx.inlineBudget = TICK_WRITE_INLINE_BUDGET;
+                ctx.nodeBudget = TICK_WRITE_NODE_BUDGET;
+                ctx.authorityFingerprint = fingerprint;
+                ctx.configureAdaptiveDeadline(deadline);
+                TaintValue[] seed = seedMethodInputs(method.desc, false);
+                Expr expression = analyzeMethodWrites(owner, method.name, method.desc, seed, ctx, 0);
+                if (ctx.deadlineExceeded || System.nanoTime() > deadline) {
+                    timedOut = true;
+                    break;
+                }
+                if (expression == null || expression instanceof UnknownExpr) continue;
+                collectStoreWrites(expression, writes);
+            }
+        }
+        return new BudgetedWrites(List.copyOf(writes), timedOut);
+    }
+
+    /* 受时间预算约束的收集结果：timedOut 表示本项被截断，收集到的写源可能不完整。 */
+    private record BudgetedWrites(List<StoreWrite> writes, boolean timedOut) {}
+
+    /* 每个权威只携带与其形成因果闭包的周期写入和状态，避免把整个 tick 过程当作改血候选。 */
+    public record MaintenanceBranch(Source authority, List<StoreWrite> maintenanceWrites,
+                                    List<Source> transactionSources) {
+        public MaintenanceBranch {
+            maintenanceWrites = List.copyOf(maintenanceWrites);
+            transactionSources = List.copyOf(transactionSources);
+        }
+    }
+
+    public record MaintenancePlan(List<MaintenanceBranch> branches) {
+        public static final MaintenancePlan EMPTY = new MaintenancePlan(List.of());
+
+        public MaintenancePlan {
+            branches = List.copyOf(branches);
+        }
+
+        public int maintenanceWriteCount() {
+            int count = 0;
+            for (MaintenanceBranch branch : branches) count += branch.maintenanceWrites().size();
+            return count;
+        }
+
+        public boolean hasExternalTransactionSource() {
+            for (MaintenanceBranch branch : branches) {
+                for (Source source : branch.transactionSources()) {
+                    if (!source.equals(branch.authority()) && isExternalStorageSource(source)) return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /* 周期写入先形成 sink→dependencies 图，再从语义权威求强连通闭包。实体外存储若由该
+       闭包直接赋值，则作为单向下游镜像附加；它无需回到权威，但也不应扩散到后续无关写入。 */
+    private static MaintenancePlan buildMaintenancePlan(Collection<Source> authorities,
+                                                        List<StoreWrite> writes) {
+        if (authorities == null || authorities.isEmpty() || writes == null || writes.isEmpty()) {
+            return MaintenancePlan.EMPTY;
+        }
+        Map<Source, Set<Source>> dependencies = new HashMap<>();
+        for (StoreWrite write : writes) {
+            if (write == null || write.sink() == null) continue;
+            Source sink = canonicalSource(dependencies.keySet(), write.sink());
+            Set<Source> outgoing = dependencies.computeIfAbsent(sink, ignored -> new LinkedHashSet<>());
+            for (Source dependency : collectSources(write.valueExpr())) {
+                outgoing.add(canonicalSource(dependencies.keySet(), dependency));
+            }
+        }
+
+        List<MaintenanceBranch> branches = new ArrayList<>();
+        for (Source authorityCandidate : authorities) {
+            if (authorityCandidate == null) continue;
+            Source authority = canonicalSource(dependencies.keySet(), authorityCandidate);
+            Set<Source> reachable = reachableSources(List.of(authority), dependencies);
+            List<Source> transactionSources = new ArrayList<>();
+            transactionSources.add(authority);
+            for (Source candidate : reachable) {
+                if (candidate.equals(authority)) continue;
+                // 单向恢复表不一定与当前存储强连通，直接参与回写的外部值同样需要联写。
+                if (reachableSources(List.of(candidate), dependencies).contains(authority)
+                        || (isExternalStorageSource(candidate)
+                            && writes.stream().anyMatch(write -> write.sink().equals(authority)
+                                && healthReadSlice(write.valueExpr()).contains(candidate)))) {
+                    transactionSources.add(candidate);
+                }
+            }
+            List<StoreWrite> causalWrites = new ArrayList<>();
+            for (StoreWrite write : writes) {
+                if (write != null && transactionSources.contains(write.sink()) && !causalWrites.contains(write)) {
+                    causalWrites.add(write);
+                }
+            }
+            /* 部分实体把实体内真实血量单向同步到 SavedData。该镜像不在强连通分量内，
+               但若不与权威同事务写入，下一 tick 的高水位仍会把实体值拉回。只接一跳且要求
+               写值直接依赖当前闭包，避免沿整个 tick 写图扩散。 */
+            List<Source> causalCore = List.copyOf(transactionSources);
+            for (StoreWrite write : writes) {
+                if (write == null || write.sink() == null
+                        || !isExternalStorageSource(write.sink())
+                        || !containsAnySink(write.valueExpr(), causalCore)) continue;
+                if (!transactionSources.contains(write.sink())) transactionSources.add(write.sink());
+                if (!causalWrites.contains(write)) causalWrites.add(write);
+            }
+            transactionSources.sort(Comparator.comparing(source -> source.label));
+            if (!causalWrites.isEmpty()) {
+                branches.add(new MaintenanceBranch(authority, causalWrites, transactionSources));
+            }
+        }
+        return branches.isEmpty() ? MaintenancePlan.EMPTY : new MaintenancePlan(branches);
+    }
+
+    private static boolean containsAnySink(Expr expression, Collection<Source> sinks) {
+        for (Source sink : sinks) {
+            if (containsSink(expression, sink)) return true;
+        }
+        return false;
+    }
+
+    private static Source canonicalSource(Collection<Source> known, Source candidate) {
+        for (Source source : known) {
+            if (source.equals(candidate)) return source;
+        }
+        return candidate;
+    }
+
+    private static Set<Source> reachableSources(Collection<Source> roots,
+                                                Map<Source, Set<Source>> dependencies) {
+        Set<Source> reached = new LinkedHashSet<>();
+        ArrayDeque<Source> pending = new ArrayDeque<>(roots);
+        while (!pending.isEmpty()) {
+            Source current = canonicalSource(dependencies.keySet(), pending.removeFirst());
+            if (!reached.add(current)) continue;
+            for (Source next : dependencies.getOrDefault(current, Set.of())) pending.addLast(next);
+        }
+        return reached;
+    }
+
+    /* 剪枝指纹的种子源：getHealth 数据流的源 + 语义出口已定位的源。
+       两者都由带语义锚点的入口得出，不含 tick 的无关写入，可以安全地反过来约束 tick。 */
+    private static List<Source> observedAuthoritySources(Class<?> entityClass,
+                                                         List<AnalysisResult> semanticCandidates) {
+        List<Source> sources = new ArrayList<>();
+        try {
+            AnalysisResult observation = analyze(entityClass);
+            if (observation != null && !observation.isEmpty()) sources.addAll(observation.sources);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+        }
+        for (AnalysisResult candidate : semanticCandidates) {
+            if (candidate == null || candidate.isEmpty()) continue;
+            for (Source source : candidate.sources) {
+                if (!sources.contains(source)) sources.add(source);
+            }
+        }
+        return sources;
+    }
+
+    /* tick 过程写源收集的预算：较常规放宽的 override 扫描额度。
+       静态过程转发链在默认 50 万节点预算内 merge 必然耗尽，receiver 链坍缩成
+       Unknown 后写源全部 NOT_ADDRESSABLE；节点与内联额度须同步放大，缺一不可。 */
+    private static final int TICK_WRITE_INLINE_BUDGET = 40_000;
+    private static final int TICK_WRITE_NODE_BUDGET = 12_000_000;
+
+    /* 软时间片只在分析仍有解释器进展时续期；绝对上限保证恶意或异常控制流最终退出。
+       Tick 与 writer 位于独立线程，因此两边的上限不会串行相加到等待时间上。 */
+    private static final long MAINTENANCE_SOFT_SLICE_NANOS = 2_000_000_000L;
+    private static final long MAINTENANCE_EXTENSION_SLICE_NANOS = 1_000_000_000L;
+    private static final long MAINTENANCE_HARD_BUDGET_NANOS = 8_000_000_000L;
+
+    /* ==================== 正向定位权威写入者 ====================
+       tick 链内联在大型转发过程里预算会被海量无关调用吃光，够不着尾部的真实写入方法；
+       权威(accessor/字段)已知后直接在实体所属模组内扫描引用它的方法，单独分析即可
+       暴露实体外的真实存储写入，与被写入方法在过程图里离 tick 多远无关。 */
+
+    /* 权威指纹：真实存储的字段/accessor/NBT 键集合。任一权威无法落键则该指纹整体不可用。 */
+    private record AuthorityFingerprint(Set<String> fieldKeys, Set<String> accessorKeys,
+                                        Set<String> nbtKeys, boolean usable) {
+        String cacheScope() {
+            return fieldKeys.size() + "/" + accessorKeys.size() + "/" + nbtKeys.size();
+        }
+
+        boolean matchesField(FieldInsnNode field) {
+            return fieldKeys.contains(field.owner + "#" + field.name + "#" + field.desc);
+        }
+
+        // accessor 静态字段无描述符参与，键格式与 findAccessorFieldKey 一致
+        boolean matchesAccessor(FieldInsnNode field) {
+            return accessorKeys.contains(field.owner + "#" + field.name);
+        }
+    }
+
+    private static final AuthorityFingerprint NO_AUTHORITY_FINGERPRINT =
+            new AuthorityFingerprint(Set.of(), Set.of(), Set.of(), false);
+
+    /* 从已分析出的权威源构建指纹：SynchedDataSource→反查其 accessor 静态字段键，
+       字段链源→末段字段键。非实体权威的源类型(静态字段/容器等)跳过不置不可用——
+       它们只是实体外维护状态，不是"权威"本身，且 tick 收集常混入无关静态字段，
+       把它们当权威会把指纹整体拖成不可用。 */
+    private static AuthorityFingerprint fingerprintAuthorities(Class<?> entityClass,
+                                                               Collection<Source> authorities) {
+        if (authorities == null || authorities.isEmpty()) return NO_AUTHORITY_FINGERPRINT;
+        Set<String> fieldKeys = new HashSet<>();
+        Set<String> accessorKeys = new HashSet<>();
+        Set<String> nbtKeys = new HashSet<>();
+        boolean usable = true;
+        for (Source authority : authorities) {
+            if (authority instanceof SynchedDataSource synched) {
+                String accessorField = findAccessorFieldKey(entityClass, synched.accessor);
+                if (accessorField == null) usable = false;
+                else accessorKeys.add(accessorField);
+            } else if (authority instanceof FieldChainSource chain && !chain.chain.isEmpty()) {
+                fieldKeys.add(fieldKey(chain.chain.get(chain.chain.size() - 1)));
+            } else if (authority instanceof ChainedFieldSource chain && !chain.chain.isEmpty()) {
+                fieldKeys.add(fieldKey(chain.chain.get(chain.chain.size() - 1)));
+            } else {
+                // StaticFieldSource/MapEntrySource/CapabilityDataSource/ArrayElementSource 等
+                // 实体外维护状态，非权威本体，忽略即可
+            }
+        }
+        if (fieldKeys.isEmpty() && accessorKeys.isEmpty() && nbtKeys.isEmpty()) {
+            return NO_AUTHORITY_FINGERPRINT;
+        }
+        return new AuthorityFingerprint(fieldKeys, accessorKeys, nbtKeys, usable);
+    }
+
+    private static String fieldKey(FieldStep step) {
+        return step.ownerInternal() + "#" + step.name() + "#" + step.desc();
+    }
+
+    /* accessor 对象本身不带来源信息，只能在实体继承链的静态字段里反查持有它的那个。 */
+    private static String findAccessorFieldKey(Class<?> entityClass, EntityDataAccessor<?> accessor) {
+        for (Class<?> owner = entityClass; owner != null && owner != Object.class; owner = owner.getSuperclass()) {
+            for (Field field : owner.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers())
+                        || !EntityDataAccessor.class.isAssignableFrom(field.getType())) continue;
+                try {
+                    field.setAccessible(true);
+                    if (field.get(null) == accessor) return internalName(owner) + "#" + field.getName();
+                } catch (Throwable t) {
+                    if (t instanceof VirtualMachineError e) throw e;
+                }
+            }
+        }
+        return null;
+    }
+
+    /* 写入权威的过程与声明 accessor 的实体同属一个模组，按实体类名前三段包前缀限定扫描范围；
+       CodeSource 在 Forge 下常是虚拟路径，不能用 jar 文件定位。 */
+    private static String modScopePrefix(Class<?> entityClass) {
+        String name = entityClass.getName();
+        int cut = 0;
+        for (int segment = 0; segment < 3; segment++) {
+            int dot = name.indexOf('.', cut);
+            if (dot < 0) break;
+            cut = dot + 1;
+        }
+        return cut <= 1 ? null : name.substring(0, cut - 1);
+    }
+
+    private record WriterSite(String ownerInternal, String methodName, String methodDesc) {}
+
+    private static final Map<String, List<WriterSite>> AUTHORITY_WRITER_SITES = new ConcurrentHashMap<>();
+    private static final int WRITER_SCAN_CLASS_LIMIT = 30_000;
+
+    private static WriterSiteScan findAuthorityWriterSites(Class<?> entityClass,
+                                                           AuthorityFingerprint fingerprint,
+                                                           long deadline) {
+        if (fingerprint == null || !fingerprint.usable()) return WriterSiteScan.EMPTY;
+        if (fingerprint.accessorKeys().isEmpty() && fingerprint.fieldKeys().isEmpty()) return WriterSiteScan.EMPTY;
+        String scope = modScopePrefix(entityClass);
+        if (scope == null) return WriterSiteScan.EMPTY;
+        String key = scope + "|" + fingerprint.cacheScope();
+        List<WriterSite> cached = AUTHORITY_WRITER_SITES.get(key);
+        if (cached != null) return new WriterSiteScan(cached, false);
+        WriterSiteScan scan = scanLoadedClassesForWriterSites(scope, fingerprint, deadline);
+        /* 被时间预算截断的结果绝不入缓存：一旦缓存，残缺的写源集会被当作完整结论长期复用，
+           该模组此后再也扫不出真实权威写入者。不缓存则下次请求可以重新扫。 */
+        if (!scan.timedOut()) AUTHORITY_WRITER_SITES.put(key, scan.sites());
+        return scan;
+    }
+
+    /* 受时间预算约束的写入者站点扫描结果；timedOut 表示扫描被截断，站点集不完整。 */
+    private record WriterSiteScan(List<WriterSite> sites, boolean timedOut) {
+        private static final WriterSiteScan EMPTY = new WriterSiteScan(List.of(), false);
+    }
+
+    private static WriterSiteScan scanLoadedClassesForWriterSites(String scope,
+                                                                  AuthorityFingerprint fingerprint,
+                                                                  long deadline) {
+        List<WriterSite> sites = new ArrayList<>();
+        int[] scanned = {0};
+        boolean[] timedOut = {false};
+        EcaTransformerManager.forEachLoadedClass(clazz -> {
+            if (clazz == null || timedOut[0] || scanned[0] >= WRITER_SCAN_CLASS_LIMIT) return;
+            if (!clazz.getName().startsWith(scope)) return;
+            if (System.nanoTime() > deadline) { timedOut[0] = true; return; }
+            byte[] bytes = classBytes(clazz);
+            if (bytes == null) return;
+            scanned[0]++;
+            try {
+                collectWriterSites(new ClassReader(bytes), fingerprint, sites);
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+            }
+        });
+        return new WriterSiteScan(List.copyOf(sites), timedOut[0]);
+    }
+
+    /* 只读指令表找引用指纹的方法：GETSTATIC 命中 accessor 键或 PUTFIELD 命中字段键即记录。 */
+    private static void collectWriterSites(ClassReader reader, AuthorityFingerprint fingerprint,
+                                           List<WriterSite> sites) {
+        String[] ownerInternal = {reader.getClassName()};
+        reader.accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor,
+                                             String signature, String[] exceptions) {
+                return new MethodVisitor(Opcodes.ASM9) {
+                    private boolean recorded;
+
+                    @Override
+                    public void visitFieldInsn(int opcode, String owner, String fieldName, String fieldDesc) {
+                        if (recorded) return;
+                        boolean hit = opcode == Opcodes.GETSTATIC
+                                && fingerprint.accessorKeys().contains(owner + "#" + fieldName);
+                        hit |= opcode == Opcodes.PUTFIELD
+                                && fingerprint.fieldKeys().contains(owner + "#" + fieldName + "#" + fieldDesc);
+                        if (!hit) return;
+                        recorded = true;
+                        sites.add(new WriterSite(ownerInternal[0], name, descriptor));
+                    }
+                };
+            }
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+    }
+
+    /* 命中的方法单独分析：它们自身通常很小，预算充裕，不受大型 tick 过程图的牵连。 */
+    private static BudgetedWrites collectAuthorityWriterWrites(Class<?> entityClass,
+                                                               AuthorityFingerprint fingerprint) {
+        List<StoreWrite> writes = new ArrayList<>();
+        // 站点扫描与逐站点分析共用同一份预算：两段都在同一条队列上，分开计会让总耗时翻倍
+        long deadline = System.nanoTime() + MAINTENANCE_HARD_BUDGET_NANOS;
+        WriterSiteScan scan = findAuthorityWriterSites(entityClass, fingerprint, deadline);
+        boolean timedOut = scan.timedOut();
+        for (WriterSite site : scan.sites()) {
+            if (System.nanoTime() > deadline) { timedOut = true; break; }
+            Class<?> owner = loadClass(site.ownerInternal());
+            if (owner == null) continue;
+            MethodNode method;
+            try {
+                method = findMethodNode(classNode(owner), site.methodName(), site.methodDesc());
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+                continue;
+            }
+            if (method == null || method.instructions.size() == 0) continue;
+            boolean isStatic = (method.access & Opcodes.ACC_STATIC) != 0;
+            AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, owner);
+            ctx.inlineBudget = TICK_WRITE_INLINE_BUDGET;
+            ctx.nodeBudget = TICK_WRITE_NODE_BUDGET;
+            ctx.authorityFingerprint = fingerprint;
+            ctx.configureAdaptiveDeadline(deadline);
+            Expr expression = analyzeMethodWrites(owner, site.methodName(), site.methodDesc(),
+                    seedWriterSiteInputs(site.methodDesc(), isStatic), ctx, 0);
+            if (ctx.deadlineExceeded || System.nanoTime() > deadline) {
+                timedOut = true;
+                break;
+            }
+            collectStoreWrites(expression, writes);
+        }
+        return new BudgetedWrites(List.copyOf(writes), timedOut);
+    }
+
+    /* 静态过程以实体为形参接收目标，须把该形参标成实体本体，否则字段源无法归位到实体。 */
+    private static TaintValue[] seedWriterSiteInputs(String desc, boolean isStatic) {
+        TaintValue[] locals = seedMethodInputs(desc, isStatic);
+        if (!isStatic) return locals;
+        Type[] argumentTypes = Type.getArgumentTypes(desc);
+        int local = 0;
+        for (Type argumentType : argumentTypes) {
+            Class<?> argumentClass = asmTypeToClass(argumentType);
+            if (argumentClass != null && Entity.class.isAssignableFrom(argumentClass)) {
+                locals[local] = new TaintValue(argumentType.getSize(), EntityParamMarker.I);
+                break;
+            }
+            local += argumentType.getSize();
+        }
+        return locals;
+    }
+
+    /* ==================== 外部扫描：布尔死亡门控识别 ====================
+       部分实体的生死状态由编码布尔字段控制，无法通过浮点比较和写入点分析定位。
+       此处识别 isDeadOrDying 或 isAlive 中的字段解码调用及其配对编码器，返回门控字段、编解码器和死亡值。
+       分析仅检查各方法自身指令，避免 isAlive 与 isDeadOrDying 相互调用形成递归。 */
+
+    public record DeathGate(Field field, Method encoder, Method decoder, boolean deathValue) {}
+
+    private static final DeathGate NO_DEATH_GATE = new DeathGate(null, null, null, false);
+    private static final Map<Class<?>, DeathGate> DEATH_GATE_CACHE = new ConcurrentHashMap<>();
+
+    // 分析实体的死亡门控；无门控返回 null(以 NO_DEATH_GATE 哨兵缓存，避免反复分析)。
+    public static DeathGate analyzeDeathGate(Class<?> entityClass) {
+        if (entityClass == null) return null;
+        DeathGate cached = DEATH_GATE_CACHE.get(entityClass);
+        if (cached != null) return cached == NO_DEATH_GATE ? null : cached;
+        DeathGate gate = detectDeathGate(entityClass);
+        DEATH_GATE_CACHE.put(entityClass, gate != null ? gate : NO_DEATH_GATE);
+        return gate;
+    }
+
+    private static DeathGate detectDeathGate(Class<?> entityClass) {
+        // isDeadOrDying 返回 true 即死 → 死亡值 true；isAlive 返回 true 即活 → 死亡值 false
+        DeathGate gate = detectDeathGateMethod(entityClass, IS_DEAD_OR_DYING, true);
+        if (gate != null) return gate;
+        return detectDeathGateMethod(entityClass, IS_ALIVE, false);
+    }
+
+    private static DeathGate detectDeathGateMethod(Class<?> entityClass, McMethod method, boolean deathValue) {
+        ClassAndMethod target = findMethodOwner(entityClass, method);
+        if (target == null) return null;
+        try {
+            byte[] bytes = classBytes(target.owner());
+            if (bytes == null) return null;
+            ClassNode cn = new ClassNode();
+            new ClassReader(bytes).accept(cn, 0);
+            MethodNode mn = null;
+            for (MethodNode m : cn.methods) {
+                if (m.name.equals(target.name()) && m.desc.equals(method.desc())) { mn = m; break; }
+            }
+            if (mn == null || mn.instructions.size() == 0) return null;
+            for (AbstractInsnNode in : mn.instructions) {
+                if (in.getOpcode() != Opcodes.INVOKESTATIC) continue;
+                MethodInsnNode call = (MethodInsnNode) in;
+                Type ret = Type.getReturnType(call.desc);
+                Type[] args = Type.getArgumentTypes(call.desc);
+                // 解码器签名：单个对象入参(编码值) -> boolean
+                if (ret.getSort() != Type.BOOLEAN || args.length != 1 || args[0].getSort() != Type.OBJECT) continue;
+                FieldInsnNode feeder = findFeedingGetField(in);
+                if (feeder == null || Type.getType(feeder.desc).getSort() != Type.OBJECT) continue;
+                Class<?> fieldOwner = loadClass(feeder.owner);
+                Class<?> decoderOwner = loadClass(call.owner);
+                if (fieldOwner == null || decoderOwner == null) continue;
+                Field field = findFieldInHierarchy(fieldOwner, feeder.name);
+                if (field == null) continue;
+                Method decoder = findStaticUnary(decoderOwner, call.name, typeToClass(args[0]));
+                // 必须存在编解码对偶 encoder((decoder返回) -> (decoder入参))，否则视为普通布尔调用而非门控(滤除原版 this.dead 等误报)
+                Method encoder = findCodecEncoder(decoderOwner, typeToClass(ret), typeToClass(args[0]));
+                if (decoder == null || encoder == null) continue;
+                field.setAccessible(true);
+                return new DeathGate(field, encoder, decoder, deathValue);
+            }
+        } catch (Throwable t) { if (t instanceof VirtualMachineError e) throw e; }
+        return null;
+    }
+
+    // 从 INVOKESTATIC 向前找喂入其参数的 GETFIELD(只越过 ALOAD/DUP/CHECKCAST 等无害指令)，限定接收者为 this(ALOAD_0)。
+    private static FieldInsnNode findFeedingGetField(AbstractInsnNode from) {
+        AbstractInsnNode cur = from.getPrevious();
+        int hops = 0;
+        while (cur != null && hops++ < 8) {
+            int op = cur.getOpcode();
+            if (op == Opcodes.GETFIELD) return (FieldInsnNode) cur;
+            if (op == Opcodes.ALOAD || op == Opcodes.DUP || op == Opcodes.DUP_X1
+                    || op == Opcodes.DUP2 || op == Opcodes.CHECKCAST || op == -1) {
+                cur = cur.getPrevious();
+                continue;
+            }
+            return null;
+        }
+        return null;
+    }
+
+    // owner 内静态单参方法，参数类型恰为 paramType。
+    private static Method findStaticUnary(Class<?> owner, String name, Class<?> paramType) {
+        for (Method m : owner.getDeclaredMethods()) {
+            if (!Modifier.isStatic(m.getModifiers()) || !m.getName().equals(name) || m.getParameterCount() != 1) continue;
+            if (m.getParameterTypes()[0] == paramType) { m.setAccessible(true); return m; }
+        }
+        return null;
+    }
+
+    // owner 内静态编解码对偶的编码器：参数类型=解码器返回、返回类型=解码器入参(如 decodeBool(String)Z 配 encodeBool(Z)String)。
+    private static Method findCodecEncoder(Class<?> owner, Class<?> paramType, Class<?> returnType) {
+        for (Method m : owner.getDeclaredMethods()) {
+            if (!Modifier.isStatic(m.getModifiers()) || m.getParameterCount() != 1) continue;
+            if (m.getParameterTypes()[0] == paramType && m.getReturnType() == returnType) { m.setAccessible(true); return m; }
+        }
+        return null;
+    }
+
+    private static Class<?> typeToClass(Type t) {
+        return switch (t.getSort()) {
+            case Type.BOOLEAN -> boolean.class;
+            case Type.BYTE -> byte.class;
+            case Type.CHAR -> char.class;
+            case Type.SHORT -> short.class;
+            case Type.INT -> int.class;
+            case Type.LONG -> long.class;
+            case Type.FLOAT -> float.class;
+            case Type.DOUBLE -> double.class;
+            default -> loadClass(t.getInternalName());
+        };
+    }
+
+    private static Expr analyzeComparisonMethod(Class<?> owner, String name, String desc,
+                                                TaintValue[] seedLocals, AnalysisCtx context, int depth) {
+        if (owner == null || owner.getClassLoader() == null || depth >= context.maxDepth) return null;
+        String cacheKey = owner.getName().replace('.', '/') + "#" + name + "#" + desc + "#comparisons";
+        if (!context.inflight.add(cacheKey)) return new UnknownExpr("recursive-cycle-comparisons");
+        try {
+            MethodNode method = findMethodNode(classNode(owner), name, desc);
+            if (method == null || method.instructions.size() == 0) return null;
+
+            String ownerInternal = internalName(owner);
+            TaintInterpreter interpreter = new TaintInterpreter(
+                    context, depth, ownerInternal, method, seedLocals);
+            Analyzer<TaintValue> analyzer = new Analyzer<>(interpreter);
+            Frame<TaintValue>[] frames = analyzeFrames(analyzer, ownerInternal, method, context);
+            List<Expr> expressions = new ArrayList<>();
+            int index = 0;
+            for (AbstractInsnNode instruction : method.instructions) {
+                Frame<TaintValue> frame = frames[index++];
+                collectComparisonOperands(expressions, frame, instruction);
+                if (!(instruction instanceof MethodInsnNode call)
+                        || Type.getReturnType(call.desc) != Type.VOID_TYPE
+                        || call.name.startsWith("<") || frame == null) continue;
+                List<Expr> arguments = invokeValueExprs(call, frame);
+                Class<?> referencedOwner = loadClass(call.owner);
+                Class<?> targetOwner = referencedOwner == null ? null
+                        : resolveInvocationOwner(referencedOwner, call.name, call.desc);
+                if (targetOwner != owner || !isEntityControlCall(call, arguments)
+                        || context.inlineBudget <= 0) continue;
+                TaintValue[] nestedLocals = seedCallLocals(call, arguments, false);
+                if (nestedLocals == null) continue;
+                context.inlineBudget--;
+                Expr nested = analyzeComparisonMethod(
+                        targetOwner, call.name, call.desc, nestedLocals, context, depth + 1);
+                if (nested != null && !(nested instanceof UnknownExpr)) addUniqueExpr(expressions, nested);
+            }
+            if (expressions.isEmpty()) return null;
+            return expressions.size() == 1 ? expressions.get(0) : new Choice(List.copyOf(expressions));
+        } catch (Throwable throwable) {
+            if (throwable instanceof VirtualMachineError error) throw error;
+            return null;
+        } finally {
+            context.inflight.remove(cacheKey);
+        }
+    }
+
+    private static boolean isEntityControlCall(MethodInsnNode call, List<Expr> arguments) {
+        if (arguments.isEmpty()) return false;
+        if (call.getOpcode() != Opcodes.INVOKESTATIC) return arguments.get(0) == EntityParamMarker.I;
+        for (Expr argument : arguments) if (argument == EntityParamMarker.I) return true;
+        return false;
+    }
+
+    private static AnalysisResult combineExternalScanCandidates(Class<?> entityClass, List<AnalysisResult> candidates) {
+        List<Expr> alternatives = new ArrayList<>();
+        for (AnalysisResult candidate : candidates) {
+            if (candidate == null || candidate.isEmpty() || candidate.sources.isEmpty()) continue;
+            addUniqueExpr(alternatives, candidate.returnExpr);
+        }
+        if (alternatives.isEmpty()) return null;
+        Expr combined = alternatives.size() == 1 ? alternatives.get(0) : new Choice(List.copyOf(alternatives));
+        List<Source> sources = new ArrayList<>(collectSources(combined));
+        sources.sort(Comparator.comparingInt(HealthDataflowAnalyzer::externalSourcePriority)
+                .thenComparing(source -> source.label));
+        return new AnalysisResult(combined, List.copyOf(sources), entityClass);
+    }
+
+    /* ==================== 有效血量模型 ====================
+       getHealth 与实际存储解耦时，实体的生死判定仍会读取该存储并计算有效血量。
+       从比较指令中提取这一表达式后，可将其用于观测和存储值反演。 */
+
+    /* 比较指令事实：跳转成立的条件为 operand <predicate> threshold。
+       predicate 取 IFEQ..IFLE 形式的操作码，0 表示方向不可判定(比较后未紧跟条件跳转，或阈值非常数)。
+       只保留操作数会丢失阈值与方向，而血量的正负极性正是由"与零比较"这一事实支撑的。 */
+    public enum ComparisonOrigin {
+        LIFECYCLE,
+        TERMINAL_OBSERVER,
+        OTHER
+    }
+
+    public record ComparisonFact(Expr operand, int predicate, float threshold, ComparisonOrigin origin) {
+        public ComparisonFact(Expr operand, int predicate, float threshold) {
+            this(operand, predicate, threshold, ComparisonOrigin.OTHER);
+        }
+    }
+
+    /* readExpr 为含 storage 的有效血量表达式；storage 是其中真正可写的存储源。
+       predicate/threshold 承自 readExpr 所在的比较指令，用于判定血量的正负极性。 */
+    public record EffectiveHealthModel(Expr readExpr, Source storage, int predicate, float threshold,
+                                       ComparisonOrigin origin) {
+        public EffectiveHealthModel(Expr readExpr, Source storage, int predicate, float threshold) {
+            this(readExpr, storage, predicate, threshold, ComparisonOrigin.OTHER);
+        }
+    }
+
+    private static final Map<Class<?>, EffectiveHealthModel> EFFECTIVE_MODEL_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, EffectiveHealthModel> PROTOCOL_TARGET_MODEL_CACHE = new ConcurrentHashMap<>();
+    /* 分析失败按候选签名缓存，而不对实体类永久缓存；后续新增候选时仍可重新分析。 */
+    private static final Map<Class<?>, String> EFFECTIVE_MODEL_MISSES = new ConcurrentHashMap<>();
+    /* 写入失败的存储，后续分析不再将其作为候选。 */
+    private static final Map<Class<?>, Set<String>> EFFECTIVE_MODEL_REJECTED = new ConcurrentHashMap<>();
+
+    /* 仅查模型缓存、绝不触发分析(供运行期非阻塞查询)。扫全类比较指令可达数秒，必须在后台预填。 */
+    public static EffectiveHealthModel peekEffectiveHealthModel(Class<?> entityClass) {
+        return entityClass == null ? null : EFFECTIVE_MODEL_CACHE.get(entityClass);
+    }
+
+    static void rememberProtocolTargetModel(Class<?> entityClass, EffectiveHealthModel model) {
+        if (entityClass != null && model != null) PROTOCOL_TARGET_MODEL_CACHE.put(entityClass, model);
+    }
+
+    static EffectiveHealthModel peekProtocolTargetModel(Class<?> entityClass) {
+        return entityClass == null ? null : PROTOCOL_TARGET_MODEL_CACHE.get(entityClass);
+    }
+
+    /* 是否已有任一段比较表达式缓存。有则建模只剩遍历与打分，调用方可当场完成而无需转入后台。 */
+    public static boolean hasComparisonCache(Class<?> entityClass) {
+        return entityClass != null
+                && (SHORT_COMPARISON_CACHE.containsKey(entityClass)
+                    || PRIORITY_COMPARISON_CACHE.containsKey(entityClass)
+                    || FULL_COMPARISON_CACHE.containsKey(entityClass));
+    }
+
+    /* 判断当前候选集合是否已经分析失败，供调用方避免重复提交。
+       候选为空时仍可能从比较表达式中提取存储源，因此同样按签名缓存。 */
+    public static boolean isEffectiveModelMiss(Class<?> entityClass, List<Source> candidates) {
+        if (entityClass == null || candidates == null) return true;
+        return candidateSignature(candidates).equals(EFFECTIVE_MODEL_MISSES.get(entityClass));
+    }
+
+    public static String candidateSignature(List<Source> candidates) {
+        List<String> labels = new ArrayList<>(candidates.size());
+        for (Source source : candidates) labels.add(source.canonicalKey());
+        Collections.sort(labels);
+        return String.join("|", labels);
+    }
+
+    /* 从候选存储源推导有效血量模型；无法确定时返回 null。
+       该分析需要扫描类指令，必须在后台线程调用。 */
+    public static EffectiveHealthModel resolveEffectiveHealthModel(Class<?> entityClass, List<Source> candidates) {
+        return resolveEffectiveHealthModel(entityClass, () -> candidates, false);
+    }
+
+    static EffectiveHealthModel resolveEffectiveHealthModel(Class<?> entityClass, Supplier<List<Source>> candidates) {
+        return resolveEffectiveHealthModel(entityClass, candidates, false);
+    }
+
+    /* 仅使用已缓存的比较表达式建模，不触发新的扫描，可在服务器线程直接调用。
+       未命中时不记录失败签名：这只表示扫描尚未完成，而非该批候选分析不出模型。 */
+    public static EffectiveHealthModel resolveCachedEffectiveHealthModel(Class<?> entityClass,
+                                                                         List<Source> candidates) {
+        return resolveEffectiveHealthModel(entityClass, () -> candidates, true);
+    }
+
+    private static EffectiveHealthModel resolveEffectiveHealthModel(Class<?> entityClass, Supplier<List<Source>> provider,
+                                                                    boolean cachedOnly) {
+        if (entityClass == null) return null;
+        // 正向缓存先于候选检查：模型一旦定下就长期有效，而候选证据会在校验成功后被清空
+        EffectiveHealthModel cached = EFFECTIVE_MODEL_CACHE.get(entityClass);
+        if (cached != null) return cached;
+        List<Source> candidates = provider.get();
+        if (candidates == null) return null;
+        String signature = candidateSignature(candidates);
+        if (!cachedOnly && signature.equals(EFFECTIVE_MODEL_MISSES.get(entityClass))) return null;
+        EffectiveHealthModel model = null;
+        try {
+            model = computeEffectiveHealthModel(entityClass, provider, cachedOnly);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            EcaLogger.info("[EffectiveHealth] model analysis threw entity={} type={} msg={}",
+                    entityClass.getName(), t.getClass().getName(), t.getMessage());
+        }
+        if (model != null) {
+            EffectiveHealthModel previous = EFFECTIVE_MODEL_CACHE.putIfAbsent(entityClass, model);
+            if (previous != null) return previous;
+            EFFECTIVE_MODEL_MISSES.remove(entityClass);
+            EcaLogger.info("[EffectiveHealth] model entity={} storage={} origin={} readExpr={}",
+                    entityClass.getName(), model.storage().label, model.origin(),
+                    HealthDataFlow.expressionSummary(model.readExpr()));
+        } else if (!cachedOnly && signature.equals(candidateSignature(provider.get()))
+                && EFFECTIVE_MODEL_CACHE.get(entityClass) == null) {
+            EFFECTIVE_MODEL_MISSES.put(entityClass, signature);
+            EcaLogger.info("[EffectiveHealth] no model entity={} candidates={} signature={}",
+                    entityClass.getName(), candidates.size(), signature);
+        }
+        return model == null ? EFFECTIVE_MODEL_CACHE.get(entityClass) : model;
+    }
+
+    /* 先扫外部扫描所用的同一组方法，未得到模型再回退到全类扫描。
+       优先段只分析含浮点比较指令的方法：血量判定必然表现为浮点比较，
+       而 getter、注册逻辑等方法一条都没有，据此可跳过大部分方法及其依赖类字节码。 */
+    private static EffectiveHealthModel computeEffectiveHealthModel(Class<?> entityClass, Supplier<List<Source>> provider,
+                                                                    boolean cachedOnly) {
+        List<ComparisonFact> shortReads = SHORT_COMPARISON_CACHE.get(entityClass);
+        if (shortReads == null && !cachedOnly) {
+            shortReads = collectClassComparisons(entityClass, true, true);
+            SHORT_COMPARISON_CACHE.put(entityClass, shortReads);
+        }
+        if (shortReads != null) {
+            EffectiveHealthModel model = selectEffectiveModel(entityClass, provider.get(), shortReads, "short-read");
+            if (model != null) return model;
+        }
+        EffectiveHealthModel concurrent = EFFECTIVE_MODEL_CACHE.get(entityClass);
+        if (concurrent != null) return concurrent;
+        List<ComparisonFact> priority = cachedOnly
+                ? PRIORITY_COMPARISON_CACHE.get(entityClass) : comparisonsOf(entityClass, true);
+        if (priority != null) {
+            concurrent = EFFECTIVE_MODEL_CACHE.get(entityClass);
+            if (concurrent != null) return concurrent;
+            List<Source> evidence = provider.get();
+            EffectiveHealthModel model = shortReads == null ? null
+                    : selectEffectiveModel(entityClass, evidence, shortReads, "short-read-refresh");
+            if (model != null) return model;
+            model = selectEffectiveModel(entityClass, evidence, priority, "priority");
+            if (model != null) return model;
+        }
+        List<ComparisonFact> full = cachedOnly
+                ? FULL_COMPARISON_CACHE.get(entityClass) : comparisonsOf(entityClass, false);
+        concurrent = EFFECTIVE_MODEL_CACHE.get(entityClass);
+        if (concurrent != null) return concurrent;
+        List<Source> evidence = provider.get();
+        EffectiveHealthModel model = shortReads == null ? null
+                : selectEffectiveModel(entityClass, evidence, shortReads, "short-read-refresh");
+        if (model != null) return model;
+        model = priority == null ? null : selectEffectiveModel(entityClass, evidence, priority, "priority-refresh");
+        return model != null ? model : full == null ? null : selectEffectiveModel(entityClass, evidence, full, "full");
+    }
+
+    /* 比较表达式与证据无关，只取决于类的字节码，因此可跨次复用。
+       扫描是本流程中最慢的部分，缓存后运行期只需重新匹配证据。 */
+    private static final Map<Class<?>, List<ComparisonFact>> PRIORITY_COMPARISON_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, List<ComparisonFact>> FULL_COMPARISON_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, List<ComparisonFact>> SHORT_COMPARISON_CACHE = new ConcurrentHashMap<>();
+
+    private static List<ComparisonFact> comparisonsOf(Class<?> entityClass, boolean priorityOnly) {
+        Map<Class<?>, List<ComparisonFact>> cache = priorityOnly ? PRIORITY_COMPARISON_CACHE : FULL_COMPARISON_CACHE;
+        List<ComparisonFact> cached = cache.get(entityClass);
+        if (cached != null) return cached;
+        List<ComparisonFact> scanned = collectClassComparisons(entityClass, priorityOnly);
+        cache.put(entityClass, scanned);
+        return scanned;
+    }
+
+    /* 预热只扫描终止判定链中的短方法，避免重型周期方法堵住后续建模任务。 */
+    public static void prewarmClassComparisons(Class<?> entityClass) {
+        if (entityClass == null) return;
+        SHORT_COMPARISON_CACHE.computeIfAbsent(entityClass, cls -> collectClassComparisons(cls, true, true));
+    }
+
+    /* 指令级筛选，不跑数据流，开销远低于逐方法完整分析。
+       浮点比较是血量判定的必要特征，据此可在优先段排除绝大多数无关方法。 */
+    private static boolean hasFloatComparison(MethodNode method) {
+        for (AbstractInsnNode insn : method.instructions) {
+            int opcode = insn.getOpcode();
+            if (opcode == Opcodes.FCMPL || opcode == Opcodes.FCMPG
+                    || opcode == Opcodes.DCMPL || opcode == Opcodes.DCMPG) return true;
+        }
+        return false;
+    }
+
+    private static EffectiveHealthModel selectEffectiveModel(Class<?> entityClass, List<Source> evidence,
+                                                             List<ComparisonFact> comparisons, String stage) {
+        Set<String> rejected = EFFECTIVE_MODEL_REJECTED.getOrDefault(entityClass, Set.of());
+        EffectiveHealthModel best = null;
+        int bestScore = Integer.MIN_VALUE;
+        boolean bestAmbiguous = false;
+        int matched = 0;
+        int rejectedForLiteralBound = 0;
+        for (ComparisonFact fact : comparisons) {
+            Expr expr = fact.operand();
+            // 伤害入参参与的算式不能充当持久血量读取。
+            if (!isHealthShapedExpr(expr) || dependsOnDamageInput(expr)) continue;
+            // 候选由独立通道提名；仅含常数的编码模型还须通过实际 getter 验证。
+            for (Source candidate : evidence) {
+                if (!isStorageSource(candidate)) continue;
+                if (rejected.contains(candidate.canonicalKey())) continue;
+                // 表达式即存储本身时两者同向，由原通道处理，无需模型
+                if (sameSource(expr, candidate) || !containsSink(expr, candidate)) continue;
+                Expr refined = normalizeEffectiveChoices(expr, candidate);
+                boolean observedEncoding = entityClass.isHidden()
+                        && fact.origin() == ComparisonOrigin.TERMINAL_OBSERVER;
+                if (refined == null || !hasIndependentBound(refined, candidate) && !observedEncoding) {
+                    rejectedForLiteralBound++;
+                    continue;
+                }
+                matched++;
+                int score = effectiveModelScore(refined, fact.origin());
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = new EffectiveHealthModel(refined, candidate, fact.predicate(), fact.threshold(),
+                            fact.origin());
+                    bestAmbiguous = false;
+                } else if (score == bestScore && best != null
+                        && !best.storage().canonicalKey().equals(candidate.canonicalKey())) {
+                    bestAmbiguous = true;
+                }
+            }
+        }
+        EcaLogger.info("[EffectiveHealth] scan entity={} stage={} comparisons={} matched={} rejectedLiteralBound={}",
+                entityClass.getName(), stage, comparisons.size(), matched, rejectedForLiteralBound);
+        // 未找到匹配项时输出样本，用于区分存储未参与比较和调用未内联两种情况。
+        // 优先段未命中属于正常回退，只在全类扫描仍无结果时输出。
+        if (matched == 0 && "full".equals(stage)) dumpComparisonSamples(entityClass, comparisons);
+        if (best == null || bestAmbiguous) return null;
+        return new EffectiveHealthModel(pruneChoicesTo(best.readExpr(), best.storage()), best.storage(),
+                best.predicate(), best.threshold(), best.origin());
+    }
+
+    /* 将 Choice 限定到包含目标存储的分支。
+       分析期的分支合并会并列存储读取与常数分支；选择常数分支会使锚点与存储失去关联。
+       反解则会主动选取含 sink 的分支，两者走法不一致会导致写入正确也无法通过校验。
+       不含存储的 Choice 保持原样，其取值不影响观测结果。 */
+    private static Expr pruneChoicesTo(Expr expr, Source storage) {
+        if (expr instanceof Choice choice) {
+            List<Expr> kept = new ArrayList<>();
+            for (Expr alternative : choice.alternatives()) {
+                if (containsSink(alternative, storage)) kept.add(pruneChoicesTo(alternative, storage));
+            }
+            if (kept.isEmpty()) return expr;
+            return kept.size() == 1 ? kept.get(0) : new Choice(List.copyOf(kept));
+        }
+        if (expr instanceof Op op) {
+            List<Expr> args = new ArrayList<>(op.args().size());
+            for (Expr arg : op.args()) args.add(pruneChoicesTo(arg, storage));
+            return new Op(op.opcode(), List.copyOf(args));
+        }
+        if (expr instanceof Call call) {
+            List<Expr> args = new ArrayList<>(call.args().size());
+            for (Expr arg : call.args()) args.add(pruneChoicesTo(arg, storage));
+            return new Call(call.owner(), call.caller(), call.name(), call.desc(),
+                    call.opcode(), List.copyOf(args));
+        }
+        return expr;
+    }
+
+    /* 有效血量模型不能让一个分支中的实体上限为另一个分支的字面量兜底。
+       分析期的 Choice 丢失了控制条件，因此只能按每个分支自身的上限来源裁决：
+       明确引用 getMaxHealth() 的分支优先；没有该分支时才保留其他独立实体状态来源。
+       若同一层仍有多个不同的同级权威，继续猜测会让求解与校验各取一条路径，必须交给上层拒绝。 */
+    static Expr normalizeEffectiveChoices(Expr expr, Source storage) {
+        if (expr == null || storage == null) return expr;
+        if (expr instanceof Choice choice) {
+            List<Expr> alternatives = new ArrayList<>();
+            for (Expr alternative : choice.alternatives()) {
+                Expr normalized = normalizeEffectiveChoices(alternative, storage);
+                if (normalized == null) return null;
+                if (!alternatives.contains(normalized)) alternatives.add(normalized);
+            }
+            if (alternatives.isEmpty()) return expr;
+
+            List<Expr> maxHealthAlternatives = new ArrayList<>();
+            for (Expr alternative : alternatives) {
+                if (referencesMaxHealth(alternative)) maxHealthAlternatives.add(alternative);
+            }
+            if (!maxHealthAlternatives.isEmpty()) {
+                return maxHealthAlternatives.size() == 1 ? maxHealthAlternatives.get(0) : null;
+            }
+
+            List<Expr> independentAlternatives = new ArrayList<>();
+            for (Expr alternative : alternatives) {
+                if (referencesSourceOtherThan(alternative, storage)) independentAlternatives.add(alternative);
+            }
+            if (!independentAlternatives.isEmpty()) {
+                return independentAlternatives.size() == 1 ? independentAlternatives.get(0) : null;
+            }
+            return new Choice(List.copyOf(alternatives));
+        }
+        if (expr instanceof Op op) {
+            List<Expr> args = new ArrayList<>(op.args().size());
+            for (Expr arg : op.args()) {
+                Expr normalized = normalizeEffectiveChoices(arg, storage);
+                if (normalized == null) return null;
+                args.add(normalized);
+            }
+            return new Op(op.opcode(), List.copyOf(args));
+        }
+        if (expr instanceof Call call) {
+            List<Expr> args = new ArrayList<>(call.args().size());
+            for (Expr arg : call.args()) {
+                Expr normalized = normalizeEffectiveChoices(arg, storage);
+                if (normalized == null) return null;
+                args.add(normalized);
+            }
+            return new Call(call.owner(), call.caller(), call.name(), call.desc(),
+                    call.opcode(), List.copyOf(args));
+        }
+        return expr;
+    }
+
+    private static final int COMPARISON_SAMPLE_LIMIT = 6;
+    /* 上溯父类后表达式层数更深，截断过早会把含存储的那一段切掉，判断不了内联展开到哪一层 */
+    private static final int COMPARISON_SAMPLE_CHARS = 900;
+
+    /* 优先输出含可写源的表达式，用于判断内联展开到哪一层，以及存储是否参与了比较。 */
+    private static void dumpComparisonSamples(Class<?> entityClass, List<ComparisonFact> comparisons) {
+        List<ComparisonFact> withSource = new ArrayList<>();
+        for (ComparisonFact fact : comparisons) {
+            if (containsAnySource(fact.operand())) withSource.add(fact);
+            if (withSource.size() >= COMPARISON_SAMPLE_LIMIT) break;
+        }
+        EcaLogger.info("[EffectiveHealth]   samples withSource={} total={}", withSource.size(), comparisons.size());
+        List<ComparisonFact> samples = withSource.isEmpty() ? comparisons : withSource;
+        int limit = Math.min(samples.size(), COMPARISON_SAMPLE_LIMIT);
+        for (int i = 0; i < limit; i++) {
+            String text = String.valueOf(samples.get(i));
+            if (text.length() > COMPARISON_SAMPLE_CHARS) text = text.substring(0, COMPARISON_SAMPLE_CHARS) + "...";
+            EcaLogger.info("[EffectiveHealth]   sample#{} {}", i, text);
+        }
+    }
+
+    private static boolean containsAnySource(Expr e) {
+        if (e instanceof Source) return true;
+        if (e instanceof Op op) {
+            for (Expr a : op.args()) if (containsAnySource(a)) return true;
+        } else if (e instanceof Call call) {
+            for (Expr a : call.args()) if (containsAnySource(a)) return true;
+        } else if (e instanceof Choice choice) {
+            for (Expr a : choice.alternatives()) if (containsAnySource(a)) return true;
+        }
+        return false;
+    }
+
+    /* 周期生命周期阈值位于阶段变化的上游，应压过终端观察中的动画派生值；
+       来源相同时再按最大生命值证据和结构复杂度排序。 */
+    private static int effectiveModelScore(Expr expr, ComparisonOrigin origin) {
+        int provenance = switch (origin) {
+            case LIFECYCLE -> 1000;
+            case TERMINAL_OBSERVER -> 100;
+            case OTHER -> 0;
+        };
+        return provenance + (referencesMaxHealth(expr) ? 100 : 0) - exprNodeCount(expr);
+    }
+
+    /* 血量由存储经算术运算得出，因此表达式须为浮点算术运算的结果。
+       布尔判定、整数取值、集合判空等表达式虽然也含存储，但不表示血量。 */
+    private static boolean isHealthShapedExpr(Expr expr) {
+        return isFloatingPointExpr(expr) && containsArithmeticOp(expr);
+    }
+
+    private static boolean isFloatingPointExpr(Expr expr) {
+        if (expr instanceof Op op) return isFloatingPointOpcode(op.opcode());
+        if (expr instanceof Call call) {
+            int sort = Type.getReturnType(call.desc()).getSort();
+            return sort == Type.FLOAT || sort == Type.DOUBLE;
+        }
+        if (expr instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) {
+                if (isFloatingPointExpr(alternative)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsArithmeticOp(Expr expr) {
+        if (expr instanceof Op op) {
+            if (isFloatingPointOpcode(op.opcode())) return true;
+            for (Expr arg : op.args()) if (containsArithmeticOp(arg)) return true;
+        } else if (expr instanceof Call call) {
+            for (Expr arg : call.args()) if (containsArithmeticOp(arg)) return true;
+        } else if (expr instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) {
+                if (containsArithmeticOp(alternative)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isFloatingPointOpcode(int opcode) {
+        return opcode == Opcodes.FADD || opcode == Opcodes.FSUB || opcode == Opcodes.FMUL
+                || opcode == Opcodes.FDIV || opcode == Opcodes.FREM || opcode == Opcodes.FNEG
+                || opcode == Opcodes.DADD || opcode == Opcodes.DSUB || opcode == Opcodes.DMUL
+                || opcode == Opcodes.DDIV || opcode == Opcodes.DREM || opcode == Opcodes.DNEG;
+    }
+
+    /* 只有存储型的源可作血量载体：常数覆写源改读不改存储，静态字段为全局共享，
+       写入要么无效，要么波及同类其他实体。 */
+    private static boolean isStorageSource(Source source) {
+        return source instanceof SynchedDataSource || source instanceof FieldChainSource
+                || source instanceof ChainedFieldSource || source instanceof CapabilityDataSource
+                || source instanceof MapEntrySource || source instanceof ArrayElementSource
+                || source instanceof MethodPropertySource;
+    }
+
+    /* 记录写入失败的存储并清除缓存模型。
+       只清缓存会让重新分析得到相同结果并反复失败，因此需要排除该存储后再分析。 */
+    public static void rejectEffectiveModel(Class<?> entityClass, EffectiveHealthModel model) {
+        if (entityClass == null || model == null || model.storage() == null) return;
+        EFFECTIVE_MODEL_REJECTED.computeIfAbsent(entityClass, k -> ConcurrentHashMap.newKeySet())
+                .add(model.storage().canonicalKey());
+        invalidateEffectiveModel(entityClass);
+    }
+
+    /* 校正模型极性，使 readExpr 与"越大越健康"一致；方向无从判定时返回 null。
+       比较式的操作数可能是与血量反向的内部计数——存活为负、归零即死。按原版极性对这类模型求逆
+       会写出镜像值：数值上满足目标，却把实体推进判死区间而当场毙命。
+       判据取"活体的血量读数不可能为负"，它自身即可定向，不依赖能否另找到一处与零的比较：
+       生死判定常定义在父类，而比较扫描只覆盖实体类自身的方法。 */
+    public static EffectiveHealthModel orientToAliveSide(EffectiveHealthModel model, LivingEntity entity) {
+        if (model == null || entity == null) return model;
+        Object value = evaluate(model.readExpr(), newContext(entity));
+        if (!(value instanceof Number number)) return model;
+        float current = number.floatValue();
+        if (Float.isNaN(current)) return model;
+        if (current > 0.0f) return model;
+        // 读数落在零边界上时两个方向都自洽，而方向选错会立即杀死实体，因此不猜
+        if (current == 0.0f) return null;
+        // 取反后 expr < T 等价于 -expr > -T，比较语义与阈值须一并取反才仍描述同一处比较
+        return new EffectiveHealthModel(new Op(negationOpcode(model.readExpr()), List.of(model.readExpr())),
+                model.storage(), mirrorPredicate(model.predicate()), -model.threshold(), model.origin());
+    }
+
+    // 取反指令须与表达式自身的浮点宽度一致，否则求值与反解都会在 double 上丢精度
+    private static int negationOpcode(Expr expr) {
+        if (expr instanceof Op op) {
+            return switch (op.opcode()) {
+                case Opcodes.DADD, Opcodes.DSUB, Opcodes.DMUL, Opcodes.DDIV, Opcodes.DREM, Opcodes.DNEG,
+                     Opcodes.I2D, Opcodes.L2D, Opcodes.F2D -> Opcodes.DNEG;
+                default -> Opcodes.FNEG;
+            };
+        }
+        if (expr instanceof Call call) {
+            return Type.getReturnType(call.desc()).getSort() == Type.DOUBLE ? Opcodes.DNEG : Opcodes.FNEG;
+        }
+        return Opcodes.FNEG;
+    }
+
+    /* 清除未经写入确认的缓存模型，使后续分析可以使用更新后的候选集合。 */
+    public static void invalidateEffectiveModel(Class<?> entityClass) {
+        if (entityClass == null) return;
+        EFFECTIVE_MODEL_CACHE.remove(entityClass);
+        EFFECTIVE_MODEL_MISSES.remove(entityClass);
+    }
+
+    /* 有效血量模型必须算的是「上限 − 已消耗」，而上限须是实体状态：属性调用、另一处存储或配置字段。
+       上限写成字面量常数的「余额 ≤ 0」是伤害配额、冷却与阈值判定的形态，不是血量——
+       它与死亡判定在字节码上完全同形，只能靠上限的来源区分。
+       求解与校验共用同一表达式，选错存储时恒真，故此判据必须在建模阶段就挡住，事后无从补救。 */
+    private static boolean hasIndependentBound(Expr expr, Source storage) {
+        return referencesMaxHealth(expr) || referencesSourceOtherThan(expr, storage);
+    }
+
+    static boolean requiresDirectObservation(EffectiveHealthModel model) {
+        return !hasIndependentBound(model.readExpr(), model.storage());
+    }
+
+    private static boolean referencesSourceOtherThan(Expr expr, Source storage) {
+        for (Source source : collectSources(expr)) {
+            if (!sameSource(source, storage)) return true;
+        }
+        return false;
+    }
+
+    private static boolean referencesMaxHealth(Expr expr) {
+        if (expr instanceof Call call) {
+            if ((call.name().equals(GET_MAX_HEALTH.srg()) || call.name().equals(GET_MAX_HEALTH.mcp()))
+                    && call.desc().equals(GET_MAX_HEALTH.desc())) return true;
+            for (Expr arg : call.args()) if (referencesMaxHealth(arg)) return true;
+        } else if (expr instanceof Op op) {
+            for (Expr arg : op.args()) if (referencesMaxHealth(arg)) return true;
+        } else if (expr instanceof Choice choice) {
+            for (Expr alt : choice.alternatives()) if (referencesMaxHealth(alt)) return true;
+        }
+        return false;
+    }
+
+    private static int exprNodeCount(Expr expr) {
+        if (expr instanceof Call call) {
+            int n = 1;
+            for (Expr arg : call.args()) n += exprNodeCount(arg);
+            return n;
+        }
+        if (expr instanceof Op op) {
+            int n = 1;
+            for (Expr arg : op.args()) n += exprNodeCount(arg);
+            return n;
+        }
+        if (expr instanceof Choice choice) {
+            int n = 1;
+            for (Expr alt : choice.alternatives()) n += exprNodeCount(alt);
+            return n;
+        }
+        return 1;
+    }
+
+    /* 扫描类实例方法中的比较指令，收集与常数比较的表达式；生死判定通常表现为剩余量小于等于零。
+       单个方法分析失败不影响其余方法，整体尽力而为。 */
+    private static List<ComparisonFact> collectClassComparisons(Class<?> entityClass, boolean priorityOnly) {
+        return collectClassComparisons(entityClass, priorityOnly, false);
+    }
+
+    private static List<ComparisonFact> collectClassComparisons(Class<?> entityClass, boolean priorityOnly,
+                                                               boolean shortOnly) {
+        List<ComparisonFact> out = new ArrayList<>();
+        List<String> failures = new ArrayList<>();
+        // 后台分析串行执行，单个类达到时间预算后使用已经收集的结果
+        long scanStart = System.nanoTime();
+        long deadline = scanStart + (shortOnly ? 1_000_000_000L : COMPARISON_SCAN_BUDGET_NANOS);
+        boolean timedOut = false;
+        int analyzed = 0;
+        List<String> slow = new ArrayList<>();
+        Map<String, Integer> dropped = new LinkedHashMap<>();
+        /* 沿继承链上溯至原版边界：运行期类可能只是一层转发壳，生死判定与血量算式都在模组父类里。
+           边界与 collectTickWrites 一致——原版比较不承载模组血量语义，且会吃光扫描预算。
+           子类覆写遮蔽父类同签名方法，故按 name+desc 去重，先到者(更靠近运行期类)优先。 */
+        Set<String> visitedMethods = new HashSet<>();
+        for (Class<?> owner = entityClass;
+             owner != null && owner != LivingEntity.class && !timedOut;
+             owner = owner.getSuperclass()) {
+            ClassNode classNode;
+            try {
+                classNode = classNode(owner);
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+                continue;
+            }
+            if (classNode == null) continue;
+            String ownerInternal = internalName(owner);
+            Set<String> terminalReads = terminalReadMethods(owner, classNode);
+            List<MethodNode> ordered = new ArrayList<>(classNode.methods);
+            ordered.sort(Comparator.comparingInt((MethodNode method) ->
+                    terminalReads.contains(method.name + method.desc) ? 0 : 1)
+                    .thenComparingInt(method -> method.instructions.size()));
+            for (MethodNode method : ordered) {
+                if (method.instructions.size() == 0 || method.name.startsWith("<")) continue;
+                if ((method.access & Opcodes.ACC_STATIC) != 0) continue;
+                if (!visitedMethods.add(method.name + method.desc)) continue;
+                boolean terminal = terminalReads.contains(method.name + method.desc);
+                if (shortOnly && (method.instructions.size() > 256 || !terminal)) continue;
+                if (priorityOnly && !hasFloatComparison(method) && !terminal) continue;
+                if (System.nanoTime() > deadline) { timedOut = true; break; }
+                /* 每个方法使用独立的预算和递归检测集，避免前序方法耗尽预算或残留状态影响后续分析。 */
+                AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, entityClass);
+                ctx.inheritedInline = true;
+                if (shortOnly) ctx.configureAdaptiveDeadline(Math.min(deadline, System.nanoTime() + 100_000_000L));
+                /* 周期性覆写方法里的生死判定要穿透多层转发才能露出存储，默认额度在此必然耗尽
+                   并把操作数坍缩成 Unknown——与 tick 写源扫描遇到的是同一现象，故用同一档额度。
+                   只对这类方法放宽，避免把整轮扫描的时间预算吃光。 */
+                if (isRecurringOverride(owner, method)) {
+                    ctx.inlineBudget = TICK_WRITE_INLINE_BUDGET;
+                    ctx.nodeBudget = TICK_WRITE_NODE_BUDGET;
+                    ctx.configureAdaptiveDeadline(deadline);
+                }
+                long methodStart = System.nanoTime();
+                int fetchStart = bytesFetchCount();
+                analyzed++;
+                try {
+                    TaintValue[] seed = seedMethodInputs(method.desc, false);
+                    TaintInterpreter interpreter = new TaintInterpreter(ctx, 0, ownerInternal, method, seed);
+                    Frame<TaintValue>[] frames = analyzeFrames(new Analyzer<>(interpreter), ownerInternal, method, ctx);
+                    ComparisonOrigin origin = terminal ? ComparisonOrigin.TERMINAL_OBSERVER : comparisonOrigin(owner, method);
+                    List<ComparisonFact> methodFacts = new ArrayList<>();
+                    int index = 0;
+                    for (AbstractInsnNode insn : method.instructions) {
+                        collectComparisonFacts(methodFacts, frames[index++], insn, dropped);
+                    }
+                    for (ComparisonFact fact : methodFacts) {
+                        out.add(new ComparisonFact(fact.operand(), fact.predicate(), fact.threshold(), origin));
+                    }
+                } catch (Throwable t) {
+                    if (t instanceof VirtualMachineError e) throw e;
+                    // 大型方法可能包含生死判定，分析失败时记录诊断以区分无匹配结果
+                    if (failures.size() < COMPARISON_FAILURE_LIMIT) {
+                        failures.add(owner.getSimpleName() + "." + method.name + method.desc
+                                + " -> " + t.getClass().getSimpleName());
+                    }
+                }
+                // 预算是被少数几个方法吃光还是被普遍拖慢，只有逐方法计时能区分
+                if (System.nanoTime() - methodStart >= COMPARISON_SLOW_METHOD_NANOS
+                        && slow.size() < COMPARISON_SLOW_METHOD_LIMIT) {
+                    slow.add(owner.getSimpleName() + "." + method.name + method.desc + " " + millisSince(methodStart)
+                            + "ms bytes=" + (bytesFetchCount() - fetchStart)
+                            + " inlineLeft=" + ctx.inlineBudget + " nodeLeft=" + ctx.nodeBudget);
+                }
+            }
+        }
+        if (timedOut || System.nanoTime() - scanStart >= COMPARISON_SLOW_SCAN_NANOS) {
+            EcaLogger.info("[EffectiveHealth]   scan cost entity={} stage={} elapsed={}ms analyzed={} collected={} timedOut={}",
+                    entityClass.getName(), shortOnly ? "short-read" : priorityOnly ? "priority" : "full",
+                    millisSince(scanStart), analyzed, out.size(), timedOut);
+            if (!slow.isEmpty()) {
+                EcaLogger.info("[EffectiveHealth]   slowest methods entity={} {}", entityClass.getName(), slow);
+            }
+        }
+        if (timedOut) {
+            EcaLogger.info("[EffectiveHealth]   scan timed out entity={} budgetMs={} collected={}",
+                    entityClass.getName(), (deadline - scanStart) / 1_000_000L, out.size());
+        }
+        if (!failures.isEmpty()) {
+            EcaLogger.info("[EffectiveHealth]   method analysis failures entity={} count={} {}",
+                    entityClass.getName(), failures.size(), failures);
+        }
+        if (!dropped.isEmpty()) {
+            EcaLogger.info("[EffectiveHealth]   dropped unknown operands entity={} stage={} {}",
+                    entityClass.getName(), shortOnly ? "short-read" : priorityOnly ? "priority" : "full", dropped);
+        }
+        return out;
+    }
+
+    private static Set<String> terminalReadMethods(Class<?> owner, ClassNode node) {
+        Set<String> reachable = new HashSet<>();
+        for (MethodNode method : node.methods) {
+            if (comparisonOrigin(owner, method) == ComparisonOrigin.TERMINAL_OBSERVER)
+                reachable.add(method.name + method.desc);
+        }
+        boolean changed;
+        do {
+            changed = false;
+            for (MethodNode method : node.methods) {
+                if (!reachable.contains(method.name + method.desc)) continue;
+                for (AbstractInsnNode instruction : method.instructions) {
+                    if (instruction instanceof MethodInsnNode call && call.owner.equals(node.name)
+                            && call.desc.startsWith("()") && !call.name.startsWith("<"))
+                        changed |= reachable.add(call.name + call.desc);
+                }
+            }
+        } while (changed);
+        return reachable;
+    }
+
+    private static ComparisonOrigin comparisonOrigin(Class<?> owner, MethodNode method) {
+        if (isRecurringOverride(owner, method)) return ComparisonOrigin.LIFECYCLE;
+        if (method != null && method.desc.equals("()Z")
+                && (method.name.equals(IS_ALIVE.srg()) || method.name.equals(IS_ALIVE.mcp())
+                    || method.name.equals(IS_DEAD_OR_DYING.srg())
+                    || method.name.equals(IS_DEAD_OR_DYING.mcp()))) {
+            return ComparisonOrigin.TERMINAL_OBSERVER;
+        }
+        return ComparisonOrigin.OTHER;
+    }
+
+    private static final int COMPARISON_FAILURE_LIMIT = 8;
+    /* 逐方法计时的记录门槛与条数上限，以及整体扫描的报告门槛。 */
+    private static final long COMPARISON_SLOW_METHOD_NANOS = 200_000_000L;
+    private static final int COMPARISON_SLOW_METHOD_LIMIT = 8;
+    private static final long COMPARISON_SLOW_SCAN_NANOS = 1_000_000_000L;
+    private static final long COMPARISON_SCAN_BUDGET_NANOS = 15_000_000_000L;
+
+    private static int externalSourcePriority(Source source) {
+        if (source instanceof SynchedDataSource) return 0;
+        if (source instanceof MapEntrySource || source instanceof CapabilityDataSource
+                || source instanceof MethodPropertySource) return 1;
+        if (source instanceof FieldChainSource) return 2;
+        if (source instanceof MethodCallSource) return 3;
+        return 4;
+    }
+
+    /* ==================== AnalysisResult + 入口 ==================== */
+
+    private static AnalysisResult analyzeDamageWriteMethod(Class<?> owner, String srgName, String mcpName, String desc) {
+        AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, owner);
+        TaintValue[] seedLocals = seedMethodInputs(desc, false);
+        Expr writes = analyzeMethodWrites(owner, srgName, desc, seedLocals, ctx, 0);
+        if (writes == null || writes instanceof UnknownExpr) {
+            writes = analyzeMethodWrites(owner, mcpName, desc, seedLocals, ctx, 0);
+        }
+        if (writes == null || writes instanceof UnknownExpr) return null;
+        Expr stripped = stripEcaHealthWrappers(writes);
+        if (stripped == null || stripped instanceof UnknownExpr) return null;
+        return AnalysisResult.of(stripped, owner);
+    }
+
+    private static Expr analyzeMethodWrites(Class<?> owner, String name, String desc,
+                                            TaintValue[] seedLocals, AnalysisCtx ctx, int depth) {
+        if (owner == null || owner.getClassLoader() == null || depth >= ctx.maxDepth) return null;
+        ctx.throwIfDeadlineExceeded();
+        String cacheKey = owner.getName().replace('.', '/') + "#" + name + "#" + desc + "#writes";
+        if (!ctx.inflight.add(cacheKey)) return new UnknownExpr("recursive-cycle-writes");
+        try {
+            MethodNode mn = findMethodNode(classNode(owner), name, desc);
+            if (mn == null || mn.instructions.size() == 0) return null;
+
+            String ownerInternal = internalName(owner);
+            TaintInterpreter interpreter = new TaintInterpreter(ctx, depth, ownerInternal, mn, seedLocals);
+            Analyzer<TaintValue> analyzer = new Analyzer<>(interpreter);
+            Frame<TaintValue>[] frames = analyzeFrames(analyzer, ownerInternal, mn, ctx);
+
+            List<Expr> writes = new ArrayList<>();
+            int idx = 0;
+            for (AbstractInsnNode insn : mn.instructions) {
+                ctx.checkDeadline();
+                Expr write = extractWriteExpression(frames[idx], insn, ctx, depth);
+                if (write != null && !(write instanceof UnknownExpr)) addUniqueExpr(writes, write);
+                idx++;
+            }
+            if (writes.isEmpty()) return null;
+            return writes.size() == 1 ? writes.get(0) : new Choice(List.copyOf(writes));
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        } finally {
+            ctx.inflight.remove(cacheKey);
+        }
+    }
+
+    private static Expr extractWriteExpression(Frame<TaintValue> frame, AbstractInsnNode insn,
+                                               AnalysisCtx ctx, int depth) {
+        if (frame == null) return null;
+        int opcode = insn.getOpcode();
+        if (insn instanceof FieldInsnNode field) {
+            if (opcode == Opcodes.PUTFIELD && frame.getStackSize() >= 2) {
+                Source sink = buildFieldSourceFromReceiver(
+                        field, frame.getStack(frame.getStackSize() - 2).expr);
+                Expr value = frame.getStack(frame.getStackSize() - 1).expr;
+                return sink == null ? null : new StoreWrite(sink, value);
+            }
+            if (opcode == Opcodes.PUTSTATIC && frame.getStackSize() >= 1) {
+                Source sink = buildStaticFieldWriteSource(field);
+                return sink == null ? null
+                        : new StoreWrite(sink, frame.getStack(frame.getStackSize() - 1).expr);
+            }
+            return null;
+        }
+        if (!(insn instanceof MethodInsnNode call)) return null;
+        List<Expr> args = invokeValueExprs(call, frame);
+        if (args.isEmpty()) return null;
+        Expr known = extractKnownWriteCall(call, args, ctx);
+        if (known != null) return known;
+        Expr inlined = tryInlineWriteCall(call, args, ctx, depth);
+        return inlined != null && !(inlined instanceof UnknownExpr) ? inlined : null;
+    }
+
+    private static Expr extractKnownWriteCall(MethodInsnNode call, List<Expr> args, AnalysisCtx ctx) {
+        Source indirect = indirectAccessSource(call, args, ctx, true);
+        if (indirect != null) return new StoreWrite(indirect, args.get(args.size() - 1));
+        if (isSynchedDataSet(call) && args.size() >= 3) {
+            Expr accessor = args.get(1);
+            if (accessor instanceof Reference ref && ref.value() instanceof EntityDataAccessor<?> acc) {
+                return new StoreWrite(new SynchedDataSource(acc, Object.class), args.get(2));
+            }
+        }
+        if (isMapPut(call) && args.size() >= 3) {
+            Expr container = args.get(0);
+            Expr key = args.get(1);
+            Source sink = new MapEntrySource(
+                    container, key, detectKeyKind(key), mapOwnerHint(container), Object.class, call.owner);
+            return new StoreWrite(sink, args.get(2));
+        }
+        return null;
+    }
+
+    /* ==================== 权威可达性剪枝 ====================
+       tick/aiStep 这类周期入口没有语义锚点，不剪枝就会把过程图里每一条写指令都收进来，
+       其中绝大多数是朝向、目标、冷却等无关字段。内联前先限深预扫
+       被调方能否触及权威存储，到不了的整条不展开：既是相关性判据，也是预算的天然上界。 */
+    private static final int MAY_WRITE_SCAN_DEPTH = 24;
+    private static final int MAY_WRITE_CACHE_LIMIT = 20_000;
+    private static final Map<String, Boolean> MAY_WRITE_STATE_CACHE = new ConcurrentHashMap<>();
+
+    private static boolean mayWriteAuthority(Class<?> owner, String name, String desc,
+                                             AnalysisCtx ctx, int depth) {
+        AuthorityFingerprint fingerprint = ctx.authorityFingerprint;
+        if (owner == null || fingerprint == null || !fingerprint.usable()) return true;
+        ctx.throwIfDeadlineExceeded();
+        String key = fingerprint.cacheScope() + "@" + internalName(owner) + "#" + name + desc;
+        Boolean cached = MAY_WRITE_STATE_CACHE.get(key);
+        if (cached != null) return cached;
+        if (depth >= MAY_WRITE_SCAN_DEPTH) return true;
+        if (MAY_WRITE_STATE_CACHE.size() > MAY_WRITE_CACHE_LIMIT) MAY_WRITE_STATE_CACHE.clear();
+        // 互递归期间先占位为"可能写"，环上的方法因此保守放行而不会缓存出错误的 false
+        MAY_WRITE_STATE_CACHE.put(key, Boolean.TRUE);
+        try {
+            boolean result = scanMayWriteAuthority(owner, name, desc, ctx, depth);
+            MAY_WRITE_STATE_CACHE.put(key, result);
+            return result;
+        } catch (AnalysisDeadlineExceeded ignored) {
+            // 超时结论不完整，不能把递归占位当成长期可达性结果。
+            MAY_WRITE_STATE_CACHE.remove(key);
+            throw ignored;
+        }
+    }
+
+    /* 判不出来一律放行：剪枝只用来省额度，绝不能把真实写入路径剪掉。 */
+    private static boolean scanMayWriteAuthority(Class<?> owner, String name, String desc,
+                                                 AnalysisCtx ctx, int depth) {
+        AuthorityFingerprint fingerprint = ctx.authorityFingerprint;
+        ctx.throwIfDeadlineExceeded();
+        MethodNode method;
+        try {
+            method = findMethodNode(classNode(owner), name, desc);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return true;
+        }
+        if (method == null) return true;
+        if (method.instructions.size() == 0) return false;
+        for (AbstractInsnNode insn : method.instructions) {
+            ctx.checkDeadline();
+            // 闭包体不在普通调用图中，不能把创建闭包的维护入口剪成不可达。
+            if (insn instanceof InvokeDynamicInsnNode dynamic
+                    && dynamic.bsm.getOwner().equals("java/lang/invoke/LambdaMetafactory")) return true;
+            if (insn instanceof FieldInsnNode field) {
+                if (insn.getOpcode() == Opcodes.PUTFIELD && fingerprint.matchesField(field)) return true;
+                // 读取 accessor 静态字段是使用该同步单元的必经指令，读写在此不作区分
+                if (insn.getOpcode() == Opcodes.GETSTATIC && fingerprint.matchesAccessor(field)) return true;
+                // 任意 EntityDataAccessor 静态读取都是写入该同步单元的必经指令；真实血量存储
+                // 常不在 getHealth 派生指纹里，仅按指纹剪枝会把写真实存储的方法整体剪掉，
+                // 形成"找不到→不内联→永远找不到"的死锁
+                if (insn.getOpcode() == Opcodes.GETSTATIC
+                        && ENTITY_DATA_ACCESSOR_DESC.equals(field.desc)) return true;
+                continue;
+            }
+            if (!(insn instanceof MethodInsnNode call)) continue;
+            if (isMapPut(call) || isIndirectAccessOwner(call.owner)) return true;
+            if (call.getOpcode() == Opcodes.INVOKEINTERFACE) return true;
+            if (!fingerprint.nbtKeys().isEmpty() && isNbtPut(call)) return true;
+            // 不会被内联的归属不必递归：调用方自身的写入指令已在本轮扫描中判过
+            if (!isInlinableOwner(call)) continue;
+            Class<?> callee = loadClass(call.owner);
+            if (callee == null) return true;
+            Class<?> resolved = resolveInvocationOwner(callee, call.name, call.desc);
+            if (mayWriteAuthority(resolved == null ? callee : resolved, call.name, call.desc,
+                    ctx, depth + 1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* 与 tryInlineWriteCall 的归属过滤保持一致，否则预扫会对实际不展开的调用做无谓递归。 */
+    private static boolean isInlinableOwner(MethodInsnNode call) {
+        if (call.name.startsWith("<")) return false;
+        if (call.owner.startsWith("java/") || call.owner.startsWith("javax/")
+                || call.owner.startsWith("jdk/") || call.owner.startsWith("com/google/")) return false;
+        if (call.owner.startsWith("net/neoforged/") || call.owner.startsWith("org/spongepowered/")) {
+            return false;
+        }
+        return !call.owner.startsWith("net/minecraft/") || isHealthLifecycleCall(call);
+    }
+
+    private static boolean isNbtPut(MethodInsnNode call) {
+        if (!call.owner.equals("net/minecraft/nbt/CompoundTag")) return false;
+        return switch (call.name) {
+            case "putBoolean", "putByte", "putShort", "putInt",
+                    "putLong", "putFloat", "putDouble", "putString" -> true;
+            default -> false;
+        };
+    }
+
+    private static Expr tryInlineWriteCall(MethodInsnNode call, List<Expr> args, AnalysisCtx ctx, int depth) {
+        if (call.getOpcode() != Opcodes.INVOKESTATIC && !args.isEmpty()
+                && args.get(0) instanceof Closure closure
+                && closure.samName().equals(call.name) && closure.samDesc().equals(call.desc)) {
+            return analyzeClosureWrites(closure, args.subList(1, args.size()), ctx, depth);
+        }
+        if (isMethodHandleInvoke(call) && !args.isEmpty()) {
+            if (depth + 1 >= ctx.maxDepth || ctx.inlineBudget <= 0) return null;
+            MethodTarget target = resolveMethodHandleTarget(args.get(0));
+            if (target == null) return null;
+            Type[] targetArgs = Type.getArgumentTypes(target.desc());
+            if (args.size() - 1 != targetArgs.length) return null;
+            TaintValue[] seedLocals = new TaintValue[localCount(targetArgs) + 8];
+            int local = 0;
+            for (int i = 0; i < targetArgs.length; i++) {
+                Expr argExpr = ctx.authorityFingerprint == null && isNumericAsmType(targetArgs[i])
+                        ? new WriteInput(i, descriptorChar(targetArgs[i]))
+                        : args.get(i + 1);
+                seedLocals[local] = new TaintValue(targetArgs[i].getSize(), argExpr);
+                local += targetArgs[i].getSize();
+            }
+            ctx.inlineBudget--;
+            return analyzeMethodWrites(target.owner(), target.name(), target.desc(), seedLocals, ctx, depth + 1);
+        }
+        if (depth + 1 >= ctx.maxDepth || ctx.inlineBudget <= 0 || call.name.startsWith("<")) return null;
+        // 实体控制类静态过程带实体参数，是实体周期行为的转发链，须放行内联才能
+        // 从 tick 链反推到真实血量写入点；其余无关静态调用仍拦掉，避免把无关工具方法拖进分析。
+        if (call.getOpcode() == Opcodes.INVOKESTATIC && !isHealthLifecycleCall(call)
+                && !isEntityControlCall(call, args)
+                && args.stream().noneMatch(Closure.class::isInstance)) return null;
+        if (call.owner.startsWith("java/") || call.owner.startsWith("javax/") || call.owner.startsWith("jdk/")) {
+            return null;
+        }
+        if (call.owner.startsWith("net/neoforged/") || call.owner.startsWith("org/spongepowered/")
+                || call.owner.startsWith("com/google/")) return null;
+        Class<?> referencedOwner = loadClass(call.owner);
+        if (referencedOwner == null) return null;
+        if (call.owner.startsWith("net/minecraft/") && !isHealthLifecycleCall(call)) return null;
+        Class<?> owner = resolveInvocationOwner(referencedOwner, call.name, call.desc);
+        if (owner == null) return null;
+        boolean isStatic = call.getOpcode() == Opcodes.INVOKESTATIC;
+        Type[] argTypes = Type.getArgumentTypes(call.desc);
+        int expectedArgs = argTypes.length + (isStatic ? 0 : 1);
+        if (args.size() != expectedArgs) return null;
+
+        // 到不了权威存储的调用直接跳过，额度留给真正通往它的路径
+        if (!mayWriteAuthority(owner, call.name, call.desc, ctx, 0)) {
+            ctx.inlineSkipped++;
+            return null;
+        }
+        ctx.inlineAllowed++;
+
+        int localCount = isStatic ? 0 : 1;
+        for (Type argType : argTypes) localCount += argType.getSize();
+        TaintValue[] seedLocals = new TaintValue[localCount + 8];
+        int local = 0;
+        int arg = 0;
+        if (!isStatic) seedLocals[local++] = new TaintValue(1, args.get(arg++));
+        for (int i = 0; i < argTypes.length; i++) {
+            Type argType = argTypes[i];
+            // 维护链必须保留数值来源；只有独立写入口建模才把参数抽象为待求输入。
+            Expr argExpr = ctx.authorityFingerprint == null && isNumericAsmType(argType)
+                    ? new WriteInput(i, descriptorChar(argType)) : args.get(arg);
+            seedLocals[local] = new TaintValue(argType.getSize(), argExpr);
+            arg++;
+            local += argType.getSize();
+        }
+        ctx.inlineBudget--;
+        return analyzeMethodWrites(owner, call.name, call.desc, seedLocals, ctx, depth + 1);
+    }
+
+    private static Expr analyzeClosureWrites(Closure closure, List<Expr> invocationArgs,
+                                              AnalysisCtx ctx, int depth) {
+        if (depth + 1 >= ctx.maxDepth || ctx.inlineBudget <= 0) return null;
+        Handle implementation = closure.implementation();
+        int tag = implementation.getTag();
+        if (tag != Opcodes.H_INVOKESTATIC && tag != Opcodes.H_INVOKEVIRTUAL
+                && tag != Opcodes.H_INVOKESPECIAL && tag != Opcodes.H_INVOKEINTERFACE) return null;
+        Class<?> owner = loadClass(implementation.getOwner());
+        if (owner == null) return null;
+        boolean isStatic = tag == Opcodes.H_INVOKESTATIC;
+        Type[] types = Type.getArgumentTypes(implementation.getDesc());
+        List<Expr> seeds = new ArrayList<>(closure.captured());
+        seeds.addAll(invocationArgs);
+        if (seeds.size() != types.length + (isStatic ? 0 : 1)) return null;
+        TaintValue[] locals = new TaintValue[localCount(types) + (isStatic ? 0 : 1) + 8];
+        int local = 0;
+        int seed = 0;
+        if (!isStatic) locals[local++] = new TaintValue(1, seeds.get(seed++));
+        for (Type type : types) {
+            locals[local] = new TaintValue(type.getSize(), seeds.get(seed++));
+            local += type.getSize();
+        }
+        ctx.inlineBudget--;
+        return analyzeMethodWrites(owner, implementation.getName(), implementation.getDesc(), locals, ctx, depth + 1);
+    }
+
+    private static boolean isHealthLifecycleCall(MethodInsnNode call) {
+        for (McMethod method : new McMethod[]{HURT, ACTUALLY_HURT, SET_HEALTH}) {
+            if (method.desc().equals(call.desc)
+                    && (method.srg().equals(call.name) || method.mcp().equals(call.name))) return true;
+        }
+        return false;
+    }
+
+    private static Class<?> resolveInvocationOwner(Class<?> referencedOwner, String name, String desc) {
+        for (Class<?> current = referencedOwner; current != null && current != Object.class;
+             current = current.getSuperclass()) {
+            if (classDefinesMethod(current, name, desc)) return current;
+        }
+        return null;
+    }
+
+    private static int localCount(Type[] types) {
+        int count = 0;
+        for (Type type : types) count += type.getSize();
+        return count;
+    }
+
+    private static TaintValue[] seedMethodInputs(String desc, boolean isStatic) {
+        Type[] argumentTypes = Type.getArgumentTypes(desc);
+        int localCount = isStatic ? 0 : 1;
+        for (Type argumentType : argumentTypes) localCount += argumentType.getSize();
+        TaintValue[] locals = new TaintValue[localCount + 8];
+        int local = 0;
+        if (!isStatic) locals[local++] = new TaintValue(1, EntityParamMarker.I);
+        int numericIndex = 0;
+        for (Type argumentType : argumentTypes) {
+            Expr expression = isNumericAsmType(argumentType)
+                    ? new WriteInput(numericIndex++, descriptorChar(argumentType))
+                    : UnknownExpr.UNKNOWN;
+            locals[local] = new TaintValue(argumentType.getSize(), expression);
+            local += argumentType.getSize();
+        }
+        return locals;
+    }
+
+    private static TaintValue[] seedCallLocals(MethodInsnNode call, List<Expr> arguments,
+                                               boolean replaceNumericArguments) {
+        boolean isStatic = call.getOpcode() == Opcodes.INVOKESTATIC;
+        Type[] argumentTypes = Type.getArgumentTypes(call.desc);
+        int expected = argumentTypes.length + (isStatic ? 0 : 1);
+        if (arguments.size() != expected) return null;
+        int localCount = isStatic ? 0 : 1;
+        for (Type argumentType : argumentTypes) localCount += argumentType.getSize();
+        TaintValue[] locals = new TaintValue[localCount + 8];
+        int local = 0;
+        int argument = 0;
+        if (!isStatic) locals[local++] = new TaintValue(1, arguments.get(argument++));
+        int numericIndex = 0;
+        for (Type argumentType : argumentTypes) {
+            Expr argumentExpression = arguments.get(argument++);
+            Expr expression = replaceNumericArguments && isNumericAsmType(argumentType)
+                    ? new WriteInput(numericIndex++, descriptorChar(argumentType))
+                    : argumentExpression;
+            locals[local] = new TaintValue(argumentType.getSize(), expression);
+            local += argumentType.getSize();
+        }
+        return locals;
+    }
+
+    private static boolean isNumericAsmType(Type type) {
+        if (type == null) return false;
+        return switch (type.getSort()) {
+            case Type.BYTE, Type.SHORT, Type.INT, Type.LONG, Type.FLOAT, Type.DOUBLE, Type.CHAR -> true;
+            default -> false;
+        };
+    }
+
+    private static char descriptorChar(Type type) {
+        return type == null || type.getDescriptor().isEmpty() ? '?' : type.getDescriptor().charAt(0);
+    }
+
+    private static boolean isIndirectAccessOwner(String owner) {
+        return owner.equals("java/lang/reflect/Field") || owner.equals("java/lang/invoke/VarHandle")
+                || owner.equals("sun/misc/Unsafe") || owner.equals("jdk/internal/misc/Unsafe");
+    }
+
+    private static boolean isIndirectMetadataCall(MethodInsnNode call) {
+        return call.owner.equals("java/lang/Class")
+                && (call.name.equals("getDeclaredField") || call.name.equals("getField"))
+                || call.name.equals("getClass") && call.desc.equals("()Ljava/lang/Class;")
+                || call.owner.equals("java/lang/invoke/MethodHandles$Lookup")
+                && (call.name.equals("findVarHandle") || call.name.equals("findStaticVarHandle")
+                    || call.name.equals("unreflectVarHandle"))
+                || call.owner.equals("java/lang/invoke/MethodHandles") && call.name.equals("arrayElementVarHandle")
+                || isIndirectAccessOwner(call.owner)
+                && (call.name.equals("objectFieldOffset") || call.name.equals("staticFieldOffset")
+                    || call.name.equals("staticFieldBase") || call.name.equals("arrayBaseOffset")
+                    || call.name.equals("arrayIndexScale"));
+    }
+
+    private static Class<?> accessClass(Expr expression, AnalysisCtx ctx) {
+        if (expression instanceof Reference reference && reference.value() instanceof Class<?> type) return type;
+        if (expression instanceof Call call && call.name().equals("getClass") && call.args().size() == 1) {
+            Expr receiver = call.args().get(0);
+            if (receiver == EntityParamMarker.I) return ctx.runtimeEntityClass;
+            if (receiver instanceof Reference reference && reference.value() != null) return reference.value().getClass();
+        }
+        return null;
+    }
+
+    private static Field reflectedAccessField(Expr expression, AnalysisCtx ctx) {
+        if (expression instanceof Reference reference && reference.value() instanceof Field field) return field;
+        if (!(expression instanceof Call call) || !call.owner().equals("java/lang/Class")
+                || call.args().size() != 2) return null;
+        Class<?> owner = accessClass(call.args().get(0), ctx);
+        if (owner == null || !(call.args().get(1) instanceof Reference name)
+                || !(name.value() instanceof String fieldName)) return null;
+        return TaintInterpreter.findReflectedField(owner, call.name(), fieldName);
+    }
+
+    private static Source accessFieldSource(Field field, Expr receiver) {
+        if (field == null) return null;
+        if (Modifier.isStatic(field.getModifiers())) return new StaticFieldSource(field);
+        if (receiver == null || receiver instanceof UnknownExpr) return null;
+        return buildFieldSourceFromReceiver(new FieldInsnNode(Opcodes.GETFIELD,
+                internalName(field.getDeclaringClass()), field.getName(), Type.getDescriptor(field.getType())), receiver);
+    }
+
+    /* 初始化辅助方法可能通过反射替换默认引用；用栈帧传递实参，避免按邻近指令猜捕获对象。 */
+    private static Expr traceAssignedValue(Class<?> owner, MethodNode method, TaintValue[] locals,
+                                           Source target, AnalysisCtx ctx, Set<String> visiting, int depth) {
+        if (depth >= ctx.maxDepth || ctx.inlineBudget-- <= 0) return new UnknownExpr("assignment-budget");
+        String key = internalName(owner) + "#" + method.name + method.desc;
+        if (!visiting.add(key)) return new UnknownExpr("assignment-cycle");
+        boolean previous = ctx.tracingAssignments;
+        ctx.tracingAssignments = true;
+        try {
+            TaintInterpreter interpreter = new TaintInterpreter(ctx, depth, internalName(owner), method, locals);
+            Frame<TaintValue>[] frames = analyzeFrames(new Analyzer<>(interpreter), internalName(owner), method, ctx);
+            Expr result = null;
+            int index = 0;
+            for (AbstractInsnNode instruction : method.instructions) {
+                ctx.checkDeadline();
+                Frame<TaintValue> frame = frames[index++];
+                if (frame == null) continue;
+                Source sink = null;
+                Expr value = null;
+                if (instruction instanceof FieldInsnNode field) {
+                    int count = frame.getStackSize();
+                    if (field.getOpcode() == Opcodes.PUTFIELD && count >= 2) {
+                        sink = buildFieldSourceFromReceiver(field, frame.getStack(count - 2).expr);
+                        value = frame.getStack(count - 1).expr;
+                    } else if (field.getOpcode() == Opcodes.PUTSTATIC && count >= 1) {
+                        sink = buildStaticFieldWriteSource(field);
+                        value = frame.getStack(count - 1).expr;
+                    }
+                } else if (instruction instanceof MethodInsnNode call) {
+                    List<Expr> args = invokeValueExprs(call, frame);
+                    sink = indirectAccessSource(call, args, ctx, true);
+                    if (sink != null) value = args.get(args.size() - 1);
+                    else if (isIndirectAccessOwner(call.owner)
+                            && (call.name.equals("set") || call.name.startsWith("put")
+                                || call.name.startsWith("compare") || call.name.startsWith("getAnd")
+                                || call.name.equals("setVolatile") || call.name.equals("setRelease")
+                                || call.name.equals("setOpaque"))) {
+                        // 未定位的间接赋值可能替换当前引用，不能继续相信先前的默认值。
+                        result = new UnknownExpr("indirect-assignment-unresolved");
+                    }
+                    else if (call.owner.equals(internalName(owner)) && !call.name.equals("<clinit>")) {
+                        MethodNode helper = findMethodNode(classNode(owner), call.name, call.desc);
+                        if (helper != null && mayAssignField(owner, helper, target, new HashSet<>(), 0)) {
+                            TaintValue[] seeds = seedCallLocals(call, args, false);
+                            if (seeds == null) return new UnknownExpr("assignment-arguments");
+                            Expr nested = traceAssignedValue(owner, helper, seeds, target, ctx, visiting, depth + 1);
+                            if (nested != null) {
+                                if (conditionalAssignment(method, index - 1)) return new UnknownExpr("conditional-assignment");
+                                result = nested;
+                            }
+                        }
+                    }
+                }
+                if (target.equals(sink)) {
+                    if (conditionalAssignment(method, index - 1)) return new UnknownExpr("conditional-assignment");
+                    result = value;
+                }
+            }
+            return result;
+        } catch (Throwable failure) {
+            if (failure instanceof VirtualMachineError error) throw error;
+            if (failure instanceof AnalysisDeadlineExceeded exhausted) throw exhausted;
+            EcaLogger.info("[HealthDataflow] assignment resolution failed: {}", failure.toString());
+            return new UnknownExpr("assignment-unresolved");
+        } finally {
+            ctx.tracingAssignments = previous;
+            visiting.remove(key);
+        }
+    }
+
+    private static boolean conditionalAssignment(MethodNode method, int assignmentIndex) {
+        for (int i = 0; i < assignmentIndex; i++) {
+            AbstractInsnNode instruction = method.instructions.get(i);
+            if (instruction instanceof JumpInsnNode jump
+                    && method.instructions.indexOf(jump.label) > assignmentIndex) return true;
+            if (instruction instanceof TableSwitchInsnNode || instruction instanceof LookupSwitchInsnNode) return true;
+        }
+        return false;
+    }
+
+    private static boolean mayAssignField(Class<?> owner, MethodNode method, Source target,
+                                          Set<String> visiting, int depth) {
+        if (depth >= 8 || !visiting.add(method.name + method.desc)) return true;
+        String fieldName = target instanceof FieldChainSource chain
+                ? chain.chain.get(chain.chain.size() - 1).name()
+                : target instanceof StaticFieldSource field ? field.field.getName() : null;
+        for (AbstractInsnNode instruction : method.instructions) {
+            if (instruction instanceof FieldInsnNode field && field.name.equals(fieldName)
+                    && (field.getOpcode() == Opcodes.PUTFIELD || field.getOpcode() == Opcodes.PUTSTATIC)) return true;
+            if (!(instruction instanceof MethodInsnNode call)) continue;
+            if (isIndirectAccessOwner(call.owner) && (call.name.startsWith("set")
+                    || call.name.startsWith("put") || call.name.startsWith("compare")
+                    || call.name.startsWith("getAnd"))) return true;
+            if (call.owner.equals(internalName(owner))) {
+                MethodNode helper = findMethodNode(classNode(owner), call.name, call.desc);
+                if (helper != null && mayAssignField(owner, helper, target, visiting, depth + 1)) return true;
+            }
+        }
+        visiting.remove(method.name + method.desc);
+        return false;
+    }
+
+    private static Expr accessorInitializer(Field field, AnalysisCtx ctx) {
+        String key = field.toGenericString();
+        if (ctx.accessorInitializers.containsKey(key)) return ctx.accessorInitializers.get(key);
+        if (!ctx.resolvingAccessors.add(key)) return null;
+        try {
+            Class<?> owner = field.getDeclaringClass();
+            if (owner.getClassLoader() == null) return null;
+            ClassNode node = classNode(owner);
+            MethodNode initializer = node == null ? null : findMethodNode(node, "<clinit>", "()V");
+            if (initializer != null) {
+                boolean metadata = false;
+                for (AbstractInsnNode instruction : initializer.instructions) {
+                    if (instruction instanceof MethodInsnNode call && isIndirectMetadataCall(call)) {
+                        metadata = true;
+                        break;
+                    }
+                }
+                if (!metadata) initializer = null;
+            }
+            Expr value = initializer == null ? null : traceAssignedValue(owner, initializer, null,
+                    new StaticFieldSource(field), ctx, new HashSet<>(), 0);
+            if (!(value instanceof Call call) || !isIndirectMetadataCall(new MethodInsnNode(
+                    call.opcode(), call.owner(), call.name(), call.desc(), false))) value = null;
+            ctx.accessorInitializers.put(key, value);
+            return value;
+        } finally {
+            ctx.resolvingAccessors.remove(key);
+        }
+    }
+
+    /* 只还原有成员来源的访问。裸地址、任意算术偏移和条件原子写入不等价于普通字段赋值。 */
+    private static Source indirectAccessSource(MethodInsnNode method, List<Expr> args,
+                                                AnalysisCtx ctx, boolean write) {
+        if (!isIndirectAccessOwner(method.owner) || args.isEmpty()) return null;
+        String name = method.name;
+        try {
+            if (method.owner.equals("java/lang/reflect/Field")) {
+                Set<String> names = write
+                        ? Set.of("set", "setBoolean", "setByte", "setChar", "setShort", "setInt", "setLong", "setFloat", "setDouble")
+                        : Set.of("get", "getBoolean", "getByte", "getChar", "getShort", "getInt", "getLong", "getFloat", "getDouble");
+                if (!names.contains(name) || args.size() != (write ? 3 : 2)) return null;
+                return accessFieldSource(reflectedAccessField(args.get(0), ctx), args.get(1));
+            }
+            if (method.owner.equals("java/lang/invoke/VarHandle")) {
+                if (!(write ? Set.of("set", "setVolatile", "setRelease", "setOpaque")
+                        : Set.of("get", "getVolatile", "getAcquire", "getOpaque")).contains(name)) return null;
+                if (!(args.get(0) instanceof Call factory)) return null;
+                if (factory.owner().equals("java/lang/invoke/MethodHandles")
+                        && factory.name().equals("arrayElementVarHandle") && factory.args().size() == 1) {
+                    Class<?> arrayType = accessClass(factory.args().get(0), ctx);
+                    if (arrayType == null || !arrayType.isArray() || args.size() != (write ? 4 : 3)) return null;
+                    return new ArrayElementSource(args.get(1), args.get(2), arrayType.getComponentType(), "arr");
+                }
+                if (!factory.owner().equals("java/lang/invoke/MethodHandles$Lookup")) return null;
+                Field field;
+                if (factory.name().equals("unreflectVarHandle") && factory.args().size() == 2) {
+                    field = reflectedAccessField(factory.args().get(1), ctx);
+                } else {
+                    if (!(factory.name().equals("findVarHandle") || factory.name().equals("findStaticVarHandle"))
+                            || factory.args().size() != 4) return null;
+                    Class<?> owner = accessClass(factory.args().get(1), ctx);
+                    if (owner == null || !(factory.args().get(2) instanceof Reference member)
+                            || !(member.value() instanceof String fieldName)) return null;
+                    field = findFieldInHierarchy(owner, fieldName);
+                    if (field == null || field.getType() != accessClass(factory.args().get(3), ctx)
+                            || Modifier.isStatic(field.getModifiers()) != factory.name().equals("findStaticVarHandle")) return null;
+                }
+                if (field == null) return null;
+                boolean isStatic = Modifier.isStatic(field.getModifiers());
+                if (args.size() != (isStatic ? 1 : 2) + (write ? 1 : 0)) return null;
+                return accessFieldSource(field, isStatic ? null : args.get(1));
+            }
+            String operation = write ? "put" : "get";
+            if (!name.matches(operation + "(Boolean|Byte|Char|Short|Int|Long|Float|Double|Object|Reference)(Volatile|Acquire|Release|Opaque)?")
+                    || args.size() != (write ? 4 : 3)) return null;
+            Source array = unsafeArraySource(name, operation, args.get(1), args.get(2), ctx);
+            if (array != null) return array;
+            if (!(args.get(2) instanceof Call offset)
+                    || !isIndirectAccessOwner(offset.owner()) || offset.args().size() != 2) return null;
+            Field field = reflectedAccessField(offset.args().get(1), ctx);
+            if (field == null) return null;
+            boolean isStatic = Modifier.isStatic(field.getModifiers());
+            if (!offset.name().equals(isStatic ? "staticFieldOffset" : "objectFieldOffset")) return null;
+            // 静态偏移必须与同一成员的基址配对，不能把偏移误套到其它对象。
+            if (isStatic && (!(args.get(1) instanceof Call base) || !base.name().equals("staticFieldBase")
+                    || !base.owner().equals(offset.owner()) || base.args().size() != 2
+                    || !field.equals(reflectedAccessField(base.args().get(1), ctx)))) return null;
+            String typeName = field.getType().isPrimitive()
+                    ? field.getType().getSimpleName() : "Object";
+            typeName = Character.toUpperCase(typeName.charAt(0)) + typeName.substring(1);
+            if (!name.startsWith(operation + typeName)
+                    && !(typeName.equals("Object") && name.startsWith(operation + "Reference"))) return null;
+            return accessFieldSource(field, isStatic ? null : args.get(1));
+        } catch (Throwable failure) {
+            if (failure instanceof VirtualMachineError error) throw error;
+            if (failure instanceof AnalysisDeadlineExceeded exhausted) throw exhausted;
+            EcaLogger.info("[HealthDataflow] indirect field resolution failed: {}", failure.toString());
+            return null;
+        }
+    }
+
+    private static Expr stripOffsetWidening(Expr expression) {
+        while (expression instanceof Op op && op.opcode() == Opcodes.I2L && op.args().size() == 1) {
+            expression = op.args().get(0);
+        }
+        return expression;
+    }
+
+    private static Source unsafeArraySource(String name, String operation, Expr array, Expr offset, AnalysisCtx ctx) {
+        // 仅识别 base + index * scale，字节偏移不会直接作为数组下标写入。
+        if (!(offset instanceof Op add) || add.opcode() != Opcodes.LADD || add.args().size() != 2) return null;
+        for (int side = 0; side < 2; side++) {
+            Expr baseExpr = stripOffsetWidening(add.args().get(side));
+            Expr indexed = stripOffsetWidening(add.args().get(1 - side));
+            if (!(baseExpr instanceof Call base) || !isIndirectAccessOwner(base.owner())
+                    || !base.name().equals("arrayBaseOffset") || base.args().size() != 2
+                    || !(indexed instanceof Op multiply) || multiply.opcode() != Opcodes.LMUL
+                    || multiply.args().size() != 2) continue;
+            Class<?> arrayType = accessClass(base.args().get(1), ctx);
+            if (arrayType == null || !arrayType.isArray()) continue;
+            for (int factor = 0; factor < 2; factor++) {
+                Expr scaleExpr = stripOffsetWidening(multiply.args().get(factor));
+                if (!(scaleExpr instanceof Call scale) || !scale.owner().equals(base.owner())
+                        || !scale.name().equals("arrayIndexScale") || scale.args().size() != 2
+                        || accessClass(scale.args().get(1), ctx) != arrayType) continue;
+                Class<?> component = arrayType.getComponentType();
+                String type = component.isPrimitive() ? component.getSimpleName() : "object";
+                type = Character.toUpperCase(type.charAt(0)) + type.substring(1);
+                if (!name.startsWith(operation + type)
+                        && !(type.equals("Object") && name.startsWith(operation + "Reference"))) return null;
+                return new ArrayElementSource(array, stripOffsetWidening(multiply.args().get(1 - factor)), component, "arr");
+            }
+        }
+        return null;
+    }
+
+    private static Source buildFieldSourceFromReceiver(FieldInsnNode field, Expr receiver) {
+        FieldStep step = new FieldStep(field.owner, field.name, field.desc);
+        if (receiver == EntityParamMarker.I) {
+            Expr source = makeFieldChainSource(List.of(step));
+            return source instanceof Source s ? s : null;
+        }
+        if (receiver instanceof FieldChainSource fcs) {
+            List<FieldStep> chain = new ArrayList<>(fcs.chain);
+            chain.add(step);
+            Expr source = makeFieldChainSource(chain);
+            return source instanceof Source s ? s : null;
+        }
+        Class<?> type = descriptorToClass(step.desc());
+        return new ChainedFieldSource(receiver, List.of(step), type == null ? Object.class : type);
+    }
+
+    private static Source buildStaticFieldWriteSource(FieldInsnNode field) {
+        try {
+            Class<?> owner = loadClass(field.owner);
+            if (owner == null) return null;
+            Field reflected = findFieldInHierarchy(owner, field.name);
+            if (reflected == null) return null;
+            reflected.setAccessible(true);
+            return new StaticFieldSource(reflected);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        }
+    }
+
+    private static Expr makeFieldChainSource(List<FieldStep> chain) {
+        try {
+            VarHandle[] handles = new VarHandle[chain.size()];
+            Class<?> lastType = null;
+            for (int i = 0; i < chain.size(); i++) {
+                FieldStep step = chain.get(i);
+                Class<?> owner = loadClass(step.ownerInternal());
+                Class<?> fieldType = descriptorToClass(step.desc());
+                if (owner == null || fieldType == null) return UnknownExpr.UNKNOWN;
+                Field field = findFieldInHierarchy(owner, step.name());
+                if (field == null) return UnknownExpr.UNKNOWN;
+                Class<?> declaring = field.getDeclaringClass();
+                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(declaring, MethodHandles.lookup());
+                handles[i] = lookup.findVarHandle(declaring, step.name(), fieldType);
+                lastType = fieldType;
+            }
+            return new FieldChainSource(chain, handles, lastType);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return UnknownExpr.UNKNOWN;
+        }
+    }
+
+    private static boolean isSynchedDataSet(MethodInsnNode call) {
+        return call.owner.equals("net/minecraft/network/syncher/SynchedEntityData")
+                && call.name.equals("set");
+    }
+
+    private static boolean isMapPut(MethodInsnNode call) {
+        return (call.name.equals("put") || call.name.equals("putIfAbsent")) && isMapClassByName(call.owner);
+    }
+
+    private static boolean isNumericType(Type type) {
+        return switch (type.getSort()) {
+            case Type.BYTE, Type.SHORT, Type.INT, Type.LONG, Type.FLOAT, Type.DOUBLE -> true;
+            case Type.OBJECT -> {
+                String name = type.getInternalName();
+                yield name.equals("java/lang/Number") || name.equals("java/lang/Float")
+                        || name.equals("java/lang/Double") || name.equals("java/lang/Integer")
+                        || name.equals("java/lang/Long") || name.equals("java/lang/Short")
+                        || name.equals("java/lang/Byte");
+            }
+            default -> false;
+        };
+    }
+
+    private static void addUniqueExpr(List<Expr> expressions, Expr expression) {
+        if (expression == null) return;
+        if (expression instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) addUniqueExpr(expressions, alternative);
+            return;
+        }
+        if (!expressions.contains(expression)) expressions.add(expression);
+    }
+
+    private record MethodTarget(Class<?> owner, String name, String desc) {}
+
+    private static boolean isMethodHandleInvoke(MethodInsnNode call) {
+        return call.owner.equals("java/lang/invoke/MethodHandle")
+                && (call.name.equals("invokeExact") || call.name.equals("invoke"));
+    }
+
+    private static MethodTarget resolveMethodHandleTarget(Expr handleExpr) {
+        if (!(handleExpr instanceof Reference reference) || !(reference.value() instanceof MethodHandle handle)) {
+            return null;
+        }
+        try {
+            MethodHandleInfo info = MethodHandles.lookup().revealDirect(handle);
+            Class<?> owner = info.getDeclaringClass();
+            String name = info.getName();
+            String desc = info.getMethodType().toMethodDescriptorString();
+            MethodTarget remapped = remapHiddenNestmateTarget(owner, name, desc);
+            return remapped != null ? remapped : new MethodTarget(owner, name, desc);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+        }
+        return resolveHandleBySignature(handle, reference.className());
+    }
+
+    /* revealDirect 只能揭示本 Lookup 有权访问的句柄，指向隐藏类成员的句柄必然失败。
+       这类隐藏类通常只是转发壳，真实实现仍留在定义它的宿主类中，因此改按句柄类型在句柄字段
+       所属类里反查同签名静态方法。同签名命中多个实现时放弃，宁可无解也不猜错目标。 */
+    private static MethodTarget resolveHandleBySignature(MethodHandle handle, String ownerInternal) {
+        if (handle == null || ownerInternal == null) return null;
+        Class<?> owner = loadClass(ownerInternal);
+        if (owner == null) return null;
+        String desc;
+        try {
+            desc = handle.type().toMethodDescriptorString();
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        }
+        Set<String> dispatchers = methodHandleDispatchers(owner);
+        MethodTarget found = null;
+        for (Method method : owner.getDeclaredMethods()) {
+            if (!Modifier.isStatic(method.getModifiers())) continue;
+            String methodDesc = Type.getMethodDescriptor(method);
+            if (!methodDesc.equals(desc)) continue;
+            // 自身经句柄再分发的方法是调用方而非实现，选中它只会解析回原点
+            if (dispatchers.contains(method.getName() + methodDesc)) continue;
+            if (found != null) return null;
+            found = new MethodTarget(owner, method.getName(), desc);
+        }
+        return found;
+    }
+
+    /* owner 中经由 MethodHandle 再分发的方法，按 name+desc 标识。 */
+    private static Set<String> methodHandleDispatchers(Class<?> owner) {
+        Set<String> names = new HashSet<>();
+        try {
+            byte[] bytes = classBytes(owner);
+            if (bytes == null) return names;
+            ClassNode cn = new ClassNode();
+            new ClassReader(bytes).accept(cn, 0);
+            for (MethodNode mn : cn.methods) {
+                for (AbstractInsnNode insn : mn.instructions) {
+                    if (insn instanceof MethodInsnNode call && isMethodHandleInvoke(call)) {
+                        names.add(mn.name + mn.desc);
+                        break;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+        }
+        return names;
+    }
+
+    private static MethodTarget remapHiddenNestmateTarget(Class<?> owner, String name, String desc) {
+        try {
+            Class<?> host = owner.getNestHost();
+            if (host == null || host == owner || name == null || name.length() != 1) return null;
+            String hostName = name + "0";
+            if (findAnyMethod(host, hostName, desc) == null) return null;
+            return new MethodTarget(host, hostName, desc);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        }
+    }
+
+    public static final class AnalysisResult {
+        public static final AnalysisResult EMPTY = new AnalysisResult(UnknownExpr.UNKNOWN, List.of(), null);
+        /* 数据流分析失败哨兵，调用方通过身份比较区分成功结果与分析失败。 */
+        public static final AnalysisResult DATA_FLOW_ANALYZER_FAILED = new AnalysisResult(UnknownExpr.UNKNOWN, List.of(), null);
+        public static final AnalysisResult INCOMPLETE = new AnalysisResult(new UnknownExpr("analysis-pending"), List.of(), null);
+        public static final AnalysisResult STRUCTURE_LIMITED = new AnalysisResult(new UnknownExpr("analysis-structure-limited"), List.of(), null);
+        public final Expr returnExpr;
+        public final List<Source> sources;
+        /* 实际定义 getHealth()F 方法的类（可能是实体类的父类），retransform 必须针对此类 */
+        public final Class<?> definingClass;
+        private AnalysisResult(Expr e, List<Source> s, Class<?> dc) {
+            this.returnExpr = e; this.sources = s; this.definingClass = dc;
+        }
+        public boolean isEmpty() {
+            return returnExpr == null || returnExpr instanceof UnknownExpr;
+        }
+
+        // getHealth 返回值的分类语义，决定改血手段的分流
+        // REAL_HEALTH：getHealth 经数据流分析后确认能沿着它到达真实血量存储位置（高可信），直接写存储
+        // NOT_REAL_HEALTH：getHealth 返回值与真实血量存储位置无关（常数/诱饵/镜像），内部按形态细分
+        // UNRESOLVED：含 Unknown 或无法符号化的非常数计算，留给后续模块
+        public enum Kind { REAL_HEALTH, NOT_REAL_HEALTH, UNRESOLVED }
+
+        /* NOT_REAL_HEALTH 优先于 REAL_HEALTH：存在可 patch 的常数覆写源时走覆写通道（改观测出口而非存储）。
+           REAL_HEALTH 仅用于无常数覆写源、getHealth 直接到达真实存储的实体。
+           常数判定只认可 patch 的 ConstOverrideSource：树中任一处出现常数（如算术常数、NaN 分支）
+           不代表 getHealth 就是常数——它可能实际读的是 SynchedEntityData 镜像，那应归 REAL_HEALTH。 */
+        public Kind classify() {
+            if (sources.stream().anyMatch(ConstOverrideSource.class::isInstance)) return Kind.NOT_REAL_HEALTH;
+            if (returnExpr == null || containsUnknown(returnExpr)) return Kind.UNRESOLVED;
+            if (!sources.isEmpty()) return Kind.REAL_HEALTH;
+            // getHealth 恒返回纯常数（无 Source 可写）→ 与真实存储无关，归 NOT_REAL_HEALTH
+            return Kind.NOT_REAL_HEALTH;
+        }
+
+        public static AnalysisResult of(Expr e, Class<?> definingClass) {
+            Expr rewritten = rewriteConstOverrides(e);
+            return new AnalysisResult(rewritten, List.copyOf(collectSources(rewritten)), definingClass);
+        }
+
+        /* external 写入只处理与权威有读取或依赖关系的源。四个语义出口中的常量通常是控制流
+           回退值，不能据此覆写实体真实血量；纯常量 StoreWrite 回读也会抢先假成功。 */
+        public static AnalysisResult withoutConstantOnlySources(AnalysisResult tree) {
+            if (tree == null || tree.sources.isEmpty()) return tree;
+            List<Source> filtered = new ArrayList<>(tree.sources.size());
+            for (Source sink : tree.sources) {
+                if (sink instanceof ConstOverrideSource) continue;
+                if (!isExternalStorageSource(sink)
+                        || containsSinkInReadPosition(tree.returnExpr, sink)
+                        || sinkHasSourceDependency(tree.returnExpr, sink)) {
+                    filtered.add(sink);
+                }
+            }
+            if (filtered.size() == tree.sources.size()) return tree;
+            return new AnalysisResult(tree.returnExpr, List.copyOf(filtered), tree.definingClass);
+        }
+
+        /* 递归遍历表达式树：该 sink 存在写入且写入值引用了其他存储源 → 有依赖。 */
+        private static boolean sinkHasSourceDependency(Expr e, Source sink) {
+            if (e instanceof StoreWrite write) {
+                if (write.sink().equals(sink) && !collectSources(write.valueExpr()).isEmpty()) return true;
+                return sinkHasSourceDependency(write.valueExpr(), sink);
+            }
+            if (e instanceof Choice choice) {
+                for (Expr alt : choice.alternatives()) {
+                    if (sinkHasSourceDependency(alt, sink)) return true;
+                }
+                return false;
+            }
+            if (e instanceof Op op) {
+                for (Expr arg : op.args()) {
+                    if (sinkHasSourceDependency(arg, sink)) return true;
+                }
+                return false;
+            }
+            if (e instanceof Call call) {
+                for (Expr arg : call.args()) {
+                    if (sinkHasSourceDependency(arg, sink)) return true;
+                }
+                return false;
+            }
+            if (e instanceof Closure closure) {
+                for (Expr arg : closure.captured()) {
+                    if (sinkHasSourceDependency(arg, sink)) return true;
+                }
+                return false;
+            }
+            if (e instanceof OptionalContentExpr optional) {
+                return sinkHasSourceDependency(optional.optionalExpr(), sink);
+            }
+            return false;
+        }
+    }
+
+    private static boolean shouldKeepAsRuntimeCall(Class<?> owner, String name, String desc) {
+        if (owner.getName().startsWith("java.")) return false;
+        try {
+            ClassNode cn = classNode(owner);
+            if (cn == null) return false;
+            for (MethodNode method : cn.methods) {
+                if (method.name.equals(name) && method.desc.equals(desc)) {
+                    if (hasStaticCodecInverse(cn, method)) return true;
+                    return Type.getReturnType(desc).equals(Type.getType(String.class))
+                            && hasComplexStringRuntimeBoundary(method);
+                }
+            }
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return false;
+        }
+        return false;
+    }
+
+    private static boolean hasComplexStringRuntimeBoundary(MethodNode method) {
+        for (AbstractInsnNode insn : method.instructions) {
+            int op = insn.getOpcode();
+            if (op == Opcodes.NEWARRAY || op == Opcodes.ANEWARRAY || op == Opcodes.MULTIANEWARRAY
+                    || isArrayStoreOpcode(op)) {
+                return true;
+            }
+            if (insn instanceof JumpInsnNode jump && jump.label != null) {
+                int insnIndex = method.instructions.indexOf(insn);
+                int targetIndex = method.instructions.indexOf(jump.label);
+                if (targetIndex >= 0 && targetIndex <= insnIndex) return true;
+            }
+        }
+        return false;
+    }
+
+    public static AnalysisResult analyze(Class<?> entityClass) {
+        return analyze(entityClass, DEFAULT_MAX_DEPTH);
+    }
+
+    public static AnalysisResult analyze(Class<?> entityClass, int maxDepth) {
+        try (AnalysisRun run = new AnalysisRun()) {
+            byte[] classBytes = classBytes(entityClass);
+            if (classBytes == null) {
+                if (entityClass.getName().contains("/0x") && entityClass.getSuperclass() != null) {
+                    return analyze(entityClass.getSuperclass(), maxDepth);
+                }
+                return AnalysisResult.EMPTY;
+            }
+            // 运行时 klass 替换后的隐藏类不能从资源回退；若没有捕获到其覆写，继承的可读 getter
+            // 仍可描述同一存储协议，优先交给父类分析而非把伪字节码当作真实实现。
+            if (entityClass.getName().contains("/0x")
+                    && !classDefinesMethodInBytes(entityClass, classBytes, GET_HEALTH.srg())
+                    && !classDefinesMethodInBytes(entityClass, classBytes, GET_HEALTH.mcp())
+                    && entityClass.getSuperclass() != null) {
+                return analyze(entityClass.getSuperclass(), maxDepth);
+            }
+            ClassAndMethod target = findMethodOwnerFromBytes(entityClass, classBytes);
+            if (target == null) return AnalysisResult.EMPTY;
+            AnalysisCtx ctx = new AnalysisCtx(maxDepth, entityClass);
+            Class<?> defClass = target.owner();
+            Expr ret = analyzeMethod(defClass, target.name(), GET_HEALTH.desc(), null, ctx, 0);
+            run.check();
+            if (ret == null) return AnalysisResult.EMPTY;
+            Expr stripped = stripEcaHealthWrappers(ret);
+            if (stripped == null || stripped instanceof UnknownExpr) return AnalysisResult.EMPTY;
+            AnalysisResult result = AnalysisResult.of(stripped, target.owner());
+            run.check();
+            return result;
+        } catch (AnalysisDeadlineExceeded incomplete) {
+            return incomplete.structural ? AnalysisResult.STRUCTURE_LIMITED : AnalysisResult.INCOMPLETE;
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+            return AnalysisResult.EMPTY;
+        }
+    }
+
+    /* ==================== 统一核心入口：方法 × 提取策略 ==================== */
+
+    /* 从字节码 Frame[] 中提取目标 Expr 的策略——同一套抽象解释引擎之上的不同收尾。
+       新增策略时务必同步 analyzeMethod 的分发 switch，否则会落到 EMPTY 默认分支。 */
+    public enum ExtractionStrategy {
+        /* FRETURN 栈顶 → 方法返回值表达式。适用：getHealth/getMaxHealth 等返回血量的方法 */
+        RETURN_VALUE,
+        /* 所有 PUTFIELD/PUTSTATIC/SynchedData.set/Map.put → 写位置与写值。适用：hurt/actuallyHurt 等修改血量的方法 */
+        METHOD_WRITES,
+    /* FCMPL/FCMPG 前栈上的非常数侧是与阈值比较的表达式，适用于 isAlive 和 isDeadOrDying 等方法。 */
+        COMPARISON_OPERANDS,
+    }
+
+    /* 收集条件分支依赖的数值表达式，保留多个独立生命状态候选。 */
+    private static final java.util.function.BiFunction<MethodNode, Frame<TaintValue>[], Expr> COMPARISON_OPERANDS_EXTRACTOR = (mn, frames) -> {
+        List<Expr> candidates = new ArrayList<>();
+        int idx = 0;
+        for (AbstractInsnNode insn : mn.instructions) {
+            Frame<TaintValue> frame = frames[idx];
+            collectComparisonOperands(candidates, frame, insn);
+            idx++;
+        }
+        if (candidates.isEmpty()) return null;
+        return candidates.size() == 1 ? candidates.get(0) : new Choice(List.copyOf(candidates));
+    };
+
+    /* 只要操作数、不关心方向的调用方(生死判定候选提取)沿用本形态；比较指令处才建临时表，避免逐指令分配。 */
+    private static void collectComparisonOperands(List<Expr> candidates, Frame<TaintValue> frame,
+                                                  AbstractInsnNode insn) {
+        if (frame == null || insn == null || !isComparisonOpcode(insn.getOpcode())) return;
+        List<ComparisonFact> facts = new ArrayList<>();
+        collectComparisonFacts(facts, frame, insn);
+        for (ComparisonFact fact : facts) addUniqueExpr(candidates, fact.operand());
+    }
+
+    private static boolean isComparisonOpcode(int opcode) {
+        return opcode == Opcodes.FCMPL || opcode == Opcodes.FCMPG || opcode == Opcodes.DCMPL
+                || opcode == Opcodes.DCMPG || opcode == Opcodes.LCMP
+                || opcode >= Opcodes.IFEQ && opcode <= Opcodes.IF_ACMPNE;
+    }
+
+    private static void collectComparisonFacts(List<ComparisonFact> facts, Frame<TaintValue> frame,
+                                               AbstractInsnNode insn) {
+        collectComparisonFacts(facts, frame, insn, null);
+    }
+
+    /* dropped 非空时统计被丢弃的 Unknown 操作数来源：坍缩原因决定该调哪个预算，
+       "有多少比较事实丢了"和"为什么丢"是两件事，只有后者能指导修改。 */
+    private static void collectComparisonFacts(List<ComparisonFact> facts, Frame<TaintValue> frame,
+                                               AbstractInsnNode insn, Map<String, Integer> dropped) {
+        if (frame == null || insn == null) return;
+        int opcode = insn.getOpcode();
+        boolean numericCompare = opcode == Opcodes.FCMPL || opcode == Opcodes.FCMPG
+                || opcode == Opcodes.DCMPL || opcode == Opcodes.DCMPG || opcode == Opcodes.LCMP;
+        boolean twoOperands = numericCompare || opcode >= Opcodes.IF_ICMPEQ && opcode <= Opcodes.IF_ACMPNE;
+        if (twoOperands && frame.getStackSize() >= 2) {
+            /* xCMPx 只把比较结果压栈，方向由紧随其后的条件跳转决定；直接比较指令自带方向。 */
+            int predicate = numericCompare ? predicateAfterCompare(insn) : directPredicate(opcode);
+            Expr left = frame.getStack(frame.getStackSize() - 2).expr;
+            Expr right = frame.getStack(frame.getStackSize() - 1).expr;
+            addComparisonFact(facts, left, right, predicate, dropped);
+            addComparisonFact(facts, right, left, mirrorPredicate(predicate), dropped);
+            return;
+        }
+        if (opcode >= Opcodes.IFEQ && opcode <= Opcodes.IFLE && frame.getStackSize() >= 1) {
+            addComparisonFact(facts, frame.getStack(frame.getStackSize() - 1).expr, null, opcode, dropped);
+        }
+    }
+
+    /* xCMPx 之后的第一条真实指令若是条件跳转，其操作码即"跳转成立"时左右操作数的关系。
+       编译器常把源码条件取反后跳转，因此这里得到的未必是源码写法，只是同一处比较的等价事实。 */
+    private static int predicateAfterCompare(AbstractInsnNode insn) {
+        for (AbstractInsnNode next = insn.getNext(); next != null; next = next.getNext()) {
+            int opcode = next.getOpcode();
+            if (opcode < 0) continue;
+            return opcode >= Opcodes.IFEQ && opcode <= Opcodes.IFLE ? opcode : 0;
+        }
+        return 0;
+    }
+
+    // IF_ICMPxx 与 IFxx 的操作码顺序一致，仅相差固定偏移；引用比较不含数值语义
+    private static int directPredicate(int opcode) {
+        return opcode >= Opcodes.IF_ICMPEQ && opcode <= Opcodes.IF_ICMPLE
+                ? opcode - (Opcodes.IF_ICMPEQ - Opcodes.IFEQ) : 0;
+    }
+
+    // 交换比较两侧(或对操作数取反)后的等价比较语义
+    private static int mirrorPredicate(int predicate) {
+        return switch (predicate) {
+            case Opcodes.IFLT -> Opcodes.IFGT;
+            case Opcodes.IFGT -> Opcodes.IFLT;
+            case Opcodes.IFLE -> Opcodes.IFGE;
+            case Opcodes.IFGE -> Opcodes.IFLE;
+            case Opcodes.IFEQ, Opcodes.IFNE -> predicate;
+            default -> 0;
+        };
+    }
+
+    /* 只有与常数比较的操作数才是候选：阈值未知时无法判定血量极性，此时记录事实但不带方向。
+       counterpart 为 null 表示单操作数条件跳转，阈值即 0。 */
+    private static void addComparisonFact(List<ComparisonFact> facts, Expr candidate, Expr counterpart,
+                                          int predicate, Map<String, Integer> dropped) {
+        if (candidate instanceof UnknownExpr unknown) {
+            if (dropped != null) dropped.merge(unknown.provenance(), 1, Integer::sum);
+            return;
+        }
+        if (candidate == null || candidate instanceof Primitive) return;
+        if (counterpart != null && !(counterpart instanceof Primitive) && !(counterpart instanceof UnknownExpr)) return;
+        float threshold = 0.0f;
+        int resolved = predicate;
+        if (counterpart instanceof Primitive primitive && primitive.value() != null) {
+            threshold = primitive.value().floatValue();
+        } else if (counterpart != null) {
+            resolved = 0;
+        }
+        List<Expr> flattened = new ArrayList<>();
+        addUniqueExpr(flattened, candidate);
+        for (Expr expr : flattened) {
+            /* 比较扫描沿继承链上溯后会扫到 ECA 注入进宿主实体的判定，其中的锁血密文与密钥
+               在结构上与宿主自定义存储无法区分。含自有状态的事实整条丢弃，而非只剥离该源——
+               剥离会留下一个缺了操作数的算式，求值必得 NaN。 */
+            if (containsEcaOwnedSource(expr)) continue;
+            ComparisonFact fact = new ComparisonFact(expr, resolved, threshold);
+            if (!facts.contains(fact)) facts.add(fact);
+        }
+    }
+
+    private static boolean containsEcaOwnedSource(Expr expr) {
+        if (expr instanceof Source source) return isEcaHealthWrapperSource(source);
+        if (expr instanceof Op op) {
+            for (Expr arg : op.args()) if (containsEcaOwnedSource(arg)) return true;
+        } else if (expr instanceof Call call) {
+            if (isEcaHealthWrapperCall(call)) return true;
+            for (Expr arg : call.args()) if (containsEcaOwnedSource(arg)) return true;
+        } else if (expr instanceof Choice choice) {
+            for (Expr alt : choice.alternatives()) if (containsEcaOwnedSource(alt)) return true;
+        } else if (expr instanceof OptionalContentExpr optional) {
+            return containsEcaOwnedSource(optional.optionalExpr());
+        }
+        return false;
+    }
+
+    /* 通用分析入口(查表版)：传入方法表项 + 提取策略即可分析。method.matchIn(cls) 内置 SRG 优先 MCP 后备查找。 */
+    public static AnalysisResult analyzeMethod(Class<?> cls, McMethod method, ExtractionStrategy strategy) {
+        if (cls == null || method == null || strategy == null) return AnalysisResult.EMPTY;
+        String name = method.matchIn(cls);
+        if (name == null) return AnalysisResult.EMPTY;
+        try {
+            return switch (strategy) {
+                case RETURN_VALUE -> {
+                    AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, cls);
+                    Expr ret = analyzeMethod(cls, name, method.desc(), null, ctx, 0);
+                    yield wrapResult(ret, cls);
+                }
+                case METHOD_WRITES -> {
+                    AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, cls);
+                    Expr writes = analyzeMethodWrites(cls, name, method.desc(), null, ctx, 0);
+                    yield wrapResult(writes, cls);
+                }
+                case COMPARISON_OPERANDS -> {
+                    AnalysisResult ar = analyzeForHealthExpr(cls, name, method.desc(), COMPARISON_OPERANDS_EXTRACTOR);
+                    yield ar != null ? ar : AnalysisResult.EMPTY;
+                }
+            };
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return AnalysisResult.EMPTY;
+        }
+    }
+
+    private static AnalysisResult wrapResult(Expr raw, Class<?> definingClass) {
+        if (raw == null || raw instanceof UnknownExpr) return AnalysisResult.EMPTY;
+        Expr stripped = stripEcaHealthWrappers(raw);
+        if (stripped == null || stripped instanceof UnknownExpr) return AnalysisResult.EMPTY;
+        return AnalysisResult.of(stripped, definingClass);
+    }
+
+    /* ==================== MC 实体方法预设快捷入口 ==================== */
+
+    /* 分析 getHealth()F：返回值即血量本身 */
+    public static AnalysisResult analyzeGetHealth(Class<?> cls) {
+        return analyzeMethod(cls, GET_HEALTH, ExtractionStrategy.RETURN_VALUE);
+    }
+
+    /* 分析 isAlive()Z：从血量与 0 比较的表达式反推血量 */
+    public static AnalysisResult analyzeIsAlive(Class<?> cls) {
+        return analyzeMethod(cls, IS_ALIVE, ExtractionStrategy.COMPARISON_OPERANDS);
+    }
+
+    /* 分析 isDeadOrDying()Z：从血量与 0 比较的表达式反推血量 */
+    public static AnalysisResult analyzeIsDeadOrDying(Class<?> cls) {
+        return analyzeMethod(cls, IS_DEAD_OR_DYING, ExtractionStrategy.COMPARISON_OPERANDS);
+    }
+
+    /* 分析 hurt(DamageSource,F)Z：从方法体内的所有写位置定位真实血量存储 */
+    public static AnalysisResult analyzeHurt(Class<?> cls) {
+        return analyzeMethod(cls, HURT, ExtractionStrategy.METHOD_WRITES);
+    }
+
+    /* 分析 actuallyHurt(DamageSource,F)V：从方法体内的所有写位置定位真实血量存储 */
+    public static AnalysisResult analyzeActuallyHurt(Class<?> cls) {
+        return analyzeMethod(cls, ACTUALLY_HURT, ExtractionStrategy.METHOD_WRITES);
+    }
+
+    /* 只载一次 classBytes，沿继承链扫描 getHealth()F 定义类 */
+    private static ClassAndMethod findMethodOwnerFromBytes(Class<?> startClass, byte[] startBytes) {
+        if (classDefinesMethodInBytes(startClass, startBytes, GET_HEALTH.srg())) return new ClassAndMethod(startClass, GET_HEALTH.srg());
+        if (classDefinesMethodInBytes(startClass, startBytes, GET_HEALTH.mcp())) return new ClassAndMethod(startClass, GET_HEALTH.mcp());
+        for (Class<?> c = startClass.getSuperclass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            if (classDefinesMethod(c, GET_HEALTH.srg(), GET_HEALTH.desc())) return new ClassAndMethod(c, GET_HEALTH.srg());
+            if (classDefinesMethod(c, GET_HEALTH.mcp(), GET_HEALTH.desc())) return new ClassAndMethod(c, GET_HEALTH.mcp());
+        }
+        return null;
+    }
+
+    private static ClassAndMethod findMethodOwner(Class<?> startClass, McMethod method) {
+        for (Class<?> current = startClass; current != null && current != Object.class;
+             current = current.getSuperclass()) {
+            if (classDefinesMethod(current, method.srg(), method.desc())) {
+                return new ClassAndMethod(current, method.srg());
+            }
+            if (classDefinesMethod(current, method.mcp(), method.desc())) {
+                return new ClassAndMethod(current, method.mcp());
+            }
+        }
+        return null;
+    }
+
+    private static boolean classDefinesMethodInBytes(Class<?> owner, byte[] bytes, String name) {
+        if (bytes == null) return false;
+        try {
+            ClassNode cn = new ClassNode();
+            new ClassReader(bytes).accept(cn, 0);
+            for (MethodNode mn : cn.methods) if (mn.name.equals(name) && mn.desc.equals(GET_HEALTH.desc())) return true;
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    /* 动态求解用：以具体种子分析任意方法的返回表达式。seedExprs[i] 对应方法第 i 个局部槽
+       (实例方法 0=this)；通常 this 传 Reference(真实对象)，参数传 Primitive(真实值)，
+       于是树中所有字段/数组叶子都根植于具体对象，可被 evaluate/solveFor 直接 concrete 求值。 */
+    private static Expr stripEcaHealthWrappers(Expr expr) {
+        Expr stripped = stripEcaHealthWrappers(expr, false);
+        return stripped == null ? UnknownExpr.UNKNOWN : stripped;
+    }
+
+    private static Expr stripEcaHealthWrappers(Expr expr, boolean discardWrapper) {
+        if (expr == null) return null;
+        if (expr instanceof Source source) {
+            if (isEcaHealthWrapperSource(source)) return discardWrapper ? null : UnknownExpr.UNKNOWN;
+            return expr;
+        }
+        if (expr instanceof Reference reference && isEcaHealthWrapperReference(reference)) {
+            return discardWrapper ? null : UnknownExpr.UNKNOWN;
+        }
+        if (expr instanceof Call call) {
+            if (isEcaHealthWrapperCall(call)) return discardWrapper ? null : UnknownExpr.UNKNOWN;
+            List<Expr> args = new ArrayList<>(call.args().size());
+            for (Expr arg : call.args()) {
+                Expr stripped = stripEcaHealthWrappers(arg, true);
+                if (stripped == null) return discardWrapper ? null : UnknownExpr.UNKNOWN;
+                args.add(stripped);
+            }
+            return args.equals(call.args()) ? expr : new Call(call.owner(), call.caller(), call.name(), call.desc(),
+                    call.opcode(), List.copyOf(args));
+        }
+        if (expr instanceof Op op) {
+            List<Expr> args = new ArrayList<>(op.args().size());
+            for (Expr arg : op.args()) {
+                Expr stripped = stripEcaHealthWrappers(arg, true);
+                if (stripped == null) return discardWrapper ? null : UnknownExpr.UNKNOWN;
+                args.add(stripped);
+            }
+            return args.equals(op.args()) ? expr : new Op(op.opcode(), List.copyOf(args));
+        }
+        if (expr instanceof Choice choice) {
+            List<Expr> alternatives = new ArrayList<>();
+            for (Expr alternative : choice.alternatives()) {
+                Expr stripped = stripEcaHealthWrappers(alternative, true);
+                if (stripped != null && !(stripped instanceof UnknownExpr) && !alternatives.contains(stripped)) {
+                    alternatives.add(stripped);
+                }
+            }
+            if (alternatives.isEmpty()) return discardWrapper ? null : UnknownExpr.UNKNOWN;
+            return alternatives.size() == 1 ? alternatives.get(0) : new Choice(List.copyOf(alternatives));
+        }
+        if (expr instanceof Closure closure) {
+            List<Expr> captured = new ArrayList<>(closure.captured().size());
+            for (Expr arg : closure.captured()) {
+                Expr stripped = stripEcaHealthWrappers(arg, true);
+                if (stripped == null) return discardWrapper ? null : UnknownExpr.UNKNOWN;
+                captured.add(stripped);
+            }
+            return captured.equals(closure.captured()) ? expr
+                    : new Closure(closure.implementation(), closure.samName(), closure.samDesc(), List.copyOf(captured));
+        }
+        if (expr instanceof OptionalContentExpr optional) {
+            Expr stripped = stripEcaHealthWrappers(optional.optionalExpr(), true);
+            if (stripped == null) return discardWrapper ? null : UnknownExpr.UNKNOWN;
+            return stripped == optional.optionalExpr() ? expr : new OptionalContentExpr(stripped);
+        }
+        return expr;
+    }
+
+    private static boolean isEcaHealthWrapperCall(Call call) {
+        return isWrapperOwner(call.owner());
+    }
+
+    private static boolean isEcaHealthWrapperSource(Source source) {
+        for (String prefix : WRAPPER_SOURCE_LABEL_PREFIXES) {
+            if (source.label.startsWith(prefix)) return true;
+        }
+        return hasWrapperOwnedFieldStep(source);
+    }
+
+    /* 调用者 hook 的中转存储会被建模成字段链源，字段名与实体自身的血量字段无法区分，
+       只能按 chain 上的 owner 归属剥离。这类源写入无效，也不代表目标实体的存储。 */
+    private static boolean hasWrapperOwnedFieldStep(Source source) {
+        List<FieldStep> chain = source instanceof FieldChainSource fieldChain ? fieldChain.chain
+                : source instanceof ChainedFieldSource chained ? chained.chain : null;
+        if (chain == null) return false;
+        for (FieldStep step : chain) {
+            if (isWrapperOwner(step.ownerInternal())) return true;
+        }
+        return false;
+    }
+
+    /* hook 的私有 record 与内部类以嵌套类形式出现，登记 owner 的嵌套类同属调用者注入 */
+    private static boolean isWrapperOwner(String ownerInternal) {
+        if (ownerInternal == null) return false;
+        if (WRAPPER_CALL_OWNERS.contains(ownerInternal)) return true;
+        for (String owner : WRAPPER_CALL_OWNERS) {
+            if (ownerInternal.length() > owner.length()
+                    && ownerInternal.charAt(owner.length()) == '$'
+                    && ownerInternal.startsWith(owner)) return true;
+        }
+        return false;
+    }
+
+    /* 保留可验证的静态编解码边界，避免分析器把解码器展开成 AES/Base64 等不可逆实现细节。 */
+    private static boolean hasStaticCodecInverse(ClassNode owner, MethodNode decoder) {
+        if ((decoder.access & Opcodes.ACC_STATIC) == 0) return false;
+        Type[] decoderArgs = Type.getArgumentTypes(decoder.desc);
+        Type decoderReturn = Type.getReturnType(decoder.desc);
+        if (decoderArgs.length != 1 || decoderArgs[0].getSort() != Type.OBJECT
+                || !isNumericAsmType(decoderReturn)) return false;
+        String encodedDesc = decoderArgs[0].getDescriptor();
+        for (MethodNode encoder : owner.methods) {
+            if ((encoder.access & Opcodes.ACC_STATIC) == 0) continue;
+            Type[] encoderArgs = Type.getArgumentTypes(encoder.desc);
+            if (encoderArgs.length == 1 && isNumericAsmType(encoderArgs[0])
+                    && Type.getReturnType(encoder.desc).getDescriptor().equals(encodedDesc)) return true;
+        }
+        return false;
+    }
+
+    /* GETSTATIC 常量折叠会把 hook 的 MethodHandle 与 ThreadLocal 常量变成 Reference，
+       此时 value 不是 String，只有 className 表明其来源，需要一并判定。 */
+    private static boolean isEcaHealthWrapperReference(Reference reference) {
+        if (isWrapperOwner(reference.className())) return true;
+        Object value = reference.value();
+        return value instanceof String s && WRAPPER_REFERENCE_VALUES.contains(s);
+    }
+
+    public static Expr analyzeSeeded(Class<?> owner, String methodName, String desc, Expr[] seedExprs) {
+        try {
+            TaintValue[] seed = new TaintValue[seedExprs.length];
+            for (int i = 0; i < seedExprs.length; i++) {
+                if (seedExprs[i] == null) continue;
+                int size = (seedExprs[i] instanceof Primitive p && (p.jvmType() == 'J' || p.jvmType() == 'D')) ? 2 : 1;
+                seed[i] = new TaintValue(size, seedExprs[i]);
+            }
+            AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, owner);
+            Expr ret = analyzeMethod(owner, methodName, desc, seed, ctx, 0);
+            return (ret == null || ret instanceof UnknownExpr) ? null : ret;
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+            return null;
+        }
+    }
+
+    /* 分析运行期暴露 writer 的完整写集。实体接收者与那个唯一数值入参按符号播种，
+       使全部关联写入能一并求解。 */
+    public static AnalysisResult analyzeWriterMethod(Class<?> owner, String methodName, String desc,
+                                                     boolean isStatic) {
+        if (owner == null || methodName == null || desc == null) return null;
+        try {
+            Type[] argumentTypes = Type.getArgumentTypes(desc);
+            int localCount = isStatic ? 0 : 1;
+            for (Type argumentType : argumentTypes) localCount += argumentType.getSize();
+            TaintValue[] seed = new TaintValue[localCount + 8];
+            int local = 0;
+            if (!isStatic) seed[local++] = new TaintValue(1, EntityParamMarker.I);
+            int numericIndex = 0;
+            for (Type argumentType : argumentTypes) {
+                Expr expression;
+                Class<?> argumentClass = asmTypeToClass(argumentType);
+                if (argumentType.getSort() == Type.OBJECT && argumentClass != null
+                        && LivingEntity.class.isAssignableFrom(argumentClass)) {
+                    expression = EntityParamMarker.I;
+                } else if (isNumericAsmType(argumentType)) {
+                    expression = new WriteInput(numericIndex++, descriptorChar(argumentType));
+                } else {
+                    expression = UnknownExpr.UNKNOWN;
+                }
+                seed[local] = new TaintValue(argumentType.getSize(), expression);
+                local += argumentType.getSize();
+            }
+            if (numericIndex != 1) return null;
+            AnalysisCtx ctx = new AnalysisCtx(DEFAULT_MAX_DEPTH, owner);
+            Expr writes = analyzeMethodWrites(owner, methodName, desc, seed, ctx, 0);
+            if (writes == null || writes instanceof UnknownExpr) return null;
+            Expr stripped = stripEcaHealthWrappers(writes);
+            if (stripped == null || stripped instanceof UnknownExpr) return null;
+            AnalysisResult result = AnalysisResult.of(stripped, owner);
+            return result.sources.size() < 2 ? null : result;
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        }
+    }
+
+    private record ClassAndMethod(Class<?> owner, String name) {}
+
+    static boolean classDefinesMethod(Class<?> clazz, String name, String desc) {
+        byte[] bytes = classBytes(clazz);
+        if (bytes == null) return false;
+        try {
+            ClassNode cn = new ClassNode();
+            new ClassReader(bytes).accept(cn, 0);
+            for (MethodNode mn : cn.methods) if (mn.name.equals(name) && mn.desc.equals(desc)) return true;
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    /* 通过 ClassBytesProvider 读取字节码；调用者可提供运行期转换结果，否则从类资源读取。 */
+    /* 字节码读取次数计数器：慢分析的主要成本是反复取类字节并重建 ClassNode，
+       按分析入口取差值即可看出该入口拉进了多大的类图。各分析线程各自计数。 */
+    private static final ThreadLocal<int[]> BYTES_FETCH_COUNT = ThreadLocal.withInitial(() -> new int[1]);
+
+    static int bytesFetchCount() {
+        return BYTES_FETCH_COUNT.get()[0];
+    }
+
+    private static byte[] classBytes(Class<?> clazz) {
+        BYTES_FETCH_COUNT.get()[0]++;
+        return bytesProvider.get(clazz);
+    }
+
+    /* 解析结果缓存：深度内联会把同一批类反复解析上千次，而 EXPAND_FRAMES 展开栈映射帧是最贵的一步。
+       缓存按线程私有，因为 ASM 的 InsnList.indexOf 会惰性写 insnNode.index，共享实例存在数据竞争；
+       而每次分析本就在单线程内跑完，重复解析也发生在同一线程内，线程私有不损命中率。
+       值用软引用并限量淘汰，避免常驻分析线程持续累积展开后的 ClassNode。
+       只服务于只读分析路径；ConstOverride 与 HeadBridge 注入会改指令，必须各自重新解析。 */
+    private static final int CLASS_NODE_CACHE_LIMIT = 128;
+    private static final ThreadLocal<LinkedHashMap<Class<?>, SoftReference<ClassNode>>> CLASS_NODE_CACHE =
+            ThreadLocal.withInitial(() -> new LinkedHashMap<>(32, 0.75f, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<Class<?>, SoftReference<ClassNode>> eldest) {
+                    return size() > CLASS_NODE_CACHE_LIMIT;
+                }
+            });
+
+    /* 取该类以 EXPAND_FRAMES 解析出的 ClassNode；调用方只读，不得修改返回的节点。 */
+    private static ClassNode classNode(Class<?> clazz) {
+        if (clazz == null) return null;
+        LinkedHashMap<Class<?>, SoftReference<ClassNode>> cache = CLASS_NODE_CACHE.get();
+        SoftReference<ClassNode> cached = cache.get(clazz);
+        ClassNode node = cached == null ? null : cached.get();
+        if (node != null) return node;
+        byte[] bytes = classBytes(clazz);
+        if (bytes == null) return null;
+        node = new ClassNode();
+        new ClassReader(bytes).accept(node, ClassReader.EXPAND_FRAMES);
+        cache.put(clazz, new SoftReference<>(node));
+        return node;
+    }
+
+    /* 在已解析的类中按名字与描述符定位方法；找不到返回 null。 */
+    private static MethodNode findMethodNode(ClassNode node, String name, String desc) {
+        if (node == null) return null;
+        for (MethodNode method : node.methods) {
+            if (method.name.equals(name) && method.desc.equals(desc)) return method;
+        }
+        return null;
+    }
+
+    //类内部名：剥去隐藏类的运行期后缀(Foo/0x000... → Foo)，以便按磁盘模板类定位字节码。
+    //隐藏类 getName() 可能不含包路径(只剩 SimpleName)，此时用其超类的包补全(隐藏类与模板同包)。
+    private static String internalName(Class<?> clazz) {
+        String n = clazz.getName().replace('.', '/');
+        int hidden = n.indexOf("/0x");
+        if (hidden < 0) return n;
+        String stripped = n.substring(0, hidden);
+        if (stripped.indexOf('/') < 0) {                 // 丢了包路径，用超类包补全
+            Class<?> sup = clazz.getSuperclass();
+            if (sup != null) {
+                String supInternal = sup.getName().replace('.', '/');
+                int lastSlash = supInternal.lastIndexOf('/');
+                if (lastSlash > 0) stripped = supInternal.substring(0, lastSlash + 1) + stripped;
+            }
+        }
+        return stripped;
+    }
+
+    private static final ThreadLocal<AnalysisRun> ANALYSIS_RUN = new ThreadLocal<>();
+    private static final ThreadLocal<AnalysisCtx> ACTIVE_ANALYSIS = new ThreadLocal<>();
+
+    private static AnalysisDeadlineExceeded incompleteAnalysis() {
+        return incompleteAnalysis(false);
+    }
+
+    private static AnalysisDeadlineExceeded incompleteAnalysis(boolean structural) {
+        AnalysisCtx context = ACTIVE_ANALYSIS.get();
+        if (context != null) {
+            context.deadlineExceeded = true;
+            context.structuralLimited |= structural;
+            structural |= context.structuralLimited;
+        }
+        AnalysisRun run = ANALYSIS_RUN.get();
+        if (run != null) {
+            run.incomplete = true;
+            run.structuralLimited |= structural;
+            structural |= run.structuralLimited;
+        }
+        return structural ? AnalysisDeadlineExceeded.STRUCTURAL : AnalysisDeadlineExceeded.INSTANCE;
+    }
+
+    private static final class AnalysisRun implements AutoCloseable {
+        final AnalysisRun previous = ANALYSIS_RUN.get();
+        final long deadline;
+        boolean incomplete;
+        boolean structuralLimited;
+
+        AnalysisRun() {
+            long budget = HealthMutationContext.current() == null ? 5_000_000_000L : 100_000_000L;
+            deadline = Math.min(System.nanoTime() + budget, previous == null ? Long.MAX_VALUE : previous.deadline);
+            ANALYSIS_RUN.set(this);
+        }
+
+        static void checkCurrent() {
+            AnalysisCtx context = ACTIVE_ANALYSIS.get();
+            if (context != null && (context.deadlineExceeded || System.nanoTime() > context.hardDeadlineNanos)) {
+                throw incompleteAnalysis();
+            }
+            AnalysisRun run = ANALYSIS_RUN.get();
+            if (run != null) run.check();
+        }
+
+        void check() {
+            if (incomplete || System.nanoTime() > deadline) throw incompleteAnalysis();
+        }
+
+        @Override public void close() {
+            if (previous == null) ANALYSIS_RUN.remove();
+            else {
+                previous.incomplete |= incomplete;
+                previous.structuralLimited |= structuralLimited;
+                ANALYSIS_RUN.set(previous);
+            }
+        }
+    }
+
+    private static final class AnalysisCtx {
+        final int maxDepth;
+        final Class<?> runtimeEntityClass;
+        final Map<String, Expr> methodCache = new HashMap<>();
+        final Set<String> opaqueMethods = new HashSet<>();
+        //当前调用栈上正在分析的方法,用于内联环检测
+        final Set<String> inflight = new HashSet<>();
+        final Set<String> resolvingAccessors = new HashSet<>();
+        final Map<String, Expr> accessorInitializers = new HashMap<>();
+        boolean tracingAssignments;
+        //全局熔断：内联次数上限,超出后直接返回 Unknown,防止指数膨胀
+        int inlineBudget = DEFAULT_INLINE_BUDGET;
+        //表达式节点预算：构造组合表达式时递减,耗尽即坍缩 Unknown
+        int nodeBudget = DEFAULT_NODE_BUDGET;
+        /* 方法在当前类找不到时是否沿继承链上溯查找。默认关闭，保持既有各通道的分析结果不变；
+           有效血量模型扫描需要展开继承自基类的访问器，单独开启。 */
+        boolean inheritedInline = false;
+        /* 权威指纹：非空时内联前先判被调方能否到达权威存储，到不了的整条跳过。
+           tick 这类没有语义锚点的入口靠它把额度约束在通往真实血量的路径上。 */
+        AuthorityFingerprint authorityFingerprint = null;
+        // 每个分析入口都有上限；维护扫描可另设软窗口，但比较内部仍服从硬截止时间。
+        long deadlineNanos = System.nanoTime() + 5_000_000_000L;
+        long hardDeadlineNanos = deadlineNanos;
+        int deadlineCheckCounter = 0;
+        int deadlineProgressMarker = 0;
+        boolean deadlineExceeded = false;
+        boolean structuralLimited;
+        int inlineSkipped = 0;
+        int inlineAllowed = 0;
+        AnalysisCtx(int maxDepth) { this(maxDepth, null); }
+
+        AnalysisCtx(int maxDepth, Class<?> runtimeEntityClass) {
+            this.maxDepth = maxDepth;
+            this.runtimeEntityClass = runtimeEntityClass;
+        }
+
+        void configureAdaptiveDeadline(long hardDeadline) {
+            long now = System.nanoTime();
+            hardDeadlineNanos = hardDeadline;
+            deadlineNanos = Math.min(hardDeadline, now + MAINTENANCE_SOFT_SLICE_NANOS);
+            deadlineProgressMarker = deadlineCheckCounter;
+        }
+
+        void checkDeadline() {
+            AnalysisRun.checkCurrent();
+            if (deadlineExceeded) throw incompleteAnalysis();
+            if (deadlineNanos == Long.MAX_VALUE || (++deadlineCheckCounter & 0xff) != 0) return;
+            throwIfDeadlineExceeded();
+        }
+
+        void throwIfDeadlineExceeded() {
+            AnalysisRun.checkCurrent();
+            if (deadlineNanos == Long.MAX_VALUE) return;
+            long now = System.nanoTime();
+            if (now <= deadlineNanos) return;
+            if (now <= hardDeadlineNanos && deadlineCheckCounter > deadlineProgressMarker) {
+                deadlineProgressMarker = deadlineCheckCounter;
+                deadlineNanos = Math.min(hardDeadlineNanos, now + MAINTENANCE_EXTENSION_SLICE_NANOS);
+                return;
+            }
+            deadlineExceeded = true;
+            throw incompleteAnalysis();
+        }
+    }
+
+    /* 栈关闭的内部控制流异常：预算耗尽是预期降级，不应为它构造昂贵栈轨迹。 */
+    private static final class AnalysisDeadlineExceeded extends RuntimeException {
+        private static final AnalysisDeadlineExceeded INSTANCE = new AnalysisDeadlineExceeded(false);
+        private static final AnalysisDeadlineExceeded STRUCTURAL = new AnalysisDeadlineExceeded(true);
+        final boolean structural;
+
+        private AnalysisDeadlineExceeded(boolean structural) {
+            super(structural ? "expression structure limit" : "analysis time limit", null, false, false);
+            this.structural = structural;
+        }
+    }
+
+    /* ==================== ASM analyzeMethod / Interpreter ==================== */
+
+    private static Frame<TaintValue>[] analyzeFrames(Analyzer<TaintValue> analyzer, String owner,
+                                                      MethodNode method, AnalysisCtx context) throws AnalyzerException {
+        AnalysisCtx previous = ACTIVE_ANALYSIS.get();
+        ACTIVE_ANALYSIS.set(context);
+        try {
+            context.throwIfDeadlineExceeded();
+            return analyzer.analyze(owner, method);
+        } finally {
+            if (previous == null) ACTIVE_ANALYSIS.remove();
+            else ACTIVE_ANALYSIS.set(previous);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Expr analyzeMethod(Class<?> owner, String name, String desc,
+                                       TaintValue[] seedLocals, AnalysisCtx ctx, int depth) {
+        if (owner.getClassLoader() == null) return null;
+        ctx.checkDeadline();
+
+        String cacheKey = owner.getName().replace('.', '/') + "#" + name + "#" + desc;
+        if (seedLocals != null && ctx.opaqueMethods.contains(cacheKey)) return opaqueInputs(seedLocals);
+        if (seedLocals == null) {
+            Expr cached = ctx.methodCache.get(cacheKey);
+            if (cached != null) return cached;
+        }
+
+        //环检测：覆盖顶层方法 + 跨方法环(如 getHealth↔position↔setHealth 互相调用),已在分析栈上则坍缩 Unknown
+        if (!ctx.inflight.add(cacheKey)) return new UnknownExpr("recursive-cycle");
+        try {
+            ClassNode cn = classNode(owner);
+            if (cn == null) return null;
+            MethodNode mn = findMethodNode(cn, name, desc);
+            // 子类未声明该方法时上溯基类，否则继承的访问器不展开，血量表达式会停在 Call 节点
+            if (mn == null && ctx.inheritedInline && owner.getSuperclass() != null) {
+                return analyzeMethod(owner.getSuperclass(), name, desc, seedLocals, ctx, depth);
+            }
+            if (mn == null || mn.instructions.size() == 0) return null;
+
+            String ownerInternal = internalName(owner);
+            TaintInterpreter interp = new TaintInterpreter(ctx, depth, ownerInternal, mn, seedLocals);
+            Analyzer<TaintValue> analyzer = new Analyzer<>(interp);
+            Frame<TaintValue>[] frames = analyzeFrames(analyzer, ownerInternal, mn, ctx);
+
+            List<Expr> returns = new ArrayList<>();
+            int idx = 0;
+            for (AbstractInsnNode insn : mn.instructions) {
+                int op = insn.getOpcode();
+                if (op == Opcodes.IRETURN || op == Opcodes.LRETURN || op == Opcodes.FRETURN
+                    || op == Opcodes.DRETURN || op == Opcodes.ARETURN) {
+                    Frame<TaintValue> f = frames[idx];
+                    if (f != null && f.getStackSize() > 0) {
+                        Expr e = f.getStack(f.getStackSize() - 1).expr;
+                        Expr expanded = expandArrayReturn(mn, frames, idx, e, ctx, depth);
+                        if (expanded != null && !collectSources(expanded).isEmpty()) e = expanded;
+                        if (e != null && !(e instanceof UnknownExpr)) returns.add(e);
+                    }
+                }
+                idx++;
+            }
+            Expr result = returns.isEmpty() ? new UnknownExpr("no-return-in-method")
+                : (returns.size() == 1 ? returns.get(0) : new Choice(dedupe(returns)));
+            if (seedLocals == null) ctx.methodCache.put(cacheKey, result);
+            return result;
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+            AnalysisRun run = ANALYSIS_RUN.get();
+            if (seedLocals != null && depth > 0 && ctx.structuralLimited
+                    && System.nanoTime() <= ctx.hardDeadlineNanos
+                    && (run == null || System.nanoTime() <= run.deadline)) {
+                // Retain inputs, not an executable call to an unproven method.
+                ctx.structuralLimited = false;
+                ctx.deadlineExceeded = false;
+                if (run != null) {
+                    run.structuralLimited = false;
+                    run.incomplete = false;
+                }
+                ctx.opaqueMethods.add(cacheKey);
+                return opaqueInputs(seedLocals);
+            }
+            return null;
+        } finally {
+            ctx.inflight.remove(cacheKey);
+        }
+    }
+
+    private static Expr opaqueInputs(TaintValue[] locals) {
+        List<Expr> inputs = new ArrayList<>();
+        inputs.add(new UnknownExpr("local-structure-boundary"));
+        Set<Expr> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (TaintValue value : locals) {
+            if (value != null && value.expr != null && !(value.expr instanceof UnknownExpr)
+                    && seen.add(value.expr)) inputs.add(value.expr);
+        }
+        return new Op(OPAQUE_ANALYSIS_BOUNDARY, inputs);
+    }
+
+    private static List<Expr> dedupe(List<Expr> in) {
+        List<Expr> out = new ArrayList<>();
+        for (Expr e : in) if (!out.contains(e)) out.add(e);
+        return out;
+    }
+
+    private static Expr expandArrayReturn(MethodNode mn, Frame<TaintValue>[] frames, int returnIndex,
+                                          Expr returnExpr, AnalysisCtx ctx, int depth) {
+        if (!(returnExpr instanceof ArrayElementSource array)
+                || !(array.arrayExpr instanceof ArrayAllocExpr targetArray)) {
+            return null;
+        }
+        Expr targetIndex = array.indexExpr;
+        List<Expr> writes = new ArrayList<>();
+        int i = 0;
+        for (AbstractInsnNode insn : mn.instructions) {
+            if (i >= returnIndex) break;
+            Frame<TaintValue> frame = frames[i];
+            Expr direct = directArrayStore(frame, insn, targetArray, targetIndex);
+            if (direct != null && !(direct instanceof UnknownExpr) && !writes.contains(direct)) {
+                writes.add(direct);
+            }
+            if (insn instanceof MethodInsnNode call && isIfPresentCall(call)) {
+                Expr fromLambda = ifPresentArrayStore(frame, call, targetArray, targetIndex, ctx, depth);
+                if (fromLambda != null && !(fromLambda instanceof UnknownExpr) && !writes.contains(fromLambda)) {
+                    writes.add(fromLambda);
+                }
+            }
+            i++;
+        }
+        if (writes.isEmpty()) return null;
+        return writes.size() == 1 ? writes.get(0) : new Choice(writes);
+    }
+
+    private static Expr directArrayStore(Frame<TaintValue> frame, AbstractInsnNode insn,
+                                         ArrayAllocExpr targetArray, Expr targetIndex) {
+        if (frame == null || !isArrayStoreOpcode(insn.getOpcode()) || frame.getStackSize() < 3) return null;
+        Expr array = frame.getStack(frame.getStackSize() - 3).expr;
+        Expr index = frame.getStack(frame.getStackSize() - 2).expr;
+        Expr value = frame.getStack(frame.getStackSize() - 1).expr;
+        return targetArray.equals(array) && sameIndex(targetIndex, index) ? value : null;
+    }
+
+    private static Expr ifPresentArrayStore(Frame<TaintValue> frame, MethodInsnNode call,
+                                           ArrayAllocExpr targetArray, Expr targetIndex,
+                                           AnalysisCtx ctx, int depth) {
+        if (frame == null) return null;
+        List<Expr> args = invokeValueExprs(call, frame);
+        if (args.size() < 2 || !(args.get(args.size() - 1) instanceof Closure closure)) return null;
+        Expr optional = args.get(0);
+        return analyzeClosureArrayStore(closure, List.of(new OptionalContentExpr(optional)),
+                targetArray, targetIndex, ctx, depth + 1);
+    }
+
+    private static boolean isIfPresentCall(MethodInsnNode call) {
+        if (!call.name.equals("ifPresent")) return false;
+        Type[] args = Type.getArgumentTypes(call.desc);
+        if (args.length != 1 || Type.getReturnType(call.desc) != Type.VOID_TYPE) return false;
+        return args[0].getSort() == Type.OBJECT;
+    }
+
+    private static List<Expr> invokeValueExprs(MethodInsnNode call, Frame<TaintValue> frame) {
+        Type[] args = Type.getArgumentTypes(call.desc);
+        boolean isStatic = call.getOpcode() == Opcodes.INVOKESTATIC;
+        int count = args.length + (isStatic ? 0 : 1);
+        if (frame.getStackSize() < count) return List.of();
+        int start = frame.getStackSize() - count;
+        List<Expr> values = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) values.add(frame.getStack(start + i).expr);
+        return values;
+    }
+
+    private static Expr analyzeClosureArrayStore(Closure closure, List<Expr> invocationArgs,
+                                                 ArrayAllocExpr targetArray, Expr targetIndex,
+                                                 AnalysisCtx ctx, int depth) {
+        Handle implementation = closure.implementation();
+        Class<?> owner = loadClass(implementation.getOwner());
+        if (owner == null || ctx.inlineBudget <= 0) return null;
+
+        boolean isStatic = implementation.getTag() == Opcodes.H_INVOKESTATIC;
+        List<Expr> seeds = new ArrayList<>();
+        if (isStatic) {
+            seeds.addAll(closure.captured());
+        } else {
+            if (closure.captured().isEmpty()) return null;
+            seeds.add(closure.captured().get(0));
+            seeds.addAll(closure.captured().subList(1, closure.captured().size()));
+        }
+        seeds.addAll(invocationArgs);
+
+        Type[] argTypes = Type.getArgumentTypes(implementation.getDesc());
+        int expectedSeeds = argTypes.length + (isStatic ? 0 : 1);
+        if (seeds.size() != expectedSeeds) return null;
+
+        int localCount = isStatic ? 0 : 1;
+        for (Type type : argTypes) localCount += type.getSize();
+        TaintValue[] locals = new TaintValue[localCount + 8];
+        int local = 0;
+        int seed = 0;
+        if (!isStatic) locals[local++] = new TaintValue(1, seeds.get(seed++));
+        for (Type type : argTypes) {
+            locals[local] = new TaintValue(type.getSize(), seeds.get(seed++));
+            local += type.getSize();
+        }
+        ctx.inlineBudget--;
+        return analyzeArrayStore(owner, implementation.getName(), implementation.getDesc(),
+                locals, targetArray, targetIndex, ctx, depth + 1);
+    }
+
+    private static Expr analyzeArrayStore(Class<?> owner, String name, String desc, TaintValue[] seedLocals,
+                                          ArrayAllocExpr targetArray, Expr targetIndex,
+                                          AnalysisCtx ctx, int depth) {
+        String cacheKey = owner.getName().replace('.', '/') + "#" + name + "#" + desc + "#arrayStore";
+        if (!ctx.inflight.add(cacheKey)) return new UnknownExpr("recursive-cycle-arrayStore");
+        try {
+            MethodNode mn = findMethodNode(classNode(owner), name, desc);
+            if (mn == null || mn.instructions.size() == 0) return null;
+
+            String ownerInternal = internalName(owner);
+            TaintInterpreter interp = new TaintInterpreter(ctx, depth, ownerInternal, mn, seedLocals);
+            Analyzer<TaintValue> analyzer = new Analyzer<>(interp);
+            Frame<TaintValue>[] frames = analyzeFrames(analyzer, ownerInternal, mn, ctx);
+            List<Expr> writes = new ArrayList<>();
+            int i = 0;
+            for (AbstractInsnNode insn : mn.instructions) {
+                Expr direct = directArrayStore(frames[i], insn, targetArray, targetIndex);
+                if (direct != null && !(direct instanceof UnknownExpr) && !writes.contains(direct)) {
+                    writes.add(direct);
+                }
+                i++;
+            }
+            if (writes.isEmpty()) return null;
+            return writes.size() == 1 ? writes.get(0) : new Choice(writes);
+        } catch (Throwable t) {
+            if (t instanceof VirtualMachineError e) throw e;
+            return null;
+        } finally {
+            ctx.inflight.remove(cacheKey);
+        }
+    }
+
+    private static boolean isArrayStoreOpcode(int opcode) {
+        return opcode == Opcodes.IASTORE || opcode == Opcodes.LASTORE || opcode == Opcodes.FASTORE
+                || opcode == Opcodes.DASTORE || opcode == Opcodes.AASTORE || opcode == Opcodes.BASTORE
+                || opcode == Opcodes.CASTORE || opcode == Opcodes.SASTORE;
+    }
+
+    private static boolean sameIndex(Expr a, Expr b) {
+        if (Objects.equals(a, b)) return true;
+        if (a instanceof Primitive pa && b instanceof Primitive pb) {
+            return pa.value().intValue() == pb.value().intValue();
+        }
+        return false;
+    }
+
+    private static final class TaintValue implements Value {
+        final int size;
+        final Expr expr;
+        TaintValue(int size, Expr expr) { this.size = size; this.expr = expr; }
+        @Override public int getSize() { return size; }
+        @Override public boolean equals(Object o) {
+            return o instanceof TaintValue v && size == v.size && Objects.equals(expr, v.expr);
+        }
+        @Override public int hashCode() { return Objects.hash(size, expr); }
+    }
+
+    private static final class EntityParamMarker implements Expr {
+        static final EntityParamMarker I = new EntityParamMarker();
+    }
+
+    private static final class TaintInterpreter extends Interpreter<TaintValue> {
+        final AnalysisCtx ctx;
+        final int depth;
+        final String currentOwner;
+        final MethodNode currentMethod;
+        final TaintValue[] seedLocals;
+
+        TaintInterpreter(AnalysisCtx ctx, int depth, String currentOwner, MethodNode currentMethod, TaintValue[] seedLocals) {
+            super(Opcodes.ASM9);
+            this.ctx = ctx; this.depth = depth;
+            this.currentOwner = currentOwner; this.currentMethod = currentMethod; this.seedLocals = seedLocals;
+        }
+
+        /* 为常数加载指令构造来源坐标:当前类/方法/指令下标 + 持有方法 receiver(local 0)。
+           seedLocals 为空(顶层 getHealth)时 receiver 即实体本身(EntityParamMarker)。 */
+        private ConstProvenance provenanceOf(AbstractInsnNode insn) {
+            Expr receiver = (seedLocals != null && seedLocals.length > 0 && seedLocals[0] != null)
+                    ? seedLocals[0].expr : EntityParamMarker.I;
+            int index = currentMethod != null ? currentMethod.instructions.indexOf(insn) : -1;
+            boolean holderIsStatic = currentMethod != null && (currentMethod.access & Opcodes.ACC_STATIC) != 0;
+            return new ConstProvenance(currentOwner,
+                    currentMethod != null ? currentMethod.name : null,
+                    currentMethod != null ? currentMethod.desc : null,
+                    index, holderIsStatic, receiver);
+        }
+
+        @Override public TaintValue newValue(Type type) {
+            ctx.checkDeadline();
+            if (type == null) return new TaintValue(1, UnknownExpr.UNKNOWN);
+            if (type == Type.VOID_TYPE) return null;
+            return new TaintValue(type.getSize(), UnknownExpr.UNKNOWN);
+        }
+
+        @Override public TaintValue newParameterValue(boolean isInstanceMethod, int local, Type type) {
+            ctx.checkDeadline();
+            if (seedLocals != null && local < seedLocals.length && seedLocals[local] != null) return seedLocals[local];
+            if (isInstanceMethod && local == 0) return new TaintValue(1, EntityParamMarker.I);
+            return new TaintValue(type.getSize(), UnknownExpr.UNKNOWN);
+        }
+
+        @Override public TaintValue newOperation(AbstractInsnNode insn) {
+            ctx.checkDeadline();
+            ConstProvenance prov = provenanceOf(insn);
+            return switch (insn.getOpcode()) {
+                case Opcodes.ACONST_NULL -> new TaintValue(1, UnknownExpr.UNKNOWN);
+                case Opcodes.ICONST_M1 -> primI(prov, -1);
+                case Opcodes.ICONST_0 -> primI(prov, 0);
+                case Opcodes.ICONST_1 -> primI(prov, 1);
+                case Opcodes.ICONST_2 -> primI(prov, 2);
+                case Opcodes.ICONST_3 -> primI(prov, 3);
+                case Opcodes.ICONST_4 -> primI(prov, 4);
+                case Opcodes.ICONST_5 -> primI(prov, 5);
+                case Opcodes.LCONST_0 -> primL(prov, 0);
+                case Opcodes.LCONST_1 -> primL(prov, 1);
+                case Opcodes.FCONST_0 -> primF(prov, 0f);
+                case Opcodes.FCONST_1 -> primF(prov, 1f);
+                case Opcodes.FCONST_2 -> primF(prov, 2f);
+                case Opcodes.DCONST_0 -> primD(prov, 0d);
+                case Opcodes.DCONST_1 -> primD(prov, 1d);
+                case Opcodes.BIPUSH, Opcodes.SIPUSH -> primI(prov, ((IntInsnNode) insn).operand);
+                case Opcodes.LDC -> ldcValue(prov, (LdcInsnNode) insn);
+                case Opcodes.GETSTATIC -> {
+                    FieldInsnNode f = (FieldInsnNode) insn;
+                    Type t = Type.getType(f.desc);
+                    Expr resolved = resolveStaticField(f.owner, f.name);
+                    if (resolved != null) yield new TaintValue(t.getSize(), resolved);
+                    yield new TaintValue(t.getSize(), UnknownExpr.UNKNOWN);
+                }
+                default -> new TaintValue(1, new UnknownExpr("newOperation-unsupported-" + insn.getOpcode()));
+            };
+        }
+
+        @Override public TaintValue copyOperation(AbstractInsnNode insn, TaintValue value) {
+            ctx.checkDeadline();
+            return value;
+        }
+
+        @Override public TaintValue unaryOperation(AbstractInsnNode insn, TaintValue value) {
+            ctx.checkDeadline();
+            int op = insn.getOpcode();
+            return switch (op) {
+                case Opcodes.INEG, Opcodes.FNEG -> new TaintValue(1, new Op(op, List.of(value.expr)));
+                case Opcodes.LNEG, Opcodes.DNEG -> new TaintValue(2, new Op(op, List.of(value.expr)));
+                case Opcodes.I2F, Opcodes.L2F, Opcodes.D2F -> new TaintValue(1, new Op(op, List.of(value.expr)));
+                case Opcodes.F2I, Opcodes.L2I, Opcodes.D2I, Opcodes.I2B, Opcodes.I2C, Opcodes.I2S
+                    -> new TaintValue(1, new Op(op, List.of(value.expr)));
+                case Opcodes.I2L, Opcodes.F2L, Opcodes.D2L -> new TaintValue(2, new Op(op, List.of(value.expr)));
+                case Opcodes.I2D, Opcodes.L2D, Opcodes.F2D -> new TaintValue(2, new Op(op, List.of(value.expr)));
+                case Opcodes.GETFIELD -> {
+                    FieldInsnNode f = (FieldInsnNode) insn;
+                    Type t = Type.getType(f.desc);
+                    Expr field = buildGetFieldSource(f, value.expr);
+                    if (field == null) field = UnknownExpr.UNKNOWN;
+                    yield new TaintValue(t.getSize(), field);
+                }
+                case Opcodes.CHECKCAST -> value;
+                case Opcodes.INSTANCEOF -> new TaintValue(1, UnknownExpr.UNKNOWN);
+                case Opcodes.ARRAYLENGTH -> new TaintValue(1, UnknownExpr.UNKNOWN);
+                case Opcodes.NEWARRAY, Opcodes.ANEWARRAY -> new TaintValue(1, new ArrayAllocExpr(System.identityHashCode(insn)));
+                case Opcodes.IFEQ, Opcodes.IFNE, Opcodes.IFLT, Opcodes.IFGE,
+                     Opcodes.IFGT, Opcodes.IFLE, Opcodes.IFNULL, Opcodes.IFNONNULL,
+                     Opcodes.TABLESWITCH, Opcodes.LOOKUPSWITCH,
+                     Opcodes.PUTSTATIC, Opcodes.ATHROW,
+                     Opcodes.MONITORENTER, Opcodes.MONITOREXIT -> null;
+                default -> new TaintValue(1, new UnknownExpr("unaryOperation-unknown-" + insn.getOpcode()));
+            };
+        }
+
+        @Override public TaintValue binaryOperation(AbstractInsnNode insn, TaintValue v1, TaintValue v2) {
+            ctx.checkDeadline();
+            int op = insn.getOpcode();
+            return switch (op) {
+                case Opcodes.IADD, Opcodes.ISUB, Opcodes.IMUL, Opcodes.IDIV, Opcodes.IREM,
+                     Opcodes.FADD, Opcodes.FSUB, Opcodes.FMUL, Opcodes.FDIV, Opcodes.FREM,
+                     Opcodes.IAND, Opcodes.IOR, Opcodes.IXOR, Opcodes.ISHL, Opcodes.ISHR, Opcodes.IUSHR
+                    -> new TaintValue(1, new Op(op, List.of(v1.expr, v2.expr)));
+                case Opcodes.LADD, Opcodes.LSUB, Opcodes.LMUL, Opcodes.LDIV, Opcodes.LREM,
+                     Opcodes.DADD, Opcodes.DSUB, Opcodes.DMUL, Opcodes.DDIV, Opcodes.DREM,
+                     Opcodes.LAND, Opcodes.LOR, Opcodes.LXOR
+                    -> new TaintValue(2, new Op(op, List.of(v1.expr, v2.expr)));
+                case Opcodes.LSHL, Opcodes.LSHR, Opcodes.LUSHR
+                    -> new TaintValue(2, new Op(op, List.of(v1.expr, v2.expr)));
+                case Opcodes.AALOAD, Opcodes.IALOAD, Opcodes.FALOAD,
+                     Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD
+                    -> new TaintValue(1, new ArrayElementSource(v1.expr, v2.expr, guessArrayElementType(op), "arr"));
+                case Opcodes.LALOAD, Opcodes.DALOAD
+                    -> new TaintValue(2, new ArrayElementSource(v1.expr, v2.expr, guessArrayElementType(op), "arr"));
+                default -> new TaintValue(1, new UnknownExpr("binaryOperation-unknown-" + op));
+            };
+        }
+
+        @Override public TaintValue ternaryOperation(AbstractInsnNode insn, TaintValue v1, TaintValue v2, TaintValue v3) {
+            ctx.checkDeadline();
+            return null;
+        }
+
+        @Override public TaintValue naryOperation(AbstractInsnNode insn, List<? extends TaintValue> values) {
+            ctx.checkDeadline();
+            if (insn.getOpcode() == Opcodes.MULTIANEWARRAY) return new TaintValue(1, UnknownExpr.UNKNOWN);
+            if (insn.getOpcode() == Opcodes.INVOKEDYNAMIC) {
+                InvokeDynamicInsnNode dynamic = (InvokeDynamicInsnNode) insn;
+                Type ret = Type.getReturnType(dynamic.desc);
+                Closure closure = closureFrom(dynamic, values);
+                return ret == Type.VOID_TYPE ? null
+                    : new TaintValue(ret.getSize(), closure == null ? UnknownExpr.UNKNOWN : closure);
+            }
+            MethodInsnNode m = (MethodInsnNode) insn;
+            Type retType = Type.getReturnType(m.desc);
+            int sz = retType == Type.VOID_TYPE ? 0 : retType.getSize();
+            if (retType == Type.VOID_TYPE) return null;
+            //节点预算耗尽：停止展开调用/内联，坍缩 Unknown，防止表达式树爆炸
+            if (--ctx.nodeBudget <= 0) return new TaintValue(sz, new UnknownExpr("nodeBudget-exhausted"));
+
+            List<Expr> accessArgs = values.stream().map(value -> value.expr).toList();
+            Source indirect = indirectAccessSource(m, accessArgs, ctx, false);
+            if (indirect != null) return new TaintValue(sz, indirect);
+            // 元数据调用必须保留来源，不能展开到 JDK 内部或折叠成无归属的偏移量。
+            if (ctx.tracingAssignments || isIndirectMetadataCall(m)) {
+                return new TaintValue(sz, new Call(m.owner, currentOwner, m.name, m.desc,
+                        m.getOpcode(), accessArgs));
+            }
+
+            Expr methodHandle = tryInlineMethodHandleReturn(m, values);
+            if (methodHandle != null && !(methodHandle instanceof UnknownExpr)) {
+                return new TaintValue(sz, methodHandle);
+            }
+
+            Expr functional = tryInlineFunctionalCall(m, values);
+            if (functional != null && !(functional instanceof UnknownExpr)) {
+                return new TaintValue(sz, functional);
+            }
+
+            // super.getHealth() / 父类 INVOKESPECIAL on getHealth → 沿继承链最终读 DATA_HEALTH_ID
+            // 假设链路上没有再 override (绝大多数 mod 满足),把 super 调用直接识别为 DATA_HEALTH_ID 的 Source
+            if (m.getOpcode() == Opcodes.INVOKESPECIAL
+                && m.desc.equals(GET_HEALTH.desc())
+                && (m.name.equals(GET_HEALTH.srg()) || m.name.equals(GET_HEALTH.mcp()))
+                && values.size() >= 1
+                && values.get(0).expr == EntityParamMarker.I) {
+                return new TaintValue(sz, new SynchedDataSource(LivingEntity.DATA_HEALTH_ID, float.class));
+            }
+
+            /* 最大生命值是改当前血量时的只读上限。保留调用边界既能在运行期取得真实属性值，
+               也避免把其内部字段或常量误收集成当前血量的可写存储。 */
+            if (m.desc.equals(GET_MAX_HEALTH.desc())
+                    && (m.name.equals(GET_MAX_HEALTH.srg()) || m.name.equals(GET_MAX_HEALTH.mcp()))) {
+                List<Expr> arguments = new ArrayList<>(values.size());
+                for (TaintValue value : values) arguments.add(value.expr);
+                return new TaintValue(sz, new Call(m.owner, currentOwner, m.name, m.desc,
+                        m.getOpcode(), List.copyOf(arguments)));
+            }
+
+            // SynchedEntityData.get
+            if (m.owner.equals("net/minecraft/network/syncher/SynchedEntityData")
+                && m.name.equals("get")
+                && values.size() >= 2) {
+                Expr accExpr = values.get(1).expr;
+                if (accExpr instanceof Reference ref && ref.value() instanceof EntityDataAccessor<?> acc) {
+                    return new TaintValue(sz, new SynchedDataSource(acc, Object.class));
+                }
+                return new TaintValue(sz, UnknownExpr.UNKNOWN);
+            }
+
+            // Map.get / getOrDefault (任意 owner,运行时反射检测)
+            if (isCapabilityValueGet(m) && values.size() >= 2) {
+                return new TaintValue(sz, new CapabilityDataSource(values.get(0).expr, values.get(1).expr,
+                        List.of(), Object.class));
+            }
+
+            if ((m.name.equals("get") || m.name.equals("getOrDefault"))
+                && values.size() >= 2
+                && isMapClassByName(m.owner)) {
+                Class<?> containerType = loadClass(m.owner);
+                if (containerType != null && !Map.class.isAssignableFrom(containerType)
+                        && BOUNDED_READ.isLoop(containerType, m.name, m.desc)) {
+                    return new TaintValue(sz, new Call(m.owner, currentOwner, m.name, m.desc,
+                            m.getOpcode(), values.stream().map(value -> value.expr).toList()));
+                }
+                Expr container = values.get(0).expr;
+                Expr key = values.get(1).expr;
+                MapEntrySource.KeyKind kk = detectKeyKind(key);
+                String ownerHint = mapOwnerHint(container);
+                return new TaintValue(sz, new MapEntrySource(container, key, kk, ownerHint, Object.class, m.owner));
+            }
+
+            // 反射常量化：getDeclaredMethod/getMethod(name).invoke(recv) 或 getDeclaredField/getField(name).get(recv)
+            // 当目标名是分析期常量时，重写为对真实方法的内联 / 真实字段的 Source，使反射隐藏的存储也能被符号化
+            {
+                TaintValue reflective = tryReflection(m, values, sz);
+                if (reflective != null) return reflective;
+            }
+
+            Expr methodProperty = tryStaticMethodProperty(m, values);
+            if (methodProperty != null) return new TaintValue(sz, methodProperty);
+
+            // 递归内联
+            Expr getter = tryInlineSimpleGetter(m, values);
+            if (getter != null && !(getter instanceof UnknownExpr)) {
+                return new TaintValue(sz, getter);
+            }
+
+            if (depth + 1 < ctx.maxDepth && !m.name.startsWith("<")) {
+                Expr inlined = tryInline(m, values);
+                if (inlined != null && !(inlined instanceof UnknownExpr)) {
+                    return new TaintValue(sz, inlined);
+                }
+            }
+
+            // 无法内联时保留 Call 节点
+            List<Expr> argExprs = new ArrayList<>(values.size());
+            for (TaintValue v : values) argExprs.add(v.expr);
+            return new TaintValue(sz, new Call(m.owner, currentOwner, m.name, m.desc,
+                    m.getOpcode(), argExprs));
+        }
+
+        private Expr tryStaticMethodProperty(MethodInsnNode method, List<? extends TaintValue> values) {
+            if (method.getOpcode() != Opcodes.INVOKESTATIC || values.size() != 1
+                    || values.get(0).expr != EntityParamMarker.I
+                    || !method.name.startsWith("get") || method.name.length() == 3) return null;
+            Type returnType = Type.getReturnType(method.desc);
+            Type[] argumentTypes = Type.getArgumentTypes(method.desc);
+            if (!isNumericAsmType(returnType) || argumentTypes.length != 1) return null;
+
+            Class<?> argumentClass = asmTypeToClass(argumentTypes[0]);
+            if (argumentClass == null || !LivingEntity.class.isAssignableFrom(argumentClass)
+                    || ctx.runtimeEntityClass == null
+                    || !argumentClass.isAssignableFrom(ctx.runtimeEntityClass)) return null;
+            Class<?> owner = loadClass(method.owner);
+            if (owner == null) return null;
+            Method getter = findAnyMethod(owner, method.name, method.desc);
+            if (getter == null || !Modifier.isStatic(getter.getModifiers())) return null;
+
+            String setterName = "set" + method.name.substring(3);
+            String setterDesc = Type.getMethodDescriptor(Type.VOID_TYPE, argumentTypes[0], returnType);
+            Method setter = findAnyMethod(owner, setterName, setterDesc);
+            if (setter == null || !Modifier.isStatic(setter.getModifiers())) return null;
+            return new MethodPropertySource(getter, setter, values.get(0).expr);
+        }
+
+        private Expr tryInlineMethodHandleReturn(MethodInsnNode method, List<? extends TaintValue> values) {
+            if (!isMethodHandleInvoke(method) || values.isEmpty()) return null;
+            if (depth + 1 >= ctx.maxDepth || ctx.inlineBudget <= 0) return null;
+            MethodTarget target = resolveMethodHandleTarget(values.get(0).expr);
+            if (target == null) return null;
+            Type[] targetArgs = Type.getArgumentTypes(target.desc());
+            if (values.size() - 1 != targetArgs.length) return null;
+
+            TaintValue[] seedLocals = new TaintValue[localCount(targetArgs) + 8];
+            int local = 0;
+            for (int i = 0; i < targetArgs.length; i++) {
+                seedLocals[local] = values.get(i + 1);
+                local += targetArgs[i].getSize();
+            }
+            ctx.inlineBudget--;
+            return analyzeMethod(target.owner(), target.name(), target.desc(), seedLocals, ctx, depth + 1);
+        }
+
+        //闭包节点保留实现句柄与捕获值，使 SAM 调用可以按真实实现继续分析。
+        private Closure closureFrom(InvokeDynamicInsnNode dynamic, List<? extends TaintValue> values) {
+            List<Expr> captured = new ArrayList<>(values.size());
+            for (TaintValue value : values) captured.add(value.expr);
+            return closureFromExprs(dynamic, captured);
+        }
+
+        private Closure closureFromExprs(InvokeDynamicInsnNode dynamic, List<Expr> captured) {
+            if (!dynamic.bsm.getOwner().equals("java/lang/invoke/LambdaMetafactory")) return null;
+            Handle implementation = null;
+            String samDesc = null;
+            for (Object arg : dynamic.bsmArgs) {
+                if (arg instanceof Handle handle) implementation = handle;
+                else if (samDesc == null && arg instanceof Type type) samDesc = type.getDescriptor();
+            }
+            return implementation == null ? null
+                : new Closure(implementation, dynamic.name, samDesc == null ? "" : samDesc, List.copyOf(captured));
+        }
+
+        private Expr tryInlineFunctionalCall(MethodInsnNode method, List<? extends TaintValue> values) {
+            if (values.isEmpty() || method.getOpcode() == Opcodes.INVOKESTATIC) return null;
+            Expr receiver = values.get(0).expr;
+            if (!(receiver instanceof Closure)) {
+                Class<?> functionalType = loadClass(method.owner);
+                if (functionalType == null || !functionalType.isInterface()) return null;
+                long abstractMethods = Arrays.stream(functionalType.getMethods())
+                        .filter(candidate -> Modifier.isAbstract(candidate.getModifiers()))
+                        .filter(candidate -> !candidate.getName().equals("equals")
+                                || !Arrays.equals(candidate.getParameterTypes(), new Class<?>[]{Object.class}))
+                        .map(candidate -> candidate.getName() + Type.getMethodDescriptor(candidate)).distinct().count();
+                if (abstractMethods != 1) return null;
+            }
+            Closure closure = receiver instanceof Closure direct ? direct : resolveFunctionalField(receiver);
+            if (closure == null || !closure.samName().equals(method.name)) return null;
+
+            List<Expr> invocationArgs = new ArrayList<>();
+            for (int i = 1; i < values.size(); i++) invocationArgs.add(values.get(i).expr);
+            return inlineClosure(closure, invocationArgs);
+        }
+
+        private Closure resolveFunctionalField(Expr receiver) {
+            if (ctx.tracingAssignments || !(receiver instanceof FieldChainSource source)
+                    || source.chain.isEmpty()) return null;
+            FieldStep field = source.chain.get(source.chain.size() - 1);
+            Class<?> owner = loadClass(field.ownerInternal());
+            if (owner == null) return null;
+            Field declared = findFieldInHierarchy(owner, field.name());
+            if (declared == null) return null;
+            owner = declared.getDeclaringClass();
+            String key = "functional:" + source.canonicalKey();
+            if (ctx.accessorInitializers.containsKey(key)) {
+                Expr cached = ctx.accessorInitializers.get(key);
+                return cached instanceof Closure closure ? closure : null;
+            }
+            if (!ctx.resolvingAccessors.add(key)) return null;
+            Expr root = source.chain.size() == 1 ? EntityParamMarker.I
+                    : makeFieldChain(source.chain.subList(0, source.chain.size() - 1));
+            try {
+                ClassNode node = classNode(owner);
+                if (node == null) return null;
+                Closure resolved = null;
+                for (MethodNode constructor : node.methods) {
+                    if (!constructor.name.equals("<init>")) continue;
+                    TaintValue[] seeds = new TaintValue[Math.max(1, constructor.maxLocals)];
+                    seeds[0] = new TaintValue(1, root);
+                    Expr assigned = traceAssignedValue(owner, constructor, seeds, source, ctx, new HashSet<>(), 0);
+                    // 多个构造路径不能用遍历顺序裁决；不完整的赋值链也不能退回默认实现。
+                    if (!(assigned instanceof Closure closure)) {
+                        ctx.accessorInitializers.put(key, UnknownExpr.UNKNOWN);
+                        return null;
+                    }
+                    if (resolved != null && !resolved.equals(closure)) {
+                        ctx.accessorInitializers.put(key, UnknownExpr.UNKNOWN);
+                        return null;
+                    }
+                    resolved = closure;
+                }
+                ctx.accessorInitializers.put(key, resolved);
+                return resolved;
+            } finally {
+                ctx.resolvingAccessors.remove(key);
+            }
+        }
+
+        private Expr inlineClosure(Closure closure, List<Expr> invocationArgs) {
+            Handle implementation = closure.implementation();
+            Class<?> owner = loadClass(implementation.getOwner());
+            if (owner == null || ctx.inlineBudget <= 0) return null;
+
+            boolean isStatic = implementation.getTag() == Opcodes.H_INVOKESTATIC;
+            List<Expr> seeds = new ArrayList<>();
+            if (isStatic) {
+                seeds.addAll(closure.captured());
+            } else {
+                if (closure.captured().isEmpty()) return null;
+                seeds.add(closure.captured().get(0));
+                seeds.addAll(closure.captured().subList(1, closure.captured().size()));
+            }
+            seeds.addAll(invocationArgs);
+
+            Type[] argTypes = Type.getArgumentTypes(implementation.getDesc());
+            int expectedSeeds = argTypes.length + (isStatic ? 0 : 1);
+            if (seeds.size() != expectedSeeds) return null;
+
+            int localCount = isStatic ? 0 : 1;
+            for (Type type : argTypes) localCount += type.getSize();
+            TaintValue[] locals = new TaintValue[localCount + 8];
+            int local = 0;
+            int seed = 0;
+            if (!isStatic) locals[local++] = new TaintValue(1, seeds.get(seed++));
+            for (Type type : argTypes) {
+                locals[local] = new TaintValue(type.getSize(), seeds.get(seed++));
+                local += type.getSize();
+            }
+            ctx.inlineBudget--;
+            return analyzeMethod(owner, implementation.getName(), implementation.getDesc(), locals, ctx, depth + 1);
+        }
+
+        /* 反射常量化只处理类与成员名均可确定的调用；无法确定时保留普通 Call，
+           交给动态轨迹继续解析。 */
+        private TaintValue tryReflection(MethodInsnNode m, List<? extends TaintValue> values, int sz) {
+            if (!m.owner.equals("java/lang/reflect/Method") && !m.owner.equals("java/lang/reflect/Field")) return null;
+
+            boolean isInvoke = m.owner.equals("java/lang/reflect/Method") && m.name.equals("invoke");
+            boolean isGet = m.owner.equals("java/lang/reflect/Field") && m.name.equals("get");
+            if (!isInvoke && !isGet) return null;
+            if (values.isEmpty()) return null;
+
+            // receiver(values[0]) 应是上游 Class.getDeclaredMethod/Field(...) 的 Call 节点
+            Expr accessorExpr = values.get(0).expr;
+            if (!(accessorExpr instanceof Call acc)) return null;
+
+            Class<?> targetClass = constClass(acc.args());      // 第 1 个 Class 常量参(getDeclaredMethod 的 receiver)
+            String memberName = constString(acc.args());        // 第 1 个 String 常量参(成员名)
+            if (targetClass == null || memberName == null) return null;
+
+            // invoke/get 的目标对象：Method.invoke(obj, args)→args[1]; Field.get(obj)→args[1]
+            Expr targetObj = values.size() >= 2 ? values.get(1).expr : null;
+            boolean onEntity = targetObj == EntityParamMarker.I;
+
+            if (isGet) {
+                // 反射读字段 → 当作字段链 Source(仅支持 this 上的字段，可写回)
+                if (!onEntity) return null;
+                try {
+                    Field f = findReflectedField(targetClass, acc.name(), memberName);
+                    if (f == null) return null;
+                    FieldStep step = new FieldStep(f.getDeclaringClass().getName().replace('.', '/'), memberName,
+                        Type.getDescriptor(f.getType()));
+                    Expr src = makeFieldChain(List.of(step));
+                    return src instanceof UnknownExpr ? null : new TaintValue(sz, src);
+                } catch (Throwable t) {
+                    if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+                    return null;
+                }
+            }
+
+            // isInvoke：无参实例方法 + 目标是 this → 内联该真实方法
+            if (!onEntity || depth + 1 >= ctx.maxDepth) return null;
+            Method jm = findReflectedZeroArgMethod(targetClass, acc.name(), memberName);
+            if (jm == null || ctx.inlineBudget <= 0) return null;
+            ctx.inlineBudget--;
+            TaintValue[] seed = new TaintValue[8];
+            seed[0] = new TaintValue(1, EntityParamMarker.I);   // this
+            Expr inlined = analyzeMethod(jm.getDeclaringClass(), jm.getName(), Type.getMethodDescriptor(jm), seed, ctx, depth + 1);
+            return (inlined == null || inlined instanceof UnknownExpr) ? null : new TaintValue(sz, inlined);
+        }
+
+        //取 Call 参数里第一个解析到具体 Class 的常量(类字面量经 ldcValue → Reference(Class))
+        private static Class<?> constClass(List<Expr> args) {
+            for (Expr a : args) {
+                if (a instanceof Reference r && r.value() instanceof Class<?> k) return k;
+            }
+            return null;
+        }
+
+        //取 Call 参数里第一个 String 常量(成员名)
+        private static String constString(List<Expr> args) {
+            for (Expr a : args) {
+                if (a instanceof Reference r && r.value() instanceof String s) return s;
+            }
+            return null;
+        }
+
+        private static Field findReflectedField(Class<?> owner, String accessorName, String fieldName) {
+            try {
+                Field field = switch (accessorName) {
+                    case "getField" -> owner.getField(fieldName);
+                    case "getDeclaredField" -> owner.getDeclaredField(fieldName);
+                    default -> null;
+                };
+                if (field != null) field.setAccessible(true);
+                return field;
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+                EcaLogger.info("[HealthDataflow] reflected field resolution failed: {}", t.toString());
+                return null;
+            }
+        }
+
+        private static Method findReflectedZeroArgMethod(Class<?> owner, String accessorName, String name) {
+            return switch (accessorName) {
+                case "getMethod" -> findZeroArgPublicMethod(owner, name);
+                case "getDeclaredMethod" -> findDeclaredZeroArgMethod(owner, name);
+                default -> findZeroArgMethod(owner, name);
+            };
+        }
+
+        private static Method findDeclaredZeroArgMethod(Class<?> owner, String name) {
+            try {
+                Method method = owner.getDeclaredMethod(name);
+                method.setAccessible(true);
+                return method;
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+                return null;
+            }
+        }
+
+        private static Method findZeroArgPublicMethod(Class<?> owner, String name) {
+            try {
+                Method method = owner.getMethod(name);
+                method.setAccessible(true);
+                return method;
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+                return null;
+            }
+        }
+
+        private static Method findZeroArgMethod(Class<?> owner, String name) {
+            for (Class<?> c = owner; c != null && c != Object.class; c = c.getSuperclass()) {
+                for (Method mm : c.getDeclaredMethods()) {
+                    if (mm.getName().equals(name) && mm.getParameterCount() == 0) return mm;
+                }
+            }
+            return null;
+        }
+
+        //识别简单 getter：实例方法 ALOD+GETFIELD+RETURN / 静态方法 GETSTATIC+RETURN
+        private Expr tryInlineSimpleGetter(MethodInsnNode m, List<? extends TaintValue> values) {
+            if (m.name.startsWith("<")) return null;
+            if (m.owner.startsWith("java/") || m.owner.startsWith("javax/") || m.owner.startsWith("jdk/")) return null;
+            if (TABLE.lookupCall(m.owner, m.name, m.desc) != null) return null;
+            boolean isStatic = m.getOpcode() == Opcodes.INVOKESTATIC;
+            // 实例 getter：无参 + 有 receiver；静态 getter：无参即可
+            if (!isStatic && (Type.getArgumentTypes(m.desc).length != 0 || values.isEmpty())) return null;
+            if (isStatic && Type.getArgumentTypes(m.desc).length != 0) return null;
+            // 静态方法无需 receiver，实例方法从 values[0] 取
+            Expr receiver = isStatic ? EntityParamMarker.I : values.get(0).expr;
+            if (receiver == null || receiver instanceof UnknownExpr) return null;
+            try {
+                Class<?> owner = loadClass(m.owner);
+                if (owner == null) return null;
+                ClassNode cn = classNode(owner);
+                if (cn == null) return null;
+                for (MethodNode method : cn.methods) {
+                    if (!method.name.equals(m.name) || !method.desc.equals(m.desc)) continue;
+                    if (isStatic) {
+                        FieldInsnNode sf = simpleStaticGetterField(method);
+                        if (sf == null) return null;
+                        return buildStaticFieldSource(sf);
+                    }
+                    FieldInsnNode field = simpleGetterField(method);
+                    if (field == null) return null;
+                    return buildGetFieldSource(field, receiver);
+                }
+                return null;
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+                return null;
+            }
+        }
+
+        //识别 ALOD+GETFIELD+RETURN(3 指令) 的实例简单 getter
+        private FieldInsnNode simpleGetterField(MethodNode method) {
+            List<AbstractInsnNode> ops = meaningfulInstructions(method);
+            if (ops.size() != 3) return null;
+            if (ops.get(0).getOpcode() != Opcodes.ALOAD) return null;
+            if (!(ops.get(1) instanceof FieldInsnNode field) || field.getOpcode() != Opcodes.GETFIELD) return null;
+            if (!isReturnOpcode(ops.get(2).getOpcode())) return null;
+            Type returnType = Type.getReturnType(method.desc);
+            if (!field.desc.equals(returnType.getDescriptor())) return null;
+            return field;
+        }
+
+        //识别 GETSTATIC+RETURN(2 指令) 的静态简单 getter
+        private FieldInsnNode simpleStaticGetterField(MethodNode method) {
+            List<AbstractInsnNode> ops = meaningfulInstructions(method);
+            if (ops.size() != 2) return null;
+            if (!(ops.get(0) instanceof FieldInsnNode field) || field.getOpcode() != Opcodes.GETSTATIC) return null;
+            if (!isReturnOpcode(ops.get(1).getOpcode())) return null;
+            Type returnType = Type.getReturnType(method.desc);
+            if (!field.desc.equals(returnType.getDescriptor())) return null;
+            return field;
+        }
+
+        private static List<AbstractInsnNode> meaningfulInstructions(MethodNode method) {
+            List<AbstractInsnNode> ops = new ArrayList<>();
+            for (AbstractInsnNode insn : method.instructions) {
+                if (insn.getOpcode() >= 0) ops.add(insn);
+            }
+            return ops;
+        }
+
+        private static boolean isReturnOpcode(int opcode) {
+            return opcode == Opcodes.IRETURN || opcode == Opcodes.LRETURN || opcode == Opcodes.FRETURN
+                    || opcode == Opcodes.DRETURN || opcode == Opcodes.ARETURN;
+        }
+
+        private Expr tryInline(MethodInsnNode m, List<? extends TaintValue> values) {
+            Class<?> owner = loadClass(m.owner);
+            if (owner == null) return null;
+            if (shouldKeepAsRuntimeCall(owner, m.name, m.desc)) return null;
+            Class<?> inlineOwner = owner;
+            boolean virtualOnEntity = (m.getOpcode() == Opcodes.INVOKEVIRTUAL
+                    || m.getOpcode() == Opcodes.INVOKEINTERFACE)
+                    && !values.isEmpty()
+                    && values.get(0).expr == EntityParamMarker.I
+                    && ctx.runtimeEntityClass != null
+                    && owner.isAssignableFrom(ctx.runtimeEntityClass);
+            if (virtualOnEntity) {
+                Method runtimeMethod = findAnyMethod(ctx.runtimeEntityClass, m.name, m.desc);
+                if (runtimeMethod != null) inlineOwner = runtimeMethod.getDeclaringClass();
+            }
+            /* 按实际声明类判定，而非调用点 owner。子类调用继承自原版基类的方法时调用点 owner 是子类，
+               据此判断会绕过对原版方法的限制，展开属性系统等实现链，结果通常坍缩为 Unknown。 */
+            Method jm = findAnyMethod(inlineOwner, m.name, m.desc);
+            Class<?> declaring = jm == null ? inlineOwner : jm.getDeclaringClass();
+            if (BOUNDED_READ.isLoop(declaring, m.name, m.desc)) {
+                return new Call(m.owner, currentOwner, m.name, m.desc, m.getOpcode(),
+                        values.stream().map(value -> value.expr).toList());
+            }
+            String declaringInternal = internalName(declaring);
+            if (declaringInternal.startsWith("java/") || declaringInternal.startsWith("net/minecraft/")) {
+                if (jm == null) return null;
+                int mods = jm.getModifiers();
+                if (!(Modifier.isFinal(mods) || Modifier.isStatic(mods) || Modifier.isPrivate(mods))) return null;
+            }
+            //全局熔断：内联次数上限(环检测已由 analyzeMethod 的 inflight 统一负责)
+            if (ctx.inlineBudget <= 0) return new UnknownExpr("inlineBudget-exhausted");
+            ctx.inlineBudget--;
+            boolean isStatic = m.getOpcode() == Opcodes.INVOKESTATIC;
+            Type[] argTypes = Type.getArgumentTypes(m.desc);
+            int localCount = (isStatic ? 0 : 1);
+            for (Type at : argTypes) localCount += at.getSize();
+            TaintValue[] seed = new TaintValue[localCount + 8];
+            int idx = 0, vidx = 0;
+            if (!isStatic) seed[idx++] = values.get(vidx++);
+            for (Type at : argTypes) {
+                seed[idx] = values.get(vidx++);
+                idx += at.getSize();
+            }
+            // 引用选择器保留原始调用，由运行期条件选择容器或键，不能把分支合并成首个非空值。
+            if (readOnlyReferenceSelector(declaring, m.name, m.desc)) {
+                return new Call(m.owner, currentOwner, m.name, m.desc, m.getOpcode(),
+                        values.stream().map(value -> value.expr).toList());
+            }
+            return analyzeMethod(declaring, m.name, m.desc, seed, ctx, depth + 1);
+        }
+
+        private boolean readOnlyReferenceSelector(Class<?> owner, String name, String descriptor) {
+            Type result = Type.getReturnType(descriptor);
+            if (result.getSort() != Type.OBJECT && result.getSort() != Type.ARRAY) return false;
+            ClassNode node = classNode(owner);
+            if (node == null) return false;
+            for (MethodNode method : node.methods) {
+                if (!method.name.equals(name) || !method.desc.equals(descriptor)) continue;
+                boolean branch = false;
+                for (AbstractInsnNode instruction : method.instructions) {
+                    int opcode = instruction.getOpcode();
+                    if (opcode < 0) continue;
+                    if (instruction instanceof JumpInsnNode jump) {
+                        if (method.instructions.indexOf(jump.label) <= method.instructions.indexOf(jump)) return false;
+                        branch = true;
+                        continue;
+                    }
+                    if (instruction instanceof FieldInsnNode field) {
+                        if (field.getOpcode() != Opcodes.GETFIELD && field.getOpcode() != Opcodes.GETSTATIC) return false;
+                        continue;
+                    }
+                    if (instruction instanceof VarInsnNode || instruction instanceof LdcInsnNode
+                            || opcode == Opcodes.ACONST_NULL || opcode == Opcodes.ARETURN
+                            || opcode == Opcodes.CHECKCAST || opcode == Opcodes.DUP || opcode == Opcodes.POP
+                            || opcode >= Opcodes.ICONST_M1 && opcode <= Opcodes.ICONST_5) continue;
+                    return false;
+                }
+                return branch && (method.access & Opcodes.ACC_SYNCHRONIZED) == 0;
+            }
+            return false;
+        }
+
+        @Override public void returnOperation(AbstractInsnNode insn, TaintValue value, TaintValue expected) {
+            ctx.checkDeadline();
+        }
+
+        @Override public TaintValue merge(TaintValue v1, TaintValue v2) {
+            ctx.checkDeadline();
+            if (v1.equals(v2)) return v1;
+            int size = Math.max(v1.size, v2.size);
+            if (--ctx.nodeBudget <= 0) return new TaintValue(size, new UnknownExpr("merge-nodeBudget-exhausted"));
+            List<Expr> alts = new ArrayList<>();
+            addAlt(alts, v1.expr);
+            addAlt(alts, v2.expr);
+            //加宽：分支过多直接坍缩 Unknown，让格有限高、循环处数据流收敛
+            if (alts.size() > MAX_CHOICE_ALTS) return new TaintValue(size, new UnknownExpr("merge-tooManyAlternatives(" + alts.size() + ">" + MAX_CHOICE_ALTS + ")"));
+            if (alts.size() == 1) return new TaintValue(size, alts.get(0));
+            return new TaintValue(size, new Choice(alts));
+        }
+
+        private void addAlt(List<Expr> into, Expr e) {
+            ctx.checkDeadline();
+            if (into.size() > MAX_CHOICE_ALTS) return;
+            if (e instanceof Choice c) {
+                for (Expr a : c.alternatives()) {
+                    ctx.checkDeadline();
+                    if (!into.contains(a)) into.add(a);
+                    if (into.size() > MAX_CHOICE_ALTS) return;
+                }
+            } else if (!into.contains(e)) into.add(e);
+        }
+
+        private Expr buildGetFieldSource(FieldInsnNode f, Expr receiver) {
+            FieldStep step = new FieldStep(f.owner, f.name, f.desc);
+            if (receiver == EntityParamMarker.I) {
+                return makeFieldChain(List.of(step));
+            }
+            if (receiver instanceof FieldChainSource fcs) {
+                List<FieldStep> ext = new ArrayList<>(fcs.chain);
+                ext.add(step);
+                return makeFieldChain(ext);
+            }
+            if (receiver instanceof ChainedFieldSource cfs) {
+                List<FieldStep> ext = new ArrayList<>(cfs.chain);
+                ext.add(step);
+                Class<?> vt = descriptorToClass(step.desc());
+                return new ChainedFieldSource(cfs.root, ext, vt == null ? Object.class : vt);
+            }
+            if (receiver instanceof CapabilityDataSource capability) {
+                List<FieldStep> ext = new ArrayList<>(capability.chain);
+                ext.add(step);
+                Class<?> vt = descriptorToClass(step.desc());
+                return new CapabilityDataSource(capability.containerExpr, capability.keyExpr, ext,
+                        vt == null ? Object.class : vt);
+            }
+            if (receiver instanceof UnknownExpr || receiver == null) {
+                return UnknownExpr.UNKNOWN;
+            }
+            // receiver 是 MapEntrySource / ArrayElementSource / Reference / Call / Op：启动非 this 字段链
+            Class<?> vt = descriptorToClass(step.desc());
+            return new ChainedFieldSource(receiver, List.of(step), vt == null ? Object.class : vt);
+        }
+
+        private Expr makeFieldChain(List<FieldStep> chain) {
+            try {
+                VarHandle[] handles = new VarHandle[chain.size()];
+                Class<?> lastType = null;
+                for (int i = 0; i < chain.size(); i++) {
+                    FieldStep s = chain.get(i);
+                    Class<?> owner = loadClass(s.ownerInternal());
+                    if (owner == null) return new UnknownExpr("fieldChain-ownerNotFound-" + s.ownerInternal());
+                    Class<?> ft = descriptorToClass(s.desc());
+                    if (ft == null) return new UnknownExpr("fieldChain-typeNotFound-" + s.desc());
+                    Field field = findFieldInHierarchy(owner, s.name());
+                    if (field == null) return new UnknownExpr("fieldChain-fieldNotFound-" + s.name());
+                    Class<?> declaring = field.getDeclaringClass();
+                    MethodHandles.Lookup lk = MethodHandles.privateLookupIn(declaring, MethodHandles.lookup());
+                    handles[i] = lk.findVarHandle(declaring, s.name(), ft);
+                    lastType = ft;
+                }
+                return new FieldChainSource(chain, handles, lastType);
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+                return new UnknownExpr("fieldChain-VarHandle-failed");
+            }
+        }
+
+        //从 GETSTATIC FieldInsnNode 构建静态字段 Source；final static 常量折叠为 Reference
+        private Expr buildStaticFieldSource(FieldInsnNode field) {
+            try {
+                Class<?> owner = loadClass(field.owner);
+                if (owner == null) return null;
+                Field f = findFieldInHierarchy(owner, field.name);
+                if (f == null) return null;
+                f.setAccessible(true);
+                if (Modifier.isFinal(f.getModifiers()) && (f.getType() == Field.class
+                        || f.getType() == VarHandle.class || f.getType() == long.class
+                        || f.getType() == int.class || f.getType() == Object.class)) {
+                    Expr metadata = accessorInitializer(f, ctx);
+                    if (metadata != null) return metadata;
+                }
+                if (Modifier.isFinal(f.getModifiers())) {
+                    Object value = f.get(null);
+                    return value == null ? null : new Reference(value, field.owner);
+                }
+                return new StaticFieldSource(f);
+            } catch (Throwable t) {
+                if (t instanceof VirtualMachineError e) throw e;
+                return null;
+            }
+        }
+
+        private Expr resolveStaticField(String ownerInternal, String name) {
+            try {
+                Class<?> owner = loadClass(ownerInternal);
+                if (owner == null) return null;
+                Field f = findFieldInHierarchy(owner, name);
+                if (f == null) return null;
+                f.setAccessible(true);
+                if (!Modifier.isFinal(f.getModifiers())) return new StaticFieldSource(f);
+                Object value = f.get(null);
+                return value == null ? null : new Reference(value, ownerInternal);
+            } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+        }
+    }
+
+    //从 Map.get 的 receiver 表达式推断容器所属类(用于兄弟表扫描),无法确定返回 null
+    private static String mapOwnerHint(Expr container) {
+        if (container instanceof Reference ref) return ref.className();
+        if (container instanceof Call call) return call.owner();
+        return null;
+    }
+
+    /* ==================== 工具 ==================== */
+
+    private static TaintValue primI(ConstProvenance p, int v) { return new TaintValue(1, new Primitive(v, 'I', p)); }
+    private static TaintValue primL(ConstProvenance p, long v) { return new TaintValue(2, new Primitive(v, 'J', p)); }
+    private static TaintValue primF(ConstProvenance p, float v) { return new TaintValue(1, new Primitive(v, 'F', p)); }
+    private static TaintValue primD(ConstProvenance p, double v) { return new TaintValue(2, new Primitive(v, 'D', p)); }
+
+    private static TaintValue ldcValue(ConstProvenance p, LdcInsnNode insn) {
+        Object cst = insn.cst;
+        int sz = (cst instanceof Long || cst instanceof Double) ? 2 : 1;
+        if (cst instanceof Integer i) return new TaintValue(sz, new Primitive(i, 'I', p));
+        if (cst instanceof Long l) return new TaintValue(sz, new Primitive(l, 'J', p));
+        if (cst instanceof Float f) return new TaintValue(sz, new Primitive(f, 'F', p));
+        if (cst instanceof Double d) return new TaintValue(sz, new Primitive(d, 'D', p));
+        if (cst instanceof String s) return new TaintValue(sz, new Reference(s, "java/lang/String"));
+        //类字面量 X.class：解析为具体 Class 引用，供反射 getDeclaredMethod/Field 定位 owner
+        if (cst instanceof Type tp && (tp.getSort() == Type.OBJECT || tp.getSort() == Type.ARRAY)) {
+            Class<?> k = loadClass(tp.getInternalName());
+            if (k != null) return new TaintValue(sz, new Reference(k, "java/lang/Class"));
+        }
+        return new TaintValue(sz, UnknownExpr.UNKNOWN);
+    }
+
+    private static boolean isMapClassByName(String internal) {
+        if (internal.equals("java/util/Map") || internal.equals("java/util/HashMap")
+            || internal.equals("java/util/concurrent/ConcurrentHashMap") || internal.equals("java/util/WeakHashMap")
+            || internal.equals("java/util/LinkedHashMap") || internal.equals("java/util/IdentityHashMap")
+            || internal.equals("java/util/TreeMap")) return true;
+        if (internal.endsWith("Map") || internal.endsWith("HashMap")) return true;
+        Class<?> c = loadClass(internal);
+        return c != null && Map.class.isAssignableFrom(c);
+    }
+
+    private static boolean isCapabilityValueGet(MethodInsnNode method) {
+        if (!method.name.equals("getValue")) return false;
+        Type[] args = Type.getArgumentTypes(method.desc);
+        if (args.length != 1 || Type.getReturnType(method.desc) == Type.VOID_TYPE) return false;
+        Class<?> owner = loadClass(method.owner);
+        Class<?> keyType = asmTypeToClass(args[0]);
+        if (owner == null || keyType == null) return false;
+        for (Class<?> c = owner; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Method candidate : c.getDeclaredMethods()) {
+                if (!candidate.getName().equals("setValue")) continue;
+                Class<?>[] params = candidate.getParameterTypes();
+                if (params.length != 2) continue;
+                if (boxedType(params[0]).isAssignableFrom(boxedType(keyType))
+                        || boxedType(keyType).isAssignableFrom(boxedType(params[0]))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static MapEntrySource.KeyKind detectKeyKind(Expr key) {
+        if (key == EntityParamMarker.I) return MapEntrySource.KeyKind.ENTITY;
+        if (key instanceof Call call && call.args().size() == 1 && call.args().get(0) == EntityParamMarker.I) {
+            if (call.name().equals("getId")) return MapEntrySource.KeyKind.ENTITY_ID;
+            if (call.name().equals("getUUID")) return MapEntrySource.KeyKind.ENTITY_UUID;
+        }
+        return MapEntrySource.KeyKind.UNKNOWN;
+    }
+
+    private static Class<?> guessArrayElementType(int loadOp) {
+        return switch (loadOp) {
+            case Opcodes.IALOAD -> int.class;
+            case Opcodes.LALOAD -> long.class;
+            case Opcodes.FALOAD -> float.class;
+            case Opcodes.DALOAD -> double.class;
+            case Opcodes.BALOAD -> byte.class;
+            case Opcodes.CALOAD -> char.class;
+            case Opcodes.SALOAD -> short.class;
+            default -> Object.class;
+        };
+    }
+
+    //从内部名加载类：依次尝试上下文类加载器、系统类加载器、本类加载器，确保模组类能被定位
+    static Class<?> loadClass(String internalName) {
+        String className = internalName.replace('/', '.');
+        Throwable last = null;
+        for (ClassLoader cl : new ClassLoader[]{
+                Thread.currentThread().getContextClassLoader(),
+                ClassLoader.getSystemClassLoader(),
+                HealthDataflowAnalyzer.class.getClassLoader()
+        }) {
+            try { return Class.forName(className, false, cl); }
+            catch (Throwable t) {
+                if (t instanceof VirtualMachineError) throw (VirtualMachineError) t;
+                last = t;
+            }
+        }
+        //终极回退：不指定类加载器(使用调用类的加载器)
+        try { return Class.forName(className); }
+        catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; }
+        return null;
+    }
+
+    private static Method findAnyMethod(Class<?> owner, String name, String desc) {
+        for (Class<?> c = owner; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Method m : c.getDeclaredMethods()) {
+                if (m.getName().equals(name) && Type.getMethodDescriptor(m).equals(desc)) return m;
+            }
+        }
+        return null;
+    }
+
+    static Method findMethod(Class<?> owner, String name, Class<?>[] paramTypes, Object[] argValues) {
+        for (Class<?> c = owner; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Method m : c.getDeclaredMethods()) {
+                if (!m.getName().equals(name)) continue;
+                Class<?>[] mp = m.getParameterTypes();
+                if (mp.length != paramTypes.length) continue;
+                boolean match = true;
+                for (int i = 0; i < mp.length; i++) {
+                    if (!methodArgMatches(mp[i], paramTypes[i], argValues == null ? null : argValues[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return m;
+            }
+        }
+        return findInterfaceMethod(owner, name, paramTypes, argValues);
+    }
+
+    private static Method findInterfaceMethod(Class<?> owner, String name, Class<?>[] paramTypes, Object[] argValues) {
+        for (Class<?> iface : allInterfaces(owner)) {
+            for (Method method : iface.getMethods()) {
+                if (!method.getName().equals(name)) continue;
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length != paramTypes.length) continue;
+                boolean match = true;
+                for (int i = 0; i < params.length; i++) {
+                    if (!methodArgMatches(params[i], paramTypes[i], argValues == null ? null : argValues[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return method;
+            }
+        }
+        return null;
+    }
+
+    private static Method findMethodByRuntimeArgs(Class<?> owner, String name, Object[] argValues) {
+        for (Class<?> c = owner; c != null && c != Object.class; c = c.getSuperclass()) {
+            for (Method method : c.getDeclaredMethods()) {
+                if (!method.getName().equals(name)) continue;
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length != argValues.length) continue;
+                boolean match = true;
+                for (int i = 0; i < params.length; i++) {
+                    Object arg = argValues[i];
+                    if (arg == null) {
+                        if (params[i].isPrimitive()) {
+                            match = false;
+                            break;
+                        }
+                        continue;
+                    }
+                    Class<?> boxedParam = boxedType(params[i]);
+                    if (!boxedParam.isAssignableFrom(arg.getClass()) && coerceArg(arg, params[i]) == arg) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return method;
+            }
+        }
+        for (Class<?> iface : allInterfaces(owner)) {
+            for (Method method : iface.getMethods()) {
+                if (!method.getName().equals(name)) continue;
+                Class<?>[] params = method.getParameterTypes();
+                if (params.length != argValues.length) continue;
+                boolean match = true;
+                for (int i = 0; i < params.length; i++) {
+                    if (!runtimeArgMatches(params[i], argValues[i])) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return method;
+            }
+        }
+        return null;
+    }
+
+    private static Set<Class<?>> allInterfaces(Class<?> type) {
+        Set<Class<?>> result = new LinkedHashSet<>();
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) collectInterfaces(c, result);
+        return result;
+    }
+
+    private static void collectInterfaces(Class<?> type, Set<Class<?>> result) {
+        for (Class<?> iface : type.getInterfaces()) {
+            if (result.add(iface)) collectInterfaces(iface, result);
+        }
+    }
+
+    private static boolean runtimeArgMatches(Class<?> param, Object arg) {
+        if (arg == null) return !param.isPrimitive();
+        Class<?> boxedParam = boxedType(param);
+        return boxedParam.isAssignableFrom(arg.getClass()) || coerceArg(arg, param) != arg;
+    }
+
+    static boolean methodArgMatches(Class<?> methodParam, Class<?> descriptorParam, Object value) {
+        Class<?> boxedMethod = boxedType(methodParam);
+        Class<?> boxedDescriptor = boxedType(descriptorParam);
+        if (boxedMethod.equals(boxedDescriptor) || boxedMethod.isAssignableFrom(boxedDescriptor)) return true;
+        if (value == null) return !methodParam.isPrimitive();
+        return boxedMethod.isAssignableFrom(value.getClass()) || coerceArg(value, methodParam) != value;
+    }
+
+    private static Class<?> boxedType(Class<?> type) {
+        if (type == null || !type.isPrimitive()) return type;
+        if (type == boolean.class) return Boolean.class;
+        if (type == char.class) return Character.class;
+        if (type == byte.class) return Byte.class;
+        if (type == short.class) return Short.class;
+        if (type == int.class) return Integer.class;
+        if (type == long.class) return Long.class;
+        if (type == float.class) return Float.class;
+        if (type == double.class) return Double.class;
+        if (type == void.class) return Void.class;
+        return type;
+    }
+
+    static Class<?> asmTypeToClass(Type t) {
+        return switch (t.getSort()) {
+            case Type.BOOLEAN -> boolean.class;
+            case Type.CHAR -> char.class;
+            case Type.BYTE -> byte.class;
+            case Type.SHORT -> short.class;
+            case Type.INT -> int.class;
+            case Type.FLOAT -> float.class;
+            case Type.LONG -> long.class;
+            case Type.DOUBLE -> double.class;
+            case Type.OBJECT, Type.ARRAY -> {
+                try { yield Class.forName(t.getClassName(), false, Thread.currentThread().getContextClassLoader()); }
+                catch (Throwable e) { if (e instanceof VirtualMachineError) throw (VirtualMachineError) e; yield null; }
+            }
+            default -> null;
+        };
+    }
+
+    static Class<?> descriptorToClass(String d) {
+        if (d == null || d.isEmpty()) return null;
+        return switch (d.charAt(0)) {
+            case 'F' -> float.class;
+            case 'D' -> double.class;
+            case 'I' -> int.class;
+            case 'J' -> long.class;
+            case 'S' -> short.class;
+            case 'B' -> byte.class;
+            case 'C' -> char.class;
+            case 'Z' -> boolean.class;
+            case 'L' -> loadClass(d.substring(1, d.length() - 1));
+            case '[' -> loadClass(d);
+            default -> null;
+        };
+    }
+
+    static Object coerceForType(Object v, Class<?> type) {
+        if (v == null) return null;
+        if (type == float.class || type == Float.class)
+            return v instanceof Number n ? n.floatValue() : null;
+        if (type == double.class || type == Double.class)
+            return v instanceof Number n ? n.doubleValue() : null;
+        if (type == int.class || type == Integer.class)
+            return v instanceof Number n ? n.intValue() : null;
+        if (type == long.class || type == Long.class)
+            return v instanceof Number n ? n.longValue() : null;
+        if (type == short.class || type == Short.class)
+            return v instanceof Number n ? n.shortValue() : null;
+        if (type == byte.class || type == Byte.class)
+            return v instanceof Number n ? n.byteValue() : null;
+        if (type == char.class || type == Character.class)
+            return v instanceof Number n ? (char) n.intValue() : null;
+        if (type == String.class) return v.toString();
+        return v;
+    }
+
+    static Object coerceSameType(Object reference, Object value) {
+        if (reference == null) return value;
+        if (reference instanceof Float) return value instanceof Number n ? n.floatValue() : null;
+        if (reference instanceof Double) return value instanceof Number n ? n.doubleValue() : null;
+        if (reference instanceof Integer) return value instanceof Number n ? n.intValue() : null;
+        if (reference instanceof Long) return value instanceof Number n ? n.longValue() : null;
+        if (reference instanceof Short) return value instanceof Number n ? n.shortValue() : null;
+        if (reference instanceof Byte) return value instanceof Number n ? n.byteValue() : null;
+        if (reference instanceof String) return value == null ? null : value.toString();
+        return value;
+    }
+
+    public static Object coerceArgPublic(Object v, Class<?> targetType) {
+        return coerceArg(v, targetType);
+    }
+
+    private static Object coerceArg(Object v, Class<?> targetType) {
+        if (v == null) return targetType.isPrimitive() ? defaultPrim(targetType) : null;
+        if (targetType.isInstance(v)) return v;
+        if (v instanceof Number n) {
+            if (targetType == int.class || targetType == Integer.class) return n.intValue();
+            if (targetType == long.class || targetType == Long.class) return n.longValue();
+            if (targetType == float.class || targetType == Float.class) return n.floatValue();
+            if (targetType == double.class || targetType == Double.class) return n.doubleValue();
+            if (targetType == short.class || targetType == Short.class) return n.shortValue();
+            if (targetType == byte.class || targetType == Byte.class) return n.byteValue();
+        }
+        return v;
+    }
+
+    private static Object defaultPrim(Class<?> t) {
+        if (t == int.class) return 0;
+        if (t == long.class) return 0L;
+        if (t == float.class) return 0f;
+        if (t == double.class) return 0d;
+        if (t == short.class) return (short) 0;
+        if (t == byte.class) return (byte) 0;
+        if (t == boolean.class) return false;
+        if (t == char.class) return (char) 0;
+        return null;
+    }
+
+    private static Object readField(Object target, FieldStep step) {
+        try {
+            Class<?> owner = loadClass(step.ownerInternal());
+            if (owner == null) return null;
+            Field f = findFieldInHierarchy(owner, step.name());
+            if (f == null) return null;
+            f.setAccessible(true);
+            return f.get(target);
+        } catch (Throwable t) { if (t instanceof VirtualMachineError) throw (VirtualMachineError) t; return null; }
+    }
+
+    static Field findFieldInHierarchy(Class<?> owner, String name) {
+        for (Class<?> c = owner; c != null && c != Object.class; c = c.getSuperclass()) {
+            try {
+                return c.getDeclaredField(name);
+            } catch (NoSuchFieldException ignored) {
+            }
+        }
+        return null;
+    }
+
+    /* 求值上下文：携带当前实体实例，让 solve/evaluate 现读其字段值代入演算(只读不写) */
+    public record SimpleEvalContext(LivingEntity entity) implements EvalContext {
+        @Override public Object eval(Expr e) { return evaluate(e, this); }
+    }
+
+    /* 公开求值上下文工厂：供写入侧/外部模块在反演前为某个实体构造一个轻量上下文 */
+    public static EvalContext newContext(LivingEntity entity) {
+        return new SimpleEvalContext(entity);
+    }
+
+    /* 公开反演入口，行为等同于 solveDetailed。
+       输入 IR 根 + 一个候选 sink + 目标值 + 求值上下文，返回 sink 应被写入的具体值或失败枚举。 */
+    public static HealthSolveResult buildWritePath(Expr root, Source sink, Object target, EvalContext ctx) {
+        return solveDetailed(root, sink, target, ctx);
+    }
+
+    /* 路径不敏感的控制流会让同一存储位置暴露多处写入。保留每个可表示的值，
+       交由落地层校验完整事务。 */
+    public static List<Object> buildWriteCandidates(Expr root, Source sink, Object target,
+                                                    EvalContext ctx, int limit) {
+        if (root == null || sink == null || ctx == null || limit <= 0) return List.of();
+        List<Object> candidates = new ArrayList<>();
+        /* 最大生命值是反向累加器的独立上限，优先使用含运行期上限读取的分支；字面量兜底
+           仍作为后备候选保留，最终由真实观测逐个裁决。 */
+        Expr relevant = pruneChoicesTo(root, sink);
+        Object stored = sink.read(ctx.entity());
+        if (stored instanceof Enum<?> value) {
+            return enumWriteCandidates(relevant, sink, target, ctx, value);
+        }
+        Expr preferred = normalizeEffectiveChoices(relevant, sink);
+        if (preferred != null) collectWriteCandidates(preferred, sink, target, ctx, limit, candidates);
+        for (Expr expanded : expandChoices(relevant, limit)) {
+            if (candidates.size() >= limit) break;
+            collectWriteCandidates(expanded, sink, target, ctx, limit, candidates);
+        }
+        /* 裁枝后的路径仍可能因路径不敏感合并而无法展开。旧反演若能给出值，保留为末位候选，
+           由事务写入和真实观测负责拒绝错误分支。 */
+        if (candidates.isEmpty()) {
+            HealthSolveResult fallback = solveDetailed(root, sink, target, ctx);
+            if (fallback.solved() && fallback.value() != null) candidates.add(fallback.value());
+        }
+        return List.copyOf(candidates);
+    }
+
+    private static final class EnumSearchState {
+        int next;
+        int pending = -1;
+    }
+
+    private static final ClassValue<Map<String, EnumSearchState>> ENUM_SEARCH_STATES = new ClassValue<>() {
+        @Override protected Map<String, EnumSearchState> computeValue(Class<?> type) { return new ConcurrentHashMap<>(); }
+    };
+
+    private static final ClassValue<List<Class<?>>> ENUM_FAMILIES = new ClassValue<>() {
+        @Override protected List<Class<?>> computeValue(Class<?> type) {
+            List<Class<?>> types = new ArrayList<>();
+            types.add(type);
+            Class<?> enclosing = type.getEnclosingClass();
+            if (enclosing != null) {
+                Class<?>[] nestedTypes = enclosing.getDeclaredClasses();
+                Arrays.sort(nestedTypes, Comparator.comparing(Class::getName));
+                for (Class<?> nested : nestedTypes) {
+                    if (types.size() >= 64) break;
+                    if (nested != type && nested.isEnum() && Arrays.stream(type.getInterfaces())
+                            .anyMatch(contract -> contract.isAssignableFrom(nested))) types.add(nested);
+                }
+            }
+            return List.copyOf(types);
+        }
+    };
+
+    // 只在本次求解内复用表达式及独立操作数，不把实体或运行期值放入类缓存。
+    private static final class CandidateValue implements Expr {
+        Object value;
+    }
+
+    private static Expr prepareCandidateExpression(Expr expression, Source source, CandidateValue slot, EvalContext context) {
+        if (sameSource(expression, source)) return slot;
+        if (!containsSink(expression, source)) {
+            Object value = safeEvaluate(expression, context);
+            return new Reference(value, value == null ? "null" : value.getClass().getName());
+        }
+        if (expression instanceof Op operation) return new Op(operation.opcode(), operation.args().stream()
+                .map(argument -> prepareCandidateExpression(argument, source, slot, context)).toList());
+        if (expression instanceof Call call) return new Call(call.owner(), call.caller(), call.name(), call.desc(),
+                call.opcode(), call.args().stream()
+                .map(argument -> prepareCandidateExpression(argument, source, slot, context)).toList());
+        return expression;
+    }
+
+    private static boolean enumResultMatches(Object actual, Object expected) {
+        return actual instanceof Number left && expected instanceof Number right
+                && Double.isFinite(left.doubleValue()) && Double.isFinite(right.doubleValue())
+                && Math.abs(left.doubleValue() - right.doubleValue()) <= Math.max(
+                        Math.ulp(right.doubleValue()) * 4,
+                        expected instanceof Float ? Math.ulp(right.floatValue()) * 4.0 : 0.0);
+    }
+
+    private static List<Object> enumWriteCandidates(Expr root, Source sink, Object target, EvalContext context,
+                                                   Enum<?> stored) {
+        long started = System.nanoTime();
+        long deadline = started + 800_000_000L;
+        Class<?> type = stored.getDeclaringClass();
+        CandidateValue slot = new CandidateValue();
+        slot.value = stored;
+        float observed = EcaSetHealthManager.readHealthAnchor(context.entity());
+        List<Expr> branches = new ArrayList<>();
+        List<Expr> originalBranches = new ArrayList<>();
+        int baselineErrors = 0;
+        List<Object> baselineValues = new ArrayList<>();
+        for (Expr branch : expandChoices(root, 16)) {
+            if (branch instanceof StoreWrite || !containsSink(branch, sink)) continue;
+            Expr prepared = prepareCandidateExpression(branch, sink, slot, context);
+            Object actual = safeEvaluate(prepared, context);
+            if (!(actual instanceof Number)) baselineErrors++;
+            if (baselineValues.size() < 4) baselineValues.add(actual instanceof Number ? actual.toString() : tr("value.unevaluable"));
+            if (enumResultMatches(actual, observed)) {
+                branches.add(prepared);
+                originalBranches.add(branch);
+            }
+        }
+        HealthMutationContext.recordEvidence(tr("enum.baseline", observed, List.copyOf(baselineValues), branches.size(), baselineErrors));
+        if (branches.isEmpty()) {
+            HealthMutationContext.recordEvidence(tr("enum.baseline_mismatch"));
+            return List.of();
+        }
+        String key = evidenceKey(root) + ":target=" + target + ":entity=" + context.entity().getUUID()
+                + ":client=" + context.entity().level().isClientSide()
+                + ":baseline=" + Float.floatToRawIntBits(observed);
+        Map<String, EnumSearchState> states = ENUM_SEARCH_STATES.get(type);
+        if (states.size() >= 64 && !states.containsKey(key)) states.clear();
+        EnumSearchState state = states.computeIfAbsent(key, ignored -> new EnumSearchState());
+        int start = state.pending >= 0 ? state.pending : state.next;
+        int index = 0, examined = 0, errors = 0;
+        boolean exhausted = false;
+        try {
+            for (Class<?> candidateType : ENUM_FAMILIES.get(type)) {
+                if (System.nanoTime() >= deadline || HealthMutationContext.stopped()) { exhausted = true; break; }
+                Object[] constants = candidateType.getEnumConstants();
+                if (constants == null) continue;
+                for (Object candidate : constants) {
+                    int position = index++;
+                    if (position < start) continue;
+                    if (System.nanoTime() >= deadline || examined >= 32768 || HealthMutationContext.stopped()) {
+                        exhausted = true;
+                        break;
+                    }
+                    examined++;
+                    slot.value = candidate;
+                    boolean matches = false;
+                    for (Expr branch : branches) {
+                        Object actual = safeEvaluate(branch, context);
+                        if (!(actual instanceof Number)) errors++;
+                        if (enumResultMatches(actual, target)) { matches = true; break; }
+                    }
+                    if (matches) {
+                        // 命中后先保存坐标；只有落地层真正开始提交，才消费该候选。
+                        state.pending = position;
+                        state.next = position;
+                        HealthMutationContext shared = HealthMutationContext.current();
+                        if (shared != null) shared.rememberSubmission(sink, candidate,
+                                () -> sink.read(context.entity()) == stored
+                                        && enumResultMatches(EcaSetHealthManager.readHealthAnchor(context.entity()), observed)
+                                        && originalBranches.stream().anyMatch(branch -> enumResultMatches(
+                                                safeEvaluate(replaceCandidate(branch, sink, candidate), context), target)), () -> {
+                            state.pending = -1;
+                            state.next = position + 1;
+                        });
+                        HealthMutationContext.recordEvidence(tr("enum.found", start, position, examined, errors));
+                        return List.of(candidate);
+                    }
+                    state.pending = -1;
+                    state.next = position + 1;
+                }
+                if (exhausted) break;
+            }
+            if (!exhausted) states.remove(key);
+        } catch (RuntimeException | LinkageError exception) {
+            exhausted = true;
+            EcaLogger.info("[HealthDataflow] object candidate evaluation failed: {}", exception.getClass().getSimpleName());
+        }
+        HealthMutationContext.recordEvidence(tr("enum.progress", start, state.next, examined, errors, (System.nanoTime() - started) / 1_000_000L, exhausted ? tr("enum.pending") : tr("enum.complete")));
+        if (exhausted && HealthMutationContext.current() != null)
+            HealthMutationContext.current().deferStorageSearch(sink);
+        return List.of();
+    }
+
+    /* Choice 可能嵌在算术或调用参数中，只有展开整条反解路径才能得到所有候选值。
+       组合数始终受 limit 约束，避免路径不敏感分析造成指数膨胀。 */
+    private static List<Expr> expandChoices(Expr expression, int limit) {
+        if (expression instanceof Choice choice) {
+            List<Expr> expanded = new ArrayList<>();
+            for (Expr alternative : choice.alternatives()) {
+                for (Expr value : expandChoices(alternative, limit)) {
+                    if (!expanded.contains(value)) expanded.add(value);
+                    if (expanded.size() >= limit) return expanded;
+                }
+            }
+            return expanded;
+        }
+        if (expression instanceof Op operation) {
+            List<List<Expr>> combinations = expandArguments(operation.args(), limit);
+            List<Expr> expanded = new ArrayList<>(combinations.size());
+            for (List<Expr> arguments : combinations) {
+                expanded.add(new Op(operation.opcode(), arguments));
+            }
+            return expanded;
+        }
+        if (expression instanceof Call call) {
+            List<List<Expr>> combinations = expandArguments(call.args(), limit);
+            List<Expr> expanded = new ArrayList<>(combinations.size());
+            for (List<Expr> arguments : combinations) {
+                expanded.add(new Call(call.owner(), call.caller(), call.name(), call.desc(),
+                        call.opcode(), arguments));
+            }
+            return expanded;
+        }
+        return List.of(expression);
+    }
+
+    private static List<List<Expr>> expandArguments(List<Expr> arguments, int limit) {
+        List<List<Expr>> combinations = new ArrayList<>();
+        combinations.add(new ArrayList<>());
+        for (Expr argument : arguments) {
+            List<Expr> alternatives = expandChoices(argument, limit);
+            List<List<Expr>> next = new ArrayList<>();
+            for (List<Expr> prefix : combinations) {
+                for (Expr alternative : alternatives) {
+                    List<Expr> combined = new ArrayList<>(prefix.size() + 1);
+                    combined.addAll(prefix);
+                    combined.add(alternative);
+                    next.add(List.copyOf(combined));
+                    if (next.size() >= limit) break;
+                }
+                if (next.size() >= limit) break;
+            }
+            combinations = next;
+            if (combinations.isEmpty()) break;
+        }
+        return combinations;
+    }
+
+    private static void collectWriteCandidates(Expr root, Source sink, Object target, EvalContext ctx,
+                                               int limit, List<Object> candidates) {
+        if (candidates.size() >= limit) return;
+        if (containsDiscreteCall(root)) {
+            for (Object value : solveDiscrete(root, sink, target, ctx, limit, new int[]{2048}, 0)) {
+                if (!candidates.contains(value)) candidates.add(value);
+                if (candidates.size() >= limit) break;
+            }
+            return;
+        }
+        if (root instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) {
+                if (candidates.size() >= limit) return;
+                if (containsSink(alternative, sink)) {
+                    collectWriteCandidates(alternative, sink, target, ctx, limit, candidates);
+                }
+            }
+            return;
+        }
+        HealthSolveResult result = solveDetailed(root, sink, target, ctx);
+        if (!result.solved() || result.value() == null) return;
+        for (Object candidate : candidates) {
+            if (Objects.equals(candidate, result.value())) return;
+        }
+        candidates.add(result.value());
+    }
+
+    private static boolean isDiscreteCall(Call call) {
+        return call.owner().equals("java/lang/Math")
+                && (call.name().equals("floorMod") && Set.of("(II)I", "(JJ)J", "(JI)I").contains(call.desc())
+                    || call.name().equals("round") && Set.of("(F)I", "(D)J").contains(call.desc()));
+    }
+
+    private static boolean containsDiscreteCall(Expr root) {
+        Set<Expr> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        ArrayDeque<Expr> pending = new ArrayDeque<>();
+        if (root != null) pending.add(root);
+        while (!pending.isEmpty() && visited.size() < 50_000) {
+            Expr expression = pending.removeLast();
+            if (!visited.add(expression)) continue;
+            if (expression instanceof Call call) {
+                if (isDiscreteCall(call)) return true;
+                pending.addAll(call.args());
+            } else if (expression instanceof Op op) pending.addAll(op.args());
+            else if (expression instanceof Choice choice) pending.addAll(choice.alternatives());
+        }
+        return false;
+    }
+
+    /* 离散运算保留多个原像；在纯表达式上替换候选正算，不以试写实体代替数学验证。 */
+    private static List<Object> solveDiscrete(Expr root, Source sink, Object target, EvalContext ctx,
+                                               int limit, int[] budget, int depth) {
+        if (--budget[0] < 0 || depth > 128) {
+            HealthMutationContext.retainFailure(HealthSolveResult.failure(HealthSolveFailure.BUDGET_EXHAUSTED,
+                    "discrete search budget exhausted"), root, sink, target);
+            return List.of();
+        }
+        if (!containsSink(root, sink)) return List.of();
+        List<Object> results = new ArrayList<>();
+        if (root instanceof Choice choice) {
+            for (Expr alternative : choice.alternatives()) {
+                for (Object value : solveDiscrete(alternative, sink, target, ctx, limit, budget, depth + 1)) {
+                    if (!results.contains(value)) results.add(value);
+                    if (results.size() >= limit) return results;
+                }
+            }
+            return results;
+        }
+        if (!(root instanceof Op) && !(root instanceof Call)) {
+            HealthSolveResult solved = solveDetailed(root, sink, target, ctx);
+            if (solved.solved() && verifiesCandidate(root, sink, solved.value(), target, ctx)) results.add(solved.value());
+            return results;
+        }
+        List<Expr> args = root instanceof Call call ? call.args() : root instanceof Op op ? op.args() : List.of();
+        int index = findArgWithSinkDetailed(args, sink);
+        if (index < 0) {
+            HealthMutationContext.retainFailure(HealthSolveResult.failure(index == -2
+                    ? HealthSolveFailure.MULTI_LOCATION_UNSUPPORTED : HealthSolveFailure.LOCATION_NOT_FOUND,
+                    "discrete operand selection failed"), root, sink, target);
+            return results;
+        }
+        Expr child = args.get(index);
+        List<Object> inputs = new ArrayList<>();
+        if (root instanceof Call call && isDiscreteCall(call)) {
+            if (index != 0) return results;
+            if (call.name().equals("round")) {
+                inputs.addAll(roundPreimages(call.desc(), target, ctx.eval(child)));
+            } else {
+                BigInteger residue = exactInteger(target);
+                BigInteger divisor = exactInteger(ctx.eval(args.get(1)));
+                if (residue == null || divisor == null || divisor.signum() == 0
+                        || residue.signum() != 0 && residue.signum() != divisor.signum()
+                        || residue.abs().compareTo(divisor.abs()) >= 0) return results;
+                int bits = call.desc().startsWith("(I") ? 32 : 64;
+                inputs.addAll(integerRepresentatives(residue, divisor.abs(), ctx.eval(child), bits, 32));
+                /* 先解乘积的同余约束，避免取模原像的局部枚举遗漏远处的整除解。 */
+                if (child instanceof Op product && product.opcode() == (bits == 32 ? Opcodes.IMUL : Opcodes.LMUL)) {
+                    int variable = findArgWithSinkDetailed(product.args(), sink);
+                    if (variable >= 0) {
+                        BigInteger factor = exactInteger(ctx.eval(product.args().get(1 - variable)));
+                        BigInteger modulus = divisor.abs();
+                        if (factor != null && factor.signum() != 0) {
+                            BigInteger gcd = factor.gcd(modulus);
+                            if (residue.mod(gcd).signum() == 0) {
+                                BigInteger period = modulus.divide(gcd);
+                                BigInteger base = period.equals(BigInteger.ONE) ? BigInteger.ZERO
+                                        : residue.divide(gcd).multiply(factor.divide(gcd).mod(period).modInverse(period)).mod(period);
+                                Expr operand = product.args().get(variable);
+                                for (Object value : integerRepresentatives(base, period, ctx.eval(operand), bits, 16)) {
+                                    for (Object candidate : solveDiscrete(operand, sink, value, ctx, limit, budget, depth + 1)) {
+                                        if (verifiesCandidate(root, sink, candidate, target, ctx) && !results.contains(candidate)) results.add(candidate);
+                                        if (results.size() >= limit) return results;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (root instanceof Op operation
+                && (operation.opcode() == Opcodes.IMUL || operation.opcode() == Opcodes.LMUL)) {
+            int bits = operation.opcode() == Opcodes.IMUL ? 32 : 64;
+            BigInteger factor = exactInteger(ctx.eval(args.get(1 - index)));
+            BigInteger product = exactInteger(target);
+            BigInteger modulus = BigInteger.ONE.shiftLeft(bits);
+            if (factor == null || product == null) return results;
+            BigInteger gcd = factor.gcd(modulus);
+            if (product.mod(gcd).signum() != 0) return results;
+            BigInteger period = modulus.divide(gcd);
+            BigInteger base = period.equals(BigInteger.ONE) ? BigInteger.ZERO
+                    : product.divide(gcd).multiply(factor.divide(gcd).mod(period).modInverse(period)).mod(period);
+            inputs.addAll(integerRepresentatives(base, period, ctx.eval(child), bits, 8));
+        } else {
+            Inverter inverter = root instanceof Op op ? TABLE.lookupOp(op.opcode()) : lookupCallInverter((Call) root);
+            if (inverter == null) {
+                HealthMutationContext.retainFailure(HealthSolveResult.failure(HealthSolveFailure.INVERTER_MISSING,
+                        "discrete dependency has no inverse"), root, sink, target);
+                return results;
+            }
+            Object input = inverter.invert(target, args, index, ctx);
+            if (input != null) inputs.add(input);
+        }
+        for (Object input : inputs) {
+            for (Object candidate : solveDiscrete(child, sink, input, ctx, limit, budget, depth + 1)) {
+                if (verifiesCandidate(root, sink, candidate, target, ctx) && !results.contains(candidate)) results.add(candidate);
+                if (results.size() >= limit) return results;
+            }
+            if (budget[0] <= 0) break;
+        }
+        return results;
+    }
+
+    private static BigInteger exactInteger(Object value) {
+        if (!(value instanceof Number number)) return null;
+        try {
+            if (number instanceof Float || number instanceof Double) {
+                return new BigDecimal(number.doubleValue()).toBigIntegerExact();
+            }
+            return new BigDecimal(number.toString()).toBigIntegerExact();
+        } catch (NumberFormatException | ArithmeticException exception) {
+            return null;
+        }
+    }
+
+    private static List<Object> integerRepresentatives(BigInteger base, BigInteger period, Object current,
+                                                        int bits, int limit) {
+        List<Object> values = new ArrayList<>();
+        BigInteger minimum = BigInteger.ONE.shiftLeft(bits - 1).negate();
+        BigInteger maximum = BigInteger.ONE.shiftLeft(bits - 1).subtract(BigInteger.ONE);
+        BigInteger observed = exactInteger(current);
+        BigInteger center = observed == null ? BigInteger.ZERO : observed.subtract(base).divide(period);
+        for (int i = 0; i < limit; i++) {
+            BigInteger offset = BigInteger.valueOf((i + 1L) / 2L * (i % 2 == 0 ? -1 : 1));
+            for (BigInteger anchor : List.of(center, BigInteger.ZERO)) {
+                BigInteger value = base.add(anchor.add(offset).multiply(period));
+                if (value.compareTo(minimum) < 0 || value.compareTo(maximum) > 0) continue;
+                Object boxed;
+                if (bits == 32) boxed = Integer.valueOf(value.intValue());
+                else boxed = Long.valueOf(value.longValue());
+                if (!values.contains(boxed)) values.add(boxed);
+            }
+        }
+        return values;
+    }
+
+    private static List<Object> roundPreimages(String descriptor, Object target, Object current) {
+        BigInteger integer = exactInteger(target);
+        int bits = descriptor.equals("(F)I") ? 32 : 64;
+        if (integer == null || integer.bitLength() >= bits) return List.of();
+        List<Object> values = new ArrayList<>();
+        double center = integer.doubleValue();
+        double observed = current instanceof Number number ? number.doubleValue() : center;
+        for (double value : new double[]{observed, center, center - 0.5, Math.nextDown(center + 0.5),
+                Math.nextDown(center), Math.nextUp(center), Math.nextDown((float) (center + 0.5)),
+                Math.nextUp((float) (center - 0.5))}) {
+            if (bits == 32) {
+                float candidate = (float) value;
+                if (Float.isFinite(candidate) && Math.round(candidate) == integer.intValue()
+                        && !values.contains(candidate)) values.add(candidate);
+            } else if (Double.isFinite(value) && Math.round(value) == integer.longValue()
+                    && !values.contains(value)) values.add(value);
+        }
+        return values;
+    }
+
+    private static boolean verifiesCandidate(Expr expression, Source sink, Object candidate,
+                                               Object target, EvalContext ctx) {
+        Object actual = evaluate(replaceCandidate(expression, sink, candidate), ctx);
+        if (actual instanceof Number left && target instanceof Number right) {
+            if (!Double.isFinite(left.doubleValue()) || !Double.isFinite(right.doubleValue())) return false;
+            BigInteger integerLeft = exactInteger(left);
+            BigInteger integerRight = exactInteger(right);
+            if (integerLeft != null && integerRight != null) return integerLeft.equals(integerRight);
+            double tolerance = Math.max(Math.ulp(right.doubleValue()) * 4,
+                    right instanceof Float ? Math.ulp(right.floatValue()) * 4.0 : 0.0);
+            return Math.abs(left.doubleValue() - right.doubleValue()) <= tolerance;
+        }
+        return Objects.equals(actual, target);
+    }
+
+    private static Expr replaceCandidate(Expr expression, Source sink, Object candidate) {
+        if (sameSource(expression, sink)) return new Reference(candidate, candidate.getClass().getName());
+        if (expression instanceof Op op) return new Op(op.opcode(), op.args().stream()
+                .map(arg -> replaceCandidate(arg, sink, candidate)).toList());
+        if (expression instanceof Call call) return new Call(call.owner(), call.caller(), call.name(), call.desc(),
+                call.opcode(), call.args().stream().map(arg -> replaceCandidate(arg, sink, candidate)).toList());
+        return expression;
+    }
+}

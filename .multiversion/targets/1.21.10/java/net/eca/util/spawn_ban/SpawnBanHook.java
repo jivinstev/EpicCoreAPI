@@ -1,0 +1,29 @@
+package net.eca.util.spawn_ban;
+
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+
+// 禁生成钩子（供Mixin调用）
+public class SpawnBanHook {
+
+    // 检查实体是否应该被阻止添加
+    public static boolean shouldBlockSpawn(Level level, Entity entity) {
+        if (level == null || level.isClientSide() || entity == null) {
+            return false;
+        }
+
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return false;
+        }
+
+        return SpawnBanManager.isEntityBanned(serverLevel, entity);
+    }
+
+    // 为底层容器入口解析实体所属的服务端世界
+    public static boolean shouldBlockSpawn(Object candidate) {
+        if (!(candidate instanceof Entity entity)) return false;
+        return shouldBlockSpawn(entity.level, entity);
+    }
+
+}

@@ -36,3 +36,11 @@ fork-port.py's own block, for its last run only:
 - model: claude-haiku-5-5 (88 req), claude-opus-5-5 (57 req), claude-sonnet-5-5 (167 req); effort: medium 312
 - tokens: output 202,746 (thinking 117,819), input 644, cache read 95,317,031, cache write 2,108,671 (5m 1,447,941 / 1h 660,730)
 - size: 43 Java files, 6 mixin classes; target Minecraft 1.21.8
+
+## fork-port.py run since 2026-10-12T05:59:11+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $0.32** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.0 h active, 0.0 h wall (2026-10-12T05:59Z to 2026-10-12T05:59Z)
+- model: claude-opus-5-5 (2 req); effort: medium 2
+- tokens: output 610 (thinking 0), input 4, cache read 1,453,706, cache write 2,353 (5m 0 / 1h 2,353)
+- size: 42 Java files, 6 mixin classes; target Minecraft 1.21.8
