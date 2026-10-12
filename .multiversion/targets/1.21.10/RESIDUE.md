@@ -1,9 +1,13 @@
-# 1.21.10 -- open items
+# Residue: gates
 
-- Shipped jar: PROVEN with tools/shipped-gate.py (real NeoForge 21.10.64 server, the _mr jar in mods/): the agent
-  backend is selected and the containers in ServerLevel replaced, as on 1.21.1. FML 10 cannot discover a class
-  processor from a mods/ jar, so the shipped path starts the AGENT backend from mod construction (ShippedBackendInit);
-  on a JVM where the agent cannot attach, a shipped 1.21.10 jar has no coremod fallback (1.21.1 had one) and logs a
-  warning instead.
-- Not yet run: Gate C (client) on 1.21.10 -- GeckoLib 5.3 submit-based layers and the 12 submit mixins are
-  compile- and audit-proven only.
+Stopped at **gates**: 1 gate(s) red: Gate C -- real client, `launch`: FAIL -- java.lang.NullPointerException thrown in net.eca..
+
+## Failing gates
+
+- Gate C -- real client, `launch`: FAIL -- java.lang.NullPointerException thrown in net.eca.compat.GeckoLibCompat.register, caught and only logged (1x); java.lang.RuntimeException thrown in net.eca.comp
+
+## To resume
+
+`python3 tools/fork-port.py --repo . --target 1.21.10 --from-stage gates --budget 4.0 --gates full`
+
+Fix what is listed here, and put every fix in the shared library (templates/fork-layer/shared/<t>) or a converter, not in one fork.
