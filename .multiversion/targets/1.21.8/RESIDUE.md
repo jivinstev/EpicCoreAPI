@@ -1,10 +1,10 @@
 # Residue: gates
 
-Stopped at **gates**: 1 gate(s) red: Gate A -- mixin-config integrity: FAIL -- the gate harness has no rename table for Minecra.
+Stopped at **gates**: 1 gate(s) red: Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/Epi.
 
 ## Failing gates
 
-- Gate A -- mixin-config integrity: FAIL -- the gate harness has no rename table for Minecraft 1.21.8 (templates/upstream-harness/versions/1.21.8.renames.tsv): it is written for 1.21.1
+- Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/EpicCoreAPI/build/mc1.21.8/fork-port/gates/gateA.log -- first compile error(s): eca/gatetest/GeneratedGameTests.j
 
 ## To resume
 
