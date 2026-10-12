@@ -1,0 +1,108 @@
+package net.eca.event;
+
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.eca.util.bossshow.BossShowClientState;
+import net.eca.util.bossshow.BossShowEditorState;
+import net.eca.util.bossshow.BossShowPose;
+import net.eca.client.BossShowScreenEffectState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+
+//客户端事件处理：tick 推进、HUD 隐藏、Letterbox、PauseScreen 拦截
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
+public final class BossShowClientEvents {
+
+    private BossShowClientEvents() {}
+
+    //每 client tick 推进
+    @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        if (Minecraft.getInstance().isPaused()) return;
+        BossShowClientState.tick();
+    }
+
+    //播放时隐藏 HUD，并在 cancel 前绘制 letterbox 黑边
+    //（必须在 Pre 里画：cancel Pre 后 ForgeGui.render 直接 return，Post 不会触发）
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onRenderGuiPre(RenderGuiEvent.Pre event) {
+        if (!BossShowClientState.isActive()) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        int width = mc.getWindow().getGuiScaledWidth();
+        int height = mc.getWindow().getGuiScaledHeight();
+        GuiGraphics gui = event.getGuiGraphics();
+
+        if (BossShowClientState.isCinematic()) {
+            int bar = (int) (height * 0.12f);
+            if (bar > 0) {
+                var pose = gui.pose();
+                pose.pushMatrix();
+                net.eca.mv.LegacyGl.enableBlend();
+                gui.fill(0, 0, width, bar, 0xFF000000);
+                gui.fill(0, height - bar, width, height, 0xFF000000);
+                net.eca.mv.LegacyGl.disableBlend();
+                pose.popMatrix();
+            }
+        }
+
+        renderSubtitle(gui, mc.font, width, height);
+
+        event.setCanceled(true);
+    }
+
+    private static void renderSubtitle(GuiGraphics gui, Font font, int width, int height) {
+        Component subtitle = BossShowClientState.getSubtitle();
+        if (subtitle == null) return;
+        float alpha = BossShowClientState.getSubtitleAlpha();
+        if (alpha <= 0f) return;
+
+        int a = (int) (alpha * 255) & 0xFF;
+        int color = (a << 24) | 0xFFFFFF;
+        //字幕位于下方黑边上沿内侧
+        int barHeight = (int) (height * 0.12f);
+        int y = height - barHeight + (barHeight - font.lineHeight) / 2;
+        gui.drawCenteredString(font, subtitle, width / 2, y, color);
+    }
+
+    //相机角度最终锁定（防止其它 mod 的 ViewportEvent 订阅者覆写我们）
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {
+        //播放优先；播放未激活时才考虑编辑器预览（二者互斥）
+        BossShowPose pose;
+        if (BossShowClientState.isActive()) {
+            pose = BossShowClientState.computePoseForRender((float) event.getPartialTick());
+        } else if (BossShowEditorState.isPreviewActive()) {
+            pose = BossShowEditorState.computePreviewPose();
+        } else {
+            return;
+        }
+        float partialTick = (float) event.getPartialTick();
+        event.setYaw(pose.yaw + BossShowScreenEffectState.shakeYaw(partialTick));
+        event.setPitch(pose.pitch + BossShowScreenEffectState.shakePitch(partialTick));
+        event.setRoll(BossShowScreenEffectState.shakeRoll(partialTick));
+    }
+
+    //拦截 PauseScreen 打开：直接转为 skip
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onScreenOpening(ScreenEvent.Opening event) {
+        if (!BossShowClientState.isActive()) return;
+        Screen next = event.getNewScreen();
+        if (next instanceof PauseScreen) {
+            event.setCanceled(true);
+            BossShowClientState.requestSkip();
+        }
+    }
+}
