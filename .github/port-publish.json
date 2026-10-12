@@ -18,6 +18,8 @@
     "jivinstev/EpicCoreAPI#2",
     "jivinstev/EpicCoreAPI#3"
   ],
+  "differences": [],
+  "original_name": "Epic Core API",
   "dependencies": [],
   "modrinth": {
     "slug": "epic-core-api-neoforge",
