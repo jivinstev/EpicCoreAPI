@@ -15,6 +15,7 @@ public final class EcaClassProcessorProvider implements ClassProcessorProvider {
         // which is what the ITransformationService constructor path did on ModLauncher.
         EcaTransformationService.TransformationBackend backend = EcaTransformationService.transformationBackend();
         EarlyLogWriter.info("[CoreMod] ClassProcessorProvider registered EcaCoreTransformer; backend=" + backend);
+        System.setProperty("net.eca.coremod.processorRegistered", "true");
         collector.add(new EcaCoreTransformer());
     }
 }
