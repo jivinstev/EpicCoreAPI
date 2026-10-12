@@ -1,17 +1,24 @@
-// Fork multi-version layer: 1.21.2 version of the authors' mixin. LivingEntityRenderer now renders a
-// LivingEntityRenderState; the entity comes from net.eca.mv.EntityOf, the partial tick from the state.
+// Fork multi-version layer: 1.21.10 version of the authors' mixin. LivingEntityRenderer renders a LivingEntityRenderState (1.21.2); the
+// entity comes from net.eca.mv.EntityOf, the partial tick from the state. 1.21.9 made the render a SUBMIT: submit(state, poseStack,
+// SubmitNodeCollector, CameraRenderState) hands the model to the collector (submitModel) instead of calling
+// EntityModel.renderToBuffer, so the Blender body replacement redirects that call, and the layers are submitted the same way.
+// The Blender body is still written straight into the shared buffer source (as net.eca.blender.client.render.BlenderModelLayer does).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.eca.blender.client.render.BlenderModelLayer;
 import net.eca.blender.client.entity.BlenderEntityRenderer;
 import net.eca.blender.client.entity.BlenderEntityBindings;
 import net.eca.blender.entity.BlenderEntityBinding;
 import net.eca.client.render.EntityExtensionLayer;
 import net.eca.mv.EntityOf;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.model.Model;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -34,9 +41,9 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
     @Unique
     private boolean eca$blenderReplacedBody;
 
-    @Inject(method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"))
-    private void eca$resetBlenderReplacement(S state, PoseStack poseStack, MultiBufferSource buffers,
-                                             int packedLight, CallbackInfo ci) {
+    @Inject(method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V", at = @At("HEAD"))
+    private void eca$resetBlenderReplacement(S state, PoseStack poseStack, SubmitNodeCollector collector,
+                                             CameraRenderState cameraState, CallbackInfo ci) {
         eca$blenderReplacedBody = false;
     }
 
@@ -48,31 +55,37 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         self.addLayer(new BlenderModelLayer<>(self));
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     @Redirect(
-        method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+        method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"
+            target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"
         )
     )
-    private void eca$renderBlenderReplacement(EntityModel<?> model, PoseStack poseStack, VertexConsumer consumer,
-                                              int packedLight, int packedOverlay, int color, S state,
-                                              PoseStack methodPoseStack, MultiBufferSource buffers, int methodPackedLight) {
+    private void eca$renderBlenderReplacement(SubmitNodeCollector collector, Model model, Object modelState,
+                                              PoseStack poseStack, RenderType renderType, int packedLight,
+                                              int packedOverlay, int color, TextureAtlasSprite sprite, int outlineColor,
+                                              ModelFeatureRenderer.CrumblingOverlay crumbling,
+                                              S state, PoseStack methodPoseStack, SubmitNodeCollector methodCollector,
+                                              CameraRenderState cameraState) {
         if (EntityOf.get(state) instanceof LivingEntity entity) {
             BlenderEntityBinding blender = BlenderEntityBindings.resolve(entity);
             if (BlenderEntityBindings.replacesBody(blender)
-                && BlenderEntityRenderer.render(entity, blender, poseStack, buffers, methodPackedLight,
+                && BlenderEntityRenderer.render(entity, blender, poseStack,
+                    Minecraft.getInstance().renderBuffers().bufferSource(), packedLight,
                     packedOverlay, state.partialTick)) {
                 eca$blenderReplacedBody = true;
                 return;
             }
         }
-        model.renderToBuffer(poseStack, consumer, packedLight, packedOverlay, color);
+        collector.submitModel(model, modelState, poseStack, renderType, packedLight, packedOverlay, color, sprite,
+            outlineColor, crumbling);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Redirect(
-        method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+        method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/entity/layers/RenderLayer;submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/EntityRenderState;FF)V"
@@ -82,7 +95,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
                                                         SubmitNodeCollector buffers, int packedLight,
                                                         EntityRenderState layerState, float yRot, float xRot,
                                                         S state, PoseStack methodPoseStack,
-                                                        MultiBufferSource methodBuffers, int methodPackedLight) {
+                                                        SubmitNodeCollector methodBuffers, CameraRenderState cameraState) {
         if (!eca$blenderReplacedBody) {
             layer.submit(poseStack, buffers, packedLight, state, yRot, xRot);
         }
