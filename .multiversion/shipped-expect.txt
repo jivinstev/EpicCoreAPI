@@ -1,0 +1,6 @@
+# Expectations of tools/shipped-gate.py: the BUILT _mr jar in a real server's mods/ folder (not the dev classpath).
+# FILE:REGEX, FILE under logs/. The coremod (ITransformationService) must be discovered...
+EcaBootstrap.log:\[CoreMod\] Selected transformation backend: (AGENT|COREMOD)
+# ...and must have transformed ServerLevel, by either backend (the shipped jar self-attaches the agent -> AGENT, whose
+# line is ContainerReplacementTransformer; the dev gates have no agent -> COREMOD, whose line is EcaCoreTransformer).
+EcaBootstrap.log:(Installed protected containers=.* target=net/minecraft/server/level/ServerLevel|Replaced \d+ containers in ServerLevel)
