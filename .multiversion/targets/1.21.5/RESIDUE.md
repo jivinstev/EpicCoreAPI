@@ -1,17 +1,14 @@
 # Residue: audit
 
-Stopped at **audit**: 7 mixin target(s) do not match vanilla.
+Stopped at **audit**: 2 mixin target(s) do not match vanilla.
 
 ## Mixin audit mismatches
 
 ```
-checked 0 mixin targets in build/mc1.21.5/mv/java against neoforge-21.5.98-client-extra-aka-minecraft-resources.jar
-
-
-NO TARGETS CHECKED -- this is NOT a pass.
-  Nothing under build/mc1.21.5/mv/java matched a mixin package with a vanilla @Mixin target.
-  If the mod really ships no mixins, skip this gate deliberately;
-  otherwise the scope is wrong (package name, --sources root, or wrong target).
+      mixin:   (int, CloudStatus, float, Matrix4f, Matrix4f, Vec3, float)
+      vanilla: void (int, CloudStatus, float, Vec3, float)
+      mixin:   no such method in vanilla
+2 MISMATCH(ES)
 ```
 
 ## To resume
