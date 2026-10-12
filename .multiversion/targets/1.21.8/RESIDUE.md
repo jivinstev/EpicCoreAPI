@@ -1,10 +1,10 @@
 # Residue: gates
 
-Stopped at **gates**: 1 gate(s) red: Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/Epi.
+Stopped at **gates**: 1 gate(s) red: Gate C -- real client, `launch`: FAIL -- Caused by: java.net.UnknownHostException: api.min.
 
 ## Failing gates
 
-- Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/EpicCoreAPI/build/mc1.21.8/fork-port/gates/gateA.log -- first compile error(s): eca/gatetest/GeneratedGameTests.j
+- Gate C -- real client, `launch`: FAIL -- Caused by: java.net.UnknownHostException: api.minecraftservices.com
 
 ## To resume
 
