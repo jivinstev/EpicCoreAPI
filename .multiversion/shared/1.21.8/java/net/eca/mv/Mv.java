@@ -64,7 +64,13 @@ public final class Mv {
 
     private static volatile boolean fogSuspended;
 
-    /** 1.21.1 code pushed fog start/end to MAX_VALUE; on 1.21.8 FogRendererMixin reads this flag when uploading fog. */
+    /**
+     * 1.21.1 code pushed fog start/end to MAX_VALUE for the draws in between. 1.21.2-1.21.5 held one FogParameters in
+     * RenderSystem that could be swapped (see the 1.21.3 helper); from 1.21.6 the fog is a uniform block uploaded by
+     * {@code FogRenderer.updateBuffer}, with nothing to swap, so this only raises a flag. A mixin on
+     * {@code FogRenderer.updateBuffer} has to read {@link #isFogSuspended()} and push the distances out -- the mod's
+     * own, since only it knows where it suspends fog.
+     */
     public static void suspendFog() {
         fogSuspended = true;
     }

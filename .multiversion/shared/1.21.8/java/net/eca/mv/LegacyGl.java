@@ -2,7 +2,7 @@
 package net.eca.mv;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.opengl.GlProgram;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.opengl.GlRenderPipeline;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
@@ -22,24 +22,28 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.ResourceLocation;
+import org.joml.Vector4f;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
-import java.util.Set;
 
 /**
- * Immediate-mode GL state and drawing as 1.21.1-1.21.4 code wrote it, on 1.21.5's RenderPipeline/RenderPass.
+ * Immediate-mode GL state and drawing as 1.21.1-1.21.4 code wrote it, on 1.21.8's RenderPipeline/RenderPass.
  *
  * <p>1.21.5 removed RenderSystem.enableBlend/blendFunc/depthMask/enable(Disable)DepthTest/Cull/colorMask/setShader and
  * BufferUploader: every draw now carries a pipeline whose blend, depth, cull and write masks are fixed. This records
  * the state those calls used to set, and {@link #draw} folds it into a pipeline (cached per shader and state) and
- * draws through a RenderPass exactly as vanilla's RenderType.draw does -- plus the shader's own uniform values and
- * samplers, which the RenderPass has to be handed by name.
+ * draws through a RenderPass exactly as 1.21.8's {@code RenderType.CompositeRenderType.draw} does: the default
+ * uniforms (Projection, Fog, Globals, Lighting) through {@code RenderSystem.bindDefaultUniforms}, a
+ * {@code DynamicTransforms} block written from the model-view, colour, model-offset, texture matrix and line width
+ * RenderSystem holds, the sampler slots -- plus the shader's own uniform blocks and samplers (see {@link ShaderInstance}).
+ * 1.21.6 replaced the per-uniform setters 1.21.5 still had with those blocks, which is why this file differs from the
+ * 1.21.5 one.
  *
- * <p>Not expressible on 1.21.5 and logged once: a blend equation other than ADD.
+ * <p>Not expressible on 1.21.8 and logged once: a blend equation other than ADD.
  */
 // MV-REQUIRES: RawGlTexture
 // MV-REQUIRES: ShaderInstance
@@ -48,7 +52,6 @@ import java.util.Set;
 // MV-REQUIRES: LegacyRenderType
 public final class LegacyGl {
     private static final Logger LOGGER = LogUtils.getLogger();
-    static final Set<String> BUILT_IN = GlProgram.BUILT_IN_UNIFORMS;
 
     private static boolean blend;
     private static BlendFunction blendFunction = BlendFunction.TRANSLUCENT;
@@ -77,7 +80,7 @@ public final class LegacyGl {
     public static void blendEquation(int equation) {
         if (equation != 32774 && !warnedEquation) {   // GL_FUNC_ADD
             warnedEquation = true;
-            LOGGER.warn("[mv] blend equation {} has no 1.21.5 pipeline equivalent; ADD is used", equation);
+            LOGGER.warn("[mv] blend equation {} has no 1.21.8 pipeline equivalent; ADD is used", equation);
         }
     }
     public static void enableDepthTest() { depthTest = true; }
@@ -103,7 +106,7 @@ public final class LegacyGl {
     public static void recordRenderCall(Runnable r) {
         if (RenderSystem.isOnRenderThread()) r.run(); else Minecraft.getInstance().execute(r);
     }
-    /** 1.21.5 binds a GpuTexture; 1.21.1 code named the texture by its location... */
+    /** 1.21.8 binds a GpuTextureView; 1.21.1 code named the texture by its location... */
     public static void setShaderTexture(int slot, ResourceLocation texture) {
         AbstractTexture t = Minecraft.getInstance().getTextureManager().getTexture(texture);
         RenderSystem.setShaderTexture(slot, t.getTextureView());
@@ -125,7 +128,7 @@ public final class LegacyGl {
     }
 
     // ---- state as a value -------------------------------------------------------------------------------------
-    /** One draw's fixed-function state: what a 1.21.5 pipeline bakes in. Part of the pipeline cache key. */
+    /** One draw's fixed-function state: what a 1.21.8 pipeline bakes in. Part of the pipeline cache key. */
     public record Key(BlendFunction blend, DepthTestFunction depth, boolean depthWrite, boolean writeColor,
                       boolean writeAlpha, boolean cull, float biasScale, float biasConstant) {
         RenderPipeline.Builder apply(RenderPipeline.Builder b) {
@@ -178,19 +181,30 @@ public final class LegacyGl {
                 indices = format.uploadImmediateIndexBuffer(m.indexBuffer());
                 indexType = m.drawState().indexType();
             }
-            float[] savedColor = null;
-            if (own != null && own.COLOR_MODULATOR != null && own.COLOR_MODULATOR.touched()) {
-                // 1.21.1's ShaderInstance.apply() uploaded RenderSystem's colour into COLOR_MODULATOR and a mod could
-                // overwrite it afterwards; 1.21.5's built-in uniform is read from RenderSystem at draw time.
-                savedColor = shaderColor.clone();
-                float[] c = own.COLOR_MODULATOR.floats();
-                shaderColor = new float[] {c[0], c[1], c[2], c[3]};
-            }
+            // 1.21.1's BufferUploader/RenderType draws called shader.apply() right before drawing and shader.clear()
+            // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask, an opacity
+            // written into COLOR_MODULATOR after super.apply()), so it has to run here too
+            if (own != null) own.apply();
+            // 1.21.1's ShaderInstance.apply() uploaded RenderSystem's colour into COLOR_MODULATOR and a mod could
+            // overwrite it afterwards; 1.21.8 puts the colour in the DynamicTransforms block, so use the mod's value
+            // when it wrote one
+            boolean override = own != null && own.COLOR_MODULATOR != null && own.COLOR_MODULATOR.touched();
+            float[] c = override ? own.COLOR_MODULATOR.floats() : shaderColor;
+            GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(
+                    RenderSystem.getModelViewMatrix(), new Vector4f(c[0], c[1], c[2], c[3]),
+                    RenderSystem.getModelOffset(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
+            // as CompositeRenderType.draw: an output override (a post-effect pass) wins over the target's own views
+            GpuTextureView colorView = RenderSystem.outputColorTextureOverride != null
+                    ? RenderSystem.outputColorTextureOverride : target.getColorTextureView();
+            GpuTextureView depthView = target.useDepth
+                    ? (RenderSystem.outputDepthTextureOverride != null ? RenderSystem.outputDepthTextureOverride : target.getDepthTextureView())
+                    : null;
             java.util.List<GpuBuffer> temps = new java.util.ArrayList<>();
             try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                    () -> "mv draw", target.getColorTextureView(), OptionalInt.empty(),
-                    target.useDepth ? target.getDepthTextureView() : null, OptionalDouble.empty())) {
+                    () -> "mv draw", colorView, OptionalInt.empty(), depthView, OptionalDouble.empty())) {
                 pass.setPipeline(pipeline);
+                RenderSystem.bindDefaultUniforms(pass);
+                pass.setUniform("DynamicTransforms", transforms);
                 pass.setVertexBuffer(0, vertices);
                 var scissor = RenderSystem.getScissorStateForRenderTypeDraws();
                 if (scissor.enabled()) pass.enableScissor(scissor.x(), scissor.y(), scissor.width(), scissor.height());
@@ -205,10 +219,8 @@ public final class LegacyGl {
                 pass.drawIndexed(0, 0, m.drawState().indexCount(), 1);
             } finally {
                 for (GpuBuffer tb : temps) tb.close();
-                if (savedColor != null) {
-                    shaderColor = savedColor;
-                    own.COLOR_MODULATOR.consume();   // 1.21.1 re-uploaded the default on every apply()
-                }
+                if (own != null) own.clear();
+                if (override) own.COLOR_MODULATOR.consume();   // 1.21.1 re-uploaded the default on every apply()
             }
         }
     }
@@ -247,9 +259,8 @@ public final class LegacyGl {
                 RenderPipeline.Builder b = RenderPipeline.builder()
                         .withLocation("mv/" + path.replace('/', '_') + "_" + pipelines.size())
                         .withVertexShader(path).withFragmentShader(path)
-                        .withUniform("ModelViewMat", UniformType.UNIFORM_BUFFER)
-                        .withUniform("ProjMat", UniformType.UNIFORM_BUFFER)
-                        .withUniform("ColorModulator", UniformType.UNIFORM_BUFFER)
+                        .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)   // ModelViewMat, ColorModulator
+                        .withUniform("Projection", UniformType.UNIFORM_BUFFER)           // ProjMat
                         .withVertexFormat(format, mode);
                 for (String s : samplers) b.withSampler(s);
                 return k.apply(b).build();

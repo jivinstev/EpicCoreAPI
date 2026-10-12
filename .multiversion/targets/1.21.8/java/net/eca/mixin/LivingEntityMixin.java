@@ -1,0 +1,389 @@
+// Fork multi-version layer, 1.21.8: addAdditionalSaveData/readAdditionalSaveData take a ValueOutput/ValueInput (CATALOG §V31 shape, 1.21.6 on); same keys and tag types on disk.
+package net.eca.mixin;
+
+import net.eca.api.EcaAPI;
+import net.eca.config.EcaConfiguration;
+import net.eca.util.EntityUtil;
+import net.eca.util.InvulnerableEntityManager;
+import net.eca.util.ResurrectionManager;
+import net.eca.util.faction.FactionManager;
+import net.eca.util.faction.FactionRelation;
+import net.eca.util.faction.FactionUtil;
+import net.eca.util.EcaOwnedState;
+import net.eca.util.health.health_lock.HealthLockManager;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.effect.MobEffectCategory;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import com.mojang.serialization.Codec;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.ArrayList;
+
+@Mixin(LivingEntity.class)
+public abstract class
+LivingEntityMixin {
+    // 键在 EcaOwnedState 集中登记，改血分析据同一份清单排除 ECA 自身注入
+    private static final String NBT_INVULNERABLE = EcaOwnedState.NBT_INVULNERABLE;
+    private static final String NBT_HEALTH_LOCK_ENC   = EcaOwnedState.NBT_HEALTH_LOCK_ENC;
+    private static final String NBT_HEALTH_LOCK_KEY   = EcaOwnedState.NBT_HEALTH_LOCK_KEY;
+    private static final String NBT_HEALTH_LOCK_CHECK = EcaOwnedState.NBT_HEALTH_LOCK_CHECK;
+    private static final String NBT_HEAL_BAN_VALUE = EcaOwnedState.NBT_HEAL_BAN_VALUE;
+    private static final String NBT_MAX_HEALTH_LOCK_ENC   = EcaOwnedState.NBT_MAX_HEALTH_LOCK_ENC;
+    private static final String NBT_MAX_HEALTH_LOCK_KEY   = EcaOwnedState.NBT_MAX_HEALTH_LOCK_KEY;
+    private static final String NBT_MAX_HEALTH_LOCK_CHECK = EcaOwnedState.NBT_MAX_HEALTH_LOCK_CHECK;
+    private static final String NBT_RESURRECTION_TRACKED = EcaOwnedState.NBT_RESURRECTION_TRACKED;
+
+    // 1.21.6+: ValueInput has no contains() and no typed getters that fail loudly; a key is "there" when it reads as
+    // anything (Codec.PASSTHROUGH accepts every element), and "a string, else an int" is the two reads in that order.
+    // The on-disk layout is what addAdditionalSaveData wrote before: the same keys, the same tag types.
+    @Unique
+    private static boolean eca$has(ValueInput input, String key) {
+        return input.read(key, Codec.PASSTHROUGH).isPresent();
+    }
+
+    @Unique
+    private static String eca$stringOrInt(ValueInput input, String key) {
+        return input.getString(key).orElseGet(() -> String.valueOf(input.getIntOr(key, 0)));
+    }
+
+    private static int parseIntSafe(String s) {
+        if (s == null || s.isEmpty()) return 0;
+        try { return Integer.parseInt(s); }
+        catch (NumberFormatException e) { return 0; }
+    }
+
+    //静态初始化注入EntityDataAccessor
+    @Inject(method = "<clinit>", at = @At("TAIL"))
+    private static void eca$onClinit(CallbackInfo ci) {
+        EntityUtil.HEALTH_LOCK_VALUE = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
+        EntityUtil.HEALTH_LOCK_KEY   = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
+        EntityUtil.HEALTH_LOCK_CHECK = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
+        EntityUtil.HEAL_BAN_VALUE = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
+        EntityUtil.INVULNERABLE = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.BOOLEAN);
+        EntityUtil.RESURRECTION_TRACKED = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.BOOLEAN);
+        EntityUtil.MAX_HEALTH_LOCK_VALUE = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
+        EntityUtil.MAX_HEALTH_LOCK_KEY   = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
+        EntityUtil.MAX_HEALTH_LOCK_CHECK = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.STRING);
+        // 定义期立即登记：改血分析在任何实体进入世界前即可排除 ECA 自有同步单元
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_VALUE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_KEY.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEALTH_LOCK_CHECK.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.HEAL_BAN_VALUE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.INVULNERABLE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.RESURRECTION_TRACKED.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_VALUE.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_KEY.id());
+        EcaOwnedState.registerSynchedDataId(EntityUtil.MAX_HEALTH_LOCK_CHECK.id());
+    }
+
+    //注册实体数据（在每个实例的defineSynchedData 中调用）
+    @Inject(method = "defineSynchedData", at = @At("TAIL"))
+    private void eca$onDefineSynchedData(SynchedEntityData.Builder builder, CallbackInfo ci) {
+        builder.define(EntityUtil.HEALTH_LOCK_VALUE, "");
+        builder.define(EntityUtil.HEALTH_LOCK_KEY,   "0");
+        builder.define(EntityUtil.HEALTH_LOCK_CHECK, "");
+        builder.define(EntityUtil.HEAL_BAN_VALUE, "");
+        builder.define(EntityUtil.INVULNERABLE, false);
+        builder.define(EntityUtil.RESURRECTION_TRACKED, false);
+        builder.define(EntityUtil.MAX_HEALTH_LOCK_VALUE, "");
+        builder.define(EntityUtil.MAX_HEALTH_LOCK_KEY,   "0");
+        builder.define(EntityUtil.MAX_HEALTH_LOCK_CHECK, "");
+    }
+
+    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
+    private void eca$writeAdditionalSaveData(ValueOutput tag, CallbackInfo ci) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (EntityUtil.INVULNERABLE == null ||
+                EntityUtil.HEALTH_LOCK_VALUE == null ||
+                EntityUtil.HEALTH_LOCK_KEY == null ||
+                EntityUtil.HEALTH_LOCK_CHECK == null ||
+                EntityUtil.HEAL_BAN_VALUE == null ||
+                EntityUtil.MAX_HEALTH_LOCK_VALUE == null ||
+                EntityUtil.MAX_HEALTH_LOCK_KEY == null ||
+                EntityUtil.MAX_HEALTH_LOCK_CHECK == null) {
+            return;
+        }
+
+        HealthLockManager.prepareForSave(entity);
+        tag.putBoolean(NBT_INVULNERABLE, entity.getEntityData().get(EntityUtil.INVULNERABLE));
+        tag.putString(NBT_HEALTH_LOCK_ENC, entity.getEntityData().get(EntityUtil.HEALTH_LOCK_VALUE));
+        tag.putInt(NBT_HEALTH_LOCK_KEY, parseIntSafe(entity.getEntityData().get(EntityUtil.HEALTH_LOCK_KEY)));
+        tag.putInt(NBT_HEALTH_LOCK_CHECK, parseIntSafe(entity.getEntityData().get(EntityUtil.HEALTH_LOCK_CHECK)));
+        tag.putString(NBT_HEAL_BAN_VALUE, entity.getEntityData().get(EntityUtil.HEAL_BAN_VALUE));
+        tag.putString(NBT_MAX_HEALTH_LOCK_ENC, entity.getEntityData().get(EntityUtil.MAX_HEALTH_LOCK_VALUE));
+        tag.putInt(NBT_MAX_HEALTH_LOCK_KEY, parseIntSafe(entity.getEntityData().get(EntityUtil.MAX_HEALTH_LOCK_KEY)));
+        tag.putInt(NBT_MAX_HEALTH_LOCK_CHECK, parseIntSafe(entity.getEntityData().get(EntityUtil.MAX_HEALTH_LOCK_CHECK)));
+        tag.putBoolean(NBT_RESURRECTION_TRACKED, entity.getEntityData().get(EntityUtil.RESURRECTION_TRACKED));
+    }
+
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
+    private void eca$readAdditionalSaveData(ValueInput tag, CallbackInfo ci) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (EntityUtil.INVULNERABLE == null ||
+                EntityUtil.HEALTH_LOCK_VALUE == null ||
+                EntityUtil.HEALTH_LOCK_KEY == null ||
+                EntityUtil.HEALTH_LOCK_CHECK == null ||
+                EntityUtil.HEAL_BAN_VALUE == null ||
+                EntityUtil.MAX_HEALTH_LOCK_VALUE == null ||
+                EntityUtil.MAX_HEALTH_LOCK_KEY == null ||
+                EntityUtil.MAX_HEALTH_LOCK_CHECK == null) {
+            return;
+        }
+
+        if (eca$has(tag, NBT_INVULNERABLE)) {
+            boolean invulnerable = tag.getBooleanOr(NBT_INVULNERABLE, false);
+            entity.getEntityData().set(EntityUtil.INVULNERABLE, invulnerable);
+            if (invulnerable) {
+                InvulnerableEntityManager.addInvulnerable(entity);
+                EcaAPI.restoreInvulnerableFastPath(entity.getId());
+            } else {
+                InvulnerableEntityManager.removeInvulnerable(entity);
+            }
+        }
+        // 锁血（新加密格式 int）
+        if (eca$has(tag, NBT_HEALTH_LOCK_ENC)) {
+            String encrypted = eca$stringOrInt(tag, NBT_HEALTH_LOCK_ENC);
+            entity.getEntityData().set(EntityUtil.HEALTH_LOCK_VALUE, encrypted);
+            entity.getEntityData().set(EntityUtil.HEALTH_LOCK_KEY,   String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_KEY, 0)));
+            entity.getEntityData().set(EntityUtil.HEALTH_LOCK_CHECK, String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_CHECK, 0)));
+        }
+        java.util.Optional<String> storedHealBan = tag.getString(NBT_HEAL_BAN_VALUE);
+        if (storedHealBan.isPresent()) {
+            // TODO(1.1.6): 删除此迁移；将 1.1.5 前老哨兵 "-1024.0" 归一化为空串，避免被误判为 healBan=0
+            String healBan = storedHealBan.get();
+            if ("-1024.0".equals(healBan)) healBan = "";
+            entity.getEntityData().set(EntityUtil.HEAL_BAN_VALUE, healBan);
+        }
+        // 最大血量锁定（新加密格式 int）
+        if (eca$has(tag, NBT_MAX_HEALTH_LOCK_ENC)) {
+            String encrypted = eca$stringOrInt(tag, NBT_MAX_HEALTH_LOCK_ENC);
+            entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_VALUE, encrypted);
+            entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_KEY,   String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_KEY, 0)));
+            entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_CHECK, String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_CHECK, 0)));
+        }
+
+        // NBT 恢复完成后建立服务端权威锁记录，并恢复禁疗快速路径。
+        HealthLockManager.restoreFastPaths(entity);
+
+        // 恢复复活追踪状态
+        if (eca$has(tag, NBT_RESURRECTION_TRACKED)) {
+            boolean tracked = tag.getBooleanOr(NBT_RESURRECTION_TRACKED, false);
+            entity.getEntityData().set(EntityUtil.RESURRECTION_TRACKED, tracked);
+            if (tracked) {
+                ResurrectionManager.add(entity);
+            }
+        }
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void onTick(CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+
+        boolean invulnerable = EcaAPI.isInvulnerable(self);
+        Float lockedValue = HealthLockManager.getLock(self);
+        Float healBanValue = HealthLockManager.getHealBan(self);
+
+        if (lockedValue != null) {
+            float currentHealth = EntityUtil.getHealth(self);
+            if (Math.abs(currentHealth - lockedValue) > 0.001f) {
+                EntityUtil.revive(self);
+                EntityUtil.setBasicHealth(self, lockedValue);
+            }
+        } else if (healBanValue != null) {
+            float currentHealth = EntityUtil.getHealth(self);
+            if (currentHealth > healBanValue) {
+                EntityUtil.setHealth(self, healBanValue);
+            }
+        }
+
+        //最大生命值锁定：每tick强制恢复到锁定值
+        Float maxHealthLock = HealthLockManager.getMaxHealthLock(self);
+        if (maxHealthLock != null) {
+            float currentMaxHealth = self.getMaxHealth();
+            if (Math.abs(currentMaxHealth - maxHealthLock) > 0.01f) {
+                EntityUtil.setMaxHealth(self, maxHealthLock);
+            }
+        }
+
+        if (invulnerable) {
+            if (!self.level().isClientSide && !self.getActiveEffects().isEmpty()) {
+                for (MobEffectInstance effectInstance : new ArrayList<>(self.getActiveEffects())) {
+                    if (effectInstance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL) {
+                        self.removeEffect(effectInstance.getEffect());
+                    }
+                }
+            }
+            EntityUtil.clearRemovalReasonIfProtected(self);
+        }
+
+        // 阵营目标验证：每 tick 检查当前目标是否仍然可攻击
+        // 防止关系变更后（如命令设置友好）已锁定的目标继续被攻击
+        if (!self.level().isClientSide && self instanceof Mob mob && mob.getTarget() != null) {
+            if (!FactionUtil.canTarget(mob, mob.getTarget())) {
+                mob.setTarget(null);
+            }
+        }
+    }
+
+    @Inject(method = "hurtServer", at = @At("HEAD"), cancellable = true)
+    private void onHurt(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        // ECA 无敌保护
+        if (EcaAPI.isInvulnerable(self)) {
+            cir.setReturnValue(false);
+            return;
+        }
+        // 阵营保护：攻击者与目标同阵营或友好关系时取消伤害并提示
+        Entity attacker = source.getEntity();
+        if (attacker != null) {
+            if (eca$checkFactionBlock(attacker, self)) {
+                cir.setReturnValue(false);
+                return;
+            }
+            if (!FactionUtil.canAttack(attacker, self)) {
+                cir.setReturnValue(false);
+            }
+        }
+    }
+
+    // 阵营仇恨传导：伤害实际生效后，先做首领传导，再做附近成员求援
+    @Inject(method = "hurtServer", at = @At("RETURN"))
+    private void eca$factionAlertOnHurt(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+        if (!cir.getReturnValue()) return; // 伤害被取消则不触发
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (!(self.level() instanceof ServerLevel serverLevel)) return;
+
+        Entity attacker = source.getEntity();
+        if (attacker == null || attacker == self) return;
+
+        // 同阵营与友好之间的伤害不触发任何仇恨传导
+        FactionRelation rel = FactionManager.getEffectiveRelation(attacker, self);
+        if (rel == FactionRelation.SAME_FACTION || rel == FactionRelation.FRIENDLY) return;
+
+        // 首领传导先于成员求援：首领的仇恨不受范围限制，优先级也更高。
+        // propagateLeaderTarget 自行判断传入实体是否为某阵营首领，非首领直接返回。
+        if (attacker instanceof LivingEntity livingAttacker) {
+            FactionManager.propagateLeaderTarget(self, livingAttacker, serverLevel);
+        }
+        FactionManager.propagateLeaderTarget(attacker, self, serverLevel);
+
+        String factionId = FactionManager.getFactionId(self);
+        if (factionId != null) {
+            FactionManager.alertFactionMembers(factionId, attacker, self, serverLevel);
+        }
+    }
+
+    @Inject(method = "actuallyHurt", at = @At("HEAD"), cancellable = true)
+    private void onActuallyHurt(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource source, float amount, CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        // ECA 无敌保护
+        if (EcaAPI.isInvulnerable(self)) {
+            ci.cancel();
+            return;
+        }
+        // 阵营保护：兜底拦截绕过 hurt 直接调用 actuallyHurt 的路径
+        Entity attacker = source.getEntity();
+        if (attacker != null) {
+            if (eca$checkFactionBlock(attacker, self)) {
+                ci.cancel();
+                return;
+            }
+            if (!FactionUtil.canAttack(attacker, self)) {
+                ci.cancel();
+            }
+        }
+    }
+
+    // 在治疗事件计算后限制最终写入值，保留正常治疗流程与锁血优先级。
+    @ModifyArg(method = "heal", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/LivingEntity;setHealth(F)V"), index = 0)
+    private float clampHealedHealth(float health) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (HealthLockManager.getLock(self) != null) {
+            return health;
+        }
+        Float healBanValue = HealthLockManager.getHealBan(self);
+        return healBanValue == null ? health : Math.min(health, healBanValue);
+    }
+
+    @Inject(method = "die", at = @At("HEAD"), cancellable = true)
+    private void onDie(DamageSource source, CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        Float lockedValue = HealthLockManager.getLock(self);
+        if (EcaAPI.isInvulnerable(self) || lockedValue != null) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "tickDeath", at = @At("HEAD"), cancellable = true)
+    private void onTickDeath(CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        Float lockedValue = HealthLockManager.getLock(self);
+        boolean resurrectionTracked = EntityUtil.RESURRECTION_TRACKED != null
+            && self.getEntityData().get(EntityUtil.RESURRECTION_TRACKED);
+        if (EcaAPI.isInvulnerable(self) || lockedValue != null || resurrectionTracked) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "isDeadOrDying", at = @At("HEAD"), cancellable = true)
+    private void onIsDeadOrDying(CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        Float locked = HealthLockManager.getLock(self);
+        if (EcaAPI.isInvulnerable(self) || (locked != null && locked > 0.0f)) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "isAlive", at = @At("HEAD"), cancellable = true)
+    private void onIsAlive(CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        Float locked = HealthLockManager.getLock(self);
+        if (EcaAPI.isInvulnerable(self) || (locked != null && locked > 0.0f)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    // ==================== 阵营 Action Bar 消息 ====================
+
+    // 检查阵营关系并发送动作栏提示；返回 true 表示应取消攻击
+    private static boolean eca$checkFactionBlock(Entity attacker, LivingEntity target) {
+        FactionRelation rel = FactionManager.getEffectiveRelation(attacker, target);
+        if (rel == FactionRelation.SAME_FACTION || rel == FactionRelation.FRIENDLY) {
+            eca$sendFactionActionBar(attacker, target);
+            return true;
+        }
+        return false;
+    }
+
+    // 向攻击者玩家发送动作栏阵营提示
+    private static void eca$sendFactionActionBar(Entity attacker, Entity target) {
+        if (!target.level().isClientSide
+                && attacker instanceof Player player
+                && EcaConfiguration.getFactionActionBarMessagesSafely()) {
+            player.displayClientMessage(
+                    Component.translatable("message.eca.faction.cannot_attack_friendly"), true);
+        }
+    }
+
+}
+
+
+
+

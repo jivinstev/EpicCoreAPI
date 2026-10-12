@@ -1,8 +1,10 @@
-// Fork multi-version layer: 1.21.5 copy of the 1.21.4 overlay (the unused BufferUploader import is gone). renderLevel lost its LightTexture (1.21.3) and gained a GraphicsResourceAllocator;
+// Fork multi-version layer: 1.21.8 copy of the 1.21.5 overlay. renderLevel lost its GameRenderer and LightTexture and gained a GraphicsResourceAllocator, the fog buffer, the fog colour and a render-sky flag (1.21.6 shape; shared row in shared/1.21.8/renames.tsv);
 // renderClouds/renderSky became frame-graph passes, so the cloud skip moved to CloudRendererMixin and the global
 // skybox to net.eca.mv.GlobalSkyboxHook (RenderLevelStageEvent AFTER_SKY, which runs where renderSky's TAIL did).
 package net.eca.mixin;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -19,10 +21,8 @@ import net.eca.util.entity_extension.GlobalSkyboxExtension;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -34,6 +34,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -64,9 +65,9 @@ public abstract class LevelRendererMixin {
 
     /* 云层关闭时 renderClouds 根本不会被调用，用后复位会让标志跨帧残留，只能在帧首清零 */
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void eca$resetCloudOcclusion(com.mojang.blaze3d.resource.GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
-                                         GameRenderer gameRenderer,
-                                         Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
+    private void eca$resetCloudOcclusion(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
+                                         Matrix4f frustumMatrix, Matrix4f projectionMatrix,
+                                         GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
         net.eca.mv.CloudGate.occlude = false;
     }
 
@@ -75,9 +76,9 @@ public abstract class LevelRendererMixin {
        只能由帧边界回收。ReceivingLevelScreen 在 tick 里也调 isChunkCompiled，
        读到跨帧残留会让“正在加载地形”在地形就绪前提前关闭。 */
     @Inject(method = "renderLevel", at = {@At("HEAD"), @At("RETURN")})
-    private void eca$clearForceLoadedRenderContext(com.mojang.blaze3d.resource.GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
-                                                   GameRenderer gameRenderer,
-                                                   Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
+    private void eca$clearForceLoadedRenderContext(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
+                                                   Matrix4f frustumMatrix, Matrix4f projectionMatrix,
+                                                   GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
         ForceLoadingManager.clearCurrentRenderingEntity();
     }
 

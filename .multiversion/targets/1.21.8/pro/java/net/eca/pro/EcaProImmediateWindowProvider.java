@@ -1,4 +1,4 @@
-// Fork multi-version layer: 1.21.5 version of the authors' file (FML 7's ImmediateWindowProvider; see the comment below).
+// Fork multi-version layer: 1.21.8 version of the authors' file (FML 9's ImmediateWindowProvider; see the comments below).
 package net.eca.pro;
 
 import net.eca.coremod.RuntimeExtensionBridge;
@@ -23,8 +23,10 @@ public final class EcaProImmediateWindowProvider implements ImmediateWindowProvi
         };
     }
 
-    public void updateModuleReads(ModuleLayer layer) {
-    }
+    // FML 9 (NeoForge 21.8) has no updateModuleReads: ImmediateWindowHandler loads the provider with a plain
+    // ServiceLoader.load(serviceLayer, ImmediateWindowProvider.class) and never hands it the game layer. FML 7 called it
+    // so a provider that opens GLFW/OpenGL itself could add the reads it needs to the game's module layer; this provider
+    // draws nothing and owns no window, so there is nothing to replace it with and the method is gone.
 
     // FML 7 (NeoForge 21.5): ImmediateWindowProvider is an EarlyLoadingScreenController, and the window/overlay methods the
     // 1.21.4 version stubbed out (updateFramebufferSize, setupMinecraftWindow, positionWindow, loadingOverlay, getGLVersion)

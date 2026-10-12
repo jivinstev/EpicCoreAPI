@@ -4,4 +4,6 @@
 re:if \(!\(value instanceof SavedData data\) \|\| data == DummySavedData\.DUMMY\) continue;	if (!((value instanceof java.util.Optional<?> cached ? cached.orElse(null) : value) instanceof SavedData data)) continue;
 re:return entity\.hurt\(damageSource, amount\);	return entity.hurtOrSimulate(damageSource, amount);
 re:Entity entity = type\.create\(level\);	Entity entity = type.create(level, EntitySpawnReason.EVENT);
+#!exhaustive  # live on 1.21.3-1.21.5; dead on 1.21.8, where the files it fed are overlays
 re:graphics\.bufferSource\(\)	graphics.bufferSource
+#!strict
