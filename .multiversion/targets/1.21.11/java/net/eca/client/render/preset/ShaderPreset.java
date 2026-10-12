@@ -1,0 +1,78 @@
+package net.eca.client.render.preset;
+
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+
+/* 一个自定义预设的多目标 RenderType 集合，由双 profile 五文件组成。
+   BLOCK profile（<name>_block.vsh/.json）→ skybox / boss bar / block。
+   NEW_ENTITY profile（<name>_entity.vsh/.json）→ boss layer / item / Geo block。
+   共享 <name>.fsh。实体纹理叠加通过 EntityLayerExtension.getTexture() 支持。 */
+public final class ShaderPreset {
+
+    private final Identifier id;
+    private final String name;
+    private final net.eca.mv.ShaderShard entityShaderState;
+    private final RenderType bossBar;
+    private final RenderType bossLayer;
+    private final RenderType skybox;
+    private final RenderType item;
+    private final RenderType block;
+
+    ShaderPreset(Identifier id, GenericPresetShader shader) {
+        this.id = id;
+        this.name = "eca_preset_" + id.getNamespace() + "_" + id.getPath().replace('/', '_');
+        net.eca.mv.ShaderShard blockShaderState = profileState(shader.block());
+        this.entityShaderState = profileState(shader.entity());
+        this.bossBar = PresetRenderTypes.bossBar(name, blockShaderState);
+        this.skybox = PresetRenderTypes.skybox(name, blockShaderState);
+        this.bossLayer = PresetRenderTypes.bossLayer(name, entityShaderState);
+        this.item = PresetRenderTypes.item(name, entityShaderState);
+        this.block = PresetRenderTypes.block(name, blockShaderState);
+    }
+
+    //用一个 profile 的当前 ShaderInstance 构造 ShaderState，并在渲染前喂入该 profile 的标准 uniform
+    private static net.eca.mv.ShaderShard profileState(GenericPresetShader.Profile profile) {
+        return new net.eca.mv.ShaderShard(profile::getShader) {
+            @Override
+            public void setupRenderState() {
+                super.setupRenderState();
+                profile.applyUniforms();
+            }
+        };
+    }
+
+    public Identifier id() {
+        return id;
+    }
+
+    public RenderType bossBar() {
+        return bossBar;
+    }
+
+    public RenderType bossLayer() {
+        return bossLayer;
+    }
+
+    public RenderType skybox() {
+        return skybox;
+    }
+
+    public RenderType item() {
+        return item;
+    }
+
+    public RenderType block() {
+        return block;
+    }
+
+    public RenderType geoBlock(Identifier texture) {
+        return PresetRenderTypes.entityEffect(name + "_geo_block", entityShaderState, texture);
+    }
+
+    // 预览系统用：带纹理绑定的实体 RenderType
+    public RenderType entityForPreview(Identifier texture) {
+        return PresetRenderTypes.entityEffect(name, entityShaderState, texture);
+    }
+}

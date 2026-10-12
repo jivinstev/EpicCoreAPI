@@ -1,0 +1,173 @@
+package net.eca.util.bossshow;
+
+import com.google.gson.JsonParser;
+import net.eca.util.bossshow.BossShowDefinition.Frame;
+import net.eca.util.bossshow.BossShowDefinition.EventCue;
+import net.eca.util.bossshow.BossShowDefinition.Keyframe;
+import net.eca.util.bossshow.BossShowDefinition.SubtitleCue;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.Identifier;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+//Frame / Keyframe / Trigger 在 FriendlyByteBuf 上的共享序列化逻辑
+public final class BossShowNetCodec {
+
+    private BossShowNetCodec() {}
+
+    public static void writeNullableRL(FriendlyByteBuf buf, Identifier rl) {
+        buf.writeBoolean(rl != null);
+        if (rl != null) buf.writeIdentifier(rl);
+    }
+
+    public static Identifier readNullableRL(FriendlyByteBuf buf) {
+        return buf.readBoolean() ? buf.readIdentifier() : null;
+    }
+
+    public static void writeFrames(FriendlyByteBuf buf, List<Frame> frames) {
+        buf.writeVarInt(frames.size());
+        for (Frame f : frames) {
+            buf.writeDouble(f.dx());
+            buf.writeDouble(f.dy());
+            buf.writeDouble(f.dz());
+            buf.writeFloat(f.yaw());
+            buf.writeFloat(f.pitch());
+            Keyframe kf = f.keyframe();
+            buf.writeBoolean(kf != null);
+            if (kf != null) {
+                buf.writeBoolean(kf.eventId() != null);
+                if (kf.eventId() != null) buf.writeUtf(kf.eventId());
+                buf.writeBoolean(kf.subtitleText() != null);
+                if (kf.subtitleText() != null) buf.writeUtf(kf.subtitleText());
+                buf.writeByte(kf.curve().ordinal());
+                buf.writeBoolean(kf.cameraPath() != null);
+                if (kf.cameraPath() != null) buf.writeUtf(kf.cameraPath().toJson().toString(), 65536);
+            }
+        }
+    }
+
+    public static List<Frame> readFrames(FriendlyByteBuf buf) {
+        int n = buf.readVarInt();
+        List<Frame> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            double dx = buf.readDouble();
+            double dy = buf.readDouble();
+            double dz = buf.readDouble();
+            float yaw = buf.readFloat();
+            float pitch = buf.readFloat();
+            boolean hasKf = buf.readBoolean();
+            Keyframe kf = null;
+            if (hasKf) {
+                boolean hasEvt = buf.readBoolean();
+                String eid = hasEvt ? buf.readUtf(256) : null;
+                boolean hasSub = buf.readBoolean();
+                String sub = hasSub ? buf.readUtf(512) : null;
+                int ci = buf.readByte() & 0xFF;
+                Curve[] cv = Curve.values();
+                Curve curve = (ci < cv.length) ? cv[ci] : Curve.NONE;
+                BossShowCameraPath path = buf.readBoolean()
+                    ? BossShowCameraPath.fromJson(JsonParser.parseString(buf.readUtf(65536)).getAsJsonObject()) : null;
+                kf = new Keyframe(eid, sub, curve, path);
+            }
+            out.add(new Frame(dx, dy, dz, yaw, pitch, kf));
+        }
+        return out;
+    }
+
+    public static void writeEventCues(FriendlyByteBuf buf, List<EventCue> cues) {
+        buf.writeVarInt(cues.size());
+        for (EventCue cue : cues) {
+            buf.writeVarInt(cue.tick());
+            buf.writeBoolean(cue.eventId() != null);
+            if (cue.eventId() != null) buf.writeUtf(cue.eventId());
+        }
+    }
+
+    public static List<EventCue> readEventCues(FriendlyByteBuf buf) {
+        int n = buf.readVarInt();
+        List<EventCue> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            int tick = buf.readVarInt();
+            String eventId = buf.readBoolean() ? buf.readUtf(256) : null;
+            out.add(new EventCue(tick, eventId));
+        }
+        return out;
+    }
+
+    public static void writeSubtitleCues(FriendlyByteBuf buf, List<SubtitleCue> cues) {
+        buf.writeVarInt(cues.size());
+        for (SubtitleCue cue : cues) {
+            buf.writeVarInt(cue.tick());
+            buf.writeBoolean(cue.text() != null);
+            if (cue.text() != null) buf.writeUtf(cue.text());
+        }
+    }
+
+    public static List<SubtitleCue> readSubtitleCues(FriendlyByteBuf buf) {
+        int n = buf.readVarInt();
+        List<SubtitleCue> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            int tick = buf.readVarInt();
+            String text = buf.readBoolean() ? buf.readUtf(512) : null;
+            out.add(new SubtitleCue(tick, text));
+        }
+        return out;
+    }
+
+    public static void writeEffectCues(FriendlyByteBuf buf, List<BossShowEffectCue> cues) {
+        buf.writeVarInt(cues.size());
+        for (BossShowEffectCue cue : cues) {
+            buf.writeVarInt(cue.tick());
+            buf.writeUtf(cue.type());
+            buf.writeUtf(cue.effect());
+            buf.writeVarInt(cue.durationTicks());
+            buf.writeVarInt(cue.fadeInTicks());
+            buf.writeVarInt(cue.fadeOutTicks());
+            buf.writeByte(cue.easing().ordinal());
+            buf.writeVarInt(cue.parameters().size());
+            cue.parameters().forEach((key, value) -> {
+                buf.writeUtf(key);
+                buf.writeFloat(value);
+            });
+        }
+    }
+
+    public static List<BossShowEffectCue> readEffectCues(FriendlyByteBuf buf) {
+        int count = buf.readVarInt();
+        List<BossShowEffectCue> result = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            int tick = buf.readVarInt();
+            String type = buf.readUtf(64);
+            String effect = buf.readUtf(128);
+            int duration = buf.readVarInt();
+            int fadeIn = buf.readVarInt();
+            int fadeOut = buf.readVarInt();
+            int easingIndex = buf.readByte() & 0xFF;
+            Curve[] curves = Curve.values();
+            Curve easing = easingIndex < curves.length ? curves[easingIndex] : Curve.NONE;
+            int parameterCount = buf.readVarInt();
+            Map<String, Float> parameters = new LinkedHashMap<>();
+            for (int j = 0; j < parameterCount; j++) {
+                parameters.put(buf.readUtf(128), buf.readFloat());
+            }
+            result.add(new BossShowEffectCue(tick, type, effect, duration, fadeIn, fadeOut, easing, parameters));
+        }
+        return result;
+    }
+
+    public static void writeTrigger(FriendlyByteBuf buf, Trigger trigger) {
+        buf.writeUtf(trigger.type());
+        buf.writeDouble(trigger instanceof Trigger.Range r ? r.effectRadius() : 0.0);
+        buf.writeUtf(trigger instanceof Trigger.Custom c ? c.eventName() : "");
+    }
+
+    public static Trigger readTrigger(FriendlyByteBuf buf) {
+        String type = buf.readUtf(64);
+        double radius = buf.readDouble();
+        String eventName = buf.readUtf(256);
+        return "range".equals(type) ? new Trigger.Range(radius) : new Trigger.Custom(eventName);
+    }
+}
