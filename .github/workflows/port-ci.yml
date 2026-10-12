@@ -32,10 +32,10 @@ name: Port CI (NeoForge 21.1.228 (Minecraft 1.21.1))
 
 on:
   push:
-    branches: ["ci/layer-kit-v10", "neoforge-1.21.x"]
+    branches: ["neoforge-1.21.1", "neoforge-1.21.x"]
     tags: ["*-mc1.21.1"]
   pull_request:
-    branches: ["ci/layer-kit-v10", "neoforge-1.21.x"]
+    branches: ["neoforge-1.21.1", "neoforge-1.21.x"]
   release:
     types: [released]
   workflow_dispatch:
@@ -232,7 +232,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: "ci/layer-kit-v10"
+          ref: "neoforge-1.21.1"
           fetch-depth: 0          # tags and history, to prove the tag was built from this branch
       - name: Port CI kit v10 (pinned by sha256)
         run: |
@@ -258,7 +258,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: "ci/layer-kit-v10"
+          ref: "neoforge-1.21.1"
       - name: Port CI kit v10 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
@@ -272,13 +272,13 @@ jobs:
 
   # ---- Multi-version layer jobs (tools/layer-ci.py). Installed with --layer-branch neoforge-1.21.x; they run only on
   # that branch (and on pull requests into it), and only where .multiversion/ exists, so the port branch's own
-  # jobs above behave exactly as without a layer. On ci/layer-kit-v10 every job below is skipped.
+  # jobs above behave exactly as without a layer. On neoforge-1.21.1 every job below is skipped.
   #   layer-plan       which targets exist: the newest (by version, 1.21.11 > 1.21.8) and the middle ones
-  #   layer-isolation  the branch differs from ci/layer-kit-v10 only in .multiversion/ and the one commented hook line
+  #   layer-isolation  the branch differs from neoforge-1.21.1 only in .multiversion/ and the one commented hook line
   #   layer-inertness  the authors' jars are entry-for-entry identical with and without that hook line
   #   layer-compile    each MIDDLE target: every source set compiles, the mixin and event-listener audits are clean
   #   layer-gates      the NEWEST target: all gates, Gate C included, plus the shipped jar when the fork records one
-  # The ci/layer-kit-v10 gates above also run on the layer branch: they are its 1.21.1 bookend.
+  # The neoforge-1.21.1 gates above also run on the layer branch: they are its 1.21.1 bookend.
   layer-plan:
     name: layer plan
     if: ${{ (github.ref_name == 'neoforge-1.21.x' || github.base_ref == 'neoforge-1.21.x') && github.event_name != 'release' && !inputs.promote && !inputs.publish && !inputs.publish_setup }}
@@ -306,7 +306,7 @@ jobs:
           python3 .port-tools/tools/layer-ci.py plan --repo . --github-output "$GITHUB_OUTPUT"
 
   layer-isolation:
-    name: layer isolation (only .multiversion/ and the hook differ from ci/layer-kit-v10)
+    name: layer isolation (only .multiversion/ and the hook differ from neoforge-1.21.1)
     needs: layer-plan
     if: ${{ needs.layer-plan.outputs.layer == 'true' }}
     runs-on: ubuntu-24.04
@@ -314,10 +314,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Isolation against origin/ci/layer-kit-v10
+      - name: Isolation against origin/neoforge-1.21.1
         run: |
-          git fetch --no-tags origin "ci/layer-kit-v10"
-          python3 .multiversion/tools/layer.py isolation --base "origin/ci/layer-kit-v10"
+          git fetch --no-tags origin "neoforge-1.21.1"
+          python3 .multiversion/tools/layer.py isolation --base "origin/neoforge-1.21.1"
 
   layer-inertness:
     name: layer inertness (the hook changes no jar)
@@ -348,7 +348,7 @@ jobs:
           if-no-files-found: ignore
 
   layer-compile:
-    # Compile-only: a change on ci/layer-kit-v10 that breaks one middle target's overlay shows here, in minutes, without
+    # Compile-only: a change on neoforge-1.21.1 that breaks one middle target's overlay shows here, in minutes, without
     # booting Minecraft once per target. The newest target gets the full gates in layer-gates.
     name: layer compile (${{ matrix.t }})
     needs: layer-plan
