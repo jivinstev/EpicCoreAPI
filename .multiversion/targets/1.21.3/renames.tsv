@@ -31,3 +31,19 @@ net.minecraft.client.renderer.ShaderInstance	net.eca.mv.ShaderInstance
 net.neoforged.neoforge.client.event.RegisterShadersEvent	net.eca.mv.RegisterShadersEvent
 re:RenderSystem\.setShader\(\(\) -> (\w+)\)	RenderSystem.setShader(\1)
 re:new RenderStateShard\.ShaderStateShard\(	new net.eca.mv.ShaderShard(
+# ---- misc 1.21.2 API, one row per call shape
+re:import net\.neoforged\.neoforge\.common\.util\.DummySavedData;\n	
+re:if \(!\(value instanceof SavedData data\) \|\| data == DummySavedData\.DUMMY\) continue;	if (!((value instanceof java.util.Optional<?> cached ? cached.orElse(null) : value) instanceof SavedData data)) continue;
+re:\.lookupOrThrow\(Registries\.STRUCTURE\)\.get\(	.lookupOrThrow(Registries.STRUCTURE).getValue(
+re:Entity entity = type\.create\(level\);	Entity entity = type.create(level, EntitySpawnReason.EVENT);
+re:EntityType\.loadEntityRecursive\(([^,]+), level, 	EntityType.loadEntityRecursive(\1, level, net.minecraft.world.entity.EntitySpawnReason.LOAD, 
+re:graphics\.blit\(texture, 	graphics.blit(net.minecraft.client.renderer.RenderType::guiTextured, texture, 
+re:graphics\.bufferSource\(\)	graphics.bufferSource
+re:RenderSystem\.runAsFancy\(	net.eca.mv.Mv.run(
+re:(dispatcher\.render\(\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,)\s*[^,()]+,	\1
+re:AABB box = entity\.getBoundingBoxForCulling\(\);	AABB box = net.eca.mv.Mv.cullingBox(entity);
+re:EntityRenderer<\? super Entity> renderer = 	EntityRenderer<? super Entity, ?> renderer = 
+re:(VertexConsumer buffer, float partialTick,\s*int packedLight, int packedOverlay)\) \{	\1, int renderColor) {
+# fog state is one FogParameters value in 1.21.2 (LevelRendererMixin's force-loaded-entity fog bypass)
+re:eca\$savedFogStart = RenderSystem\.getShaderFogStart\(\);\s*eca\$savedFogEnd = RenderSystem\.getShaderFogEnd\(\);\s*RenderSystem\.setShaderFogStart\(Float\.MAX_VALUE\);\s*RenderSystem\.setShaderFogEnd\(Float\.MAX_VALUE\);	net.eca.mv.Mv.suspendFog();
+re:RenderSystem\.setShaderFogStart\(eca\$savedFogStart\);\s*RenderSystem\.setShaderFogEnd\(eca\$savedFogEnd\);	net.eca.mv.Mv.restoreFog();
