@@ -1,1 +1,33 @@
 # 1.21.3: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
+# ---- 1.21.2: measured against neoforge-21.3.97-sources.jar
+net.minecraft.util.FastColor	net.minecraft.util.ARGB
+re:\bFastColor\.ARGB32\.	ARGB.
+net.minecraft.world.level.portal.DimensionTransition	net.minecraft.world.level.portal.TeleportTransition
+DimensionTransition	TeleportTransition
+member:registryOrThrow	lookupOrThrow
+re:VertexSorting\.DISTANCE_TO_ORIGIN\)	com.mojang.blaze3d.ProjectionType.PERSPECTIVE)
+re:VertexSorting\.ORTHOGRAPHIC_Z\)	com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC)
+re:TextureStateShard\(([^,()]+), false, false\)	TextureStateShard(\1, net.minecraft.util.TriState.FALSE, false)
+re:\bBuiltInRegistries\.(\w+)\.get\(	BuiltInRegistries.\1.getValue(
+re:[ \t]*RenderSystem\.applyModelViewMatrix\(\);[ \t]*\n	
+re:RenderSystem\.setShader\(GameRenderer::getPositionColorShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR)
+re:RenderSystem\.setShader\(GameRenderer::getPositionTexColorShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX_COLOR)
+re:RenderSystem\.setShader\(GameRenderer::getPositionTexShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX)
+re:GlStateManager\._clear\(([^;]*), false\);	GlStateManager._clear(\1);
+re:\bLevelRenderer\.renderLineBox\(	net.minecraft.client.renderer.ShapeRenderer.renderLineBox(
+re:\.input\.jumping\b	.input.keyPresses.jump()
+re:\.input\.shiftKeyDown\b	.input.keyPresses.shift()
+# NativeImage pixels: 1.21.1 getPixelRGBA/setPixelRGBA took ABGR; 1.21.2 getPixel/setPixel take ARGB.
+# Convert at the call so every caller keeps ABGR semantics exactly.
+re:(\w+)\.getPixelRGBA\(((?:[^()]|\([^()]*\))*)\)	net.minecraft.util.ARGB.toABGR(\1.getPixel(\2))
+re:(\w+)\.setPixelRGBA\(\s*([^,]+),\s*([^,]+),\s*((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)\s*;	\1.setPixel(\2, \3, net.minecraft.util.ARGB.fromABGR(\4));
+re:return entity\.hurt\(damageSource, amount\);	return entity.hurtOrSimulate(damageSource, amount);
+re:minecraft\.getTimer\(\)	minecraft.getDeltaTracker()
+net.minecraft.world.entity.MobSpawnType	net.minecraft.world.entity.EntitySpawnReason
+MobSpawnType	EntitySpawnReason
+re:(\w+)\.asByteArray\(\)	net.eca.mv.Mv.pngBytes(\1)
+# ---- shaders: ECA builds its own programs through net.eca.mv.ShaderInstance (1.21.1's API on 1.21.2's program)
+net.minecraft.client.renderer.ShaderInstance	net.eca.mv.ShaderInstance
+net.neoforged.neoforge.client.event.RegisterShadersEvent	net.eca.mv.RegisterShadersEvent
+re:RenderSystem\.setShader\(\(\) -> (\w+)\)	RenderSystem.setShader(\1)
+re:new RenderStateShard\.ShaderStateShard\(	new net.eca.mv.ShaderShard(
