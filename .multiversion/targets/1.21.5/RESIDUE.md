@@ -4,7 +4,7 @@ Stopped at **gates**: 1 gate(s) red: Gate A -- mixin-config integrity: FAIL -- G
 
 ## Failing gates
 
-- Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/EpicCoreAPI/build/mc1.21.5/fork-port/gates/gateA.log
+- Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/EpicCoreAPI/build/mc1.21.5/fork-port/gates/gateA.log -- first compile error(s): eca/gatetest/BaselineGameTest.jav
 
 ## To resume
 
