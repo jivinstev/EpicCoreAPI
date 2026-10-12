@@ -1,10 +1,10 @@
 # Residue: gates
 
-Stopped at **gates**: 1 gate(s) red: Gate C -- real client, `launch`: FAIL -- java.lang.NullPointerException thrown in net.eca..
+Stopped at **gates**: 1 gate(s) red: Gate C -- real client, `gauntlet`: FAIL -- Caused by: net.neoforged.fml.ModLoadingExceptio.
 
 ## Failing gates
 
-- Gate C -- real client, `launch`: FAIL -- java.lang.NullPointerException thrown in net.eca.compat.GeckoLibCompat.register, caught and only logged (1x); java.lang.RuntimeException thrown in net.eca.comp
+- Gate C -- real client, `gauntlet`: FAIL -- Caused by: net.neoforged.fml.ModLoadingException: Loading errors encountered:
 
 ## To resume
 
