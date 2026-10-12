@@ -1,5 +1,6 @@
-// OVERLAY-ONLY: community fork multi-version layer (not the authors' code).
+// OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 package net.eca.mv;
+// MV-REQUIRES: ShaderReloader  (posts this event at every client resource reload)
 
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.bus.api.Event;
@@ -11,8 +12,8 @@ import java.util.function.Consumer;
 
 /**
  * Stands in for 1.21.1's NeoForge RegisterShadersEvent, which handed mods a ResourceProvider and took finished
- * ShaderInstances. 1.21.2's event only takes ShaderProgram keys for the vanilla ShaderManager, so ECA's listeners
- * receive this instead: {@link ShaderReloader} posts it on ECA's mod bus at every client resource reload, after
+ * ShaderInstances. 1.21.2's event only takes ShaderProgram keys for the vanilla ShaderManager, so the mod's listeners
+ * receive this instead: {@link ShaderReloader} posts it on the mod's mod bus at every client resource reload, after
  * closing the programs the previous reload registered.
  */
 public class RegisterShadersEvent extends Event implements IModBusEvent {

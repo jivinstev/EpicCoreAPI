@@ -1,52 +1,7 @@
-# 1.21.3: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
-# ---- 1.21.2: measured against neoforge-21.3.97-sources.jar
-net.minecraft.util.FastColor	net.minecraft.util.ARGB
-re:\bFastColor\.ARGB32\.	ARGB.
-net.minecraft.world.level.portal.DimensionTransition	net.minecraft.world.level.portal.TeleportTransition
-DimensionTransition	TeleportTransition
-member:registryOrThrow	lookupOrThrow
-re:VertexSorting\.DISTANCE_TO_ORIGIN\)	com.mojang.blaze3d.ProjectionType.PERSPECTIVE)
-re:VertexSorting\.ORTHOGRAPHIC_Z\)	com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC)
-re:TextureStateShard\(([^,()]+), false, false\)	TextureStateShard(\1, net.minecraft.util.TriState.FALSE, false)
-re:\bBuiltInRegistries\.(\w+)\.get\(	BuiltInRegistries.\1.getValue(
-re:[ \t]*RenderSystem\.applyModelViewMatrix\(\);[ \t]*\n	
-re:RenderSystem\.setShader\(GameRenderer::getPositionColorShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR)
-re:RenderSystem\.setShader\(GameRenderer::getPositionTexShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX)
-re:GlStateManager\._clear\(([^;]*), false\);	GlStateManager._clear(\1);
-re:\bLevelRenderer\.renderLineBox\(	net.minecraft.client.renderer.ShapeRenderer.renderLineBox(
-re:\.input\.jumping\b	.input.keyPresses.jump()
-re:\.input\.shiftKeyDown\b	.input.keyPresses.shift()
-# NativeImage pixels: 1.21.1 getPixelRGBA/setPixelRGBA took ABGR; 1.21.2 getPixel/setPixel take ARGB.
-# Convert at the call so every caller keeps ABGR semantics exactly.
-re:(\w+)\.getPixelRGBA\(((?:[^()]|\([^()]*\))*)\)	net.minecraft.util.ARGB.toABGR(\1.getPixel(\2))
-re:(\w+)\.setPixelRGBA\(\s*([^,]+),\s*([^,]+),\s*((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)\s*;	\1.setPixel(\2, \3, net.minecraft.util.ARGB.fromABGR(\4));
-re:return entity\.hurt\(damageSource, amount\);	return entity.hurtOrSimulate(damageSource, amount);
-re:minecraft\.getTimer\(\)	minecraft.getDeltaTracker()
-net.minecraft.world.entity.MobSpawnType	net.minecraft.world.entity.EntitySpawnReason
-MobSpawnType	EntitySpawnReason
-re:(\w+)\.asByteArray\(\)	net.eca.mv.Mv.pngBytes(\1)
-# ---- shaders: ECA builds its own programs through net.eca.mv.ShaderInstance (1.21.1's API on 1.21.2's program)
-net.minecraft.client.renderer.ShaderInstance	net.eca.mv.ShaderInstance
-net.neoforged.neoforge.client.event.RegisterShadersEvent	net.eca.mv.RegisterShadersEvent
-re:RenderSystem\.setShader\(\(\) -> (\w+)\)	RenderSystem.setShader(\1)
-re:new RenderStateShard\.ShaderStateShard\(	new net.eca.mv.ShaderShard(
-# ---- misc 1.21.2 API, one row per call shape
-re:import net\.neoforged\.neoforge\.common\.util\.DummySavedData;\n	
+# Epic Core API's own rows for 1.21.3. The generic 1.21.1 -> 1.21.3 rows are inherited from the migrator's shared
+# table (.multiversion/shared/1.21.3/renames.tsv, make-fork-layer.py sync-shared); these are call shapes only
+# this mod has. Fork rows run before the shared ones, so a row here wins over a generic row for the same text.
 re:if \(!\(value instanceof SavedData data\) \|\| data == DummySavedData\.DUMMY\) continue;	if (!((value instanceof java.util.Optional<?> cached ? cached.orElse(null) : value) instanceof SavedData data)) continue;
-re:\.lookupOrThrow\(Registries\.STRUCTURE\)\.get\(	.lookupOrThrow(Registries.STRUCTURE).getValue(
+re:return entity\.hurt\(damageSource, amount\);	return entity.hurtOrSimulate(damageSource, amount);
 re:Entity entity = type\.create\(level\);	Entity entity = type.create(level, EntitySpawnReason.EVENT);
-re:EntityType\.loadEntityRecursive\(([^,]+), level, 	EntityType.loadEntityRecursive(\1, level, net.minecraft.world.entity.EntitySpawnReason.LOAD, 
-re:graphics\.blit\(texture, 	graphics.blit(net.minecraft.client.renderer.RenderType::guiTextured, texture, 
 re:graphics\.bufferSource\(\)	graphics.bufferSource
-re:RenderSystem\.runAsFancy\(	net.eca.mv.Mv.run(
-re:(dispatcher\.render\(\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,)\s*[^,()]+,	\1
-re:(VertexConsumer buffer, float partialTick,\s*int packedLight, int packedOverlay)\) \{	\1, int renderColor) {
-# fog state is one FogParameters value in 1.21.2 (LevelRendererMixin's force-loaded-entity fog bypass)
-# ---- mixin targets (invisible to javac; checked by audit-mixin-targets.py against the 1.21.3 sources)
-re:@Inject\(method = "hurt",([^\n]*)\n(\s*)private void ([\w$]+)\(DamageSource source,	@Inject(method = "hurtServer",\1\n\2private void \3(net.minecraft.server.level.ServerLevel eca$hurtLevel, DamageSource source,
-re:@Inject\(method = "actuallyHurt",([^\n]*)\n(\s*)private void ([\w$]+)\(DamageSource source,	@Inject(method = "actuallyHurt",\1\n\2private void \3(net.minecraft.server.level.ServerLevel eca$hurtLevel, DamageSource source,
-re:LevelRenderer;renderLevel\(Lnet/minecraft/client/DeltaTracker;	LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;
-# 1.21.1 ItemRenderer.render did push/transform/render/pop inline; 1.21.2 moved that body to renderItemModelRaw
-re:@Inject\(method = "render",(\s*at = @At\(value = "INVOKE",\s*target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose\(\)V")	@Inject(method = "renderItemModelRaw",\1
-re:(int combinedLight, int combinedOverlay, BakedModel model,)(\s*)CallbackInfo ci\)	\1 boolean eca$flat, float eca$depth,\2CallbackInfo ci)
-re:"changeDimension\(Lnet/minecraft/world/level/portal/DimensionTransition;\)Lnet/minecraft/world/entity/Entity;"	"teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/world/entity/Entity;"

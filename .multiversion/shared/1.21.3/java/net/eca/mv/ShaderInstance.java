@@ -1,4 +1,4 @@
-// OVERLAY-ONLY: community fork multi-version layer (not the authors' code).
+// OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 package net.eca.mv;
 
 import com.google.gson.JsonElement;
@@ -27,9 +27,9 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * 1.21.1's ShaderInstance, rebuilt on 1.21.2's CompiledShaderProgram so ECA's shader code keeps its shape:
+ * 1.21.1's ShaderInstance, rebuilt on 1.21.2's CompiledShaderProgram so the mod's shader code keeps its shape:
  * a program is made from {@code <ns>:shaders/core/<name>.json} through whatever ResourceProvider the caller passes
- * (ECA's preset provider included), in the 1.21.1 JSON format, with its "blend" applied on {@link #apply()}.
+ * (the mod's preset provider included), in the 1.21.1 JSON format, with its "blend" applied on {@link #apply()}.
  * The vanilla ShaderManager in 1.21.2 cannot do this: it only compiles programs it found itself and has no
  * blend state. The constructor CompiledShaderProgram(int) is widened by this target's access transformer.
  */

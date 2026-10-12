@@ -1,8 +1,7 @@
-// OVERLAY-ONLY: community fork multi-version layer (not the authors' code).
+// OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 package net.eca.mv;
 
 import com.mojang.logging.LogUtils;
-import net.eca.EcaMod;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
@@ -15,8 +14,8 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Posts {@link RegisterShadersEvent} on ECA's mod bus at every client resource reload (1.21.1 did it via NeoForge). */
-@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+/** Posts {@link RegisterShadersEvent} on the mod's mod bus at every client resource reload (1.21.1 did it via NeoForge). */
+@EventBusSubscriber(modid = "eca", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class ShaderReloader implements ResourceManagerReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final List<ShaderInstance> LOADED = new ArrayList<>();
@@ -35,15 +34,15 @@ public final class ShaderReloader implements ResourceManagerReloadListener {
             try {
                 old.close();
             } catch (RuntimeException e) {
-                LOGGER.warn("ECA: closing shader {} failed", old.getName(), e);
+                LOGGER.warn("eca: closing shader {} failed", old.getName(), e);
             }
         }
         LOADED.clear();
         RegisterShadersEvent event = new RegisterShadersEvent(resourceManager);
         try {
-            ModList.get().getModContainerById(EcaMod.MOD_ID).orElseThrow().getEventBus().post(event);
+            ModList.get().getModContainerById("eca").orElseThrow().getEventBus().post(event);
         } catch (RuntimeException e) {
-            LOGGER.error("ECA: shader registration failed", e);
+            LOGGER.error("eca: shader registration failed", e);
         }
         LOADED.addAll(event.registered);
     }

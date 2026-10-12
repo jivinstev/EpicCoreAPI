@@ -1,4 +1,4 @@
-// OVERLAY-ONLY: community fork multi-version layer (not the authors' code). Helpers that stand in for
+// OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code). Helpers that stand in for
 // vanilla methods removed in 1.21.2, so the authors' call sites need only a rename row.
 package net.eca.mv;
 
@@ -20,7 +20,7 @@ public final class Mv {
     public static byte[] pngBytes(NativeImage image) throws IOException {
         Path tmp = null;
         try {
-            tmp = Files.createTempFile("eca-preview", ".png");
+            tmp = Files.createTempFile("mv-png", ".png");
             image.writeToFile(tmp);
             return Files.readAllBytes(tmp);
         } finally {

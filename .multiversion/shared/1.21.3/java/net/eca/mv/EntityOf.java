@@ -1,7 +1,6 @@
-// OVERLAY-ONLY: community fork multi-version layer (not the authors' code).
+// OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 package net.eca.mv;
 
-import net.eca.EcaMod;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.resources.ResourceLocation;
@@ -13,13 +12,13 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 
 /**
- * 1.21.2 renders entities from a render state, and ECA's layers and mixins decide from the ENTITY (its type's
+ * 1.21.2 renders entities from a render state, and the mod's layers and mixins decide from the ENTITY (its type's
  * extension, its Blender binding). This parks the entity on every render state. It must be parked from a
  * render-state modifier: NeoForge clears render data after extractRenderState and before the modifiers run.
  */
-@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = "eca", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class EntityOf {
-    public static final ContextKey<Entity> KEY = new ContextKey<>(ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "entity"));
+    public static final ContextKey<Entity> KEY = new ContextKey<>(ResourceLocation.fromNamespaceAndPath("eca", "entity"));
 
     private EntityOf() {
     }
