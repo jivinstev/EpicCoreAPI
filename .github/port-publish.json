@@ -26,8 +26,8 @@
     "asset": "_mr.jar"
   },
   "curseforge": {
-    "project_id": null,
-    "slug": "epic-core-api-neoforge",
+    "project_id": 1743235,
+    "slug": "epic-core-api-community-port-1-21-1",
     "asset": "_cf.jar"
   }
 }
