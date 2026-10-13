@@ -3,7 +3,7 @@
   "permission": "https://github.com/CJiangqiu/EpicCoreAPI/issues/9",
   "auto": true,
   "modid": "eca",
-  "title": "Epic Core API - Community Port",
+  "title": "Epic Core API - Community Port (1.21.1+)",
   "summary": "Unofficial NeoForge port of Epic Core API by CJiangqiu to newer Minecraft, maintained by the community with the author's permission.",
   "body_file": ".github/port-publish/description.md",
   "icon": "src/main/resources/logo.png",
