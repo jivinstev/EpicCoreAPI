@@ -8,9 +8,9 @@
     {
       "role": "self",
       "modid": "eca",
-      "name": "epic-core-api-1.1.8-fix-fix_mr.jar",
-      "url": "https://github.com/jivinstev/EpicCoreAPI/releases/download/eca-1.1.8-fix-fix-mc1.21.1-r4/epic-core-api-1.1.8-fix-fix_mr.jar",
-      "sha256": "0708591ee4eecd070e7eb00b64c6b6ec9aa7e17655a5ed713a617df3388edf46"
+      "name": "epic-core-api-1.1.9_mr.jar",
+      "url": "https://github.com/jivinstev/EpicCoreAPI/releases/download/eca-1.1.9-mc1.21.1-r3/epic-core-api-1.1.9_mr.jar",
+      "sha256": "4a935a01b79fe8beaa7b05718854085850d04d02dc50ac78ee12c2513f6e14f8"
     },
     {
       "role": "extra",
@@ -20,5 +20,9 @@
       "page": "https://modrinth.com/mod/geckolib/version/gFmrC8Ru",
       "sha256": "a1b6ce25e8627aa7e748672eedb6b71af68e0993462313649c259f38e42bcac9"
     }
-  ]
+  ],
+  "release": {
+    "url": "https://github.com/jivinstev/EpicCoreAPI/releases/tag/eca-1.1.9-mc1.21.1-r3",
+    "prerelease": false
+  }
 }
