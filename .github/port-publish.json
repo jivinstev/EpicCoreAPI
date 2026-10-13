@@ -29,5 +29,26 @@
     "project_id": 1743235,
     "slug": "epic-core-api-community-port-1-21-1",
     "asset": "_cf.jar"
-  }
+  },
+  "environment": "client_and_server",
+  "disclosures": [
+    {
+      "type": "derivative_work",
+      "sources": [
+        {
+          "label": "Epic Core API by CJiangqiu",
+          "link": "https://modrinth.com/mod/epic-core-api",
+          "note": "An unofficial port of the original to NeoForge 1.21.1, with the original's content."
+        }
+      ]
+    },
+    {
+      "type": "ai_content",
+      "uses": [
+        "code",
+        "text"
+      ],
+      "note": "The changes that port the original to NeoForge 1.21.1, and this page's text, were made with an AI coding assistant and checked by automated gates and a person playing it. The mod's content, art and design are the original author's."
+    }
+  ]
 }
