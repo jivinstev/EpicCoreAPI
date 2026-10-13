@@ -49,6 +49,17 @@
         "text"
       ],
       "note": "The changes that port the original to NeoForge 1.21.1, and this page's text, were made with an AI coding assistant and checked by automated gates and a person playing it. The mod's content, art and design are the original author's."
+    },
+    {
+      "type": "ai_functionality",
+      "note": "Includes an optional shader-generator tool that can call an AI service you configure with your own URL and API key. Nothing is sent unless you set it up."
+    },
+    {
+      "type": "system_interactions",
+      "interactions": [
+        "Writes its Java agent jar to the system temporary folder when it loads it, and deletes it on exit."
+      ],
+      "note": "Modrinth build only; the CurseForge build does not include the agent."
     }
   ]
 }
