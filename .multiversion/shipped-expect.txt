@@ -3,4 +3,6 @@
 EcaBootstrap.log:\[CoreMod\] Selected transformation backend: (AGENT|COREMOD)
 # ...and must have transformed ServerLevel, by either backend (the shipped jar self-attaches the agent -> AGENT, whose
 # line is ContainerReplacementTransformer; the dev gates have no agent -> COREMOD, whose line is EcaCoreTransformer).
-EcaBootstrap.log:(Installed protected containers=.* target=net/minecraft/server/level/ServerLevel|Replaced \d+ containers in ServerLevel)
+# The class may be logged bare (ServerLevel) or by its internal name (net/minecraft/server/level/ServerLevel): the
+# authors' 1.1.9 update (2617d87) switched to the internal name, so the pattern accepts both.
+EcaBootstrap.log:(Installed protected containers=.* target=net/minecraft/server/level/ServerLevel|Replaced \d+ containers in (net/minecraft/server/level/)?ServerLevel\b)
