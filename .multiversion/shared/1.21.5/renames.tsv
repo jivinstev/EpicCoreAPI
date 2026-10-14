@@ -112,4 +112,16 @@ re:([\w.]+(?:\(\))?)\.frameBufferId\b	net.eca.mv.LegacyTargets.fbo(\1)
 re:([\w.]+(?:\(\))?)\.bindWrite\(\s*(true|false)\s*\)	net.eca.mv.LegacyTargets.bindWrite(\1, \2)
 # GlStateManager no longer tracks the clear colour; the GL call is the same
 re:\bGlStateManager\._clearColor\(	org.lwjgl.opengl.GL11.glClearColor(
+# ---- Inventory.items is private in 1.21.5; the same NonNullList is getNonEquipmentItems()
+re:\.getInventory\(\)\.items\b	.getInventory().getNonEquipmentItems()
+# ---- GeckoLib: its only 1.21.5 line is 5.x. These classes only MOVED from 4.x (the predicate's AnimationState<T> is
+# AnimationTest<T> now; 5.x's own processing.AnimationState is a different class). The render-state rewrite itself
+# (GeoEntityRenderer<T, R extends EntityRenderState & GeoRenderState>, layers' addRenderData/addPerBoneRender,
+# BlockAndItemGeoLayer.getRelevantBones) is per file: CATALOG M49.
+software.bernie.geckolib.renderer.GeoRenderer	software.bernie.geckolib.renderer.base.GeoRenderer
+software.bernie.geckolib.animation.AnimatableManager	software.bernie.geckolib.animatable.manager.AnimatableManager
+software.bernie.geckolib.animation.AnimationController	software.bernie.geckolib.animatable.processing.AnimationController
+software.bernie.geckolib.animation.AnimationState	software.bernie.geckolib.animatable.processing.AnimationTest
+# AnimationController.getControllerState() is getAnimationState() (same State enum)
+re:\.getControllerState\(\)	.getAnimationState()
 #!strict
