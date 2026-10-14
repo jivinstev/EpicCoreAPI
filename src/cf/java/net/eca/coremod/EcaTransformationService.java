@@ -3,7 +3,7 @@ package net.eca.coremod;
 import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.IModuleLayerManager;
-import cpw.mods.modlauncher.api.ITransformationService.Resource;
+import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 import org.jetbrains.annotations.NotNull;
 import sun.misc.Unsafe;
@@ -20,7 +20,7 @@ import java.util.*;
  * Responsibilities: select one transformation backend and prevent dual loading.
  */
 @SuppressWarnings("unchecked")
-public class EcaTransformationService {
+public class EcaTransformationService implements ITransformationService {
 
     private static final Class<?>[] PRELOADED = preloadAll(
         "net.eca.coremod.EcaCoreTransformer",
@@ -64,32 +64,37 @@ public class EcaTransformationService {
     private static String ecaModuleName;
     private static Path ecaJarPath;
 
+    @Override
     public @NotNull String name() {
         return SERVICE_NAME;
     }
 
+    @Override
     public void onLoad(@NotNull IEnvironment env, @NotNull Set<String> otherServices) {
     }
 
+    @Override
     public void initialize(@NotNull IEnvironment environment) {
     }
 
+    @Override
     public @NotNull List<Resource> beginScanning(@NotNull IEnvironment environment) {
         return List.of();
     }
 
+    @Override
     public @NotNull List<Resource> completeScan(@NotNull IModuleLayerManager layerManager) {
         return List.of();
     }
 
-    @SuppressWarnings("rawtypes")
-    public @NotNull List<ITransformer> transformers() {
+    @Override
+    public @NotNull List<? extends ITransformer<?>> transformers() {
         if (PRELOADED[0] == null) {
             log("[CoreMod] Load-time transformer unavailable");
             return List.of();
         }
         try {
-            return List.of((ITransformer) PRELOADED[0].getDeclaredConstructor().newInstance());
+            return List.<ITransformer<?>>of((ITransformer<?>) PRELOADED[0].getDeclaredConstructor().newInstance());
         } catch (Throwable t) {
             log("[CoreMod] Failed to create load-time transformer: " + t.getMessage());
             return List.of();

@@ -3,7 +3,7 @@
   "permission": "https://github.com/CJiangqiu/EpicCoreAPI/issues/9",
   "auto": true,
   "modid": "eca",
-  "title": "Epic Core API - Community Port",
+  "title": "Epic Core API - Community Port (1.21.1+)",
   "summary": "Unofficial NeoForge port of Epic Core API by CJiangqiu to newer Minecraft, maintained by the community with the author's permission.",
   "body_file": ".github/port-publish/description.md",
   "icon": "src/main/resources/logo.png",
@@ -16,7 +16,8 @@
   "ledger_issues": [
     "jivinstev/EpicCoreAPI#1",
     "jivinstev/EpicCoreAPI#2",
-    "jivinstev/EpicCoreAPI#3"
+    "jivinstev/EpicCoreAPI#3",
+    "jivinstev/EpicCoreAPI#21"
   ],
   "differences": [],
   "original_name": "Epic Core API",
@@ -26,8 +27,40 @@
     "asset": "_mr.jar"
   },
   "curseforge": {
-    "project_id": null,
-    "slug": "epic-core-api-neoforge",
+    "project_id": 1743235,
+    "slug": "epic-core-api-community-port-neoforge",
     "asset": "_cf.jar"
-  }
+  },
+  "environment": "client_and_server",
+  "disclosures": [
+    {
+      "type": "derivative_work",
+      "sources": [
+        {
+          "label": "Epic Core API by CJiangqiu",
+          "link": "https://modrinth.com/mod/epic-core-api",
+          "note": "An unofficial port of the original to NeoForge 1.21.1, with the original's content."
+        }
+      ]
+    },
+    {
+      "type": "ai_content",
+      "uses": [
+        "code",
+        "text"
+      ],
+      "note": "The changes that port the original to NeoForge 1.21.1, and this page's text, were made with an AI coding assistant and checked by automated gates and a person playing it. The mod's content, art and design are the original author's."
+    },
+    {
+      "type": "ai_functionality",
+      "note": "Includes an optional shader-generator tool that can call an AI service you configure with your own URL and API key. Nothing is sent unless you set it up."
+    },
+    {
+      "type": "system_interactions",
+      "interactions": [
+        "Writes its Java agent jar to the system temporary folder when it loads it, and deletes it on exit."
+      ],
+      "note": "Modrinth build only; the CurseForge build does not include the agent."
+    }
+  ]
 }
