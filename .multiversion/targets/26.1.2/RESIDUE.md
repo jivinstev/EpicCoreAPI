@@ -1,15 +1,13 @@
-# Residue: measure
+# Residue: gates
 
-Stopped at **measure**: the compile does not count: PARSE ABORT -- 8 of 8 errors are SYNTAX. javac stopped before attribution, so this is NOT a count: a rewrite broke a file. Offending files: mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: ')' expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: ';' expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: -> expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: illegal start of mv/java/net/eca/util/health/health_lock/HealthLockManager.java:356: error: ')' expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:356: error: -> expected.
+Stopped at **gates**: 1 gate(s) red: Gate A -- mixin-config integrity: FAIL -- the gate harness has no rename table for Minecra.
 
-## Remaining compile errors (compile-summary.py, grouped by CATALOG entry / family)
+## Failing gates
 
-```
-PARSE ABORT -- 8 of 8 errors are SYNTAX. javac stopped before attribution, so this is NOT a count: a rewrite broke a file. Offending files: mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: ')' expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: ';' expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: -> expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:212: error: illegal start of mv/java/net/eca/util/health/health_lock/HealthLockManager.java:356: error: ')' expected mv/java/net/eca/util/health/health_lock/HealthLockManager.java:356: error: -> expected
-```
+- Gate A -- mixin-config integrity: FAIL -- the gate harness has no rename table for Minecraft 26.1.2 (templates/upstream-harness/versions/26.1.2.renames.tsv): it is written for 1.21.1
 
 ## To resume
 
-`python3 tools/fork-port.py --repo . --target 26.1.2 --from-stage measure --budget 15.0 --gates ab`
+`python3 tools/fork-port.py --repo . --target 26.1.2 --from-stage gates --budget 5.0 --gates ab`
 
 Fix what is listed here, and put every fix in the shared library (templates/fork-layer/shared/<t>) or a converter, not in one fork.

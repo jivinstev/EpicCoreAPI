@@ -1,0 +1,12 @@
+[
+ {
+  "file": ".multiversion/targets/26.1.2/java/net/eca/mixin/GameRendererPostLevelMixin.java",
+  "why": "removes 1 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": "26.1 removed GameRenderer.getDepthFar, so the force-loaded far-plane extension moved to CameraDepthFarMixin, which raises Camera.depthFar right after Camera.update stores it (before the culling projection and perspective use it) and is added by mixin_add."
+ },
+ {
+  "file": ".multiversion/targets/26.1.2/java/net/eca/mixin/LevelRendererMixin.java",
+  "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": "The 1.21.11 overlay retargeted to 26.1.2 signatures (renderLevel, CameraRenderState descriptor): the authors' removed renderClouds/renderEntity/renderSky handlers live on as CloudRendererMixin (CloudRenderer.render HEAD), the @Redirect of EntityRenderDispatcher.submit in submitEntities and GlobalSkyboxHook (RenderLevelStageEvent.AfterSky), all three checked present in 26.1.2."
+ }
+]

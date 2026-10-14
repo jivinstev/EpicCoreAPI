@@ -1,1 +1,9 @@
 # 26.1.2: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
+# X5: proposed by a file-loop worker, kept because the error count fell
+net.minecraft.client.gui.GuiGraphics	net.minecraft.client.gui.GuiGraphicsExtractor
+# X47: proposed by a file-loop worker, kept because the error count fell
+drawCenteredString(	centeredText(
+# X55: proposed by a file-loop worker, kept because the error count fell
+re:DefaultVertexFormat\.NEW_ENTITY	DefaultVertexFormat.ENTITY
+# X56: proposed by a file-loop worker, kept because the error count fell
+re:\bChunkPos\.asLong\b	ChunkPos.pack
