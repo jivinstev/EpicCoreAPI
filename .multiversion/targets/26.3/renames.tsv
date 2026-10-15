@@ -1,1 +1,3 @@
 # 26.3: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
+# X61: proposed by a file-loop worker, kept because the error count fell
+InputConstants.isKeyDown(window, 	InputConstants.isKeyDown(

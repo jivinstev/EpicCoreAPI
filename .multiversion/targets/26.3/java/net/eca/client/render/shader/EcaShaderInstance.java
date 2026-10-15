@@ -1,0 +1,265 @@
+package net.eca.client.render.shader;
+
+import net.eca.mv.Uniform;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
+import net.eca.client.render.ShaderMaskSource;
+import net.minecraft.client.Minecraft;
+import net.eca.mv.ShaderInstance;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.ResourceProvider;
+import org.lwjgl.opengl.GL11;
+
+import java.io.IOException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+
+// Oculus兼容：覆写apply()，在Oculus锁定DepthColor后立刻解锁，使ECA着色器在光影模式下可见
+public class EcaShaderInstance extends ShaderInstance {
+
+    private static final MethodHandle UNLOCK_DEPTH_COLOR;
+    private static final MethodHandle RESTORE_BLEND;
+    private static final MethodHandle IS_DEPTH_COLOR_LOCKED;
+    private static final MethodHandle GET_IRIS_API;
+    private static final MethodHandle IS_SHADER_PACK_IN_USE;
+
+    static {
+        MethodHandle unlockHandle = null;
+        MethodHandle restoreBlendHandle = null;
+        MethodHandle isLockedHandle = null;
+        MethodHandle getApiHandle = null;
+        MethodHandle isInUseHandle = null;
+        try {
+            Class<?> depthColorStorage = Class.forName("net.irisshaders.iris.gl.blending.DepthColorStorage");
+            unlockHandle = MethodHandles.publicLookup().findStatic(
+                depthColorStorage, "unlockDepthColor", MethodType.methodType(void.class)
+            );
+            isLockedHandle = MethodHandles.publicLookup().findStatic(
+                depthColorStorage, "isDepthColorLocked", MethodType.methodType(boolean.class)
+            );
+
+            Class<?> blendModeStorage = Class.forName("net.irisshaders.iris.gl.blending.BlendModeStorage");
+            restoreBlendHandle = MethodHandles.publicLookup().findStatic(
+                blendModeStorage, "restoreBlend", MethodType.methodType(void.class)
+            );
+
+            Class<?> irisApiClass = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+            getApiHandle = MethodHandles.publicLookup().findStatic(
+                irisApiClass, "getInstance", MethodType.methodType(irisApiClass)
+            );
+            isInUseHandle = MethodHandles.publicLookup().findVirtual(
+                irisApiClass, "isShaderPackInUse", MethodType.methodType(boolean.class)
+            );
+        } catch (ClassNotFoundException ignored) {
+            // Oculus未安装
+        } catch (Exception ignored) {
+        }
+        UNLOCK_DEPTH_COLOR = unlockHandle;
+        RESTORE_BLEND = restoreBlendHandle;
+        IS_DEPTH_COLOR_LOCKED = isLockedHandle;
+        GET_IRIS_API = getApiHandle;
+        IS_SHADER_PACK_IN_USE = isInUseHandle;
+    }
+
+    // ==================== ColorKey 共享状态 ====================
+
+    private static float colorKeyR;
+    private static float colorKeyG;
+    private static float colorKeyB;
+    private static float colorKeyEnabled;
+    private static float colorKeyTolerance = 0.1f;
+
+    public static void setColorKey(float r, float g, float b, float tolerance) {
+        colorKeyR = r;
+        colorKeyG = g;
+        colorKeyB = b;
+        colorKeyEnabled = 1.0f;
+        colorKeyTolerance = tolerance;
+    }
+
+    public static void clearColorKey() {
+        colorKeyR = 0.0f;
+        colorKeyG = 0.0f;
+        colorKeyB = 0.0f;
+        colorKeyEnabled = 0.0f;
+        colorKeyTolerance = 0.1f;
+    }
+
+    public static void applyColorKeyUniforms(Uniform colorKeyColorUniform, Uniform colorKeyToleranceUniform) {
+        try {
+            if (colorKeyColorUniform != null) {
+                colorKeyColorUniform.set(colorKeyR, colorKeyG, colorKeyB, colorKeyEnabled);
+            }
+            if (colorKeyToleranceUniform != null) {
+                colorKeyToleranceUniform.set(colorKeyTolerance);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    // ==================== LocalUvBounds 共享状态 ====================
+    // 用于把图集 UV (texCoord0) 归一化回本地 [0,1] 空间，使 shader 的中心化数学
+    // 对物品/子贴图也能正确工作。默认 (0,0)+(1,1) 即恒等映射，完全向后兼容。
+
+    private static float localUvMinU = 0.0f;
+    private static float localUvMinV = 0.0f;
+    private static float localUvScaleU = 1.0f;
+    private static float localUvScaleV = 1.0f;
+
+    public static void setLocalUvBounds(float uMin, float vMin, float uScale, float vScale) {
+        localUvMinU = uMin;
+        localUvMinV = vMin;
+        localUvScaleU = uScale;
+        localUvScaleV = vScale;
+    }
+
+    public static void clearLocalUvBounds() {
+        localUvMinU = 0.0f;
+        localUvMinV = 0.0f;
+        localUvScaleU = 1.0f;
+        localUvScaleV = 1.0f;
+    }
+
+    // ==================== Opacity 共享状态 ====================
+    // 设置全局着色器不透明度，覆写 COLOR_MODULATOR.a。1.0 为完全不透明，0.0 为完全透明。
+    // 每一帧每个着色器实例调用 apply() 时取当前值。该值不会跨帧保留。
+
+    private static float ecaOpacity = 1.0f;
+
+    private static ShaderMaskSource shaderMaskSource = ShaderMaskSource.NONE;
+    private static Identifier shaderMaskTexture;
+    private static int shaderMaskColor;
+    private static float shaderMaskTolerance = 0.05f;
+
+    private final Uniform maskColorUniform;
+    private final Uniform maskToleranceUniform;
+
+    public static void setOpacity(float opacity) {
+        ecaOpacity = Math.max(0.0f, Math.min(1.0f, opacity));
+    }
+
+    public static void clearOpacity() {
+        ecaOpacity = 1.0f;
+    }
+
+    public static void setShaderMask(ShaderMaskSource source, Identifier texture,
+                                     int color, float tolerance) {
+        shaderMaskSource = source == null ? ShaderMaskSource.NONE : source;
+        shaderMaskTexture = texture;
+        shaderMaskColor = color & 0xFFFFFF;
+        shaderMaskTolerance = Math.max(0.0f, tolerance);
+    }
+
+    public static void clearShaderMask() {
+        shaderMaskSource = ShaderMaskSource.NONE;
+        shaderMaskTexture = null;
+        shaderMaskColor = 0;
+        shaderMaskTolerance = 0.05f;
+    }
+
+    @Deprecated
+    public static void setEntityMask(Identifier texture, int color, float tolerance) {
+        setShaderMask(texture == null ? ShaderMaskSource.NONE : ShaderMaskSource.TEXTURE,
+            texture, color, tolerance);
+    }
+
+    @Deprecated
+    public static void clearEntityMask() {
+        clearShaderMask();
+    }
+
+    public static void applyLocalUvBoundsUniforms(Uniform localUvMinUniform, Uniform localUvScaleUniform) {
+        try {
+            if (localUvMinUniform != null) {
+                localUvMinUniform.set(localUvMinU, localUvMinV);
+            }
+            if (localUvScaleUniform != null) {
+                localUvScaleUniform.set(localUvScaleU, localUvScaleV);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    // 检测Oculus光影是否激活（光影包已启用且正在使用）
+    public static boolean isOculusShadersActive() {
+        if (GET_IRIS_API == null || IS_SHADER_PACK_IN_USE == null) {
+            return false;
+        }
+        try {
+            Object api = GET_IRIS_API.invoke();
+            return (boolean) IS_SHADER_PACK_IN_USE.invoke(api);
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    public EcaShaderInstance(ResourceProvider resourceProvider, Identifier location, VertexFormat format) throws IOException {
+        super(resourceProvider, location, format);
+        this.maskColorUniform = getUniform("MaskColor");
+        this.maskToleranceUniform = getUniform("MaskTolerance");
+    }
+
+    public static EcaShaderInstance create(ResourceProvider resourceProvider, Identifier location, VertexFormat format) throws IOException {
+        return new EcaShaderInstance(resourceProvider, location, format);
+    }
+
+    @Override
+    public void apply() {
+        applyShaderMask();
+        super.apply();
+        // 覆写 COLOR_MODULATOR.a 为 ECA 不透明度：ColorModulator 在父类 apply() 中已按 JSON 静态值上传，
+        // 此处用 ecaOpacity 替换其 alpha 分量，使所有 ECA 着色器实例一致响应 setOpacity()。
+        if (this.COLOR_MODULATOR != null && ecaOpacity < 1.0f) {
+            this.COLOR_MODULATOR.set(1.0f, 1.0f, 1.0f, ecaOpacity);
+        }
+        // Oculus的MixinShaderInstance会在super.apply()的TAIL锁定DepthColor，
+        // 导致非ExtendedShader/FallbackShader的着色器无法写入颜色和深度。
+        // 在此立刻解锁，使ECA着色器正常渲染。
+        if (UNLOCK_DEPTH_COLOR != null && IS_DEPTH_COLOR_LOCKED != null) {
+            try {
+                boolean wasLocked = (boolean) IS_DEPTH_COLOR_LOCKED.invokeExact();
+                if (wasLocked) {
+                    UNLOCK_DEPTH_COLOR.invokeExact();
+
+                    // 额外保险：直接使用LWJGL GL调用绕过GlStateManager拦截
+                    // 当光影开启时，GlStateManager的_depthMask和_colorMask会被
+                    // MixinGlStateManager_DepthColorOverride拦截。即使调用unlockDepthColor()
+                    // 内部也是通过GlStateManager，可能再次被拦截。直接GL调用可以彻底绕过。
+                    GL11.glDepthMask(true);
+                    GL11.glColorMask(true, true, true, true);
+                }
+
+                // 恢复混合状态（如果被锁定）
+                if (RESTORE_BLEND != null) {
+                    RESTORE_BLEND.invokeExact();
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    private void applyShaderMask() {
+        ShaderMaskSource source = shaderMaskSource;
+        if (maskColorUniform != null) {
+            if (source == ShaderMaskSource.NONE) {
+                maskColorUniform.set(0.0f, 0.0f, 0.0f, 0.0f);
+            } else {
+                float red = (shaderMaskColor >> 16 & 0xFF) / 255.0f;
+                float green = (shaderMaskColor >> 8 & 0xFF) / 255.0f;
+                float blue = (shaderMaskColor & 0xFF) / 255.0f;
+                maskColorUniform.set(red, green, blue, 1.0f);
+            }
+        }
+        if (maskToleranceUniform != null) {
+            maskToleranceUniform.set(shaderMaskTolerance);
+        }
+        if (source == ShaderMaskSource.TEXTURE && shaderMaskTexture != null) {
+            AbstractTexture maskTexture = Minecraft.getInstance().getTextureManager().getTexture(shaderMaskTexture);
+            setSampler("MaskSampler", maskTexture);
+        } else if (source == ShaderMaskSource.BASE_TEXTURE) {
+            setSampler("MaskSampler", net.eca.mv.LegacyGl.getShaderTexture(0));
+        }
+    }
+}
