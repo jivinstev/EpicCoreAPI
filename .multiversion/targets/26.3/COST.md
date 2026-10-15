@@ -33,3 +33,12 @@
 - tokens: output 746 (thinking 0), input 26, cache read 2,143,068, cache write 386,332 (5m 384,722 / 1h 1,610)
 - size: 61 Java files, 9 mixin classes; target Minecraft 26.3
 - ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '333': 1, '111': 1}} -- the cost includes that work
+
+## fork-port.py run since 2026-10-15T13:17:29+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $1.79** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.17 h active, 0.17 h wall (2026-10-15T13:17Z to 2026-10-15T13:27Z)
+- model: claude-opus-5-5 (14 req); effort: medium 14
+- tokens: output 665 (thinking 0), input 32, cache read 2,486,915, cache write 255,567 (5m 254,465 / 1h 1,102)
+- size: 61 Java files, 9 mixin classes; target Minecraft 26.3
+- ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '333': 1, '111': 1}} -- the cost includes that work
