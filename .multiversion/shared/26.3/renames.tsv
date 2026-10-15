@@ -14,4 +14,9 @@ re:\bInputConstants\.isKeyDown\((?:[^,()]|\((?:[^()]|\([^()]*\))*\))+,\s*	InputC
 # be told from a matrix by a row and is left to the compile error.
 re:\.mulPose\(\s*(?=(?:com\.mojang\.math\.)?Axis\.[XYZ][PN]\.rotation)	.rotate(
 re:\.mulPose\(\s*(?=new\s+(?:org\.joml\.)?Quaternionf\()	.rotate(
+# ---- AbortableIterationConsumer.Continuation is the top-level net.minecraft.util.Continuation (same constants). A nested
+# class's move is not in the generated moves (they map top-level classes), and a mixin descriptor names it with '$'.
+re:\bnet\.minecraft\.util\.AbortableIterationConsumer\.Continuation\b	net.minecraft.util.Continuation
+re:\bAbortableIterationConsumer\.Continuation\b	net.minecraft.util.Continuation
+re:Lnet/minecraft/util/AbortableIterationConsumer\$Continuation;	Lnet/minecraft/util/Continuation;
 #!strict

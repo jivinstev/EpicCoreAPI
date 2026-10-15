@@ -79,10 +79,11 @@ public abstract class LevelRendererMixin {
 
     /* 云层关闭时 renderClouds 根本不会被调用，用后复位会让标志跨帧残留，只能在帧首清零 */
     // 26.2: LevelRenderer.renderLevel is render(...), without the ChunkSectionsToRender argument
+    // 26.3: render(...) lost the DeltaTracker and model-view arguments and gained consistentDepthRequired
     @Inject(method = "render", at = @At("HEAD"))
-    private void eca$resetCloudOcclusion(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline,
-                                         net.minecraft.client.renderer.state.level.CameraRenderState cameraState, org.joml.Matrix4fc modelView,
-                                         GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
+    private void eca$resetCloudOcclusion(GraphicsResourceAllocator allocator, boolean renderBlockOutline,
+                                         net.minecraft.client.renderer.state.level.CameraRenderState cameraState,
+                                         GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, boolean consistentDepth, CallbackInfo ci) {
         net.eca.mv.CloudGate.occlude = false;
     }
 
@@ -91,9 +92,9 @@ public abstract class LevelRendererMixin {
        只能由帧边界回收。ReceivingLevelScreen 在 tick 里也调 isChunkCompiled，
        读到跨帧残留会让“正在加载地形”在地形就绪前提前关闭。 */
     @Inject(method = "render", at = {@At("HEAD"), @At("RETURN")})
-    private void eca$clearForceLoadedRenderContext(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline,
-                                                   net.minecraft.client.renderer.state.level.CameraRenderState cameraState, org.joml.Matrix4fc modelView,
-                                                   GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
+    private void eca$clearForceLoadedRenderContext(GraphicsResourceAllocator allocator, boolean renderBlockOutline,
+                                                   net.minecraft.client.renderer.state.level.CameraRenderState cameraState,
+                                                   GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, boolean consistentDepth, CallbackInfo ci) {
         ForceLoadingManager.clearCurrentRenderingEntity();
     }
 
@@ -101,7 +102,8 @@ public abstract class LevelRendererMixin {
 
     // 1.21.11: isSectionCompiled became isSectionCompiledAndVisible (compiled AND faded in); forcing true keeps the same effect.
     @Inject(method = "isSectionCompiledAndVisible", at = @At("HEAD"), cancellable = true)
-    private void eca$forceLoadedChunkCheck(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
+    // 26.3: isSectionCompiledAndVisible(pos, chunkFadeDuration)
+    private void eca$forceLoadedChunkCheck(BlockPos pos, long chunkFadeDuration, CallbackInfoReturnable<Boolean> cir) {
         Entity entity = ForceLoadingManager.getCurrentRenderingEntity();
         if (entity != null && ForceLoadingManager.shouldForceLoad(entity)) {
             cir.setReturnValue(true);

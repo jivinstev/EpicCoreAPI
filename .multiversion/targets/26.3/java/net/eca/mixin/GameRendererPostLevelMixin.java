@@ -49,7 +49,8 @@ public class GameRendererPostLevelMixin {
 
     // 在renderLevel()返回后注入，此时Oculus延迟渲染管线已完成合成，主帧缓冲区活跃
     @Inject(method = "renderLevel", at = @At("RETURN"))
-    private void eca$renderPostLevel(DeltaTracker deltaTracker, CallbackInfo ci) {
+    // 26.3: renderLevel() takes no DeltaTracker
+    private void eca$renderPostLevel(CallbackInfo ci) {
         if (minecraft.level == null) {
             return;
         }
@@ -70,12 +71,13 @@ public class GameRendererPostLevelMixin {
         ShaderMaskRenderQueue.flush();
     }
 
-    // 26.2: LevelRenderer.renderLevel(..., ChunkSectionsToRender) is render(...) without the sections argument
+    // 26.2: LevelRenderer.renderLevel(..., ChunkSectionsToRender) is render(...) without the sections argument;
+    // 26.3: render(allocator, outline, cameraState, terrainFog, fogColor, renderSky, consistentDepth) (no DeltaTracker / model-view)
     @Inject(method = "renderLevel",
             at = @At(value = "INVOKE",
-                     target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V",
+                     target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZZ)V",
                      shift = At.Shift.AFTER))
-    private void eca$flushItemLayersAfterWorld(DeltaTracker deltaTracker, CallbackInfo ci) {
+    private void eca$flushItemLayersAfterWorld(CallbackInfo ci) {
         if (!EcaShaderInstance.isOculusShadersActive()) {
             ShaderMaskRenderQueue.flush();
         }

@@ -29,7 +29,7 @@ public class EntitySectionMixin {
 
     // 空间查询只隔离正在清除的实例，避免误伤同类型存活实体的交互。
     @ModifyVariable(
-        method = "getEntities(Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/AbortableIterationConsumer$Continuation;",
+        method = "getEntities(Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/Continuation;",
         at = @At("HEAD"),
         argsOnly = true,
         ordinal = 0
@@ -43,7 +43,7 @@ public class EntitySectionMixin {
     }
 
     @ModifyVariable(
-        method = "getEntities(Lnet/minecraft/world/level/entity/EntityTypeTest;Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/AbortableIterationConsumer$Continuation;",
+        method = "getEntities(Lnet/minecraft/world/level/entity/EntityTypeTest;Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/Continuation;",
         at = @At("HEAD"),
         argsOnly = true,
         ordinal = 0

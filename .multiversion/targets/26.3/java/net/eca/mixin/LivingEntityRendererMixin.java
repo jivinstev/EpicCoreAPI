@@ -62,7 +62,8 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
             target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/UvMapping;I)V"
         )
     )
-    private void eca$renderBlenderReplacement(SubmitNodeCollector collector, Model<? super S> model, S modelState,
+    // the redirected call's generic state is erased to Object: the handler must take Object there (Mixin checks it)
+    private void eca$renderBlenderReplacement(SubmitNodeCollector collector, Model model, Object modelState,
                                               PoseStack poseStack, RenderType renderType, int packedLight,
                                               int packedOverlay, int color, UvMapping uvMapping, int outlineColor,
                                               S state, PoseStack methodPoseStack, SubmitNodeCollector methodCollector,
