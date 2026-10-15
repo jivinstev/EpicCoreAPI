@@ -119,17 +119,35 @@ public final class BossShowAnchorRenderer {
         pose.popPose();
     }
 
-    //ShapeRenderer.renderShape 在 26.2 移除：按原实现逐条边输出线段
+    // 26.3: no shape-outline helper is left to call. Every edge VoxelShape.forAllEdges reports is shifted by the
+    // offset and handed to outlineEdge, which emits it as one line segment whose normal is its own direction.
     private static void renderShape(PoseStack pose, VertexConsumer vc, net.minecraft.world.phys.shapes.VoxelShape shape,
                                     double x, double y, double z, int color, float lineWidth) {
-        PoseStack.Pose last = pose.last();
-        shape.forAllEdges((x0, y0, z0, x1, y1, z1) -> {
-            org.joml.Vector3f n = new org.joml.Vector3f((float) (x1 - x0), (float) (y1 - y0), (float) (z1 - z0)).normalize();
-            vc.addVertex(last, (float) (x0 + x), (float) (y0 + y), (float) (z0 + z))
-                .setColor(color).setNormal(last, n).setLineWidth(lineWidth);
-            vc.addVertex(last, (float) (x1 + x), (float) (y1 + y), (float) (z1 + z))
-                .setColor(color).setNormal(last, n).setLineWidth(lineWidth);
-        });
+        final PoseStack.Pose entry = pose.last();
+        final float ox = (float) x, oy = (float) y, oz = (float) z;
+        shape.forAllEdges((ax, ay, az, bx, by, bz) -> outlineEdge(vc, entry,
+                new float[] {ox + (float) ax, oy + (float) ay, oz + (float) az},
+                new float[] {ox + (float) bx, oy + (float) by, oz + (float) bz},
+                color, lineWidth));
+    }
+
+    private static void outlineEdge(VertexConsumer vc, PoseStack.Pose entry, float[] from, float[] to,
+                                    int argb, float width) {
+        float[] dir = {to[0] - from[0], to[1] - from[1], to[2] - from[2]};
+        float lenSq = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
+        if (lenSq <= 1.0e-12f) {
+            return;   // a degenerate edge has no direction for the line normal
+        }
+        float inv = 1.0f / (float) Math.sqrt(lenSq);
+        for (int i = 0; i < 3; i++) {
+            dir[i] *= inv;
+        }
+        for (float[] end : new float[][] {from, to}) {
+            vc.addVertex(entry, end[0], end[1], end[2])
+                    .setColor(argb)
+                    .setNormal(entry, dir[0], dir[1], dir[2])
+                    .setLineWidth(width);
+        }
     }
 
     private static void renderCameraPath(PoseStack pose, VertexConsumer vc,
