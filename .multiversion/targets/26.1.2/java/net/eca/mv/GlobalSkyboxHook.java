@@ -1,7 +1,12 @@
-// OVERLAY-ONLY: community fork multi-version layer (1.21.5 copy of the 1.21.3 overlay: the draw calls go through
-// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection,
-// moved to RenderLevelStageEvent AFTER_SKY: in 1.21.2 the sky is a frame-graph pass and NeoForge fires that
-// stage at the end of it. The drawing code is the authors', unchanged.
+// OVERLAY-ONLY: community fork multi-version layer (26.1.2 copy of the 1.21.11 overlay: the draw calls go through
+// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection. 26.1.2's sky is a
+// frame-graph pass and NeoForge posts RenderLevelStageEvent.AfterSky at the end of it (lambda$addSkyPass$0) -- but
+// renderLevel adds no sky pass when its shouldRenderSky flag is false (GameRenderer passes
+// !bossOverlay.shouldCreateWorldFog()), and addSkyPass adds none for Skybox NONE (the Nether), lava/powder snow or a
+// sky-blocking mob effect (cameraState.entityRenderState.doesMobEffectBlockSky), where 1.21.1's renderSky still reached
+// its TAIL; and AfterSky is posted even where a custom CustomSkyboxRenderer.renderSky took over (1.21.1 returned early
+// there). So the 26.1.2 LevelRendererMixin overlay adds its own pass before the main pass, calls render() from it and
+// sets passOwned, and the AfterSky handler stands down. The drawing code is the authors', unchanged.
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -46,11 +51,23 @@ public final class GlobalSkyboxHook {
 
     // ==================== 全局天空盒渲染 ====================
 
+    /** Set by a LevelRendererMixin overlay that draws the skybox from its own frame pass (render()). */
+    public static volatile boolean passOwned;
+
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent.AfterSky event) {
-        Matrix4f frustumMatrix = new Matrix4f(event.getModelViewMatrix());
+        if (passOwned) {
+            return;
+        }
+        // 26.1.2's AfterSky carries no camera (and a null PoseStack); its model-view matrix is cameraState.viewRotationMatrix,
+        // which renderLevel has already multiplied onto RenderSystem's model-view stack, so the PoseStack starts from identity.
+        render(new Matrix4f(), Minecraft.getInstance().gameRenderer.getMainCamera());
+    }
+
+    /** The authors' renderSky TAIL handler body. frustumMatrix is what the PoseStack starts from: 1.21.1 passed the view
+     *  matrix because the model-view stack did not hold it yet; on 26.1.2 the stack holds it, so callers pass identity. */
+    public static void render(Matrix4f frustumMatrix, Camera camera) {
         Minecraft minecraft = Minecraft.getInstance();
-        Camera camera = minecraft.gameRenderer.getMainCamera();
         if (minecraft.level == null || camera == null) {
             return;
         }
