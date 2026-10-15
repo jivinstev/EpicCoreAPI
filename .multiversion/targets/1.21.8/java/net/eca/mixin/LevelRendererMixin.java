@@ -5,7 +5,9 @@
 // (net.eca.mv.GlobalSkyboxHook.render), because 1.21.8 adds no sky pass when renderLevel's render-sky flag is false
 // (GameRenderer passes !isFoggyAt) or addSkyPass declines (SkyType NONE, lava/powder snow, a sky-blocking effect), where
 // 1.21.1's renderSky still reached its TAIL; it is skipped where a custom DimensionSpecialEffects.renderSky drew the sky
-// (1.21.8's sky lambda is lambda$addSkyPass$13, and renderSky takes one Matrix4f now).
+// (1.21.8's sky lambda is lambda$addSkyPass$13, and renderSky takes one Matrix4f now), and, on a frame with no sky
+// pass, where the dimension's effects override renderSky at all (1.21.1 asked that override first and returned before
+// the TAIL when it drew).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -118,15 +120,46 @@ public abstract class LevelRendererMixin {
     @Unique
     private boolean eca$customSkyDrawn;
 
+    /* true when this frame's sky pass ran and so asked the custom renderSky (eca$customSkyDrawn is its answer). */
+    @Unique
+    private boolean eca$skyPassAsked;
+
+    /* Per DimensionSpecialEffects class: does it override renderSky (1.21.8's NeoForge default lives on
+       IDimensionSpecialEffectsExtension and returns false)? Read reflectively once per class. */
+    @Unique
+    private static final java.util.Map<Class<?>, Boolean> ECA_CUSTOM_SKY_CLASSES = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Inject(method = "renderLevel", at = @At("HEAD"), require = 1)
     private void eca$resetCustomSky(CallbackInfo ci) {
         eca$customSkyDrawn = false;
+        eca$skyPassAsked = false;
+    }
+
+    /* No sky pass this frame (render-sky flag false: foggy or boss-fog dimension; SkyType NONE, a sky-blocking effect,
+       under lava/powder snow): 1.21.8 never calls renderSky then, but 1.21.1 still asked it before reaching the TAIL. A
+       dimension with its own renderSky draws its sky there, so the skybox stays out, as it did when that override
+       returned true. */
+    @Unique
+    private static boolean eca$hasCustomSkyRenderer(net.minecraft.client.renderer.DimensionSpecialEffects effects) {
+        if (effects == null) {
+            return false;
+        }
+        return ECA_CUSTOM_SKY_CLASSES.computeIfAbsent(effects.getClass(), type -> {
+            try {
+                Class<?> owner = type.getMethod("renderSky", net.minecraft.client.multiplayer.ClientLevel.class, int.class,
+                        float.class, Matrix4f.class, Camera.class, Runnable.class).getDeclaringClass();
+                return !owner.isInterface() && owner != net.minecraft.client.renderer.DimensionSpecialEffects.class;
+            } catch (NoSuchMethodException | SecurityException e) {
+                return false;
+            }
+        });
     }
 
     @ModifyExpressionValue(method = "lambda$addSkyPass$13",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/DimensionSpecialEffects;renderSky(Lnet/minecraft/client/multiplayer/ClientLevel;IFLorg/joml/Matrix4f;Lnet/minecraft/client/Camera;Ljava/lang/Runnable;)Z"),
             require = 1)
     private boolean eca$recordCustomSky(boolean handled) {
+        eca$skyPassAsked = true;
         eca$customSkyDrawn = handled;
         return handled;
     }
@@ -146,7 +179,9 @@ public abstract class LevelRendererMixin {
         FramePass pass = frameGraph.addPass("eca_global_skybox");
         this.targets.main = pass.readsAndWrites(this.targets.main);
         pass.executes(() -> {
-            if (eca$customSkyDrawn) {
+            // the sky pass ran: its renderSky answer decides; no sky pass: skip where the dimension has its own renderSky
+            if (eca$skyPassAsked ? eca$customSkyDrawn
+                    : Minecraft.getInstance().level != null && eca$hasCustomSkyRenderer(Minecraft.getInstance().level.effects())) {
                 return;
             }
             RenderSystem.setShaderFog(fogBuffer);
