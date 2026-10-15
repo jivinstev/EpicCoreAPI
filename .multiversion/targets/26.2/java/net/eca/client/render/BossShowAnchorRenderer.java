@@ -119,17 +119,35 @@ public final class BossShowAnchorRenderer {
         pose.popPose();
     }
 
-    //ShapeRenderer.renderShape 在 26.2 移除：按原实现逐条边输出线段
+    // 26.2: no shape-outline helper is left to call, so each edge VoxelShape.forAllEdges reports becomes one line
+    // segment here: both ends offset by (x, y, z), the segment's unit direction as the line normal.
     private static void renderShape(PoseStack pose, VertexConsumer vc, net.minecraft.world.phys.shapes.VoxelShape shape,
                                     double x, double y, double z, int color, float lineWidth) {
-        PoseStack.Pose last = pose.last();
-        shape.forAllEdges((x0, y0, z0, x1, y1, z1) -> {
-            org.joml.Vector3f n = new org.joml.Vector3f((float) (x1 - x0), (float) (y1 - y0), (float) (z1 - z0)).normalize();
-            vc.addVertex(last, (float) (x0 + x), (float) (y0 + y), (float) (z0 + z))
-                .setColor(color).setNormal(last, n).setLineWidth(lineWidth);
-            vc.addVertex(last, (float) (x1 + x), (float) (y1 + y), (float) (z1 + z))
-                .setColor(color).setNormal(last, n).setLineWidth(lineWidth);
-        });
+        final PoseStack.Pose entry = pose.last();
+        shape.forAllEdges((fromX, fromY, fromZ, toX, toY, toZ) -> lineSegment(vc, entry,
+                (float) (x + fromX), (float) (y + fromY), (float) (z + fromZ),
+                (float) (x + toX), (float) (y + toY), (float) (z + toZ), color, lineWidth));
+    }
+
+    private static void lineSegment(VertexConsumer vc, PoseStack.Pose entry,
+                                    float sx, float sy, float sz, float ex, float ey, float ez, int argb, float width) {
+        float dirX = ex - sx;
+        float dirY = ey - sy;
+        float dirZ = ez - sz;
+        float length = (float) Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+        if (length < 1.0e-6f) {
+            return;   // a zero-length edge has no direction to give the line
+        }
+        dirX /= length;
+        dirY /= length;
+        dirZ /= length;
+        for (int end = 0; end < 2; end++) {
+            boolean start = end == 0;
+            vc.addVertex(entry, start ? sx : ex, start ? sy : ey, start ? sz : ez)
+                    .setColor(argb)
+                    .setNormal(entry, dirX, dirY, dirZ)
+                    .setLineWidth(width);
+        }
     }
 
     private static void renderCameraPath(PoseStack pose, VertexConsumer vc,

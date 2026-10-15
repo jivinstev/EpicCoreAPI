@@ -15,6 +15,10 @@
 // when shouldRenderSky, and addSkyPass declines lava/powder snow, doesMobEffectBlockSky and Skybox NONE, so the skybox gets
 // its own pass on targets.main before addMainPass (now taking the FeatureRenderDispatcher.PreparedFrame and the
 // model-view Matrix4fc), with render()'s terrainFog slice as the sky and main passes use.
+// 26.2 (review of #32/#33, F3): the skybox pass also stands down, on a frame with no sky pass, where the dimension has a
+// CustomSkyboxRenderer at all (1.21.1 asked that override first and returned before the TAIL when it drew). 26.2's
+// LevelExtractor.extract fills LevelRenderState.customSkyboxRenderer (reset to null first) before GameRenderer.renderLevel
+// calls render(); LevelRenderer keeps that state in its package-private final levelRenderState field.
 package net.eca.mixin;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -135,15 +139,26 @@ public abstract class LevelRendererMixin {
     @Unique
     private boolean eca$customSkyDrawn;
 
+    /* true when this frame's sky pass reached the custom renderSky call (eca$customSkyDrawn then holds its answer). */
+    @Unique
+    private boolean eca$skyPassAsked;
+
+    /* 26.2: LevelExtractor.extract fills customSkyboxRenderer (null when the dimension has none) before render(). */
+    @Shadow
+    @Final
+    LevelRenderState levelRenderState;
+
     @Inject(method = "render", at = @At("HEAD"), require = 1)
     private void eca$resetCustomSky(CallbackInfo ci) {
         eca$customSkyDrawn = false;
+        eca$skyPassAsked = false;
     }
 
     @ModifyExpressionValue(method = "lambda$addSkyPass$0",
             at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/client/CustomSkyboxRenderer;renderSky(Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/state/level/SkyRenderState;Lorg/joml/Matrix4fc;Ljava/lang/Runnable;)Z"),
             require = 1)
     private boolean eca$recordCustomSky(boolean handled) {
+        eca$skyPassAsked = true;
         eca$customSkyDrawn = handled;
         return handled;
     }
@@ -161,7 +176,10 @@ public abstract class LevelRendererMixin {
         FramePass pass = frameGraph.addPass("eca_global_skybox");
         this.targets.main = pass.readsAndWrites(this.targets.main);
         pass.executes(() -> {
-            if (eca$customSkyDrawn) {
+            // a sky pass asked the custom renderSky: its answer decides (false still drew the skybox on 1.21.1). No sky
+            // pass this frame (shouldRenderSky false under boss world fog, or addSkyPass declined: Skybox NONE, lava/powder
+            // snow, a sky-blocking mob effect), so renderSky was never asked: stand down where the dimension has one.
+            if (eca$skyPassAsked ? eca$customSkyDrawn : this.levelRenderState.customSkyboxRenderer != null) {
                 return;
             }
             // render()'s terrainFog is the one world fog slice the sky pass and the main pass both set; do the same.

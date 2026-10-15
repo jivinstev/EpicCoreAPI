@@ -1,3 +1,21 @@
+// Fork multi-version layer: 26.2 overlay of the authors' FilterRenderer (26.2 port: stage listeners, ProjectionMatrixBuffer,
+// reverse-Z depth flips, extract -> submit -> feature-dispatch entity drawing, sized depth copies). Review fix (#33, F1),
+// derived with javap/sources of minecraft-patched-26.2.0.90:
+//  - LevelRenderer.render prepares the level's FeatureRenderDispatcher.PreparedFrame before it builds the frame graph and
+//    closes it only after the graph ran; AfterTranslucentFeatures is posted inside the main pass, while that frame (the
+//    dispatcher's ONE PreparedFrame, shared with GameRenderer) is in use. renderAllFeatures(storage) there calls
+//    prepareFrame -> begin, which refuses a frame in use (IllegalStateException), and would re-upload the shared staged
+//    vertex buffer under the level's later phases. Even drawn, PreparedRenderType.drawFromBuffer opens its RenderPass on
+//    its OutputTarget's render target (the main one) unless RenderSystem.outputColorTextureOverride /
+//    outputDepthTextureOverride are set, so a raw spotlight FBO bind was ignored.
+//  - So, as 26.3 does: the scene depth is copied into the spotlight target at AfterTranslucentFeatures (raw GL blit,
+//    the authors' moment), and the crosshair entity is drawn into it at AfterLevel (GameRenderer.renderLevel posts it
+//    after render returned, so the level's frame is closed and every clear of the main target is behind us), with both
+//    output overrides naming the spotlight's views for the whole submit/prepare/execute, and the view rotation pushed
+//    back on the model-view stack (RenderType.prepare reads it; render popped it). The spotlight is a TextureTarget
+//    whose depth follows the main target's useStencil, i.e. the main target's own depth format.
+// Under Fabulous graphics the item-entity/translucent/outline targets are not redirected, as on 1.21.1.
+// An overlay passes down the `inherits` chain WITHOUT rename rows; 26.3 carries its own FilterRenderer overlay.
 package net.eca.client.render.shader;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -68,11 +86,10 @@ public class FilterRenderer {
     private static int copyWidth;
     private static int copyHeight;
 
-    private static int spotlightFbo = -1;
-    private static int spotlightDepthTexture = -1;
-    private static int spotlightColorTexture = -1;
-    private static int spotlightWidth;
-    private static int spotlightHeight;
+    // 26.2 (#33): the spotlight mask is a TextureTarget, so the entity's RenderType draws can be pointed at it
+    private static com.mojang.blaze3d.pipeline.TextureTarget spotlightTarget;
+    // 26.2 (#33): set when AfterTranslucentFeatures copied the scene depth this frame (see onRenderLevelStage)
+    private static boolean spotlightDepthTaken;
 
     /* 宇宙滤镜专用：在实体绘制前（AFTER_CUTOUT_BLOCKS_LAYER）快照纯地形深度，
        用于 AFTER_LEVEL 合成时区分实体像素与方块像素（阶段 AFTER_CUTOUT_BLOCKS） */
@@ -83,7 +100,6 @@ public class FilterRenderer {
 
     // 26.2 (#33): the depth format each copy was allocated in (the main target's, see allocateDepthCopy)
     private static com.mojang.blaze3d.GpuFormat copyDepthFormat;
-    private static com.mojang.blaze3d.GpuFormat spotlightDepthFormat;
     private static com.mojang.blaze3d.GpuFormat cosmosTerrainDepthFormat;
 
     public static void registerShaders(RegisterShadersEvent event) throws IOException {
@@ -235,11 +251,18 @@ public class FilterRenderer {
         boolean afterLevel = event instanceof RenderLevelStageEvent.AfterLevel;
 
         if (isRenderedFilter(FilterType.SPOTLIGHT) && spotlightShader != null) {
+            // 26.2 (#33): depth at the authors' moment (inside the main pass, raw GL only); the entity itself once the
+            // level's PreparedFrame is closed (AfterLevel), then the composite
             if (event instanceof RenderLevelStageEvent.AfterTranslucentFeatures) {
-                captureSpotlightEntity(event);
+                copySpotlightDepth();
                 return;
             }
             if (afterLevel) {
+                if (!spotlightDepthTaken) {
+                    copySpotlightDepth();
+                }
+                spotlightDepthTaken = false;
+                captureSpotlightEntity(event);
                 renderSpotlight(event);
                 return;
             }
@@ -396,52 +419,26 @@ public class FilterRenderer {
     }
 
     private static void ensureSpotlightTargets(int width, int height) {
-        if (spotlightFbo != -1 && spotlightWidth == width && spotlightHeight == height && spotlightDepthFormat == mainDepthFormat()) return;
+        RenderTarget main = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        boolean reusable = spotlightTarget != null
+                && spotlightTarget.width == width && spotlightTarget.height == height
+                && spotlightTarget.useStencil == main.useStencil
+                && spotlightTarget.getDepthTexture() != null
+                && spotlightTarget.getDepthTexture().getFormat() == mainDepthFormat();
+        if (reusable) return;
         destroySpotlightTargets();
-
-        spotlightDepthTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(spotlightDepthTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        allocateDepthCopy(width, height);
-
-        spotlightColorTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(spotlightColorTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, width, height, 0,
-                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, null);
-
-        spotlightFbo = GL30.glGenFramebuffers();
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, depthAttachment(),
-                GL11.GL_TEXTURE_2D, spotlightDepthTexture, 0);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
-                GL11.GL_TEXTURE_2D, spotlightColorTexture, 0);
-
-        spotlightWidth = width;
-        spotlightHeight = height;
-        spotlightDepthFormat = mainDepthFormat();
+        // RGBA8 colour as the authors' texture was; createBuffers picks the depth format from useStencil exactly as the
+        // main target does, so the depth blit from the main target is between identical formats
+        spotlightTarget = new com.mojang.blaze3d.pipeline.TextureTarget("eca_spotlight", width, height, true,
+                main.useStencil, com.mojang.blaze3d.GpuFormat.RGBA8_UNORM);
     }
 
     private static void destroySpotlightTargets() {
-        if (spotlightDepthTexture != -1) {
-            GlStateManager._deleteTexture(spotlightDepthTexture);
-            spotlightDepthTexture = -1;
+        if (spotlightTarget != null) {
+            spotlightTarget.destroyBuffers();
+            spotlightTarget = null;
         }
-        if (spotlightColorTexture != -1) {
-            GlStateManager._deleteTexture(spotlightColorTexture);
-            spotlightColorTexture = -1;
-        }
-        if (spotlightFbo != -1) {
-            GL30.glDeleteFramebuffers(spotlightFbo);
-            spotlightFbo = -1;
-        }
+        spotlightDepthTaken = false;
     }
 
     private static void ensureCosmosTerrainTarget(int width, int height) {
@@ -624,7 +621,7 @@ public class FilterRenderer {
             net.eca.mv.LegacyGl.setShader(() -> spotlightShader);
             net.eca.mv.LegacyGl.setShaderTexture(0, depthCopyTexture);
             net.eca.mv.LegacyGl.setShaderTexture(1, colorCopyTexture);
-            net.eca.mv.LegacyGl.setShaderTexture(2, spotlightColorTexture);
+            net.eca.mv.LegacyGl.setShaderTexture(2, spotlightTarget.getColorTextureView());
             if (spotlightShader.getUniform("ScreenSize") != null) {
                 spotlightShader.getUniform("ScreenSize").set((float) width, (float) height);
             }
@@ -644,57 +641,66 @@ public class FilterRenderer {
         }
     }
 
+    /** 26.2 (#33): the scene depth into the spotlight target, as the authors' capture began; raw GL, so it is legal inside
+     *  the main frame pass. */
+    private static void copySpotlightDepth() {
+        RenderTarget mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        int w = mainTarget.width;
+        int h = mainTarget.height;
+        ensureSpotlightTargets(w, h);
+        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(mainTarget));
+        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(spotlightTarget));
+        GL30.glBlitFramebuffer(0, 0, w, h, 0, 0, w, h, GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+        net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
+        spotlightDepthTaken = true;
+    }
+
+    /** The rest of the authors' capture, at AfterLevel on 26.2: a transparent mask colour, then the crosshair entity drawn
+     *  over the copied depth into the spotlight target. */
     @SuppressWarnings("deprecation")
     private static void captureSpotlightEntity(RenderLevelStageEvent event) {
         Minecraft mc = Minecraft.getInstance();
         Entity target = mc.crosshairPickEntity;
         RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
+        ensureSpotlightTargets(mainTarget.width, mainTarget.height);
+        RenderSystem.getDevice().createCommandEncoder()
+                .clearColorTexture(spotlightTarget.getColorTexture(), new org.joml.Vector4f(0.0f, 0.0f, 0.0f, 0.0f));
 
-        if (target == null || target.isRemoved() || mc.level == null || target.level() != mc.level) {
-            int width = mainTarget.width;
-            int height = mainTarget.height;
-            ensureSpotlightTargets(width, height);
-            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-            org.lwjgl.opengl.GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
+        boolean drawable = target != null && !target.isRemoved() && mc.level != null && target.level() == mc.level;
+        if (!drawable) {
             return;
         }
-
-        int width = mainTarget.width;
-        int height = mainTarget.height;
-        ensureSpotlightTargets(width, height);
-
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-        org.lwjgl.opengl.GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(mainTarget));
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, spotlightFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
 
         float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         Vec3 camPos = mc.gameRenderer.mainCamera().position();
         double x = Mth.lerp(partialTick, target.xOld, target.getX()) - camPos.x;
         double y = Mth.lerp(partialTick, target.yOld, target.getY()) - camPos.y;
         double z = Mth.lerp(partialTick, target.zOld, target.getZ()) - camPos.z;
-        float yRot = Mth.lerp(partialTick, target.yRotO, target.getYRot());
 
         PoseStack poseStack = event.getPoseStack();
         EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
 
-        net.eca.mv.LegacyGl.enableDepthTest();
-        net.eca.mv.LegacyGl.depthMask(true);
-        // 1.21.10: entity rendering is extract -> submit -> feature dispatch; flush it right away into the spotlight FBO.
-        // 26.2: GameRenderer no longer hands out its submit storage, and renderAllFeatures takes the storage to draw, so
-        // this one entity goes through a storage of its own (as vanilla's PictureInPictureRenderer does)
-        net.minecraft.client.renderer.SubmitNodeStorage storage = new net.minecraft.client.renderer.SubmitNodeStorage();
-        dispatcher.submit(dispatcher.extractEntity(target, partialTick), event.getLevelRenderState().cameraRenderState,
-                x, y, z, poseStack, storage);
-        mc.gameRenderer.featureRenderDispatcher().renderAllFeatures(storage);
+        // extract -> submit -> feature dispatch, through a storage of this entity alone (as vanilla's
+        // PictureInPictureRenderer does). renderAllFeatures prepares (RenderType.prepare snapshots the model-view, which
+        // render popped: push the view rotation again) and executes at once; each PreparedRenderType draw opens its pass
+        // on the overrides when set, so the whole call runs with them naming the spotlight's views. Earlier overrides
+        // and the model-view stack are put back in the finally.
+        com.mojang.blaze3d.textures.GpuTextureView priorColor = RenderSystem.outputColorTextureOverride;
+        com.mojang.blaze3d.textures.GpuTextureView priorDepth = RenderSystem.outputDepthTextureOverride;
+        RenderSystem.getModelViewStack().pushMatrix();
+        try {
+            RenderSystem.getModelViewStack().mul(event.getModelViewMatrix());
+            RenderSystem.outputColorTextureOverride = spotlightTarget.getColorTextureView();
+            RenderSystem.outputDepthTextureOverride = spotlightTarget.getDepthTextureView();
+            net.minecraft.client.renderer.SubmitNodeStorage storage = new net.minecraft.client.renderer.SubmitNodeStorage();
+            dispatcher.submit(dispatcher.extractEntity(target, partialTick), event.getLevelRenderState().cameraRenderState,
+                    x, y, z, poseStack, storage);
+            mc.gameRenderer.featureRenderDispatcher().renderAllFeatures(storage);
+        } finally {
+            RenderSystem.outputColorTextureOverride = priorColor;
+            RenderSystem.outputDepthTextureOverride = priorDepth;
+            RenderSystem.getModelViewStack().popMatrix();
+        }
 
         net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
     }
