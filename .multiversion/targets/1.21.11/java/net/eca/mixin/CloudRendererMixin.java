@@ -1,3 +1,4 @@
+// 1.21.11: kept as a second gate; the clouds-pass cancel itself is LevelRendererMixin's HEAD injection on lambda$addCloudsPass$3.
 // 1.21.11: render() gained the game time (a long, before the partial tick), so the callback does too.
 // 1.21.5: render() dropped the (unused here) modelView/projection Matrix4f params.
 // OVERLAY-ONLY: community fork multi-version layer. 1.21.1's LevelRendererMixin cancelled renderClouds; in 1.21.2
