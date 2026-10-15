@@ -62,3 +62,12 @@ fork-port.py's own block, for its last run only:
 - tokens: output 777 (thinking 64), input 62, cache read 2,366,986, cache write 92,350 (5m 84,705 / 1h 7,645)
 - size: 42 Java files, 6 mixin classes; target Minecraft 1.21.8
 - ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '111': 1, '333': 1}} -- the cost includes that work
+
+## fork-port.py run since 2026-10-15T18:49:28+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $0.77** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.03 h active, 0.03 h wall (2026-10-15T18:49Z to 2026-10-15T18:51Z)
+- model: claude-opus-5-5 (15 req); effort: medium 15
+- tokens: output 500 (thinking 0), input 44, cache read 3,474,320, cache write 11,380 (5m 7,449 / 1h 3,931)
+- size: 42 Java files, 6 mixin classes; target Minecraft 1.21.8
+- ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '333': 1, '111': 1}} -- the cost includes that work
