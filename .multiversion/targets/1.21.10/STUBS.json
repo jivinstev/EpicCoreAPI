@@ -1,0 +1,27 @@
+[
+ {
+  "file": ".multiversion/targets/1.21.10/cf/java/net/eca/coremod/EcaTransformationService.java",
+  "why": "deletes overriding method(s) initialize, onLoad: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
+  "reviewed": null
+ },
+ {
+  "file": ".multiversion/targets/1.21.10/java/net/eca/coremod/EcaCoreTransformer.java",
+  "why": "deletes overriding method(s) castVote, getTargetType, labels, targets: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
+  "reviewed": null
+ },
+ {
+  "file": ".multiversion/targets/1.21.10/java/net/eca/coremod/EcaTransformationService.java",
+  "why": "deletes overriding method(s) initialize, onLoad: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
+  "reviewed": null
+ },
+ {
+  "file": ".multiversion/targets/1.21.10/java/net/eca/mixin/LevelRendererMixin.java",
+  "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": null
+ },
+ {
+  "file": ".multiversion/targets/1.21.10/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java",
+  "why": "empties 3 method bodies",
+  "reviewed": null
+ }
+]

@@ -1,0 +1,12 @@
+[
+ {
+  "file": ".multiversion/targets/1.21.8/java/net/eca/mixin/LevelRendererMixin.java",
+  "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": null
+ },
+ {
+  "file": ".multiversion/targets/1.21.8/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java",
+  "why": "deletes overriding method(s) getGLVersion, loadingOverlay, positionWindow, setupMinecraftWindow: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
+  "reviewed": null
+ }
+]
