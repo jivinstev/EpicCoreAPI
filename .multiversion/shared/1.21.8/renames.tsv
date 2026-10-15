@@ -1,7 +1,7 @@
 # Shared fork-layer rename table: NeoForge 1.21.5 -> 1.21.8 (Minecraft 1.21.8; NeoForge 21.8; FML 9). Applied FIRST (nearest
 # target) on the 1.21.1 text, then the 1.21.5/1.21.4/1.21.3 tables on whatever it left, so a row here that rewrites
 # something those rows also rewrite has to write the 1.21.8 form itself. Measured against neoforge-21.8.54-sources.jar
-# on the Epic Core API port (the unattended 1.21.8 loop's residue, which put every one of these in a per-fork overlay).
+# on the first layer-fork port (the unattended 1.21.8 loop's residue, which put every one of these in a per-fork overlay).
 #!exhaustive  # shared library: most forks use only some of these rows
 # ---- FML 9: @EventBusSubscriber has no `bus` any more; the bus follows from the event class (a mod-bus event is
 # delivered on the mod bus, anything else on the game bus), so dropping the argument keeps every subscriber where it was.
@@ -36,3 +36,16 @@ re:(\b(?:play|common|configuration)Bidirectional\(\s*(?:[^,()]|\([^()]*\))+,\s*(
 re:(\b(?:play|common|configuration)Bidirectional\(\s*(?:[^,()]|\([^()]*\))+,\s*(?:[^,()]|\([^()]*\))+,\s*)((?:\w+|\([^()]*\))\s*->\s*(?:[^(),;{}]|\((?:[^()]|\([^()]*\))*\))+)(\s*\))	\1\2, \2\3
 # PacketDistributor.sendToServer moved to the client-only ClientPacketDistributor (NeoForge 21.6+); written fully qualified (a row cannot add an import).
 re:\bPacketDistributor\.sendToServer\(	net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
+# ---- a former @OnlyIn(CLIENT) method in a common class is verified on the server once strip_onlyin removes the
+# annotation; widening a client local to its common type loads the client class there (ClientRefs explains). Only the
+# widening assignment form is rewritten: a local that keeps LocalPlayer/ClientLevel needs the client class anyway.
+re:\b((?:net\.minecraft\.world\.entity\.player\.)?Player \w+ = )(?:net\.minecraft\.client\.)?Minecraft\.getInstance\(\)\.player;	\1net.eca.mv.ClientRefs.player();
+re:\b((?:net\.minecraft\.world\.level\.)?Level \w+ = )(?:net\.minecraft\.client\.)?Minecraft\.getInstance\(\)\.level;	\1net.eca.mv.ClientRefs.level();
+# ---- 1.21.6: Screen.renderWithTooltip draws the background (renderBackground) BEFORE calling render, and Screen.render no
+# longer does. A screen whose render() opens with its own renderBackground(...) call (the 1.20.2-1.21.5 idiom) now draws
+# it twice, and for a plain Screen the second menu blur throws "IllegalStateException: Can only blur once per frame" --
+# a real-client crash the moment the screen opens. Drop the leading call; the background is still drawn once, below.
+# Only in a Screen: the match starts at an `extends ...Screen` and takes the first render(GuiGraphics, ...) after it, so a
+# widget or other Renderable's render() in a file with no Screen class is left alone.
+re:(\bextends\s+[\w$.]*Screen\b(?:(?!public void render\(GuiGraphics\b)[\s\S])*?public void render\(GuiGraphics (\w+),\s*int (\w+),\s*int (\w+),\s*float (\w+)\)\s*\{[ \t]*\n?(?:[ \t]*//[^\n]*\n)*)[ \t]*(?:this\.)?renderBackground\(\2,\s*\3,\s*\4,\s*\5\);[ \t]*\n	\1
+#!strict

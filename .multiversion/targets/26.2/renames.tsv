@@ -1,0 +1,2 @@
+# 26.2: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
+# The file-loop rows (VertexFormat.Mode, getMainCamera, setScreen) moved to the shared 26.2 table, as generic.

@@ -24,3 +24,30 @@
 - tokens: output 578 (thinking 0), input 10, cache read 1,479,159, cache write 1,689 (5m 0 / 1h 1,689)
 - size: 67 Java files, 6 mixin classes; target Minecraft 1.21.10
 - ⚠ these sessions also touched other mods: {'471798a7': {'modlauncher': 1}} -- the cost includes that work
+
+## fork-port.py run since 2026-10-15T01:01:41+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $0.08** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.0 h active, 0.0 h wall (2026-10-15T01:02Z to 2026-10-15T01:02Z)
+- model: claude-opus-5-5 (1 req); effort: medium 1
+- tokens: output 16 (thinking 0), input 2, cache read 383,503, cache write 849 (5m 849 / 1h 0)
+- size: 67 Java files, 6 mixin classes; target Minecraft 1.21.10
+- ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '333': 1, '111': 1}} -- the cost includes that work
+
+## fork-port.py run since 2026-10-15T16:21:13+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $0.58** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.02 h active, 0.02 h wall (2026-10-15T16:21Z to 2026-10-15T16:22Z)
+- model: claude-opus-5-5 (18 req); effort: medium 18
+- tokens: output 1,358 (thinking 32), input 46, cache read 2,216,632, cache write 17,170 (5m 9,018 / 1h 8,152)
+- size: 67 Java files, 6 mixin classes; target Minecraft 1.21.10
+- ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '333': 1, '111': 1}} -- the cost includes that work
+
+## fork-port.py run since 2026-10-15T19:01:37+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $0.06** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.0 h active, 0.0 h wall (2026-10-15T19:01Z to 2026-10-15T19:01Z)
+- model: claude-opus-5-5 (2 req); effort: medium 2
+- tokens: output 39 (thinking 0), input 4, cache read 262,260, cache write 886 (5m 886 / 1h 0)
+- size: 67 Java files, 6 mixin classes; target Minecraft 1.21.10
+- ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '111': 1, '333': 1}} -- the cost includes that work

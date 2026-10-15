@@ -1,0 +1,88 @@
+package net.eca.client.render.shader;
+
+import net.eca.mv.Uniform;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.eca.client.render.preset.ShaderPresetResourceProvider;
+import net.minecraft.client.Minecraft;
+import net.eca.mv.ShaderInstance;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.eca.mv.RegisterShadersEvent;
+
+import java.io.IOException;
+
+@SuppressWarnings("removal")
+public class VolcanoShader {
+
+    private static ShaderInstance shader;
+    private static Uniform timeUniform;
+    private static Uniform cameraYawUniform;
+    private static Uniform cameraPitchUniform;
+    private static Uniform colorKeyColorUniform;
+    private static Uniform colorKeyToleranceUniform;
+    private static Uniform localUvMinUniform;
+    private static Uniform localUvScaleUniform;
+
+    public static void register(RegisterShadersEvent event) throws IOException {
+        ShaderInstance volcanoShader = EcaShaderInstance.create(
+            ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
+            Identifier.fromNamespaceAndPath("eca", "volcano"),
+            DefaultVertexFormat.BLOCK
+        );
+        event.registerShader(volcanoShader, instance -> {
+            shader = instance;
+            timeUniform = shader.getUniform("GameTime");
+            cameraYawUniform = shader.getUniform("CameraYaw");
+            cameraPitchUniform = shader.getUniform("CameraPitch");
+            colorKeyColorUniform = shader.getUniform("ColorKeyColor");
+            colorKeyToleranceUniform = shader.getUniform("ColorKeyTolerance");
+            localUvMinUniform = shader.getUniform("LocalUvMin");
+            localUvScaleUniform = shader.getUniform("LocalUvScale");
+        });
+    }
+
+    public static ShaderInstance getShader() {
+        return shader;
+    }
+
+    public static void applyUniforms() {
+        try {
+            if (timeUniform != null) {
+                float systemTime = (System.currentTimeMillis() % 1000000L) / 1000.0F;
+                timeUniform.set(systemTime);
+            }
+            if (cameraYawUniform != null || cameraPitchUniform != null) {
+                Minecraft mc = Minecraft.getInstance();
+                Entity cameraEntity = mc.getCameraEntity();
+                if (mc.gameRenderer != null && cameraEntity != null) {
+                    float yaw = (float) Math.toRadians(cameraEntity.getYRot());
+                    float pitch = (float) Math.toRadians(cameraEntity.getXRot());
+                    if (cameraYawUniform != null) {
+                        cameraYawUniform.set(yaw);
+                    }
+                    if (cameraPitchUniform != null) {
+                        cameraPitchUniform.set(pitch);
+                    }
+                }
+            }
+            EcaShaderInstance.applyColorKeyUniforms(colorKeyColorUniform, colorKeyToleranceUniform);
+            EcaShaderInstance.applyLocalUvBoundsUniforms(localUvMinUniform, localUvScaleUniform);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static boolean isAvailable() {
+        return shader != null;
+    }
+
+    public static void clear() {
+        shader = null;
+        timeUniform = null;
+        cameraYawUniform = null;
+        cameraPitchUniform = null;
+        colorKeyColorUniform = null;
+        colorKeyToleranceUniform = null;
+        localUvMinUniform = null;
+        localUvScaleUniform = null;
+    }
+}

@@ -1,3 +1,18 @@
+// Fork multi-version layer: 1.21.8 overlay of the authors' FilterRenderer. Beyond the 1.21.8 port (stage listeners,
+// projection buffers, the Cosmos projection), two review fixes (#33), shaped as 1.21.5's overlay and re-derived for 1.21.8:
+//  - the spotlight mask: a RenderType draw opens its RenderPass on its output target's GpuTextureViews (MAIN_TARGET ->
+//    Minecraft.getMainRenderTarget()), and the GL backend binds the FBO cached on that colour texture, so binding the
+//    authors' raw spotlight FBO was ignored: the mask stayed empty and the entity was drawn a second time into the main
+//    target. The spotlight is now a TextureTarget, and while the entity is drawn RenderSystem.outputColorTextureOverride /
+//    outputDepthTextureOverride (1.21.6+; CompositeRenderType.draw and net.eca.mv.LegacyGl both honour them) name its
+//    views, restored in a finally.
+//  - depth copies in the main target's own format: the main depth is sized (MainTarget: DEPTH32 -> GL_DEPTH_COMPONENT32,
+//    or NeoForge's stencil format), and an unsized GL_DEPTH_COMPONENT copy makes the COLOR|DEPTH blit fail as a whole.
+//    allocateDepthCopy/depthAttachment as 26.2's and 1.21.5's overlays do, reallocated when the format changes; the
+//    spotlight TextureTarget takes the main target's useStencil, so RenderTarget.createBuffers gives it the main's format.
+// Under Fabulous graphics the item-entity/translucent/outline targets are not redirected, as on 1.21.1.
+// An overlay passes down the `inherits` chain WITHOUT rename rows; no later target compiles this file (1.21.10 and
+// every target after it carry their own FilterRenderer overlay).
 package net.eca.client.render.shader;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -68,11 +83,8 @@ public class FilterRenderer {
     private static int copyWidth;
     private static int copyHeight;
 
-    private static int spotlightFbo = -1;
-    private static int spotlightDepthTexture = -1;
-    private static int spotlightColorTexture = -1;
-    private static int spotlightWidth;
-    private static int spotlightHeight;
+    // 1.21.8 (#33): the spotlight mask is a TextureTarget, so RenderType draws can be pointed at it (see captureSpotlightEntity)
+    private static com.mojang.blaze3d.pipeline.TextureTarget spotlightTarget;
 
     /* 宇宙滤镜专用：在实体绘制前（AFTER_CUTOUT_BLOCKS_LAYER）快照纯地形深度，
        用于 AFTER_LEVEL 合成时区分实体像素与方块像素（阶段 AFTER_CUTOUT_BLOCKS） */
@@ -80,6 +92,10 @@ public class FilterRenderer {
     private static int cosmosTerrainDepthTexture = -1;
     private static int cosmosTerrainWidth;
     private static int cosmosTerrainHeight;
+
+    // 1.21.8 (#33): the depth format each copy was allocated in (the main target's, see allocateDepthCopy)
+    private static com.mojang.blaze3d.textures.TextureFormat copyDepthFormat;
+    private static com.mojang.blaze3d.textures.TextureFormat cosmosTerrainDepthFormat;
 
     public static void registerShaders(RegisterShadersEvent event) throws IOException {
         event.registerShader(
@@ -321,8 +337,26 @@ public class FilterRenderer {
         clearAll();
     }
 
+    // 1.21.8 (#33): the main target's depth format (MainTarget allocates DEPTH32, or NeoForge's stencil format)
+    private static com.mojang.blaze3d.textures.TextureFormat mainDepthFormat() {
+        com.mojang.blaze3d.textures.GpuTexture depth = Minecraft.getInstance().getMainRenderTarget().getDepthTexture();
+        return depth != null ? depth.getFormat() : com.mojang.blaze3d.textures.TextureFormat.DEPTH32;
+    }
+
+    // allocates the bound texture as a depth copy in the main target's format, so a depth blit between them is legal
+    private static void allocateDepthCopy(int width, int height) {
+        com.mojang.blaze3d.textures.TextureFormat format = mainDepthFormat();
+        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, com.mojang.blaze3d.opengl.GlConst.toGlInternalId(format),
+                width, height, 0, com.mojang.blaze3d.opengl.GlConst.toGlExternalId(format),
+                com.mojang.blaze3d.opengl.GlConst.toGlType(format), null);
+    }
+
+    private static int depthAttachment() {
+        return mainDepthFormat().hasStencilAspect() ? GL30.GL_DEPTH_STENCIL_ATTACHMENT : GL30.GL_DEPTH_ATTACHMENT;
+    }
+
     private static void ensureCopyTargets(int width, int height) {
-        if (copyFbo != -1 && copyWidth == width && copyHeight == height) return;
+        if (copyFbo != -1 && copyWidth == width && copyHeight == height && copyDepthFormat == mainDepthFormat()) return;
         destroyCopyTargets();
 
         depthCopyTexture = GlStateManager._genTexture();
@@ -332,8 +366,7 @@ public class FilterRenderer {
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
+        allocateDepthCopy(width, height);
 
         colorCopyTexture = GlStateManager._genTexture();
         GlStateManager._bindTexture(colorCopyTexture);
@@ -346,13 +379,14 @@ public class FilterRenderer {
 
         copyFbo = GL30.glGenFramebuffers();
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, copyFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, depthAttachment(),
                 GL11.GL_TEXTURE_2D, depthCopyTexture, 0);
         GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
                 GL11.GL_TEXTURE_2D, colorCopyTexture, 0);
 
         copyWidth = width;
         copyHeight = height;
+        copyDepthFormat = mainDepthFormat();
     }
 
     private static void destroyCopyTargets() {
@@ -371,56 +405,26 @@ public class FilterRenderer {
     }
 
     private static void ensureSpotlightTargets(int width, int height) {
-        if (spotlightFbo != -1 && spotlightWidth == width && spotlightHeight == height) return;
+        RenderTarget mainTarget = Minecraft.getInstance().getMainRenderTarget();
+        if (spotlightTarget != null && spotlightTarget.width == width && spotlightTarget.height == height
+                && spotlightTarget.useStencil == mainTarget.useStencil
+                && spotlightTarget.getDepthTexture().getFormat() == mainDepthFormat()) return;
         destroySpotlightTargets();
-
-        spotlightDepthTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(spotlightDepthTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
-
-        spotlightColorTexture = GlStateManager._genTexture();
-        GlStateManager._bindTexture(spotlightColorTexture);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA8, width, height, 0,
-                GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, null);
-
-        spotlightFbo = GL30.glGenFramebuffers();
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
-                GL11.GL_TEXTURE_2D, spotlightDepthTexture, 0);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
-                GL11.GL_TEXTURE_2D, spotlightColorTexture, 0);
-
-        spotlightWidth = width;
-        spotlightHeight = height;
+        // 1.21.8: colour RGBA8 and depth in the main target's format (createBuffers picks it from useStencil, as
+        // MainTarget does), NEAREST filtering -- what the authors' raw textures were, as GpuTextures a RenderPass can use
+        spotlightTarget = new com.mojang.blaze3d.pipeline.TextureTarget("eca_spotlight", width, height, true, mainTarget.useStencil);
     }
 
     private static void destroySpotlightTargets() {
-        if (spotlightDepthTexture != -1) {
-            GlStateManager._deleteTexture(spotlightDepthTexture);
-            spotlightDepthTexture = -1;
-        }
-        if (spotlightColorTexture != -1) {
-            GlStateManager._deleteTexture(spotlightColorTexture);
-            spotlightColorTexture = -1;
-        }
-        if (spotlightFbo != -1) {
-            GL30.glDeleteFramebuffers(spotlightFbo);
-            spotlightFbo = -1;
+        if (spotlightTarget != null) {
+            spotlightTarget.destroyBuffers();
+            spotlightTarget = null;
         }
     }
 
     private static void ensureCosmosTerrainTarget(int width, int height) {
-        if (cosmosTerrainFbo != -1 && cosmosTerrainWidth == width && cosmosTerrainHeight == height) return;
+        if (cosmosTerrainFbo != -1 && cosmosTerrainWidth == width && cosmosTerrainHeight == height
+                && cosmosTerrainDepthFormat == mainDepthFormat()) return;
         destroyCosmosTerrainTarget();
 
         cosmosTerrainDepthTexture = GlStateManager._genTexture();
@@ -430,12 +434,11 @@ public class FilterRenderer {
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
+        allocateDepthCopy(width, height);
 
         cosmosTerrainFbo = GL30.glGenFramebuffers();
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, cosmosTerrainFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, depthAttachment(),
                 GL11.GL_TEXTURE_2D, cosmosTerrainDepthTexture, 0);
         GL11.glDrawBuffer(GL11.GL_NONE);
         GL11.glReadBuffer(GL11.GL_NONE);
@@ -443,6 +446,7 @@ public class FilterRenderer {
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
         cosmosTerrainWidth = width;
         cosmosTerrainHeight = height;
+        cosmosTerrainDepthFormat = mainDepthFormat();
     }
 
     private static void destroyCosmosTerrainTarget() {
@@ -599,7 +603,7 @@ public class FilterRenderer {
             net.eca.mv.LegacyGl.setShader(() -> spotlightShader);
             net.eca.mv.LegacyGl.setShaderTexture(0, depthCopyTexture);
             net.eca.mv.LegacyGl.setShaderTexture(1, colorCopyTexture);
-            net.eca.mv.LegacyGl.setShaderTexture(2, spotlightColorTexture);
+            net.eca.mv.LegacyGl.setShaderTexture(2, spotlightTarget != null ? spotlightTarget.getColorTextureView() : null);
             if (spotlightShader.getUniform("ScreenSize") != null) {
                 spotlightShader.getUniform("ScreenSize").set((float) width, (float) height);
             }
@@ -629,9 +633,8 @@ public class FilterRenderer {
             int width = mainTarget.width;
             int height = mainTarget.height;
             ensureSpotlightTargets(width, height);
-            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-            org.lwjgl.opengl.GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+                    spotlightTarget.getColorTexture(), 0, spotlightTarget.getDepthTexture(), 1.0);
             net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
             return;
         }
@@ -640,16 +643,13 @@ public class FilterRenderer {
         int height = mainTarget.height;
         ensureSpotlightTargets(width, height);
 
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-        org.lwjgl.opengl.GL11.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+                spotlightTarget.getColorTexture(), 0, spotlightTarget.getDepthTexture(), 1.0);
 
         GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(mainTarget));
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, spotlightFbo);
+        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(spotlightTarget));
         GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
                 GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-
-        GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
 
         float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         Vec3 camPos = event.getCamera().getPosition();
@@ -664,9 +664,20 @@ public class FilterRenderer {
 
         net.eca.mv.LegacyGl.enableDepthTest();
         net.eca.mv.LegacyGl.depthMask(true);
-        dispatcher.render(target, x, y, z, partialTick, poseStack, buffer,
-                dispatcher.getPackedLightCoords(target, partialTick));
-        buffer.endBatch();
+        // 1.21.8 (#33): RenderType.draw opens its pass on MAIN_TARGET's views unless an output override is set, so for
+        // this draw the overrides name the spotlight's (any override already in place is put back afterwards)
+        com.mojang.blaze3d.textures.GpuTextureView savedColor = RenderSystem.outputColorTextureOverride;
+        com.mojang.blaze3d.textures.GpuTextureView savedDepth = RenderSystem.outputDepthTextureOverride;
+        RenderSystem.outputColorTextureOverride = spotlightTarget.getColorTextureView();
+        RenderSystem.outputDepthTextureOverride = spotlightTarget.getDepthTextureView();
+        try {
+            dispatcher.render(target, x, y, z, partialTick, poseStack, buffer,
+                    dispatcher.getPackedLightCoords(target, partialTick));
+            buffer.endBatch();
+        } finally {
+            RenderSystem.outputColorTextureOverride = savedColor;
+            RenderSystem.outputDepthTextureOverride = savedDepth;
+        }
 
         net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
     }

@@ -1,0 +1,412 @@
+package net.eca.event;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.eca.client.BossShowKeyBindings;
+import net.eca.client.gui.BossShowEditorHomeScreen;
+import net.eca.client.gui.BossShowEditorScreen;
+import net.eca.client.gui.BossShowEditorSessionScreen;
+import net.eca.config.EcaConfiguration;
+import net.eca.network.BossShowEditorHeartbeatPacket;
+import net.eca.network.BossShowPlaySelectionPacket;
+import net.eca.network.NetworkHandler;
+import net.eca.util.bossshow.BossShowDefinition;
+import net.eca.util.bossshow.BossShowEditorState;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.PauseScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.UUID;
+
+//BossShow 编辑器：实体选择 + 录制状态机
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
+public final class BossShowEditorClientEvents {
+
+    private static Entity cachedHovered = null;
+    private static int sessionHeartbeatTicks = 0;
+
+    //通用 toast（recording 提示共用）
+    private static long toastUntilMillis = 0L;
+    private static Component toastText = Component.empty();
+
+    private BossShowEditorClientEvents() {}
+
+    public static void showToast(Component text, long durationMs) {
+        toastText = text;
+        toastUntilMillis = System.currentTimeMillis() + durationMs;
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onLocalPlayerTick(PlayerTickEvent.Post event) {
+        if (!(event.getEntity() instanceof LocalPlayer localPlayer)
+            || !BossShowEditorState.isActive()
+            || EcaConfiguration.getBossShowRecordingFlightInertiaSafely()
+            || !localPlayer.getAbilities().flying
+            || localPlayer.isPassenger()) {
+            return;
+        }
+        boolean noMovementInput = localPlayer.input.getMoveVector().y == 0.0F
+            && localPlayer.input.getMoveVector().x == 0.0F
+            && !localPlayer.input.keyPresses.jump()
+            && !localPlayer.input.keyPresses.shift();
+        //只清除松键后的残余速度，避免压低正常飞行速度。
+        if (noMovementInput) {
+            localPlayer.setDeltaMovement(Vec3.ZERO);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onClientTick(ClientTickEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        tickEditorSessionHeartbeat(mc);
+
+        if (mc.screen instanceof BossShowEditorScreen editor && BossShowEditorState.isPreviewPlaying()) {
+            BossShowEditorState.tickPreviewPlayback();
+            editor.syncFromState();
+        }
+
+        //=== 录制相关快捷键（无 screen 时）===
+        if (mc.screen == null && BossShowEditorState.isActive() && BossShowEditorState.hasAnchor()) {
+            //J = 开始/恢复
+            while (BossShowKeyBindings.REC_START.consumeClick()) {
+                if (mc.level != null) {
+                    BossShowEditorState.startOrResumeRecording(mc.level.getGameTime());
+                    showToast(Component.translatable("gui.eca.bossshow.recording.started"), 1000L);
+                }
+            }
+            //I = 暂停
+            while (BossShowKeyBindings.REC_PAUSE.consumeClick()) {
+                if (BossShowEditorState.isActivelyRecording()) {
+                    BossShowEditorState.pauseRecording();
+                    showToast(Component.translatable("gui.eca.bossshow.recording.paused"), 1000L);
+                }
+            }
+        } else {
+            //drain 掉避免延后误触发
+            while (BossShowKeyBindings.REC_START.consumeClick()) {}
+            while (BossShowKeyBindings.REC_PAUSE.consumeClick()) {}
+        }
+
+        //=== 每 tick 采样（仅 RECORDING 状态）===
+        if (mc.screen == null
+            && BossShowEditorState.isActivelyRecording()
+            && BossShowEditorState.hasAnchor()
+            && mc.gameRenderer != null) {
+            Camera cam = mc.gameRenderer.getMainCamera();
+            BossShowEditorState.captureFrameFromCamera(
+                cam.position().x, cam.position().y, cam.position().z,
+                cam.yRot(), cam.xRot()
+            );
+        }
+
+        //=== selection 模式 raycast ===
+        if (!BossShowEditorState.isAnySelectionMode()) {
+            cachedHovered = null;
+            return;
+        }
+        if (mc.level == null || mc.player == null || mc.screen != null) {
+            BossShowEditorState.setHoveredEntityUuid(null);
+            cachedHovered = null;
+            return;
+        }
+        EntityHitResult hit = raycastEntity(mc.player, EcaConfiguration.getBossShowEntitySelectionRangeSafely());
+        if (hit != null && hit.getEntity() instanceof LivingEntity le && le.isAlive()) {
+            BossShowEditorState.setHoveredEntityUuid(le.getUUID());
+            cachedHovered = le;
+        } else {
+            BossShowEditorState.setHoveredEntityUuid(null);
+            cachedHovered = null;
+        }
+    }
+
+    private static void tickEditorSessionHeartbeat(Minecraft minecraft) {
+        if (!BossShowEditorState.isActive()) {
+            sessionHeartbeatTicks = 0;
+            return;
+        }
+        boolean worldOperation = BossShowEditorState.isRecordingMode()
+            || BossShowEditorState.isAnySelectionMode()
+            || BossShowEditorState.isPoseCaptureArmed();
+        boolean validContext = minecraft.screen instanceof BossShowEditorSessionScreen
+            || minecraft.screen instanceof ConfirmScreen
+            || worldOperation && (minecraft.screen == null || minecraft.screen instanceof PauseScreen);
+        if (!validContext || minecraft.getConnection() == null) return;
+
+        sessionHeartbeatTicks++;
+        if (sessionHeartbeatTicks >= 20) {
+            NetworkHandler.sendToServer(new BossShowEditorHeartbeatPacket());
+            sessionHeartbeatTicks = 0;
+        }
+    }
+
+    @SubscribeEvent
+    public static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        BossShowEditorState.exit();
+        sessionHeartbeatTicks = 0;
+        cachedHovered = null;
+    }
+
+    //ENTER 完成录制（保存）
+    @SubscribeEvent
+    public static void onKeyInput(InputEvent.Key event) {
+        if (event.getAction() != GLFW.GLFW_PRESS) return;
+        Minecraft mc = Minecraft.getInstance();
+
+        if (BossShowEditorState.isPoseCaptureArmed()) {
+            if (mc.screen != null) return;
+            if (event.getKey() == GLFW.GLFW_KEY_ESCAPE) {
+                BossShowEditorState.cancelPoseCapture();
+                mc.setScreen(new BossShowEditorScreen());
+                return;
+            }
+            if (event.getKey() == GLFW.GLFW_KEY_ENTER || event.getKey() == GLFW.GLFW_KEY_KP_ENTER) {
+                if (mc.gameRenderer != null) {
+                    Camera cam = mc.gameRenderer.getMainCamera();
+                    BossShowEditorState.commitPoseCapture(
+                        cam.position().x, cam.position().y, cam.position().z,
+                        cam.yRot(), cam.xRot());
+                }
+                mc.setScreen(new BossShowEditorScreen());
+            }
+            return;
+        }
+
+        if (!BossShowEditorState.isRecordingMode()) return;
+        if (mc.screen != null) return;
+        if (event.getKey() == GLFW.GLFW_KEY_ENTER || event.getKey() == GLFW.GLFW_KEY_KP_ENTER) {
+            finishRecording(true);
+        }
+    }
+
+    public static void finishRecording(boolean keep) {
+        if (!BossShowEditorState.isRecordingMode()) return;
+        if (keep) {
+            BossShowEditorState.finishRecording();
+        } else {
+            BossShowEditorState.discardRecording();
+        }
+        Minecraft.getInstance().setScreen(new BossShowEditorScreen());
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        if (!BossShowEditorState.isAnySelectionMode()) return;
+        Entity target = cachedHovered;
+        if (target == null || target.isRemoved()) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        Camera cam = mc.gameRenderer.getMainCamera();
+        Vec3 camPos = cam.position();
+
+        PoseStack pose = event.getPoseStack();
+        pose.pushPose();
+        pose.translate(-camPos.x, -camPos.y, -camPos.z);
+
+        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
+        AABB box = target.getBoundingBox().inflate(0.02);
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(box), 0.0, 0.0, 0.0,
+            net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f);
+        buffer.endBatch(RenderTypes.lines());
+
+        pose.popPose();
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onMouseButton(InputEvent.MouseButton.Pre event) {
+        if (!BossShowEditorState.isAnySelectionMode()) return;
+        if (event.getAction() != GLFW.GLFW_PRESS) return;
+        if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_RIGHT) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
+
+        event.setCanceled(true);
+
+        //=== PLAY 选择模式：必须有 hovered entity，把目标实体送到服务端启动播放 ===
+        if (BossShowEditorState.isPlaySelectionMode()) {
+            UUID uuid = BossShowEditorState.getHoveredEntityUuid();
+            if (uuid == null || cachedHovered == null || cachedHovered.isRemoved()) return;
+            Identifier defId = BossShowEditorState.getPendingPlayDefId();
+            if (defId == null) {
+                BossShowEditorState.exitSelectionMode();
+                cachedHovered = null;
+                mc.setScreen(new BossShowEditorHomeScreen());
+                return;
+            }
+            NetworkHandler.sendToServer(
+                new BossShowPlaySelectionPacket(defId, cachedHovered.getUUID()));
+            BossShowEditorState.exitSelectionMode();
+            cachedHovered = null;
+            mc.setScreen(null);
+            return;
+        }
+
+        //录制和新建都以目标实体自身位姿建立局部坐标系。
+        Entity target = cachedHovered;
+        boolean hasTarget = target != null && !target.isRemoved();
+        if (BossShowEditorState.isRecordSelectionMode()) {
+            if (!hasTarget || mc.level == null) return;
+            BossShowEditorState.setTargetType(target.getType());
+            BossShowEditorState.setAnchor(target.getUUID(), target.getX(), target.getY(), target.getZ(), target.getYRot());
+            BossShowEditorState.exitSelectionMode();
+            cachedHovered = null;
+            BossShowEditorState.enterRecordingStandby(mc.level.getGameTime());
+            mc.setScreen(null);
+            return;
+        }
+
+        LocalPlayer player = mc.player;
+        if (player == null || !hasTarget) return;
+
+        EntityType<?> type = target.getType();
+        UUID anchorUuid = target.getUUID();
+        double ax = target.getX();
+        double ay = target.getY();
+        double az = target.getZ();
+        float anchorYaw = target.getYRot();
+
+        Identifier id = BossShowEditorState.generateAutoId(type);
+        BossShowDefinition blank = BossShowEditorState.createBlank(id, type);
+        BossShowEditorState.exitSelectionMode();
+        cachedHovered = null;
+        BossShowEditorState.enter(blank);
+        BossShowEditorState.setAnchor(anchorUuid, ax, ay, az, anchorYaw);
+        //跳过 EditorScreen 直接进入录制 standby（HUD 显示 PAUSED，等 J 触发采样）
+        if (mc.level != null) {
+            BossShowEditorState.enterRecordingStandby(mc.level.getGameTime());
+        }
+        mc.setScreen(null);
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onScreenOpening(ScreenEvent.Opening event) {
+        if (!(event.getNewScreen() instanceof PauseScreen)) return;
+
+        if (BossShowEditorState.isPoseCaptureArmed()) {
+            event.setCanceled(true);
+            BossShowEditorState.cancelPoseCapture();
+            Minecraft.getInstance().setScreen(new BossShowEditorScreen());
+            return;
+        }
+
+        if (BossShowEditorState.isRecordingMode()) {
+            event.setCanceled(true);
+            finishRecording(false);
+            return;
+        }
+        if (BossShowEditorState.isAnySelectionMode()) {
+            event.setCanceled(true);
+            boolean recordingSelection = BossShowEditorState.isRecordSelectionMode();
+            BossShowEditorState.exitSelectionMode();
+            cachedHovered = null;
+            Minecraft.getInstance().setScreen(recordingSelection
+                ? new BossShowEditorScreen()
+                : new BossShowEditorHomeScreen());
+            return;
+        }
+        //在编辑器 session 活着且无 screen 状态下按 ESC 也回到 Home
+        if (BossShowEditorState.isActive()) {
+            event.setCanceled(true);
+            Minecraft.getInstance().setScreen(new BossShowEditorHomeScreen());
+        }
+    }
+
+    //通用 toast 渲染
+    @SubscribeEvent
+    public static void onRenderGuiToast(RenderGuiEvent.Post event) {
+        if (System.currentTimeMillis() >= toastUntilMillis) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
+        int w = mc.getWindow().getGuiScaledWidth();
+        int h = mc.getWindow().getGuiScaledHeight();
+        event.getGuiGraphics().centeredText(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
+    }
+
+    @SubscribeEvent
+    public static void onRenderGui(RenderGuiEvent.Post event) {
+        if (!BossShowEditorState.isAnySelectionMode()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
+
+        int w = mc.getWindow().getGuiScaledWidth();
+        int h = mc.getWindow().getGuiScaledHeight();
+        GuiGraphicsExtractor g = event.getGuiGraphics();
+
+        boolean targeted = BossShowEditorState.getHoveredEntityUuid() != null;
+        boolean isPlay = BossShowEditorState.isPlaySelectionMode();
+        boolean isRecord = BossShowEditorState.isRecordSelectionMode();
+
+        Component line1;
+        if (isPlay) {
+            Identifier defId = BossShowEditorState.getPendingPlayDefId();
+            String defStr = defId != null ? defId.toString() : "?";
+            line1 = Component.translatable(targeted
+                ? "gui.eca.bossshow.play_selection.targeted"
+                : "gui.eca.bossshow.play_selection.aim", defStr);
+        } else if (isRecord) {
+            line1 = Component.translatable(targeted
+                ? "gui.eca.bossshow.record_selection.targeted"
+                : "gui.eca.bossshow.record_selection.aim");
+        } else {
+            line1 = Component.translatable(targeted
+                ? "gui.eca.bossshow.selection.targeted"
+                : "gui.eca.bossshow.selection.aim");
+        }
+        Component line2 = Component.translatable(isPlay
+            ? "gui.eca.bossshow.play_selection.hint"
+            : isRecord
+                ? "gui.eca.bossshow.record_selection.hint"
+                : "gui.eca.bossshow.selection.hint");
+
+        int y = h / 4;
+        g.centeredText(mc.font, line1, w / 2, y, 0xFFFFFF);
+        if (targeted && cachedHovered != null) {
+            Component hint = Component.literal("§7").append(cachedHovered.getType().getDescription());
+            g.centeredText(mc.font, hint, w / 2, y + 12, 0xCCCCCC);
+        }
+        g.centeredText(mc.font, line2, w / 2, y + 26, 0xAAAAAA);
+    }
+
+    private static EntityHitResult raycastEntity(LocalPlayer player, double reach) {
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
+        AABB scanBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0, 1.0, 1.0);
+        return ProjectileUtil.getEntityHitResult(
+            player,
+            eye,
+            end,
+            scanBox,
+            e -> e instanceof LivingEntity && e.isAlive() && e != player,
+            reach
+        );
+    }
+}

@@ -1,4 +1,6 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
+// MV-REQUIRES: LegacyGl
+// MV-REQUIRES: Uniform
 package net.eca.mv;
 
 import com.google.gson.JsonArray;
@@ -62,7 +64,7 @@ import java.util.regex.Pattern;
  * filled from the value the mod set. A value the MOD wrote into a built-in
  * wins over vanilla's for that draw only when it wrote it where 1.21.1 let it: 1.21.1 drew with
  * {@code setDefaultUniforms(..)} (every built-in overwritten from RenderSystem, GameTime included) and then {@code apply()},
- * so a write made BEFORE the draw (a shard's setupRenderState -- Epic Core API sets GameTime to seconds there) was lost on
+ * so a write made BEFORE the draw (a shard's setupRenderState -- a fork sets GameTime to seconds there) was lost on
  * 1.21.1 and is lost here ({@link #setDefaultUniforms}), while one made in the mod's own {@code apply()} override survives:
  * {@link #transformMatrix}/{@link #lineWidth}/colour feed {@code DynamicTransforms}, {@link #projectionBuffer} and
  * {@link #globalsBuffer} replace the {@code Projection}/{@code Globals} block, and {@link #consumeBuiltIns} forgets the
@@ -299,6 +301,12 @@ public class ShaderInstance implements AutoCloseable {
         for (String s : samplers) {
             GpuTextureView t = boundSamplers.get(s);
             if (t == null) t = LegacyGl.slotTexture(s);
+            // 1.21.1's GL let a declared sampler stay unset: its uniform is 0, so it read texture unit 0. From 1.21.5 the
+            // command encoder refuses the draw instead ("Missing sampler X", thrown from the frame), so a sampler the
+            // mod only binds on some paths (a mask set only when a mask source is chosen) takes unit 0's texture, and
+            // with nothing there the missing-texture sprite -- never an unbound sampler
+            if (t == null) t = LegacyGl.slotTexture("Sampler0");
+            if (t == null) t = LegacyGl.missingTexture();
             if (t != null) pass.bindSampler(s, t);
         }
     }

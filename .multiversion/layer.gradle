@@ -12,7 +12,8 @@
 //     Minecraft version: vanilla moves the classes it names).
 //   * The Java toolchain, neoforge.mods.toml version ranges and dependency substitutions follow the
 //     target's target.properties.
-//   * Everything builds into build/mc<t>/, so one target's classes never mix with another's.
+//   * Everything builds into build/mc<t>/, so one target's classes never mix with another's, and the client runs in
+//     build/mc<t>/run, so one target's mod configs never reach another's client.
 //     The jars it writes to libs carry the target in their name (-mc<t>), so a release can hold one per target.
 // Versions are NOT changed here: run through .multiversion/build.sh <t>, which passes the target's
 // versions as -P (they override gradle.properties) along with -Pmc.
@@ -45,6 +46,18 @@ mvProps.stringPropertyNames().findAll { it.startsWith('prop.') }.each { k ->
 
 def mvPython = System.getProperty('os.name').toLowerCase().contains('windows') ? 'python' : 'python3'
 layout.buildDirectory = file("build/mc${mvTarget}")   // inside build/: every authors' .gitignore ignores it
+
+// ---- the client's game directory ---------------------------------------------------------------------------------
+// One per target (issue #114): build/mc<t>/run. Mods write their configs into the game directory in the format of the
+// version that ran last, so with one shared run/ a newer target's mod config (a toggle written as the string "ON")
+// crashed an older target's client reading it as a boolean -- a Gate C red on a port whose code was not involved.
+// The client's only: the gates' GameTest server keeps the harness's own run directory. Without -Pmc this script
+// returned above, so a single-version build (and the base) keeps the authors' run directory exactly as it was.
+// BEGIN-RUN-DIRS (tools/test-port-tools.sh runs this block)
+if (extensions.findByName('neoForge') != null) {
+    neoForge.runs.matching { it.name == 'client' }.configureEach { r -> r.gameDirectory = file("build/mc${mvTarget}/run") }
+}
+// END-RUN-DIRS
 
 // ---- sources -----------------------------------------------------------------------------------
 // Every source set's own src/<set>/java goes through the same table (a mod can have more than main: an extra
@@ -98,6 +111,13 @@ def mvAt = mvChain.reverse().collect { file(".multiversion/targets/${it}/resourc
 if (mvAt != null) {
     neoForge.accessTransformers.files.setFrom(mvAt)
 }
+// nfrt_version=<v>: the NeoForm runtime that stages this target's Minecraft. Absent (every 1.21.x target): the one the
+// authors' ModDevGradle brings. Measured: MDG 2.0.146's NFRT 2.0.27 cannot stage NeoForge 26.2.0.90 (its own access
+// transformer widens HolderSet$Named.contents() and the recompile fails on an anonymous subclass); NFRT 2.0.31 (what
+// MDG 2.0.148 brings) stages it. Setting it here keeps the authors' plugins block untouched.
+if (mvProps.getProperty('nfrt_version')) {
+    neoFormRuntime.version = mvProps.getProperty('nfrt_version')      // a project extension of ModDevGradle's, not on neoForge
+}
 
 def mvRanges = mvProps.stringPropertyNames().findAll { it.startsWith('toml.') }.collectEntries { [(it.substring(5)): mvProps.getProperty(it)] }
 // mixin_add.<config file>=<array>:<Class>,<Class>;<array>:<Class> -- mixins that exist only on this target (and
@@ -146,6 +166,23 @@ def mvSubs = mvProps.stringPropertyNames().findAll { it.startsWith('substitute.'
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         mvSubs.each { k -> substitute(module(k.substring(11))).using(module(mvProps.getProperty(k))) }
+    }
+}
+// tools/layer-deps.py: a dependency with no build for this Minecraft that the port does not require is taken off
+// the classpath (exclude.<group:module>=<reason>), and a build it found on Modrinth needs Modrinth's maven.
+// BEGIN-EXCLUDES (tools/test-port-tools.sh runs this block)
+mvProps.stringPropertyNames().findAll { it.startsWith('exclude.') }.each { k ->
+    def ga = k.substring(8).split(':', 2)
+    // a key with no ':' (an unescaped one is cut there by java.util.Properties) would exclude a WHOLE group
+    if (ga.length != 2 || !ga[0] || !ga[1]) {
+        throw new GradleException("target.properties: ${k} is not exclude.<group>\\:<module> (escape the ':')")
+    }
+    configurations.configureEach { exclude group: ga[0], module: ga[1] }
+}
+// END-EXCLUDES
+if (mvSubs.any { mvProps.getProperty(it).startsWith('maven.modrinth:') }) {
+    repositories {
+        maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
     }
 }
 // ---- jar names ---------------------------------------------------------------------------------
