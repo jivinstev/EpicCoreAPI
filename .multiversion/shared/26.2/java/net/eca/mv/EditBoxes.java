@@ -58,6 +58,9 @@ public final class EditBoxes {
         final Predicate<String> filter;
         final Consumer<String> inner;
         String last;
+        /** True while {@link #accept} puts {@link #last} back: that setValue calls this responder again, and the
+         *  chained responder already has that value, so the call is not passed on. */
+        boolean restoring;
 
         Filtered(EditBox box, Predicate<String> filter, Consumer<String> inner) {
             this.box = box;
@@ -68,11 +71,19 @@ public final class EditBoxes {
 
         @Override
         public void accept(String value) {
+            if (restoring) {
+                return;
+            }
             if (filter.test(value)) {
                 last = value;
                 if (inner != null) inner.accept(value);
             } else if (!value.equals(last)) {
-                box.setValue(last);
+                restoring = true;
+                try {
+                    box.setValue(last);
+                } finally {
+                    restoring = false;
+                }
             }
         }
     }

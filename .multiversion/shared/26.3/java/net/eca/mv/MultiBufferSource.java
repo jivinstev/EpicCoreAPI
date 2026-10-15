@@ -88,7 +88,12 @@ public interface MultiBufferSource {
         public VertexConsumer getBuffer(RenderType type) {
             BufferBuilder open = startedBuilders.get(type);
             if (open != null) {
-                return open;
+                if (type.canConsolidateConsecutiveGeometry()) {
+                    return open;
+                }
+                // a type whose consecutive geometry must stay apart (strips, fans, line loops): draw what this
+                // builder holds now, so the next caller's vertices start a new primitive instead of joining it
+                endBatch(type);
             }
             ByteBufferBuilder own = fixedBuffers.get(type);
             ByteBufferBuilder target;
@@ -135,9 +140,16 @@ public interface MultiBufferSource {
                 return;
             }
             MeshData mesh = builder.build();   // null when nothing was written
-            if (mesh != null) {
-                draw(type, mesh);
+            if (mesh == null) {
+                return;
             }
+            if (type.sortOnUpload()) {
+                // translucent types: order the quads back to front for the current projection before drawing; the
+                // sorted index data is written into the same buffer the vertices were collected in
+                ByteBufferBuilder written = fixedBuffers.getOrDefault(type, sharedBuffer);
+                mesh.sortQuads(written, RenderSystem.getProjectionType().vertexSorting());
+            }
+            draw(type, mesh);
         }
 
         static void draw(RenderType type, MeshData mesh) {
