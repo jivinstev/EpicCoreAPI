@@ -88,11 +88,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -139,11 +139,11 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -324,12 +324,12 @@ jobs:
       # branch only -- never the layer branch -- and only where the branch has a manifest. The commit sits on top of the
       # tag, so publish (needs: promote) still finds the tag in the branch's history. A failure here is reported and
       # never stops publish.
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         if: ${{ github.ref_name == 'neoforge-1.21.1' && hashFiles('.github/port-install.json') != '' }}
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Refresh the install manifest
         if: ${{ github.ref_name == 'neoforge-1.21.1' && hashFiles('.github/port-install.json') != '' }}
@@ -341,7 +341,7 @@ jobs:
           set -euo pipefail
           if ! printf '%s' "$TAG" | grep -Eq '^[A-Za-z0-9._+-]+$'; then echo "::error::not a release tag: $TAG"; exit 1; fi
           if [ ! -f .port-tools/tools/port-manifest.py ]; then
-            echo "::warning::Port CI kit v22 has no port-manifest.py: regenerate this workflow with a newer kit"; exit 0
+            echo "::warning::Port CI kit v23 has no port-manifest.py: regenerate this workflow with a newer kit"; exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -370,11 +370,11 @@ jobs:
         with:
           ref: "neoforge-1.21.1"
           fetch-depth: 0          # tags and history, to prove the tag was built from this branch
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Publish to Modrinth and CurseForge
         env:
@@ -395,11 +395,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: "neoforge-1.21.1"
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Create the Modrinth draft project
         env:
@@ -438,8 +438,8 @@ jobs:
             echo "layer=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
           python3 .port-tools/tools/layer-ci.py plan --repo . --github-output "$GITHUB_OUTPUT"
 
@@ -465,11 +465,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -498,11 +498,11 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -537,11 +537,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -589,11 +589,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Port CI kit v22 (pinned by sha256)
+      - name: Port CI kit v23 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v22/port-ci-kit-v22.tar.gz"
-          echo "b7e5436c6d7dd9761265bc1e6ea7cf8c724c4fdfcfcbef10f9f68aed7bc47ab6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v23/port-ci-kit-v23.tar.gz"
+          echo "57c7308e283a9b5ee98637594b36f93f67edb5f869b91eee2bccd919e4745ec6  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
