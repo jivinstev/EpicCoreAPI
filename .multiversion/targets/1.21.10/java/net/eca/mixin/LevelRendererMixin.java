@@ -3,9 +3,13 @@
 // FeatureRenderDispatcher.renderAllFeatures. So the per-entity bracket (cloud occlusion, fog flag) is a @Redirect of that call,
 // the frustum the bracket needs (the cullingFrustum field is gone) is taken from extractVisibleEntities' argument, and
 // renderLevel gained a third Matrix4f (the culling projection).
-// 1.21.8 copy of the 1.21.5 overlay: renderLevel lost its GameRenderer and LightTexture and gained a GraphicsResourceAllocator, the fog buffer, the fog colour and a render-sky flag (1.21.6 shape; shared row in shared/1.21.8/renames.tsv);
-// renderClouds/renderSky became frame-graph passes, so the cloud skip moved to CloudRendererMixin and the global
-// skybox to net.eca.mv.GlobalSkyboxHook (RenderLevelStageEvent AFTER_SKY, which runs where renderSky's TAIL did).
+// renderClouds/renderSky are frame-graph passes, as on 1.21.8, but 1.21.9 hands them the extracted LevelRenderState. The cloud
+// skip cancels the clouds pass (1.21.10: lambda$addCloudsPass$3) at its DimensionSpecialEffects.renderClouds call, where
+// 1.21.1's renderClouds HEAD was; CloudRendererMixin (from 1.21.3) also gates CloudRenderer.render. The global skybox is drawn
+// from a pass of its own before the main pass (net.eca.mv.GlobalSkyboxHook.render), because 1.21.10 adds no sky pass when
+// renderLevel's render-sky flag is false (GameRenderer passes !(isFoggyAt || boss-overlay world fog)) or addSkyPass declines
+// (SkyType NONE, lava/powder snow, blindness/darkness), where 1.21.1's renderSky still reached its TAIL; it is skipped where a
+// custom DimensionSpecialEffects.renderSky drew the sky (1.21.10's sky lambda is lambda$addSkyPass$8).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -45,7 +49,14 @@ import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
+import com.mojang.blaze3d.framegraph.FramePass;
+import net.minecraft.client.renderer.LevelTargetBundle;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -97,7 +108,70 @@ public abstract class LevelRendererMixin {
         ForceLoadingManager.clearCurrentRenderingEntity();
     }
 
-    // 1.21.2: clouds are a frame-graph pass; net.eca.mixin.CloudRendererMixin cancels them (fork layer).
+    // 1.21.10: clouds are a frame-graph pass (lambda$addCloudsPass$3). Cancel it where 1.21.1's renderClouds HEAD was:
+    // before the custom DimensionSpecialEffects.renderClouds hook, so a dimension that draws its own clouds is skipped
+    // too. renderLevel adds the clouds pass after addMainPass and addParticlesPass, and entities are submitted (and
+    // eca$markCloudOcclusion sets the flag) in the main pass, so when the clouds pass executes the flag is final.
+    @Inject(method = "lambda$addCloudsPass$3",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/DimensionSpecialEffects;renderClouds(Lnet/minecraft/client/renderer/state/LevelRenderState;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/client/CloudStatus;IFLorg/joml/Matrix4f;)Z"),
+            cancellable = true, require = 1)
+    private void eca$skipOccludingClouds(CallbackInfo ci) {
+        if (net.eca.mv.CloudGate.occlude) {
+            ci.cancel();
+        }
+    }
+
+    // ==================== 全局天空盒渲染 (fork layer, 1.21.2+) ====================
+
+    @Shadow
+    @Final
+    private LevelTargetBundle targets;
+
+    /* true when this frame's sky pass was drawn by a custom DimensionSpecialEffects.renderSky: 1.21.1's renderSky
+       returned before its TAIL then, so the authors' skybox was not drawn. */
+    @Unique
+    private boolean eca$customSkyDrawn;
+
+    @Inject(method = "renderLevel", at = @At("HEAD"), require = 1)
+    private void eca$resetCustomSky(CallbackInfo ci) {
+        eca$customSkyDrawn = false;
+    }
+
+    @ModifyExpressionValue(method = "lambda$addSkyPass$8",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/DimensionSpecialEffects;renderSky(Lnet/minecraft/client/renderer/state/LevelRenderState;Lnet/minecraft/client/renderer/state/SkyRenderState;Lorg/joml/Matrix4f;Ljava/lang/Runnable;)Z"),
+            require = 1)
+    private boolean eca$recordCustomSky(boolean handled) {
+        eca$customSkyDrawn = handled;
+        return handled;
+    }
+
+    /* The authors' renderSky TAIL: a pass of its own on the main target, ordered after the sky pass (when there is
+       one) and before the main pass. 1.21.10 still has one world fog buffer (GameRenderer passes
+       FogRenderer.getBuffer(FogMode.WORLD) as renderLevel's GpuBufferSlice), and vanilla's sky pass sets exactly that
+       with RenderSystem.setShaderFog before drawing, so this pass does the same. frustumMatrix is unused: see below. */
+    @Inject(method = "renderLevel",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;addMainPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/culling/Frustum;Lorg/joml/Matrix4f;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;ZLnet/minecraft/client/renderer/state/LevelRenderState;Lnet/minecraft/client/DeltaTracker;Lnet/minecraft/util/profiling/ProfilerFiller;)V"),
+            require = 1)
+    private void eca$addGlobalSkyboxPass(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera,
+                                         Matrix4f frustumMatrix, Matrix4f projectionMatrix, Matrix4f cullProjection,
+                                         GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci,
+                                         @Local FrameGraphBuilder frameGraph) {
+        net.eca.mv.GlobalSkyboxHook.passOwned = true;
+        FramePass pass = frameGraph.addPass("eca_global_skybox");
+        this.targets.main = pass.readsAndWrites(this.targets.main);
+        pass.executes(() -> {
+            if (eca$customSkyDrawn) {
+                return;
+            }
+            RenderSystem.setShaderFog(fogBuffer);
+            // 1.21.1's renderSky ran before renderLevel pushed frustumMatrix onto the model-view stack, so the authors'
+            // PoseStack carried it. 1.21.10 renderLevel still does matrix4fstack.mul(frustumMatrix) before building the
+            // frame graph (popped after it executes), and both LegacyGl and RenderType.draw write
+            // RenderSystem.getModelViewMatrix() (that stack) into DynamicTransforms as ModelViewMat, so the PoseStack
+            // starts from identity here (the vanilla sky pass also draws its sun and moon from a bare PoseStack).
+            net.eca.mv.GlobalSkyboxHook.render(new Matrix4f(), camera);
+        });
+    }
 
     @Inject(method = "isSectionCompiled", at = @At("HEAD"), cancellable = true)
     private void eca$forceLoadedChunkCheck(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
