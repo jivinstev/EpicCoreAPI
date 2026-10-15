@@ -1,0 +1,2717 @@
+// Fork multi-version layer, 26.2: Entity.getId() throws until an id is assigned (CATALOG §V104); the id-keyed invulnerable fast path (isInvulnerable, reached from the isAlive/isDeadOrDying/isRemoved hooks) treats an entity without one as having no entry, as 1.21's fresh id never had one.
+package net.eca.api;
+
+import net.eca.coremod.AllReturnToggle;
+import net.eca.coremod.EcaTransformerManager;
+import net.eca.coremod.TransformerWhitelist;
+import net.eca.config.EcaConfiguration;
+import net.eca.util.EcaLogger;
+import net.eca.util.EntityLocationManager;
+import net.eca.util.EntityUtil;
+import net.eca.util.InvulnerableEntityManager;
+import net.eca.util.ResurrectionManager;
+import net.eca.util.call_bridge.CallBridgeManager;
+import net.eca.util.EcaOwnedState;
+import net.eca.util.health.health_lock.HealthLockManager;
+import net.eca.util.reflect.UnsafeUtil;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import net.eca.util.entity_extension.EntityExtension;
+import net.eca.util.entity_extension.BlenderAnimationManager;
+import net.eca.blender.animation.BlenderControllers;
+import net.eca.blender.animation.controller.BlenderControllerContext;
+import net.eca.util.entity_extension.EntityExtensionManager;
+import net.eca.util.entity_extension.ForceLoadingManager;
+import net.eca.util.entity_extension.GlobalEffectOverrideManager;
+import net.eca.network.EntityExtensionOverridePacket.FogData;
+import net.eca.network.EntityExtensionOverridePacket.SkyboxData;
+import net.eca.network.EntityExtensionOverridePacket.MusicData;
+import net.eca.util.bossshow.BossShowDefinition;
+import net.eca.util.bossshow.BossShowManager;
+import net.eca.util.bossshow.BossShowPlaybackTracker;
+import net.eca.util.bossshow.Trigger;
+import net.eca.util.filter.FilterManager;
+import net.eca.util.filter.FilterType;
+import net.eca.util.faction.Faction;
+import net.eca.util.faction.FactionManager;
+import net.eca.util.faction.FactionMember;
+import net.eca.util.faction.FactionRelation;
+import net.eca.util.faction.FactionUtil;
+import net.eca.util.raid.RaidDefinition;
+import net.eca.util.raid.RaidInstance;
+import net.eca.util.raid.RaidManager;
+import net.eca.util.spawn_ban.SpawnBanManager;
+import net.eca.client.render.preset.ShaderPreset;
+import net.eca.client.render.preset.ShaderPresetRegistry;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforgespi.language.IModFileInfo;
+import net.neoforged.neoforgespi.language.ModFileScanData;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+public final class EcaAPI {
+
+    // 无敌实体快速路径：按 entityId 记录当前处于 ECA 无敌状态的实体。
+    // isInvulnerable() 先查此集，不在则直接返回 false 跳过 SynchedEntityData 读取。
+    private static final Set<Integer> INVULNERABLE_IDS = ConcurrentHashMap.newKeySet();
+
+    private static boolean isValidHealthLockValue(float value) {
+        return value > 0.0f && (Float.isFinite(value) || value == Float.POSITIVE_INFINITY);
+    }
+
+    // 清除快速路径条目（供 EntityUtil 内部清理调用）
+    public static void clearInvulnerableFastPath(int entityId) {
+        INVULNERABLE_IDS.remove(entityId);
+    }
+
+    // 恢复快速路径条目（由 LivingEntityMixin.readAdditionalSaveData 调用，确保重启后快速路径不为空）
+    public static void restoreInvulnerableFastPath(int entityId) {
+        INVULNERABLE_IDS.add(entityId);
+    }
+
+    // 在目标来源的调用栈检测器已桥接时执行受控调用
+    /**
+     * Execute a value-returning invocation inside an authorized call-bridge scope.
+     * The target determines which loaded code source is scanned for stack watchdogs.
+     * @param target the target object or target class whose code source should be prepared
+     * @param invocation the invocation to execute
+     * @param <T> the invocation result type
+     * @return the invocation result
+     */
+    public static <T> T callAuthorized(Object target, Supplier<T> invocation) {
+        return CallBridgeManager.callAuthorized(target, invocation);
+    }
+
+    // 在目标来源的调用栈检测器已桥接时执行无返回值受控调用
+    /**
+     * Execute a void invocation inside an authorized call-bridge scope.
+     * The target determines which loaded code source is scanned for stack watchdogs.
+     * @param target the target object or target class whose code source should be prepared
+     * @param invocation the invocation to execute
+     */
+    public static void runAuthorized(Object target, Runnable invocation) {
+        CallBridgeManager.runAuthorized(target, invocation);
+    }
+
+    // 锁定血量
+    /**
+     * Lock entity health at a specific value.
+     * When enabled, the entity's health is locked in two ways:
+     * 1. getHealth() always returns the locked value (via bytecode hook)
+     * 2. Real health is reset to the locked value every tick (via Mixin)
+     * This provides true health locking - the entity cannot die from damage
+     * as long as the lock is active (unless killed instantly with damage > locked value).
+     * Use cases:
+     * - Boss invincibility phases
+     * - Tutorial mode (beginner protection)
+     * - PVP damage limitation
+     * - Heal negation effects
+     * The locked value is synchronized to clients via SynchedEntityData.
+     * @param entity the living entity
+     * @param value the positive finite health lock value, or positive infinity
+     */
+    public static void lockHealth(LivingEntity entity, float value) {
+        if (entity == null) {
+            EcaLogger.info("[EcaAPI] lockHealth rejected entity=null value={}", value);
+            return;
+        }
+        if (!isValidHealthLockValue(value)) {
+            EcaLogger.info("[EcaAPI] lockHealth rejected entity={} value={} reason=invalid-lock-value",
+                    entity.getClass().getName(), value);
+            return;
+        }
+        try {
+            if (value == Float.POSITIVE_INFINITY) {
+                EntityUtil.setBasicHealth(entity, value);
+            } else {
+                setHealth(entity, value);
+            }
+            HealthLockManager.setLock(entity, value);
+        } catch (Exception e) {
+            EcaLogger.info("[EcaAPI] lockHealth failed entity={} value={} msg={}",
+                    entity.getClass().getName(), value, e.getMessage());
+        }
+    }
+
+    // 解锁血量
+    /**
+     * Unlock entity health.
+     * After unlocking, the entity's getHealth() method will return the actual health value.
+     * @param entity the living entity
+     */
+    public static void unlockHealth(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        HealthLockManager.removeLock(entity);
+    }
+
+    // ==================== 禁疗系统 ====================
+
+    // 设置固定恢复上限，普通掉血不会降低记录值。
+    /**
+     * Set a fixed healing ceiling for an entity without healing it.
+     * Healing below the ceiling is allowed, and damage does not lower the recorded value.
+     * The ceiling remains until explicitly replaced or removed. Health locks take priority.
+     * The recorded value is synchronized to clients via SynchedEntityData.
+     * @param entity the living entity
+     * @param value the fixed health ceiling to maintain
+     */
+    public static void banHealing(LivingEntity entity, float value) {
+        if (entity == null) {
+            EcaLogger.info("[EcaAPI] banHealing rejected entity=null value={}", value);
+            return;
+        }
+        try {
+            HealthLockManager.setHealBan(entity, value);
+        } catch (Exception e) {
+            EcaLogger.info("[EcaAPI] banHealing failed entity={} value={} msg={}",
+                    entity.getClass().getName(), value, e.getMessage());
+        }
+    }
+
+    // 解除禁疗
+    /**
+     * Remove the fixed healing ceiling for an entity without changing its current health.
+     * @param entity the living entity
+     */
+    public static void unbanHealing(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        HealthLockManager.removeHealBan(entity);
+    }
+
+    // 获取当前禁疗值
+    /**
+     * Get the recorded fixed healing ceiling for an entity.
+     * @param entity the living entity
+     * @return the healing ceiling, or null if no ceiling is active
+     */
+    public static Float getHealBanValue(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        return HealthLockManager.getHealBan(entity);
+    }
+
+    // 检查是否被禁疗
+    /**
+     * Check whether an entity has a fixed healing ceiling.
+     * @param entity the living entity
+     * @return true if a healing ceiling is active, false otherwise
+     */
+    public static boolean isHealingBanned(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        return HealthLockManager.getHealBan(entity) != null;
+    }
+
+    // 获取当前锁定值（如果没有锁定返回 null）
+    /**
+     * Get the current health lock value for an entity.
+     * @param entity the living entity
+     * @return the locked value, or null if health is not locked
+     */
+    public static Float getLockedHealth(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        return HealthLockManager.getLock(entity);
+    }
+
+    // 检查是否被锁定
+    /**
+     * Check if an entity has health locked.
+     * @param entity the living entity
+     * @return true if health is locked, false otherwise
+     */
+    public static boolean isHealthLocked(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        return HealthLockManager.getLock(entity) != null;
+    }
+
+    // 获取实体真实血量
+    /**
+     * Read health from an existing analyzed storage expression, falling back to vanilla synchronized health data.
+     * This read does not initiate analysis or fall back to the entity's health getter.
+     * @param entity the living entity
+     * @return the health value, NaN if storage cannot be read, or 0.0f if entity is null
+     */
+    public static float getHealth(LivingEntity entity) {
+        return EntityUtil.getHealth(entity);
+    }
+
+    // 读取已分析的真实血量，未确认时读取原版同步血量
+    /**
+     * Read health from an existing analyzed storage expression, falling back to vanilla synchronized health data.
+     * This read does not initiate analysis or fall back to the entity's health getter.
+     * @param entity the living entity
+     * @return the health value, or NaN if the entity is null or storage cannot be read
+     */
+    public static float getRealHealth(LivingEntity entity) {
+        if (entity == null) return Float.NaN;
+        return EntityUtil.getHealth(entity);
+    }
+
+    // 设置实体血量
+    /**
+     * Set entity health through a verified life-protocol transaction.
+     * The transaction snapshots every affected state, applies the selected writer, performs immediate
+     * readback, and schedules cross-tick validation. Failed immediate writes are rolled back.
+     * @param entity the living entity
+     * @param health the target health value
+     * @return true if the active implementation verifies the target value
+     */
+    public static boolean setHealth(LivingEntity entity, float health) {
+        return EntityUtil.setHealth(entity, health);
+    }
+
+    // 强制实体受伤（原版 hurt 未正确扣血时，补记伤害源并用 ECA 改血兜底）
+    /**
+     * Damage an entity, guaranteeing the health loss actually lands.
+     * Vanilla {@code hurt} performs its only real health write inside {@code actuallyHurt} as
+     * {@code setHealth(getHealth() - damage)}, going through the entity's own getters and setters. When those
+     * are overridden or decoupled from the real storage, the whole pipeline runs and the events still fire
+     * while no health is lost. This method therefore does three things in order:
+     * 1. Clears the invulnerability cooldown and calls vanilla {@code hurt}, so mitigation (armor, resistance,
+     *    absorption, shields), knockback, aggro and hurt animation all happen normally.
+     * 2. Re-reads the health anchor and compares it against {@code before - amount}, with a tolerance of
+     *    {@code min(1.0, amount * 50%)}.
+     * 3. On mismatch, restores the damage-source bookkeeping vanilla would have left behind
+     *    (lastHurtByMob, lastHurtByPlayer/Time, lastDamageSource/Stamp, combat tracker, hurt animation)
+     *    and forces the health through {@link #setHealth}, clamped at zero. A lethal result is never
+     *    forced into the death path here: the entity is left at zero health so vanilla {@code tickDeath}
+     *    plays the death animation and removes it. Use {@link #kill} when an immediate kill is wanted.
+     * Entities protected by ECA's own health lock or invulnerability are left to those systems: vanilla
+     * {@code hurt} is still called, but no forced write is attempted.
+     * Server side only; clients receive the result through the existing health sync packet.
+     * @param entity the living entity to damage
+     * @param damageSource the damage source, used for both mitigation and kill credit
+     * @param amount the damage amount, must be finite and greater than 0
+     * @return true if the entity ended up at the expected health, or was killed as expected
+     */
+    public static boolean hurt(LivingEntity entity, DamageSource damageSource, float amount) {
+        return EntityUtil.hurt(entity, damageSource, amount);
+    }
+
+    // 强制实体受伤的便捷重载：由攻击者自动取伤害类型
+    /**
+     * Damage an entity using a damage source derived from the attacker.
+     * Players use {@code playerAttack}, every other living entity uses {@code mobAttack}, matching what
+     * vanilla melee would produce, so kill credit and loot attribution behave as expected.
+     * See {@link #hurt(LivingEntity, DamageSource, float)} for the full pipeline.
+     * @param entity the living entity to damage
+     * @param attacker the attacking living entity, must not be null
+     * @param amount the damage amount, must be finite and greater than 0
+     * @return true if the entity ended up at the expected health, or was killed as expected
+     */
+    public static boolean hurt(LivingEntity entity, LivingEntity attacker, float amount) {
+        if (entity == null || attacker == null) return false;
+        DamageSource damageSource = attacker instanceof Player player
+                ? attacker.damageSources().playerAttack(player)
+                : attacker.damageSources().mobAttack(attacker);
+        return EntityUtil.hurt(entity, damageSource, amount);
+    }
+
+
+    // 获取实体无敌状态
+    /**
+     * Get the invulnerability state of an entity (ECA system).
+     * Uses EntityData for LivingEntity types (synchronized to clients automatically).
+     * Non-LivingEntity types always return false.
+     * @param entity the entity to check
+     * @return true if the entity is invulnerable, false otherwise
+     */
+    public static boolean isInvulnerable(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+        if (!(entity instanceof LivingEntity livingEntity)) {
+            return false;
+        }
+        // 快速路径：绝大多数实体不无敌，直接返回 false，跳过 SynchedEntityData 读取
+        if (!INVULNERABLE_IDS.contains(net.eca.mv.EntityIds.peek(entity))) {
+            return false;
+        }
+        boolean dataInvulnerable;
+        if (EntityUtil.INVULNERABLE != null) {
+            dataInvulnerable = livingEntity.getEntityData().get(EntityUtil.INVULNERABLE);
+        } else {
+            dataInvulnerable = livingEntity.getPersistentData().getBooleanOr(EcaOwnedState.NBT_INVULNERABLE, false);
+        }
+        if (dataInvulnerable || !EcaConfiguration.getDefenceEnableRadicalLogicSafely()) {
+            return dataInvulnerable;
+        }
+        boolean managerInvulnerable = InvulnerableEntityManager.isInvulnerable(entity);
+        if (managerInvulnerable) {
+            if (EntityUtil.INVULNERABLE != null) {
+                livingEntity.getEntityData().set(EntityUtil.INVULNERABLE, true);
+            } else {
+                livingEntity.getPersistentData().putBoolean(EcaOwnedState.NBT_INVULNERABLE, true);
+            }
+        }
+        return managerInvulnerable;
+    }
+
+    // 设置实体无敌状态
+    /**
+     * Set the invulnerability state of an entity (ECA system).
+     * Uses EntityData for LivingEntity types (synchronized to clients automatically).
+     * Non-LivingEntity types are ignored.
+     * IMPORTANT: This method automatically manages multiple protection systems:
+     * When enabling invulnerability:
+     * - Revives entity and locks health at current value
+     * - Blocks all incoming damage (hurt/actuallyHurt intercepted)
+     * - Prevents death (die/tickDeath intercepted, isDeadOrDying/isAlive overridden)
+     * - Removes harmful potion effects every tick
+     * - Prevents mobs from targeting this entity
+     * - Protects player inventory (clearContent/removeItem/clearOrCountMatchingItems blocked)
+     * When disabling invulnerability:
+     * - Clears invulnerability flag and unlocks health
+     * - All above protections are lifted
+     * @param entity the entity to modify
+     * @param invulnerable true to make the entity invulnerable, false otherwise
+     */
+    public static void setInvulnerable(Entity entity, boolean invulnerable) {
+        if (entity == null) {
+            return;
+        }
+        if (!(entity instanceof LivingEntity livingEntity)) {
+            return;
+        }
+
+        if (invulnerable) {
+            // 先保存当前值，因为复活流程会临时把真实血量恢复到最大值。
+            float currentHealth = EntityUtil.getHealth(livingEntity);
+            if (net.eca.mv.EntityIds.assigned(entity)) INVULNERABLE_IDS.add(entity.getId());
+            revive(livingEntity);
+            float lockValue = Math.max(currentHealth, 1.0f);
+            lockHealth(livingEntity, lockValue);
+            if (EntityUtil.INVULNERABLE != null) {
+                livingEntity.getEntityData().set(EntityUtil.INVULNERABLE, true);
+            } else {
+                livingEntity.getPersistentData().putBoolean(EcaOwnedState.NBT_INVULNERABLE, true);
+            }
+            InvulnerableEntityManager.addInvulnerable(entity);
+        } else {
+            // 关闭无敌：解除无敌状态 + 解锁血量 + 移除记录
+            INVULNERABLE_IDS.remove(net.eca.mv.EntityIds.peek(entity));
+            if (EntityUtil.INVULNERABLE != null) {
+                livingEntity.getEntityData().set(EntityUtil.INVULNERABLE, false);
+            } else {
+                livingEntity.getPersistentData().putBoolean(EcaOwnedState.NBT_INVULNERABLE, false);
+            }
+            unlockHealth(livingEntity);
+            InvulnerableEntityManager.removeInvulnerable(entity);
+            // 刷新血量状态，使 Minecraft 内部死亡检测恢复正常
+            livingEntity.onSyncedDataUpdated(LivingEntity.DATA_HEALTH_ID);
+        }
+    }
+
+
+    // 设置实体死亡
+    /**
+     * Set an entity to dead state and handle all death-related logic.
+     * @param entity the living entity to setDead
+     * @param damageSource the damage source that caused the death
+     */
+    public static void kill(LivingEntity entity, DamageSource damageSource) {
+        EntityUtil.kill(entity, damageSource);
+    }
+
+    // 复活实体
+    /**
+     * Revive an entity by clearing its death state.
+     * @param entity the living entity to revive
+     */
+    public static void revive(LivingEntity entity) {
+        EntityUtil.revive(entity);
+    }
+
+    // 按UUID复活实体
+    /**
+     * Revive an entity by UUID in the specified level.
+     * @param level the server level containing the entity
+     * @param uuid the UUID of the entity to revive
+     */
+    public static void revive(ServerLevel level, UUID uuid) {
+        EntityUtil.revive(level, uuid);
+    }
+
+    // 复活实体关键容器
+    /**
+     * Revive all critical entity containers for an entity.
+     * Attempts to re-insert the entity into tickList, lookup, sections, and tracker.
+     * @param entity the living entity to revive containers for
+     * @return map of container name to success result
+     */
+    public static Map<String, Boolean> reviveAllContainers(LivingEntity entity) {
+        return EntityUtil.reviveAllContainers(entity);
+    }
+
+    // 按UUID复活实体关键容器
+    /**
+     * Revive all critical entity containers by UUID in the specified level.
+     * @param level the server level containing the entity
+     * @param uuid the UUID of the entity to revive containers for
+     * @return map of container name to success result
+     */
+    public static Map<String, Boolean> reviveAllContainers(ServerLevel level, UUID uuid) {
+        return EntityUtil.reviveAllContainers(level, uuid);
+    }
+
+
+    // 完整清除实体
+    /**
+     * Completely remove an entity from the world, including all internal containers.
+     * This performs deep cleanup including:
+     * - AI system cleanup (goals, targets, navigation)
+     * - Boss bar cleanup
+     * - Riding/passenger relationships
+     * - Server-side containers (ChunkMap, EntityTickList, EntityLookup, EntitySectionStorage, etc.)
+     * - Client-side containers (if applicable)
+     * @param entity the entity to remove
+     * @param reason the removal reason (e.g., Entity.RemovalReason.KILLED, DISCARDED, etc.)
+     */
+    public static void remove(Entity entity, Entity.RemovalReason reason) {
+        EntityUtil.remove(entity, reason);
+    }
+
+    // 通过 LWJGL 的内部 Unsafe 实例清除实体，需要开启激进攻击逻辑配置
+    /**
+     * Remove an entity using LWJGL's internal Unsafe instance, bypassing call-stack interception.
+     * DANGER! Requires "Enable Radical Logic" in Attack config.
+     * @param entity the entity to remove
+     * @param reason the removal reason
+     * @return true if removal succeeded, false otherwise (including when config is disabled)
+     */
+    public static boolean memoryRemove(Entity entity, Entity.RemovalReason reason) {
+        if (!EcaConfiguration.getAttackEnableRadicalLogicSafely()) {
+            EcaLogger.warn("memoryRemove requires Attack Radical Logic to be enabled in config");
+            return false;
+        }
+
+        EntityUtil.prepareForMemoryRemove(entity);
+
+        return UnsafeUtil.unsafeRemove(entity, reason);
+    }
+
+    // 清理实体 Boss 血条
+    /**
+     * Clean up boss bars associated with an entity.
+     * This method scans all instance fields of the entity and removes any ServerBossEvent instances found.
+     * Use this when you want to remove boss bars without completely removing the entity.
+     * @param entity the entity whose boss bars should be cleaned up
+     */
+    public static void cleanupBossBar(Entity entity) {
+        EntityUtil.cleanupBossBar(entity);
+    }
+
+
+    // 播放 BossShow 演出
+    /**
+     * Start playing a BossShow cutscene for a specific player, targeting a specific entity.
+     * The cutscene must already be loaded (either via {@code @RegisterBossShow} + JSON, or
+     * via a JSON file under {@code config/eca/bossshow/<ns>/<name>.json}).
+     * <p>
+     * This bypasses history checks — the cutscene plays even if the viewer has seen it before.
+     * For "natural" trigger semantics (honoring history), use {@link #playBossShowIfNew}.
+     *
+     * @param viewer     the player who will watch the cutscene
+     * @param target     the target entity the cutscene is anchored to
+     * @param cutsceneId the Identifier id of the cutscene
+     * @return true if playback started, false if no such definition or viewer already has a session
+     */
+    public static boolean playBossShow(ServerPlayer viewer,
+                                       LivingEntity target,
+                                       Identifier cutsceneId) {
+        BossShowDefinition def = BossShowManager.get(cutsceneId);
+        if (def == null) return false;
+        return BossShowPlaybackTracker.start(viewer, target, def, true);
+    }
+
+    // 仅当未看过时播放 BossShow 演出
+    /**
+     * Start playing a BossShow cutscene only if the viewer has not seen it before (honors history).
+     * @param viewer     the player
+     * @param target     the target entity
+     * @param cutsceneId the cutscene id
+     * @return true if playback started, false if already seen or not found
+     */
+    public static boolean playBossShowIfNew(ServerPlayer viewer,
+                                            LivingEntity target,
+                                            Identifier cutsceneId) {
+        BossShowDefinition def = BossShowManager.get(cutsceneId);
+        if (def == null) return false;
+        return BossShowPlaybackTracker.start(viewer, target, def, false);
+    }
+
+    // 停止 BossShow 演出
+    /**
+     * Stop the currently playing BossShow cutscene for the given viewer, if any.
+     * @param viewer the player
+     */
+    public static void stopBossShow(ServerPlayer viewer) {
+        BossShowPlaybackTracker.stop(viewer, false);
+    }
+
+    // 检查玩家是否正在观看 BossShow 演出
+    /**
+     * @param viewer the player
+     * @return true if the player currently has an active BossShow session
+     */
+    public static boolean isBossShowPlaying(ServerPlayer viewer) {
+        return BossShowPlaybackTracker.isPlaying(viewer);
+    }
+
+    // 推送自定义事件触发 BossShow 演出
+    /**
+     * Push a custom event name to the BossShow system. Every cutscene whose trigger is
+     * {@link Trigger.Custom} with a matching {@code eventName} (case-sensitive, non-empty)
+     * is started for the given viewer/target pair, honoring per-definition history.
+     * <p>
+     * Cutscenes are skipped silently if the viewer already has an active session, the
+     * cutscene is empty, or history says the viewer has already seen it (per
+     * {@code allowRepeat} on the definition).
+     *
+     * @param eventName the event name to match against {@code Trigger.Custom.eventName}
+     * @param viewer    the player who will watch any matched cutscenes
+     * @param target    the entity the cutscene is anchored to
+     * @return the number of cutscenes actually started
+     */
+    public static int launchBossShowEvent(String eventName, ServerPlayer viewer, LivingEntity target) {
+        if (eventName == null || eventName.isEmpty()) return 0;
+        if (viewer == null || target == null) return 0;
+        int started = 0;
+        for (BossShowDefinition def : BossShowManager.getAllDefinitions().values()) {
+            if (!(def.trigger() instanceof Trigger.Custom custom)) continue;
+            if (!eventName.equals(custom.eventName())) continue;
+            if (BossShowPlaybackTracker.start(viewer, target, def, false)) {
+                started++;
+            }
+        }
+        return started;
+    }
+
+
+    // 传送实体到指定位置
+    /**
+     * Teleport an entity in its current server level through ECA-owned position and network
+     * state. This bypasses overridable entity teleport and movement entry points while preserving
+     * spatial indexes, passengers, collision bounds, and client confirmation state.
+     * @param entity the entity to teleport
+     * @param x the target x coordinate
+     * @param y the target y coordinate
+     * @param z the target z coordinate
+     * @return true if teleportation succeeded, false otherwise
+     */
+    public static boolean teleport(Entity entity, double x, double y, double z) {
+        return EntityUtil.teleport(entity, x, y, z);
+    }
+
+    // 按ID获取实体
+    /**
+     * Resolve an entity by numeric id from the specified level using ECA resolver.
+     * @param level the level to query
+     * @param entityId the runtime entity id
+     * @return the resolved entity, or null if not found
+     */
+    public static Entity getEntity(Level level, int entityId) {
+        return EntityUtil.getEntity(level, entityId);
+    }
+
+    // 按UUID获取实体
+    /**
+     * Resolve an entity by UUID from the specified level using ECA resolver.
+     * @param level the level to query
+     * @param uuid the entity UUID
+     * @return the resolved entity, or null if not found
+     */
+    public static Entity getEntity(Level level, UUID uuid) {
+        return EntityUtil.getEntity(level, uuid);
+    }
+
+    // 按ID获取指定类型实体
+    /**
+     * Resolve an entity by id and cast it to the expected type.
+     * @param level the level to query
+     * @param entityId the runtime entity id
+     * @param entityClass expected entity class
+     * @return typed entity instance, or null if not found/type mismatch
+     */
+    public static <T extends Entity> T getEntity(Level level, int entityId, Class<T> entityClass) {
+        return EntityUtil.getEntity(level, entityId, entityClass);
+    }
+
+    // 按UUID获取指定类型实体
+    /**
+     * Resolve an entity by UUID and cast it to the expected type.
+     * @param level the level to query
+     * @param uuid the entity UUID
+     * @param entityClass expected entity class
+     * @return typed entity instance, or null if not found/type mismatch
+     */
+    public static <T extends Entity> T getEntity(Level level, UUID uuid, Class<T> entityClass) {
+        return EntityUtil.getEntity(level, uuid, entityClass);
+    }
+
+    // 全服按ID获取实体
+    /**
+     * Resolve an entity by id across all server levels.
+     * @param server the minecraft server
+     * @param entityId the runtime entity id
+     * @return the resolved entity, or null if not found
+     */
+    public static Entity getEntity(MinecraftServer server, int entityId) {
+        return EntityUtil.getEntity(server, entityId);
+    }
+
+    // 全服按UUID获取实体
+    /**
+     * Resolve an entity by UUID across all server levels.
+     * @param server the minecraft server
+     * @param uuid the entity UUID
+     * @return the resolved entity, or null if not found
+     */
+    public static Entity getEntity(MinecraftServer server, UUID uuid) {
+        return EntityUtil.getEntity(server, uuid);
+    }
+
+    // 获取维度全部实体
+    /**
+     * Get all entities in a level using ECA resolver.
+     * @param level the level to query
+     * @return list of entities, empty list if none
+     */
+    public static List<Entity> getEntities(Level level) {
+        return EntityUtil.getEntities(level);
+    }
+
+    // 获取维度范围实体
+    /**
+     * Get entities in the specified area from a level.
+     * @param level the level to query
+     * @param area query area
+     * @return entities whose bounding boxes intersect the area
+     */
+    public static List<Entity> getEntities(Level level, AABB area) {
+        return EntityUtil.getEntities(level, area);
+    }
+
+    // 获取维度筛选实体
+    /**
+     * Get entities in a level with a custom filter.
+     * @param level the level to query
+     * @param filter filter predicate
+     * @return filtered entities
+     */
+    public static List<Entity> getEntities(Level level, Predicate<Entity> filter) {
+        return EntityUtil.getEntities(level, filter);
+    }
+
+    // 获取维度范围筛选实体
+    /**
+     * Get entities in area with an additional custom filter.
+     * @param level the level to query
+     * @param area query area
+     * @param filter filter predicate
+     * @return filtered entities in area
+     */
+    public static List<Entity> getEntities(Level level, AABB area, Predicate<Entity> filter) {
+        return EntityUtil.getEntities(level, area, filter);
+    }
+
+    // 获取维度全部指定类型实体
+    /**
+     * Get all entities of the specified type in a level.
+     * @param level the level to query
+     * @param entityClass expected class
+     * @return typed entity list
+     */
+    public static <T extends Entity> List<T> getEntities(Level level, Class<T> entityClass) {
+        return EntityUtil.getEntities(level, entityClass);
+    }
+
+    // 获取维度范围指定类型实体
+    /**
+     * Get entities of the specified type in the given area.
+     * @param level the level to query
+     * @param area query area
+     * @param entityClass expected class
+     * @return typed entity list in area
+     */
+    public static <T extends Entity> List<T> getEntities(Level level, AABB area, Class<T> entityClass) {
+        return EntityUtil.getEntities(level, area, entityClass);
+    }
+
+    // 获取全服全部实体
+    /**
+     * Get all entities across all server levels.
+     * @param server the minecraft server
+     * @return all resolved entities
+     */
+    public static List<Entity> getEntities(MinecraftServer server) {
+        return EntityUtil.getEntities(server);
+    }
+
+    // 获取全服筛选实体
+    /**
+     * Get entities across all server levels with custom filter.
+     * @param server the minecraft server
+     * @param filter filter predicate
+     * @return filtered entities from all levels
+     */
+    public static List<Entity> getEntities(MinecraftServer server, Predicate<Entity> filter) {
+        return EntityUtil.getEntities(server, filter);
+    }
+
+    // 获取最近的实体（自定义筛选）
+    /**
+     * Get the nearest entity from the given position matching the filter.
+     * Uses ECA resolver so invulnerable entities are included in the search.
+     * @param level the level to query
+     * @param pos the origin position for distance comparison
+     * @param filter filter predicate
+     * @return the nearest matching entity, or null if none found
+     */
+    public static Entity getNearestEntity(Level level, Vec3 pos, Predicate<Entity> filter) {
+        return EntityUtil.getNearestEntity(level, pos, filter);
+    }
+
+    // 获取范围内最近的实体（自定义筛选）
+    /**
+     * Get the nearest entity within the given area matching the filter.
+     * @param level the level to query
+     * @param pos the origin position for distance comparison
+     * @param area query area to narrow candidates
+     * @param filter filter predicate
+     * @return the nearest matching entity, or null if none found
+     */
+    public static Entity getNearestEntity(Level level, Vec3 pos, AABB area, Predicate<Entity> filter) {
+        return EntityUtil.getNearestEntity(level, pos, area, filter);
+    }
+
+    // 获取最近的指定类型实体
+    /**
+     * Get the nearest entity of the specified type from the given position.
+     * @param level the level to query
+     * @param pos the origin position for distance comparison
+     * @param entityClass expected entity class
+     * @return the nearest entity of the given type, or null if none found
+     */
+    public static <T extends Entity> T getNearestEntity(Level level, Vec3 pos, Class<T> entityClass) {
+        return EntityUtil.getNearestEntity(level, pos, entityClass);
+    }
+
+    // 获取范围内最近的指定类型实体
+    /**
+     * Get the nearest entity of the specified type within the given area.
+     * @param level the level to query
+     * @param pos the origin position for distance comparison
+     * @param area query area to narrow candidates
+     * @param entityClass expected entity class
+     * @return the nearest entity of the given type, or null if none found
+     */
+    public static <T extends Entity> T getNearestEntity(Level level, Vec3 pos, AABB area, Class<T> entityClass) {
+        return EntityUtil.getNearestEntity(level, pos, area, entityClass);
+    }
+
+    // ==================== 位置锁定系统 ====================
+
+    // 锁定实体位置（当前位置）
+    /**
+     * Lock entity location at its current position.
+     * When location is locked, any position changes will be reverted.
+     * Dimension changes are automatically handled and the locked position will be updated to the new dimension.
+     * @param entity the entity to lock
+     */
+    public static void lockLocation(Entity entity) {
+        EntityLocationManager.lockLocation(entity);
+    }
+
+    // 锁定实体到指定位置
+    /**
+     * Lock entity location at the specified position.
+     * The entity will be teleported to and held at the given coordinates.
+     * @param entity the entity to lock
+     * @param position the position to lock the entity at
+     */
+    public static void lockLocation(Entity entity, Vec3 position) {
+        EntityLocationManager.lockLocation(entity, position);
+    }
+
+    // 解锁实体位置
+    /**
+     * Unlock entity location.
+     * After unlocking, the entity can be moved/teleported freely.
+     * @param entity the entity to unlock
+     */
+    public static void unlockLocation(Entity entity) {
+        EntityLocationManager.unlockLocation(entity);
+    }
+
+    // 检查位置是否被锁定
+    /**
+     * Check if an entity's location is locked.
+     * @param entity the entity to check
+     * @return true if location is locked, false otherwise
+     */
+    public static boolean isLocationLocked(Entity entity) {
+        return EntityLocationManager.isLocationLocked(entity);
+    }
+
+    // 获取锁定的位置
+    /**
+     * Get the locked location of an entity.
+     * @param entity the entity
+     * @return the locked location, or null if not locked
+     */
+    public static Vec3 getLockedLocation(Entity entity) {
+        return EntityLocationManager.getLockedPosition(entity);
+    }
+
+    // ==================== 最大生命值 API ====================
+
+    // 设置实体最大生命值
+    /**
+     * Set entity max health to a precise target value.
+     * This method reverse-calculates the required base value from current attribute modifiers,
+     * so that getMaxHealth() returns exactly the target value after all modifiers are applied.
+     * Requires "Unlock Attribute Limits" config to be enabled for values above 1024.
+     * @param entity the living entity
+     * @param maxHealth the target max health value (must be > 0)
+     * @return true if modification succeeded
+     */
+    public static boolean setMaxHealth(LivingEntity entity, float maxHealth) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        return EntityUtil.setMaxHealth(entity, maxHealth);
+    }
+
+    // 锁定最大生命值
+    /**
+     * Lock entity max health at a specific value.
+     * When locked, the entity's max health is forced to the locked value every tick
+     * via reverse-calculating the attribute base value.
+     * Any external modifications (equipment, potions, other mods) will be overridden each tick.
+     * @param entity the living entity
+     * @param value the positive finite max health lock value, or positive infinity
+     */
+    public static void lockMaxHealth(LivingEntity entity, float value) {
+        if (entity == null) {
+            EcaLogger.info("[EcaAPI] lockMaxHealth rejected entity=null value={}", value);
+            return;
+        }
+        if (!isValidHealthLockValue(value)) {
+            EcaLogger.info("[EcaAPI] lockMaxHealth rejected entity={} value={} reason=invalid-lock-value",
+                    entity.getClass().getName(), value);
+            return;
+        }
+        try {
+            HealthLockManager.setMaxHealthLock(entity, value);
+            EntityUtil.setMaxHealth(entity, value);
+        } catch (Exception e) {
+            EcaLogger.info("[EcaAPI] lockMaxHealth failed entity={} value={} msg={}",
+                    entity.getClass().getName(), value, e.getMessage());
+        }
+    }
+
+    // 解锁最大生命值
+    /**
+     * Unlock entity max health.
+     * After unlocking, the entity's max health can be modified normally by equipment, potions, etc.
+     * @param entity the living entity
+     */
+    public static void unlockMaxHealth(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        HealthLockManager.removeMaxHealthLock(entity);
+    }
+
+    // 获取最大生命值锁定值
+    /**
+     * Get the current max health lock value for an entity.
+     * @param entity the living entity
+     * @return the locked max health value, or null if not locked
+     */
+    public static Float getLockedMaxHealth(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        return HealthLockManager.getMaxHealthLock(entity);
+    }
+
+    // 检查最大生命值是否被锁定
+    /**
+     * Check if an entity has max health locked.
+     * @param entity the living entity
+     * @return true if max health is locked, false otherwise
+     */
+    public static boolean isMaxHealthLocked(LivingEntity entity) {
+        if (entity == null) {
+            throw new IllegalArgumentException("Entity cannot be null");
+        }
+        return HealthLockManager.getMaxHealthLock(entity) != null;
+    }
+
+    // 添加血量白名单关键词
+    /**
+     * Add a keyword to the health whitelist.
+     * Fields containing this keyword will be modified during health modification.
+     * @param keyword the keyword to add (case-insensitive)
+     * @deprecated Leftover of the legacy name-based heuristic; the protocol analyzer is structure-based and never reads these lists. Retained for API compatibility only.
+     */
+    @Deprecated
+    public static void addHealthWhitelistKeyword(String keyword) {
+        EntityUtil.addHealthWhitelistKeyword(keyword);
+    }
+
+    // 移除血量白名单关键词
+    /**
+     * Remove a keyword from the health whitelist.
+     * @param keyword the keyword to remove (case-insensitive)
+     * @deprecated Leftover of the legacy name-based heuristic; the protocol analyzer is structure-based and never reads these lists. Retained for API compatibility only.
+     */
+    @Deprecated
+    public static void removeHealthWhitelistKeyword(String keyword) {
+        EntityUtil.removeHealthWhitelistKeyword(keyword);
+    }
+
+    // 获取所有血量白名单关键词
+    /**
+     * Get all health whitelist keywords.
+     * @return a read-only copy of the health whitelist keywords
+     * @deprecated Leftover of the legacy name-based heuristic; the protocol analyzer is structure-based and never reads these lists. Retained for API compatibility only.
+     */
+    @Deprecated
+    public static Set<String> getHealthWhitelistKeywords() {
+        return EntityUtil.getHealthWhitelistKeywords();
+    }
+
+    // 添加血量黑名单关键词
+    /**
+     * Add a keyword to the health blacklist.
+     * Fields containing this keyword will NOT be modified during health modification.
+     * @param keyword the keyword to add (case-insensitive)
+     * @deprecated Leftover of the legacy name-based heuristic; the protocol analyzer is structure-based and never reads these lists. Retained for API compatibility only.
+     */
+    @Deprecated
+    public static void addHealthBlacklistKeyword(String keyword) {
+        EntityUtil.addHealthBlacklistKeyword(keyword);
+    }
+
+    // 移除血量黑名单关键词
+    /**
+     * Remove a keyword from the health blacklist.
+     * @param keyword the keyword to remove (case-insensitive)
+     * @deprecated Leftover of the legacy name-based heuristic; the protocol analyzer is structure-based and never reads these lists. Retained for API compatibility only.
+     */
+    @Deprecated
+    public static void removeHealthBlacklistKeyword(String keyword) {
+        EntityUtil.removeHealthBlacklistKeyword(keyword);
+    }
+
+    // 获取所有血量黑名单关键词
+    /**
+     * Get all health blacklist keywords.
+     * @return a read-only copy of the health blacklist keywords
+     * @deprecated Leftover of the legacy name-based heuristic; the protocol analyzer is structure-based and never reads these lists. Retained for API compatibility only.
+     */
+    @Deprecated
+    public static Set<String> getHealthBlacklistKeywords() {
+        return EntityUtil.getHealthBlacklistKeywords();
+    }
+
+
+    // ============ 实体扩展 API ============
+
+    // 获取实体扩展注册表
+    /**
+     * Get the entity extension registry.
+     * @return unmodifiable map of EntityType to EntityExtension
+     */
+    public static Map<EntityType<?>, EntityExtension> getEntityExtensionRegistry() {
+        return EntityExtensionManager.getRegistryView();
+    }
+
+    // 获取当前维度活跃实体扩展类型列表
+    /**
+     * Get active entity extension types for a level.
+     * @param level the server level
+     * @return unmodifiable map of EntityType to active count
+     * @throws IllegalArgumentException if level is null
+     */
+    public static Map<EntityType<?>, Integer> getActiveEntityExtensionTypes(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        return EntityExtensionManager.getActiveTypeCounts(level);
+    }
+
+    // 获取当前维度生效的实体扩展
+    /**
+     * Get the active entity extension for a level.
+     * @param level the server level
+     * @return active EntityExtension, or null if none
+     * @throws IllegalArgumentException if level is null
+     */
+    public static EntityExtension getActiveEntityExtension(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        EntityType<?> type = EntityExtensionManager.getActiveType(level);
+        return type != null ? EntityExtensionManager.getExtension(type) : null;
+    }
+
+    // 清空当前维度活跃表
+    /**
+     * Clear the active entity extension table for a level.
+     * @param level the server level
+     * @throws IllegalArgumentException if level is null
+     */
+    public static void clearActiveEntityExtensionTable(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        EntityExtensionManager.clearActiveTable(level);
+    }
+
+
+    // ============ 全局效果覆盖 API ============
+
+    // 设置全局雾气效果
+    /**
+     * Set global fog effect override for a dimension.
+     * This directly overrides the fog effect in the effect cache without changing the current priority.
+     * Any entity extension with priority >= current cached priority can still take over later.
+     * @param level the server level (dimension)
+     * @param data the fog data to apply
+     * @throws IllegalArgumentException if level or data is null
+     */
+    public static void setGlobalFog(ServerLevel level, FogData data) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        if (data == null) {
+            throw new IllegalArgumentException("FogData cannot be null");
+        }
+        GlobalEffectOverrideManager.setFog(level, data);
+    }
+
+    // 清除全局雾气效果
+    /**
+     * Clear global fog effect override for a dimension.
+     * @param level the server level (dimension)
+     * @throws IllegalArgumentException if level is null
+     */
+    public static void clearGlobalFog(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        GlobalEffectOverrideManager.clearFog(level);
+    }
+
+    // 设置全局天空盒效果
+    /**
+     * Set global skybox effect override for a dimension.
+     * This directly overrides the skybox effect in the effect cache without changing the current priority.
+     * @param level the server level (dimension)
+     * @param data the skybox data to apply
+     * @throws IllegalArgumentException if level or data is null
+     */
+    public static void setGlobalSkybox(ServerLevel level, SkyboxData data) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        if (data == null) {
+            throw new IllegalArgumentException("SkyboxData cannot be null");
+        }
+        GlobalEffectOverrideManager.setSkybox(level, data);
+    }
+
+    // 清除全局天空盒效果
+    /**
+     * Clear global skybox effect override for a dimension.
+     * @param level the server level (dimension)
+     * @throws IllegalArgumentException if level is null
+     */
+    public static void clearGlobalSkybox(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        GlobalEffectOverrideManager.clearSkybox(level);
+    }
+
+    // 设置全局战斗音乐效果
+    /**
+     * Set global combat music effect override for a dimension.
+     * This directly overrides the combat music in the effect cache without changing the current priority.
+     * @param level the server level (dimension)
+     * @param data the music data to apply
+     * @throws IllegalArgumentException if level or data is null
+     */
+    public static void setGlobalMusic(ServerLevel level, MusicData data) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        if (data == null) {
+            throw new IllegalArgumentException("MusicData cannot be null");
+        }
+        GlobalEffectOverrideManager.setMusic(level, data);
+    }
+
+    // 清除全局战斗音乐效果
+    /**
+     * Clear global combat music effect override for a dimension.
+     * @param level the server level (dimension)
+     * @throws IllegalArgumentException if level is null
+     */
+    public static void clearGlobalMusic(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        GlobalEffectOverrideManager.clearMusic(level);
+    }
+
+    // 清除维度所有全局效果覆盖
+    /**
+     * Clear all global effect overrides (fog, skybox, music) for a dimension.
+     * @param level the server level (dimension)
+     * @throws IllegalArgumentException if level is null
+     */
+    public static void clearAllGlobalEffects(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        GlobalEffectOverrideManager.clearAll(level);
+    }
+
+
+    // ============ 禁生成 API ============
+
+    // 禁止生成
+    /**
+     * Ban the specified entity type from spawning in a level.
+     * Entities of this type will be blocked from spawning for the specified duration.
+     * The ban is stored per-dimension and persists with world saves.
+     *
+     * Use cases:
+     * - Temporarily disable mob spawning after boss death
+     * - Prevent specific entities from respawning during events
+     * - Create mob-free zones for building or exploration
+     *
+     * @param level the server level
+     * @param type the entity type to ban
+     * @param timeInSeconds ban duration in seconds
+     * @return true if ban was added successfully
+     * @throws IllegalArgumentException if level or type is null
+     */
+    public static boolean banSpawn(ServerLevel level, EntityType<?> type, int timeInSeconds) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("EntityType cannot be null");
+        }
+        return SpawnBanManager.addBan(level, type, timeInSeconds);
+    }
+
+    // 检查是否被禁生成
+    /**
+     * Check if an entity type is currently banned from spawning.
+     * @param level the server level
+     * @param type the entity type to check
+     * @return true if the entity type is banned
+     * @throws IllegalArgumentException if level or type is null
+     */
+    public static boolean isSpawnBanned(ServerLevel level, EntityType<?> type) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("EntityType cannot be null");
+        }
+        return SpawnBanManager.isBanned(level, type);
+    }
+
+    // 获取禁生成剩余时间
+    /**
+     * Get the remaining spawn ban time for an entity type.
+     * @param level the server level
+     * @param type the entity type to check
+     * @return remaining time in seconds, 0 if not banned
+     * @throws IllegalArgumentException if level or type is null
+     */
+    public static int getSpawnBanTime(ServerLevel level, EntityType<?> type) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("EntityType cannot be null");
+        }
+        return SpawnBanManager.getRemainingTime(level, type);
+    }
+
+    // 解除禁生成
+    /**
+     * Unban the specified entity type, allowing it to spawn again.
+     * @param level the server level
+     * @param type the entity type to unban
+     * @return true if a ban was removed
+     * @throws IllegalArgumentException if level or type is null
+     */
+    public static boolean unbanSpawn(ServerLevel level, EntityType<?> type) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("EntityType cannot be null");
+        }
+        return SpawnBanManager.clearBan(level, type);
+    }
+
+    // 获取所有禁生成
+    /**
+     * Get all current spawn bans for a level.
+     * @param level the server level
+     * @return immutable map of EntityType to remaining seconds
+     * @throws IllegalArgumentException if level is null
+     */
+    public static Map<EntityType<?>, Integer> getAllSpawnBans(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        return SpawnBanManager.getAllBans(level);
+    }
+
+    // 解除所有禁生成
+    /**
+     * Unban all entity types, allowing all spawning in the level.
+     * @param level the server level
+     * @throws IllegalArgumentException if level is null
+     */
+    public static void unbanAllSpawns(ServerLevel level) {
+        if (level == null) {
+            throw new IllegalArgumentException("Level cannot be null");
+        }
+        SpawnBanManager.clearAllBans(level);
+    }
+
+
+    // ==================== 滤镜系统 ====================
+
+    // 启用滤镜
+    /**
+     * Enable a filter for the specified player.
+     * The filter state is per-player and synced to the client via network packet.
+     * @param player the server player
+     * @param filter the filter type to enable
+     */
+    public static void enableFilter(ServerPlayer player, FilterType filter) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+        if (filter == null) {
+            throw new IllegalArgumentException("FilterType cannot be null");
+        }
+        FilterManager.enable(player, filter);
+    }
+
+    // 禁用滤镜
+    /**
+     * Disable a filter for the specified player.
+     * @param player the server player
+     * @param filter the filter type to disable
+     */
+    public static void disableFilter(ServerPlayer player, FilterType filter) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+        if (filter == null) {
+            throw new IllegalArgumentException("FilterType cannot be null");
+        }
+        FilterManager.disable(player, filter);
+    }
+
+    // 检查滤镜是否启用
+    /**
+     * Check if a filter is enabled for the specified player.
+     * @param player the server player
+     * @param filter the filter type to check
+     * @return true if the filter is enabled
+     */
+    public static boolean isFilterEnabled(ServerPlayer player, FilterType filter) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+        if (filter == null) {
+            throw new IllegalArgumentException("FilterType cannot be null");
+        }
+        return FilterManager.isEnabled(player, filter);
+    }
+
+    // 获取玩家的所有活跃滤镜
+    /**
+     * Get all active filters for the specified player.
+     * @param player the server player
+     * @return unmodifiable set of active filter types
+     */
+    public static Set<FilterType> getActiveFilters(ServerPlayer player) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player cannot be null");
+        }
+        return FilterManager.getActiveFilters(player);
+    }
+
+
+    // 需要开启激进攻击逻辑；玩家定位六个装备槽所属模组，其他实体定位自身所属模组，并遵守转换白名单
+    /**
+     * Enable AllReturn for the specified entity's owning mod file, subject to transform whitelists.
+     * Players target the mod files owning items in their four armor slots and two hand slots instead.
+     * Other protected entities are rejected without inspecting their equipment.
+     * Eligible boolean and void methods in the resolved mod files are affected.
+     * DANGER! Requires "Enable Radical Logic" in Attack config.
+     * @param entity the entity used to resolve the target mod file
+     * @return true if AllReturn was enabled successfully
+     */
+    public static boolean enableAllReturn(Entity entity) {
+        if (entity == null) return false;
+        if (!EcaTransformerManager.supportsExtendedRuntime()) {
+            EcaLogger.warn("Your ECA build does not include this feature. Please use the latest version from Modrinth.");
+            return false;
+        }
+        if (!EcaConfiguration.getAttackEnableRadicalLogicSafely()) {
+            EcaLogger.warn("AllReturn requires Attack Radical Logic to be enabled in config");
+            return false;
+        }
+
+        return setEntityModAllReturn(entity, true);
+    }
+
+    // 关闭实体所属模组的 AllReturn；玩家按六个装备槽解析目标，并遵守转换白名单
+    /**
+     * Disable AllReturn for the specified entity's entire owning mod file.
+     * Uses the same target resolution as {@link #enableAllReturn(Entity)}, including the
+     * equipment-based targeting exclusively for players.
+     * @param entity the entity used to resolve the target mod file
+     * @return true if the target mod was resolved and disabled successfully
+     */
+    public static boolean disableAllReturn(Entity entity) {
+        return setEntityModAllReturn(entity, false);
+    }
+
+    // 关闭AllReturn
+    /**
+     * Disable AllReturn and clear all targets.
+     */
+    public static void disableAllReturn() {
+        AllReturnToggle.clearAll();
+    }
+
+    // 检查AllReturn是否启用
+    /**
+     * Check if AllReturn is currently enabled.
+     * @return true if AllReturn is enabled
+     */
+    public static boolean isAllReturnEnabled() {
+        return AllReturnToggle.isEnabled();
+    }
+
+    // 全局AllReturn开关（影响所有已加载的mod）
+    /**
+     * Enable or disable global AllReturn mode.
+     * DANGER! Requires "Enable Radical Logic" in Attack config.
+     * @param enable true to enable, false to disable
+     * @return true if operation succeeded
+     */
+    public static boolean setGlobalAllReturn(boolean enable) {
+        if (!enable) {
+            AllReturnToggle.clearAll();
+            return true;
+        }
+
+        if (!EcaTransformerManager.supportsExtendedRuntime()) {
+            EcaLogger.warn("Your ECA build does not include this feature. Please use the latest version from Modrinth.");
+            return false;
+        }
+
+        if (!EcaConfiguration.getAttackEnableRadicalLogicSafely()) {
+            EcaLogger.warn("GlobalAllReturn requires Attack Radical Logic to be enabled in config");
+            return false;
+        }
+
+        Set<String> collectedPrefixes = new HashSet<>();
+        boolean enumerated = EcaTransformerManager.forEachLoadedInternalName(info -> {
+            if (info == null || !info.modifiable()) return;
+            String internalName = info.internalName();
+            if (internalName == null || internalName.indexOf('/') < 0) return;
+            if (TransformerWhitelist.isProtectedInternal(internalName)) return;
+
+            String prefix = toInternalPrefix(internalName.replace('/', '.'));
+            if (prefix != null) collectedPrefixes.add(prefix);
+        });
+        if (!enumerated) {
+            EcaLogger.warn("GlobalAllReturn: loaded class enumeration unavailable");
+            return false;
+        }
+
+        if (collectedPrefixes.isEmpty()) {
+            EcaLogger.warn("GlobalAllReturn: No candidate package prefixes found");
+            return false;
+        }
+
+        AllReturnToggle.setEnabled(true);
+        for (String prefix : collectedPrefixes) {
+            AllReturnToggle.addAllowedPrefix(prefix);
+        }
+        return true;
+    }
+
+    private static String toInternalPrefix(String binaryName) {
+        int lastDot = binaryName.lastIndexOf('.');
+        if (lastDot <= 0) return null;
+        return binaryName.substring(0, lastDot + 1).replace('.', '/');
+    }
+
+    private static boolean setEntityModAllReturn(Entity entity, boolean enable) {
+        if (entity == null) return false;
+        if (entity instanceof Player player) {
+            return setEquipmentModAllReturn(player, enable);
+        }
+        String targetInternalName = entity.getClass().getName().replace('.', '/');
+        if (TransformerWhitelist.isProtectedInternal(targetInternalName)) {
+            return false;
+        }
+        return applyAllReturnModScope(targetInternalName, enable);
+    }
+
+    // 玩家仅以四个盔甲槽和主副手定位目标，避免波及背包物品所属模组。
+    private static boolean setEquipmentModAllReturn(Player player, boolean enable) {
+        Set<String> resolved = new HashSet<>();
+        boolean applied = false;
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack stack = player.getItemBySlot(slot);
+            if (stack.isEmpty()) continue;
+            String itemInternalName = stack.getItem().getClass().getName().replace('.', '/');
+            if (TransformerWhitelist.isProtectedInternal(itemInternalName)) continue;
+            // 同一 mod 的多件装备只需处理一次，作用域是整个 mod 文件
+            if (!resolved.add(itemInternalName)) continue;
+            if (applyAllReturnModScope(itemInternalName, enable)) applied = true;
+        }
+        return applied;
+    }
+
+    private static boolean applyAllReturnModScope(String targetInternalName, boolean enable) {
+        AllReturnModScope scope = resolveAllReturnModScope(targetInternalName);
+        if (scope == null || scope.internalNames().isEmpty() || scope.prefixes().isEmpty()) {
+            EcaLogger.info("AllReturn: unable to resolve owning mod for {}", targetInternalName.replace('/', '.'));
+            return false;
+        }
+
+        if (!enable) {
+            for (String prefix : scope.prefixes()) {
+                AllReturnToggle.removeAllowedPrefix(prefix);
+            }
+            EcaLogger.info("AllReturn: disabled mod file {}", scope.fileName());
+            return true;
+        }
+
+        Set<String> existingPrefixes = AllReturnToggle.getAllowedPrefixes();
+        Set<String> addedPrefixes = new HashSet<>();
+        boolean wasEnabled = AllReturnToggle.isEnabled();
+        AllReturnToggle.setEnabled(true);
+        for (String prefix : scope.prefixes()) {
+            AllReturnToggle.addAllowedPrefix(prefix);
+            if (!existingPrefixes.contains(prefix)) {
+                addedPrefixes.add(prefix);
+            }
+        }
+
+        if (!EcaTransformerManager.retransformLoadedInternalNames(scope.internalNames())) {
+            for (String prefix : addedPrefixes) {
+                AllReturnToggle.removeAllowedPrefix(prefix);
+            }
+            if (!wasEnabled && existingPrefixes.isEmpty()) {
+                AllReturnToggle.setEnabled(false);
+            }
+            EcaLogger.warn("AllReturn: no loaded class from mod file {} could be retransformed",
+                    scope.fileName());
+            return false;
+        }
+
+        EcaLogger.info("AllReturn: enabled mod file {} with {} classes across {} packages",
+                scope.fileName(), scope.internalNames().size(), scope.prefixes().size());
+        return true;
+    }
+
+    private static AllReturnModScope resolveAllReturnModScope(String targetInternalName) {
+        try {
+            for (IModFileInfo modFileInfo : ModList.get().getModFiles()) {
+                ModFileScanData scanData = modFileInfo.getFile().getScanResult();
+                if (scanData == null) continue;
+
+                Set<String> internalNames = new HashSet<>();
+                boolean containsTarget = false;
+                for (ModFileScanData.ClassData classData : scanData.getClasses()) {
+                    String internalName = classData.clazz().getInternalName();
+                    if (internalName == null || TransformerWhitelist.isProtectedInternal(internalName)) {
+                        continue;
+                    }
+                    internalNames.add(internalName);
+                    if (targetInternalName.equals(internalName)) {
+                        containsTarget = true;
+                    }
+                }
+                if (!containsTarget) continue;
+
+                Set<String> prefixes = new HashSet<>();
+                for (String internalName : internalNames) {
+                    String prefix = toInternalPrefix(internalName.replace('/', '.'));
+                    if (prefix != null) {
+                        prefixes.add(prefix);
+                    }
+                }
+                return new AllReturnModScope(modFileInfo.getFile().getFileName(), internalNames, prefixes);
+            }
+        } catch (Throwable t) {
+            EcaLogger.warn("AllReturn: owning mod scan failed for {}: {}",
+                    targetInternalName, t.getMessage());
+        }
+        return null;
+    }
+
+    private record AllReturnModScope(String fileName, Set<String> internalNames, Set<String> prefixes) {
+    }
+
+    // ==================== 白名单 API ====================
+
+    // --- AllReturn 白名单：跳过 AllReturn 转换，防御性 Hook 仍然生效 ---
+
+    // 添加 AllReturn 白名单前缀
+    /**
+     * Add a package prefix to the AllReturn whitelist.
+     * Classes in whitelisted packages will NOT be affected by AllReturn transformation.
+     * Defensive hooks (getHealth, isAlive, etc.) will still apply.
+     * @param packagePrefix the package prefix (e.g., "com.yourmod.")
+     */
+    public static void addAllReturnWhitelist(String packagePrefix) {
+        TransformerWhitelist.addAllReturn(packagePrefix);
+    }
+
+    // 移除 AllReturn 白名单前缀
+    /**
+     * Remove a package prefix from the AllReturn whitelist.
+     * Built-in entries cannot be removed.
+     * @param packagePrefix the package prefix to remove
+     * @return true if successfully removed
+     */
+    public static boolean removeAllReturnWhitelist(String packagePrefix) {
+        return TransformerWhitelist.removeAllReturn(packagePrefix);
+    }
+
+    // --- 转换白名单：跳过全部 ECA 转换（AllReturn + 防御性 Hook） ---
+
+    // 添加转换白名单前缀
+    /**
+     * Add a package prefix to the transform whitelist.
+     * Classes in whitelisted packages will be completely skipped by ALL ECA transformations,
+     * including AllReturn AND defensive hooks (getHealth, isAlive, etc.).
+     * @param packagePrefix the package prefix (e.g., "com.yourmod.")
+     */
+    public static void addTransformWhitelist(String packagePrefix) {
+        TransformerWhitelist.addTransform(packagePrefix);
+    }
+
+    // 移除转换白名单前缀
+    /**
+     * Remove a package prefix from the transform whitelist.
+     * Built-in entries (JDK, Minecraft, Forge, etc.) cannot be removed.
+     * @param packagePrefix the package prefix to remove
+     * @return true if successfully removed
+     */
+    public static boolean removeTransformWhitelist(String packagePrefix) {
+        return TransformerWhitelist.removeTransform(packagePrefix);
+    }
+
+    // --- 查询 ---
+
+    // 检查类是否在 AllReturn 白名单中
+    /**
+     * Check if a class is protected from AllReturn transformation.
+     * @param className the binary class name (e.g., "com.yourmod.MyClass")
+     * @return true if the class is protected from AllReturn
+     */
+    public static boolean isAllReturnWhitelisted(String className) {
+        return TransformerWhitelist.isProtected(className);
+    }
+
+    // 检查类是否在转换白名单中
+    /**
+     * Check if a class is protected from all ECA transformations.
+     * @param className the binary class name (e.g., "com.yourmod.MyClass")
+     * @return true if the class is fully protected
+     */
+    public static boolean isTransformWhitelisted(String className) {
+        return TransformerWhitelist.isSystemProtected(className);
+    }
+
+    // 获取所有白名单前缀
+    /**
+     * Get all whitelist prefixes (both levels, built-in + custom).
+     * @return unmodifiable set of all prefixes
+     */
+    public static Set<String> getAllWhitelistedPackages() {
+        return TransformerWhitelist.getAll();
+    }
+
+    // ==================== 强加载系统 ====================
+
+    // 设置实体强加载状态
+    /**
+     * Set the force loading state of an entity.
+     * When enabled, the entity's chunk is kept loaded (EntityTicking level) regardless of player proximity.
+     * The force load ticket follows the entity as it moves between chunks.
+     * When disabled, the chunk ticket is released. Has no effect on entities force-loaded via EntityExtension.
+     * @param entity the living entity
+     * @param level the server level the entity is in
+     * @param forceLoad true to enable force loading, false to disable
+     */
+    public static void setForceLoading(LivingEntity entity, ServerLevel level, boolean forceLoad) {
+        if (entity == null || level == null) return;
+        if (forceLoad) {
+            ForceLoadingManager.enableForceLoading(entity, level);
+        } else {
+            ForceLoadingManager.disableForceLoading(entity, level);
+        }
+    }
+
+    // 检查实体是否被强加载（包含扩展系统和手动API两种来源）
+    /**
+     * Check if an entity is currently force loaded.
+     * Returns true if force loaded via EntityExtension or via the API.
+     * @param entity the entity to check
+     * @return true if the entity is force loaded
+     */
+    public static boolean isForceLoaded(LivingEntity entity) {
+        if (entity == null) return false;
+        return ForceLoadingManager.shouldForceLoad(entity);
+    }
+
+    // ==================== 着色器预设 API ====================
+
+    // 获取自定义着色器预设（仅客户端）
+    /**
+     * Get a registered custom shader preset by its resource id (client only).
+     * ECA auto-discovers presets from standard five-file sets under
+     * {@code config/eca/shadergenerator/} or {@code assets/<namespace>/eca/shader_presets/}.
+     * The returned object exposes BLOCK-profile RenderTypes for skyboxes, boss bars, and block extensions,
+     * plus NEW_ENTITY-profile RenderTypes for entity, item, and GeckoLib block extension passes.
+     * @param id the preset resource id
+     * @return the shader preset, or null if no preset is registered for the id
+     */
+    public static ShaderPreset shaderPreset(Identifier id) {
+        return ShaderPresetRegistry.getPreset(id);
+    }
+
+    // ==================== 线程复活 ====================
+
+    // 启动复活守护线程
+    /**
+     * Start the resurrection daemon thread (idempotent).
+     * Once started, the daemon continuously monitors all tracked entities and
+     * auto-revives any that die or lose their container instances.
+     * Do not use on entities that spawn in large numbers.
+     */
+    public static void startResurrection() {
+        ResurrectionManager.start();
+    }
+
+    // 停止复活守护线程
+    /**
+     * Stop the resurrection daemon thread.
+     */
+    public static void stopResurrection() {
+        ResurrectionManager.stop();
+    }
+
+    // 检查复活守护线程是否运行
+    /**
+     * Check whether the resurrection daemon thread is currently running.
+     * @return true if the daemon is active
+     */
+    public static boolean isResurrectionRunning() {
+        return ResurrectionManager.isRunning();
+    }
+
+    // 将实体加入复活追踪
+    /**
+     * Add an entity to the resurrection tracking set.
+     * Every poll cycle the daemon checks whether the entity is still present on the
+     * server and on the clients tracking it, snapshots its state while intact, and
+     * rebuilds whichever side lost it from that snapshot.
+     * @param entity the entity to track
+     */
+    public static void addResurrectionTarget(Entity entity) {
+        ResurrectionManager.add(entity);
+    }
+
+    // 将实体从复活追踪中移除
+    /**
+     * Remove an entity from the resurrection tracking set.
+     * @param entity the entity to stop tracking
+     */
+    public static void removeResurrectionTarget(Entity entity) {
+        ResurrectionManager.remove(entity);
+    }
+
+    // 检查实体是否在复活追踪中
+    /**
+     * Check whether an entity is currently tracked for resurrection.
+     * @param entity the entity to check
+     * @return true if the entity is being tracked
+     */
+    public static boolean isResurrectionTracked(Entity entity) {
+        return entity != null && ResurrectionManager.isTracked(entity.getUUID());
+    }
+
+    // 获取复活追踪的实体数量
+    /**
+     * Get the number of entities currently tracked for resurrection.
+     * @return tracked entity count
+     */
+    public static int getResurrectionTrackedCount() {
+        return ResurrectionManager.getTrackedCount();
+    }
+
+    // 清除全部复活追踪目标
+    /**
+     * Remove all entities from the resurrection tracking set.
+     */
+    public static void clearAllResurrectionTargets() {
+        ResurrectionManager.clearAll();
+    }
+
+    // 设置复活轮询间隔
+    /**
+     * Set the daemon poll interval in milliseconds.
+     * @param ms poll interval, clamped to 1–10000 (default 25)
+     */
+    public static void setResurrectionPollInterval(long ms) {
+        ResurrectionManager.setPollIntervalMs(ms);
+    }
+
+    // 获取复活轮询间隔
+    /**
+     * Get the current daemon poll interval in milliseconds.
+     * @return poll interval in ms
+     */
+    public static long getResurrectionPollInterval() {
+        return ResurrectionManager.getPollIntervalMs();
+    }
+
+    // 获取累计复活次数
+    /**
+     * Get the total number of entities revived by the daemon since start.
+     * @return total revived count
+     */
+    public static long getResurrectionTotalRevived() {
+        return ResurrectionManager.getTotalRevivedCount();
+    }
+
+    // 获取累计检查次数
+    /**
+     * Get the total number of entity checks performed by the daemon since start.
+     * @return total check count
+     */
+    public static long getResurrectionTotalChecks() {
+        return ResurrectionManager.getTotalCheckCount();
+    }
+
+    // 设置客户端在场探测间隔
+    /**
+     * Set the interval at which the daemon probes whether tracked entities still exist
+     * on the clients tracking them. The probe is a network round trip, so it runs on a
+     * far longer interval than the server-side poll.
+     * @param ms probe interval, clamped to 100-60000 (default 1000)
+     */
+    public static void setResurrectionClientPollInterval(long ms) {
+        ResurrectionManager.setClientPollIntervalMs(ms);
+    }
+
+    // 获取客户端在场探测间隔
+    /**
+     * Get the current client presence probe interval in milliseconds.
+     * @return probe interval in ms
+     */
+    public static long getResurrectionClientPollInterval() {
+        return ResurrectionManager.getClientPollIntervalMs();
+    }
+
+    // 设置状态快照间隔
+    /**
+     * Set the interval at which an intact entity has its state snapshotted into the
+     * record. Snapshotting serializes the full entity NBT, so it runs less often than
+     * the presence check that gates it.
+     * @param ms snapshot interval, clamped to 50-60000 (default 500)
+     */
+    public static void setResurrectionSnapshotInterval(long ms) {
+        ResurrectionManager.setSnapshotIntervalMs(ms);
+    }
+
+    // 获取状态快照间隔
+    /**
+     * Get the current state snapshot interval in milliseconds.
+     * @return snapshot interval in ms
+     */
+    public static long getResurrectionSnapshotInterval() {
+        return ResurrectionManager.getSnapshotIntervalMs();
+    }
+
+    // 获取累计服务端容器修复次数
+    /**
+     * Get the number of times the daemon repaired server-side containers for an entity
+     * whose instance was still usable.
+     * @return total server container repair count
+     */
+    public static long getResurrectionTotalServerRepairs() {
+        return ResurrectionManager.getTotalServerRepairCount();
+    }
+
+    // 获取累计实体重建次数
+    /**
+     * Get the number of times the daemon rebuilt an entity from its record because the
+     * live instance no longer existed.
+     * @return total rebuild count
+     */
+    public static long getResurrectionTotalRebuilds() {
+        return ResurrectionManager.getTotalRebuildCount();
+    }
+
+    // 获取累计客户端重新配对次数
+    /**
+     * Get the number of times the daemon re-paired an entity with a client that had
+     * dropped it while the server still considered the player paired.
+     * @return total client pairing repair count
+     */
+    public static long getResurrectionTotalClientRepairs() {
+        return ResurrectionManager.getTotalClientRepairCount();
+    }
+
+    // 获取累计位置流放恢复次数
+    /**
+     * Get the number of times the daemon pulled a tracked entity back after it was
+     * displaced to a position no legitimate movement could reach.
+     * @return total displacement restore count
+     */
+    public static long getResurrectionTotalDisplacementRestores() {
+        return ResurrectionManager.getTotalDisplacementRestoreCount();
+    }
+
+    // 获取累计状态快照次数
+    /**
+     * Get the number of state snapshots taken since start.
+     * @return total snapshot count
+     */
+    public static long getResurrectionTotalSnapshots() {
+        return ResurrectionManager.getTotalSnapshotCount();
+    }
+
+    // 对实体进行一次容器完整性检查
+    /**
+     * Perform a one-shot container integrity check for a tracked entity.
+     * Checks all server-side entity containers (sections, lookup, tickList, chunkMap, etc.).
+     * @param level the server level
+     * @param entity the entity to check
+     * @return map of container name to present status
+     */
+    public static Map<String, Boolean> checkResurrectionTarget(ServerLevel level, Entity entity) {
+        return entity != null ? ResurrectionManager.check(level, entity.getUUID()) : Collections.emptyMap();
+    }
+
+    // 手动强制复活实体
+    /**
+     * Manually force-revive a tracked entity immediately.
+     * @param level the server level
+     * @param entity the entity to revive
+     * @return container integrity map after revival
+     */
+    public static Map<String, Boolean> reviveResurrectionTarget(ServerLevel level, Entity entity) {
+        return entity != null ? ResurrectionManager.reviveNow(level, entity.getUUID()) : Collections.emptyMap();
+    }
+
+    // ==================== 阵营系统 ====================
+
+    // 创建阵营（内存）
+    /**
+     * Create and register a new faction (memory only, no persistence).
+     * 创建一个新阵营（仅内存，不持久化）。
+     */
+    public static Faction createFaction(String id, String displayName, int color) {
+        if (id == null || id.isEmpty()) {
+            throw new IllegalArgumentException("Faction id cannot be null or empty");
+        }
+        if (displayName == null || displayName.isEmpty()) {
+            throw new IllegalArgumentException("Faction displayName cannot be null or empty");
+        }
+        Faction faction = new Faction(id, displayName, color);
+        FactionManager.registerFaction(faction);
+        return faction;
+    }
+
+    // 创建阵营（持久化）
+    /**
+     * Create and register a new faction, persisted to world SavedData.
+     * 创建一个新阵营并持久化到世界存档。
+     *
+     * @param id          unique faction identifier
+     * @param displayName human-readable display name
+     * @param color       ARGB color for UI display
+     * @param level       the server level for persistence
+     * @return the created Faction instance
+     */
+    public static Faction createFaction(String id, String displayName, int color, Level level) {
+        Faction faction = createFaction(id, displayName, color);
+        if (level != null) {
+            FactionManager.registerFaction(faction, level);
+        }
+        return faction;
+    }
+
+    // 删除阵营（内存）
+    /**
+     * Remove a faction definition (memory only).
+     * 删除一个阵营定义（仅内存，不持久化）。
+     */
+    public static boolean removeFaction(String factionId) {
+        return FactionManager.unregisterFaction(factionId);
+    }
+
+    // 删除阵营（持久化）
+    /**
+     * Remove a faction definition, persisted to world SavedData.
+     * 删除一个阵营定义并持久化。
+     */
+    public static boolean removeFaction(String factionId, Level level) {
+        return FactionManager.unregisterFaction(factionId, level);
+    }
+
+    // 合并阵营（fromId 并入 intoId 后被删除，持久化）
+    /**
+     * Merge one faction into another. Every member of {@code fromId} is rebound to
+     * {@code intoId}, relation overrides are folded into the surviving faction, and
+     * {@code fromId} is removed. The surviving faction keeps its own display name, color,
+     * default relation, and leader; it inherits the dissolved faction's leader only when
+     * it has none of its own.
+     * 把 fromId 阵营整体并入 intoId，成员改绑、关系归并，随后删除 fromId。
+     *
+     * @param intoId the surviving faction id
+     * @param fromId the faction to dissolve
+     * @param level  the server level for persistence
+     * @return the number of members moved, or -1 if the merge could not run
+     */
+    public static int mergeFactions(String intoId, String fromId, Level level) {
+        return FactionManager.mergeFactions(intoId, fromId, level);
+    }
+
+    // 获取阵营定义
+    /**
+     * Get a faction definition by its id.
+     * 根据 ID 获取阵营定义。
+     *
+     * @param factionId the faction id
+     * @return the Faction, or null if not registered
+     */
+    public static Faction getFaction(String factionId) {
+        return FactionManager.getFaction(factionId);
+    }
+
+    // 获取全部阵营
+    /**
+     * Get all registered factions.
+     * 获取所有已注册的阵营。
+     *
+     * @return unmodifiable map of faction id → Faction
+     */
+    public static Map<String, Faction> getAllFactions() {
+        return FactionManager.getAllFactions();
+    }
+
+    // 实体加入阵营
+    /**
+     * Bind an entity to a registered faction. The request is refused and logged if the
+     * faction does not exist.
+     * 将实体加入指定阵营。
+     *
+     * @param entity    the entity
+     * @param factionId the target faction id
+     */
+    public static void joinFaction(Entity entity, String factionId) {
+        FactionManager.joinFaction(entity, factionId);
+    }
+
+    // 实体退出阵营
+    /**
+     * Remove an entity from its current faction. No-op if the entity had no faction.
+     * 将实体从当前阵营中移除。
+     *
+     * @param entity the entity
+     */
+    public static void leaveFaction(Entity entity) {
+        FactionManager.leaveFaction(entity);
+    }
+
+    // 获取实体所属阵营 ID
+    /**
+     * Get the faction id an entity belongs to.
+     * 获取实体所属的阵营 ID。
+     *
+     * @param entity the entity
+     * @return faction id, or null if the entity has no faction
+     */
+    public static String getEntityFaction(Entity entity) {
+        return FactionManager.getFactionId(entity);
+    }
+
+    // 判断是否同阵营
+    /**
+     * Check whether two entities belong to the same faction.
+     * Both entities must have a faction; if either has none, returns false.
+     * 判断两个实体是否属于同一阵营。
+     *
+     * @param a first entity
+     * @param b second entity
+     * @return true if both belong to the same faction
+     */
+    public static boolean areSameFaction(Entity a, Entity b) {
+        return FactionManager.areSameFaction(a, b);
+    }
+
+    // 判断两个实体是否因 ECA 阵营或原版同盟关系而互为友方
+    /**
+     * Check whether two entities are friendly. This includes entities in the same ECA faction,
+     * entities whose ECA factions have a friendly relation, vanilla scoreboard allies,
+     * owner-pet pairs, and pets that share an owner or whose owners are scoreboard allies.
+     * Creative mode, spectator mode, and ECA invulnerability are attack protections rather than
+     * alliance relationships and are therefore not included.
+     *
+     * @param a first entity
+     * @param b second entity
+     * @return true if the entities have an ECA or vanilla friendly relationship
+     */
+    public static boolean isFriendly(Entity a, Entity b) {
+        return FactionUtil.isFriendly(a, b);
+    }
+
+    // 获取阵营内全部实体
+    /**
+     * Resolve the specified faction's member table to live entities in the given level.
+     * Unloaded members and members in other dimensions are omitted.
+     * 将阵营成员表解析为指定维度中的已加载实体。
+     *
+     * @param level     the level to scan
+     * @param factionId the faction id
+     * @return list of faction members (may be empty)
+     */
+    public static List<Entity> getFactionMembers(Level level, String factionId) {
+        return FactionManager.getFactionMembers(level, factionId);
+    }
+
+    // 移除阵营内全部实体
+    /**
+     * Remove every explicit member from the specified faction, including unloaded members
+     * and members in other dimensions.
+     * 将指定阵营的全部显式成员移出阵营，包括未加载和其他维度中的成员。
+     *
+     * @param factionId the faction id
+     * @param level     the level to scan
+     */
+    public static void kickAllFromFaction(String factionId, Level level) {
+        FactionManager.kickAll(factionId, level);
+    }
+
+    // 设置阵营间关系（内存）
+    /**
+     * Set the relation that faction A has toward faction B (memory only).
+     * 设置阵营 A 对阵营 B 的关系（仅内存，不持久化）。
+     */
+    public static void setFactionRelation(String factionAId, String factionBId, FactionRelation relation) {
+        FactionManager.setFactionRelation(factionAId, factionBId, relation);
+    }
+
+    // 设置阵营间关系（持久化）
+    /**
+     * Set the relation that faction A has toward faction B, persisted to SavedData.
+     * 设置阵营 A 对阵营 B 的关系并持久化。
+     */
+    public static void setFactionRelation(String factionAId, String factionBId, FactionRelation relation,
+                                          Level level) {
+        FactionManager.setFactionRelation(factionAId, factionBId, relation, level);
+    }
+
+    // 查询阵营间关系
+    /**
+     * Get the explicitly configured relation from faction A to faction B.
+     * Returns null if no explicit override has been set — use
+     * {@link FactionManager#getEffectiveRelation} for the fully resolved relation.
+     * 查询阵营 A 对阵营 B 的显式关系覆盖。
+     *
+     * @param factionAId the source faction id
+     * @param factionBId the target faction id
+     * @return the relation, or null if not set
+     */
+    public static FactionRelation getFactionRelation(String factionAId, String factionBId) {
+        return FactionManager.getFactionRelation(factionAId, factionBId);
+    }
+
+    // 查询实体间有效关系
+    /**
+     * Resolve the effective faction relation from entity {@code source}'s perspective
+     * toward entity {@code target}. This determines whether {@code source} may harm or
+     * target {@code target} under faction rules.
+     * 查询 source 实体对 target 实体的有效阵营关系。
+     *
+     * @param source the source entity (attacker / targeter)
+     * @param target the target entity
+     * @return the effective FactionRelation
+     */
+    public static FactionRelation getEffectiveFactionRelation(Entity source, Entity target) {
+        return FactionManager.getEffectiveRelation(source, target);
+    }
+
+    // 判断是否可攻击
+    /**
+     * Shortcut: returns true if faction rules permit {@code source} to harm {@code target}.
+     * Returns false for SAME_FACTION and FRIENDLY relations.
+     * 判断阵营规则是否允许 source 伤害 target。
+     *
+     * @param source the attacker
+     * @param target the target
+     * @return false if faction rules prevent harm
+     */
+    public static boolean canHarm(Entity source, Entity target) {
+        return FactionManager.canHarm(source, target);
+    }
+
+    // 判断阵营与保护规则是否允许主动锁定目标
+    /**
+     * Check whether {@code source} may deliberately acquire {@code target} as a combat
+     * target. Unlike {@link #canHarm(Entity, Entity)}, this returns false for an effective
+     * {@link FactionRelation#NEUTRAL} relation. Entities without factions continue to use
+     * vanilla targeting rules.
+     *
+     * @param source the entity attempting to acquire a target
+     * @param target the proposed target
+     * @return true if deliberate targeting is permitted
+     */
+    public static boolean canTarget(Entity source, Entity target) {
+        return FactionUtil.canTarget(source, target);
+    }
+
+    // ==================== 阵营求援 ====================
+
+    // 阵营求援：附近同阵营及友方阵营生物共同反击敌对阵营攻击者
+    /**
+     * Alert nearby same-faction and friendly-faction mobs to target an attacker.
+     * Called when a faction member is hurt by a hostile faction member. Factionless
+     * attackers are ignored.
+     * Only affects {@link Mob} entities within {@code FACTION_ALERT_RANGE} blocks of the
+     * victim. Whether an existing target may be replaced is controlled by the faction alert config.
+     * @param factionId the victim's faction id
+     * @param attacker  the entity that attacked
+     * @param victim    the entity that was attacked
+     * @param level     the level to search for allies
+     */
+    public static void alertFactionMembers(String factionId, Entity attacker, Entity victim,
+                                           Level level) {
+        FactionManager.alertFactionMembers(factionId, attacker, victim, level);
+    }
+
+    // ==================== 阵营成员（UUID 级，无需实体在线） ====================
+
+    // 按 UUID 加入阵营
+    /**
+     * Bind an entity to a faction by UUID, without requiring it to be loaded. Use this when
+     * managing summons or offline members whose entity may be in an unloaded chunk.
+     * 按 UUID 将实体加入阵营，无需实体在线或已加载。
+     *
+     * @param uuid      the entity UUID
+     * @param typeId    the entity type registry id, e.g. {@code "minecraft:zombie"}
+     * @param isPlayer  whether the member is a player
+     * @param factionId the target faction id
+     * @param level     any server level, used to reach the overworld SavedData
+     * @return true if the binding was created
+     */
+    public static boolean joinFaction(UUID uuid, String typeId, boolean isPlayer, String factionId, Level level) {
+        return FactionManager.joinFaction(uuid, typeId, isPlayer, factionId, level);
+    }
+
+    // 按 UUID 退出阵营
+    /**
+     * Remove a member from its faction by UUID, without requiring it to be loaded.
+     * 按 UUID 将实体移出所属阵营，无需实体在线。
+     *
+     * @param uuid  the entity UUID
+     * @param level any server level, used to reach the overworld SavedData
+     * @return true if a binding was removed
+     */
+    public static boolean leaveFaction(UUID uuid, Level level) {
+        return FactionManager.leaveFaction(uuid, level);
+    }
+
+    // 按 UUID 查询所属阵营
+    /**
+     * Get the faction id bound to a UUID. Pure index lookup, no entity needed — but also no
+     * pet-owner inheritance, which requires a live entity to resolve.
+     * 按 UUID 查询所属阵营，纯索引查询；不含需要实体才能解析的宠物继承。
+     *
+     * @param uuid the entity UUID
+     * @return faction id, or null if this UUID has no explicit binding
+     */
+    public static String getEntityFaction(UUID uuid) {
+        return FactionManager.getFactionId(uuid);
+    }
+
+    // 判断 UUID 是否为指定阵营成员
+    /**
+     * Check whether a UUID is bound to a specific faction.
+     * 判断指定 UUID 是否为该阵营的成员。
+     *
+     * @param uuid      the entity UUID
+     * @param factionId the faction id
+     * @return true if the UUID belongs to that faction
+     */
+    public static boolean isFactionMember(UUID uuid, String factionId) {
+        return FactionManager.isMember(uuid, factionId);
+    }
+
+    // 获取阵营的全部成员记录
+    /**
+     * Get every member record of a faction, including type info, without loading entities.
+     * 获取阵营的全部成员记录（含类型信息），无需加载实体。
+     *
+     * @param factionId the faction id
+     * @return read-only member records, empty if the faction is unknown
+     */
+    public static Collection<FactionMember> getFactionMemberRecords(String factionId) {
+        return FactionManager.getMembers(factionId);
+    }
+
+    // 获取阵营的全部成员 UUID
+    /**
+     * Get every member UUID of a faction without loading entities.
+     * 获取阵营的全部成员 UUID，无需加载实体。
+     *
+     * @param factionId the faction id
+     * @return read-only member UUIDs, empty if the faction is unknown
+     */
+    public static Set<UUID> getFactionMemberUuids(String factionId) {
+        return FactionManager.getMemberUuids(factionId);
+    }
+
+    // 按实体类型筛选阵营成员
+    /**
+     * Filter a faction's members by entity type without loading entities.
+     * 按实体类型筛选阵营成员，无需加载实体。
+     *
+     * @param factionId the faction id
+     * @param typeId    the entity type registry id, e.g. {@code "minecraft:zombie"}
+     * @return matching member records
+     */
+    public static List<FactionMember> getFactionMembersByType(String factionId, String typeId) {
+        return FactionManager.getMembersByType(factionId, typeId);
+    }
+
+    // 获取阵营成员数量
+    /**
+     * Get a faction's member count without loading entities.
+     * 获取阵营成员数量，无需加载实体。
+     *
+     * @param factionId the faction id
+     * @return member count, 0 if the faction is unknown
+     */
+    public static int getFactionMemberCount(String factionId) {
+        return FactionManager.getMemberCount(factionId);
+    }
+
+    // 将阵营成员解析为该维度中实际存在的实体
+    /**
+     * Resolve a faction's members to live entities in one level. Members in unloaded chunks
+     * or other dimensions are omitted.
+     * 将阵营成员解析为该维度中实际存在的实体，未加载或跨维度的成员会被跳过。
+     *
+     * @param factionId the faction id
+     * @param level     the level to resolve in
+     * @return resolvable member entities
+     */
+    public static List<Entity> resolveFactionMembers(String factionId, ServerLevel level) {
+        return FactionManager.resolveMembers(factionId, level);
+    }
+
+    // ==================== 阵营首领 ====================
+
+    // 设置阵营首领（自动加入该阵营）
+    /**
+     * Set a faction's leader. The entity is added to the faction if it is not already a
+     * member, since a leader outside its own faction would be a contradictory state.
+     * 设置阵营首领；若该实体尚未入营则自动加入。
+     *
+     * @param factionId the faction id
+     * @param leader    the new leader
+     * @param level     the server level for persistence
+     * @return true if the leader was set
+     */
+    public static boolean setFactionLeader(String factionId, Entity leader, Level level) {
+        return FactionManager.setLeader(factionId, leader, level);
+    }
+
+    // 清除阵营首领（成员身份保留）
+    /**
+     * Clear a faction's leader. The former leader remains a member.
+     * 清除阵营首领，原首领仍保留成员身份。
+     *
+     * @param factionId the faction id
+     * @param level     the server level for persistence
+     * @return true if a leader was cleared
+     */
+    public static boolean clearFactionLeader(String factionId, Level level) {
+        return FactionManager.clearLeader(factionId, level);
+    }
+
+    // 获取阵营首领记录
+    /**
+     * Get a faction's leader record without loading the entity.
+     * 获取阵营首领记录，无需加载实体。
+     *
+     * @param factionId the faction id
+     * @return the leader record, or null
+     */
+    public static FactionMember getFactionLeader(String factionId) {
+        return FactionManager.getLeader(factionId);
+    }
+
+    // 获取阵营首领 UUID
+    /**
+     * Get a faction's leader UUID.
+     * 获取阵营首领的 UUID。
+     *
+     * @param factionId the faction id
+     * @return the leader UUID, or null
+     */
+    public static UUID getFactionLeaderUuid(String factionId) {
+        return FactionManager.getLeaderUuid(factionId);
+    }
+
+    // 将阵营首领解析为实体（跨全部维度搜索）
+    /**
+     * Resolve a faction's leader to a live entity, searching every dimension.
+     * 将阵营首领解析为实体，跨全部维度搜索。
+     *
+     * @param factionId the faction id
+     * @param server    the running server
+     * @return the leader entity, or null if offline or unloaded
+     */
+    public static Entity resolveFactionLeader(String factionId, MinecraftServer server) {
+        return FactionManager.resolveLeader(factionId, server);
+    }
+
+    // 判断实体是否为任意阵营的首领
+    /**
+     * Check whether an entity leads any faction.
+     * 判断实体是否为任意阵营的首领。
+     *
+     * @param entity the entity to test
+     * @return true if it leads some faction
+     */
+    public static boolean isFactionLeader(Entity entity) {
+        return FactionManager.isLeader(entity);
+    }
+
+    // 反查某实体担任首领的阵营
+    /**
+     * Find which faction an entity leads.
+     * 反查某实体担任首领的阵营。
+     *
+     * @param uuid the leader's UUID
+     * @return the faction id it leads, or null
+     */
+    public static String getFactionByLeader(UUID uuid) {
+        return FactionManager.getFactionByLeader(uuid);
+    }
+
+    // ==================== 袭击系统 ====================
+
+    // 在目标结构内发起袭击
+    /**
+     * Start a raid at a position inside its target structure. The raid center is taken from
+     * the structure's bounding box, not from {@code pos}. If the definition declares no
+     * target structure, {@code pos} becomes the center.
+     * 在目标结构内发起袭击，袭击中心取自结构包围盒。
+     *
+     * @param level  the server level
+     * @param pos    a position inside the target structure
+     * @param raidId the registered raid definition id
+     * @return the started raid, or null if the definition is unknown or the position is
+     *         not inside the target structure
+     */
+    public static RaidInstance startRaid(ServerLevel level, BlockPos pos, String raidId) {
+        if (level == null || pos == null) return null;
+        return RaidManager.startRaid(level, pos, raidId);
+    }
+
+    // 在指定坐标强制发起袭击，跳过结构查询
+    /**
+     * Start a raid with an explicit center, bypassing the structure lookup. Use this for
+     * trigger conditions unrelated to structures, and for testing.
+     * 以指定坐标为中心强制发起袭击，跳过结构查询。
+     *
+     * @param level  the server level
+     * @param center the raid center
+     * @param raidId the registered raid definition id
+     * @return the started raid, or null if the definition is unknown
+     */
+    public static RaidInstance startRaidAt(ServerLevel level, BlockPos center, String raidId) {
+        if (level == null || center == null) return null;
+        return RaidManager.startRaidAt(level, center, raidId);
+    }
+
+    // 结束袭击并清除全部存活袭击者
+    /**
+     * End a raid, discarding every surviving raider. This is how an endless raid is meant
+     * to be finished — it never satisfies the default victory condition on its own.
+     * 结束袭击并清除全部仍存活的袭击者，用于收尾无限波次袭击。
+     *
+     * @param level   the server level
+     * @param raid    the raid to end
+     * @param victory true to end in victory (fires reward callbacks), false for defeat
+     * @return true if the raid was active and has been ended
+     */
+    public static boolean endRaid(ServerLevel level, RaidInstance raid, boolean victory) {
+        if (level == null || raid == null) return false;
+        return RaidManager.endRaid(level, raid, victory);
+    }
+
+    // 按 ID 结束袭击并清除全部存活袭击者
+    /**
+     * End a raid by its instance id, discarding every surviving raider.
+     * 按袭击实例 ID 结束袭击并清除全部仍存活的袭击者。
+     *
+     * @param level   the server level
+     * @param raidId  the raid instance id
+     * @param victory true to end in victory, false for defeat
+     * @return true if a matching active raid was found and ended
+     */
+    public static boolean endRaid(ServerLevel level, int raidId, boolean victory) {
+        if (level == null) return false;
+        return RaidManager.endRaid(level, raidId, victory);
+    }
+
+    // 按 ID 获取活跃袭击
+    /**
+     * Get an active raid by its instance id.
+     * 按袭击实例 ID 获取活跃袭击。
+     *
+     * @param level  the server level
+     * @param raidId the raid instance id
+     * @return the active raid, or null
+     */
+    public static RaidInstance getRaid(ServerLevel level, int raidId) {
+        if (level == null) return null;
+        return RaidManager.getRaid(level, raidId);
+    }
+
+    // 获取该维度的全部活跃袭击
+    /**
+     * Get every active raid in a level.
+     * 获取该维度中的全部活跃袭击。
+     *
+     * @param level the server level
+     * @return active raids, may be empty
+     */
+    public static List<RaidInstance> getActiveRaids(ServerLevel level) {
+        if (level == null) return Collections.emptyList();
+        return RaidManager.getActiveRaids(level);
+    }
+
+    // 获取距指定坐标最近的活跃袭击
+    /**
+     * Find the nearest active raid whose center lies within a distance of a position.
+     * 获取距指定坐标一定范围内最近的活跃袭击。
+     *
+     * @param level       the server level
+     * @param pos         the position to search from
+     * @param maxDistance maximum distance in blocks
+     * @return the nearest raid in range, or null
+     */
+    public static RaidInstance getNearestRaid(ServerLevel level, BlockPos pos, double maxDistance) {
+        if (level == null || pos == null) return null;
+        return RaidManager.getNearestRaid(level, pos, maxDistance);
+    }
+
+    // 获取全部已注册的袭击定义
+    /**
+     * Get all registered raid definitions.
+     * 获取全部已注册的袭击定义。
+     *
+     * @return read-only map of raid id → definition
+     */
+    public static Map<String, RaidDefinition> getAllRaidDefinitions() {
+        return RaidManager.getAllDefinitions();
+    }
+
+    // 从头播放模型动作并手动接管动画控制器。
+    /**
+     * Starts a named model animation from the beginning on the logical server thread.
+     * Takes manual control until stopped or replaced; a non-looping action holds its final pose.
+     * @param entity the entity whose model should animate
+     * @param animation the exact animation name in the model resource
+     * @return true if the playback state was accepted and synchronized
+     */
+    public static boolean playAnimation(LivingEntity entity, String animation) {
+        return BlenderAnimationManager.play(entity, animation, 1.0f, false);
+    }
+
+    // 以指定速度和循环方式从头播放实体动画
+    /**
+     * Starts a named model animation with manual control on the logical server thread.
+     * Repeated calls restart even the same animation; active skills are cancelled.
+     * @param entity the entity whose model should animate
+     * @param animation the exact animation name in the model resource
+     * @param speed positive playback speed where {@code 1.0} is the exported speed
+     * @param loop whether playback should wrap at the end of the animation
+     * @return true if the playback state was accepted and synchronized
+     */
+    public static boolean playAnimation(LivingEntity entity, String animation, float speed, boolean loop) {
+        return BlenderAnimationManager.play(entity, animation, speed, loop);
+    }
+
+    // 停止当前动作，释放手动接管或取消技能，交回控制器或资源默认动作。
+    /**
+     * Stops managed playback on the logical server thread, cancelling an active skill if present.
+     * Returns to controller selection on its next update, or to the binding/resource fallback.
+     * A death-locked controller rejects this operation.
+     * @param entity the animated entity
+     * @return true if an active managed animation was stopped
+     */
+    public static boolean stopAnimation(LivingEntity entity) {
+        return BlenderAnimationManager.stop(entity);
+    }
+
+    // 暂停当前受管理动作及技能计时，但不暂停生命周期决策。
+    /**
+     * Pauses managed playback and skill timing on the logical server thread.
+     * Lifecycle decisions may still replace the paused action; death-locked playback rejects this call.
+     * @param entity the animated entity
+     * @return true if a running managed animation was paused
+     */
+    public static boolean pauseAnimation(LivingEntity entity) {
+        return BlenderAnimationManager.pause(entity);
+    }
+
+    // 从暂停位置继续播放实体动画
+    /**
+     * Resumes paused managed playback from its preserved position on the logical server thread.
+     * @param entity the animated entity
+     * @return true if a paused managed animation was resumed
+     */
+    public static boolean resumeAnimation(LivingEntity entity) {
+        return BlenderAnimationManager.resume(entity);
+    }
+
+    // 查询实体是否存在受管理动作状态，包括控制器动作、暂停或末尾保持。
+    /**
+     * Checks for managed playback, including controller actions, on the logical server thread.
+     * Paused and held-final-pose states count as active; this does not indicate an active skill.
+     * @param entity the entity to inspect on the logical server
+     * @return true if the entity has a managed animation playback state
+     */
+    public static boolean isAnimationPlaying(LivingEntity entity) {
+        return BlenderAnimationManager.isPlaying(entity, null);
+    }
+
+    // 查询实体当前受管理动作是否匹配指定名称。
+    /**
+     * Checks the managed animation name on the logical server thread, including controller actions.
+     * Paused and held-final-pose states still count as active.
+     * @param entity the entity to inspect on the logical server
+     * @param animation the exact animation name to compare
+     * @return true if the named animation is the entity's current managed animation
+     */
+    public static boolean isAnimationPlaying(LivingEntity entity, String animation) {
+        return animation != null && BlenderAnimationManager.isPlaying(entity, animation);
+    }
+
+    // 在服务端触发已定义的 Blender 技能动画。
+    /**
+     * Starts a named skill through the entity's server-side controller and interruption policy.
+     * @param entity the controlled entity on the logical server
+     * @param skillId the configured skill identifier, not the resource animation name
+     * @return true if execution started; false if rejected, unavailable, or called reentrantly
+     */
+    public static boolean triggerBlenderSkill(LivingEntity entity, String skillId) {
+        return BlenderControllers.triggerSkill(entity, skillId);
+    }
+
+    // 取消当前技能并在下一次控制器更新时恢复基础动作。
+    /**
+     * Cancels the active skill with the stopped reason without invoking its completion callback.
+     * @param entity the controlled entity on the logical server
+     * @return true if an active skill was cancelled
+     */
+    public static boolean cancelBlenderSkill(LivingEntity entity) {
+        return BlenderControllers.cancelSkill(entity);
+    }
+
+    // 查询服务端当前是否有尚未结束的技能执行实例。
+    /**
+     * Checks for an active skill execution, including a paused execution.
+     * @param entity the controlled entity on the logical server
+     * @return true if a skill is active, or false on the client or after termination
+     */
+    public static boolean isBlenderSkillActive(LivingEntity entity) {
+        return BlenderControllers.currentSkill(entity) != null;
+    }
+
+    // 获取当前技能执行快照，供服务端逻辑检查进度与执行编号。
+    /**
+     * Retrieves the current server-side skill execution snapshot.
+     * @param entity the controlled entity on the logical server
+     * @return the execution snapshot, or null if no skill is active
+     */
+    public static BlenderControllerContext getBlenderSkillExecution(LivingEntity entity) {
+        return BlenderControllers.currentSkill(entity);
+    }
+
+    private EcaAPI() {}
+}

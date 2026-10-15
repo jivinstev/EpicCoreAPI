@@ -12,6 +12,6 @@
  {
   "file": ".multiversion/targets/26.3/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java",
   "why": "empties 1 method body; empties 4 method bodies",
-  "reviewed": null
+  "reviewed": "No behaviour lost: the authors' provider (src/pro) draws nothing and owns no window, and every method of theirs is already a no-op. 26.3's FML 12 interface replaced takeOverGlfwWindow with stopEventPolling (nothing to stop: this provider polls no events) and handOverToMinecraft (returns Minecraft's default 854x480 window state, as it owns none); updateProgress/completeProgress have nothing to draw. Checked against the authors' file and the 1.21.10 overlay."
  }
 ]
