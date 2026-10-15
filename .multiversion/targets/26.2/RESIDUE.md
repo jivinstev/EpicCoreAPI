@@ -1,10 +1,10 @@
 # Residue: gates
 
-Stopped at **gates**: 1 gate(s) red: author's own build (`build agentJar cfJar devJar jvmtiBackendJar mrJar proAgentJar proJar`.
+Stopped at **gates**: 1 gate(s) red: Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/eca.
 
 ## Failing gates
 
-- author's own build (`build agentJar cfJar devJar jvmtiBackendJar mrJar proAgentJar proJar`): FAIL -- epic-core-api-1.1.9_cf-mc26.2.jar, epic-core-api-1.1.9_dev-mc26.2.jar, epic-core-api-1.1.9_mr-mc26.
+- Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/eca-layer/build/mc26.2/fork-port/gates/gateA.log -- first compile error(s): eca/test/ClientBootSmokeTest.java:128
 
 ## To resume
 
