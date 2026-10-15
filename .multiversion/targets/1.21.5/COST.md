@@ -28,3 +28,12 @@ The block below was appended by tools/fork-port.py for its own last run only:
 - model: claude-opus-5-5 (65 req), claude-sonnet-5-5 (41 req); effort: medium 106
 - tokens: output 30,458 (thinking 6,249), input 234, cache read 52,021,017, cache write 679,997 (5m 621,256 / 1h 58,741)
 - size: 15 Java files, 6 mixin classes; target Minecraft 1.21.5
+
+## fork-port.py run since 2026-10-15T01:14:08+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $1.93** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.0 h active, 0.0 h wall (2026-10-15T01:14Z to 2026-10-15T01:14Z)
+- model: claude-opus-5-5 (1 req); effort: medium 1
+- tokens: output 16 (thinking 0), input 2, cache read 0, cache write 385,599 (5m 385,599 / 1h 0)
+- size: 15 Java files, 6 mixin classes; target Minecraft 1.21.5
+- ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '111': 1, '333': 1}} -- the cost includes that work

@@ -1,5 +1,10 @@
 [
  {
+  "file": ".multiversion/targets/26.1.2/java/net/eca/mixin/FogRendererMixin.java",
+  "why": "removes 1 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": "26.1.2's setupFog returns the one FogData that is both the clear colour and what updateBuffer uploads, so the authors' setupColor TAIL (colour, any medium) and setupFog TAIL (distances, in air) are one setupFog RETURN edit of that FogData with the same two conditions."
+ },
+ {
   "file": ".multiversion/targets/26.1.2/java/net/eca/mixin/GameRendererPostLevelMixin.java",
   "why": "removes 1 mixin injection handler(s): check each still applies somewhere, with the same effect",
   "reviewed": "26.1 removed GameRenderer.getDepthFar, so the force-loaded far-plane extension moved to CameraDepthFarMixin, which raises Camera.depthFar right after Camera.update stores it (before the culling projection and perspective use it) and is added by mixin_add."

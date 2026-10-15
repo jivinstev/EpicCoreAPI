@@ -2,26 +2,26 @@
  {
   "file": ".multiversion/targets/1.21.10/cf/java/net/eca/coremod/EcaTransformationService.java",
   "why": "deletes overriding method(s) initialize, onLoad: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
-  "reviewed": null
+  "reviewed": "FML 10 has no ModLauncher, and the authors' onLoad and initialize were already empty; the one ITransformationService member that did work, transformers(), is EcaClassProcessorProvider (a ClassProcessorProvider service) handing FML the same EcaCoreTransformer after touching this class's static initialiser."
  },
  {
   "file": ".multiversion/targets/1.21.10/java/net/eca/coremod/EcaCoreTransformer.java",
   "why": "deletes overriding method(s) castVote, getTargetType, labels, targets: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
-  "reviewed": null
+  "reviewed": "On FML 10's ClassProcessor these four have direct equivalents: targets() is handlesClass over the same targetNames(), castVote YES and getTargetType CLASS are implied by handlesClass on a class Type, and labels() is name() (eca:eca_core); transform is processClass over the same transformNode."
  },
  {
   "file": ".multiversion/targets/1.21.10/java/net/eca/coremod/EcaTransformationService.java",
   "why": "deletes overriding method(s) initialize, onLoad: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
-  "reviewed": null
+  "reviewed": "FML 10 has no ModLauncher, and the authors' onLoad and initialize were already empty; the one ITransformationService member that did work, transformers(), is EcaClassProcessorProvider (a ClassProcessorProvider service) handing FML the same EcaCoreTransformer after touching this class's static initialiser."
  },
  {
   "file": ".multiversion/targets/1.21.10/java/net/eca/mixin/LevelRendererMixin.java",
   "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
-  "reviewed": null
+  "reviewed": "renderClouds HEAD is CloudRendererMixin (CloudRenderer.render), renderSky TAIL is GlobalSkyboxHook (RenderLevelStageEvent.AfterSky), and the renderEntity HEAD/RETURN bracket is the extractVisibleEntities capture plus the @Redirect of EntityRenderDispatcher.submit in submitEntities, all present in the prepared 1.21.10 tree."
  },
  {
   "file": ".multiversion/targets/1.21.10/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java",
   "why": "empties 3 method bodies",
-  "reviewed": null
+  "reviewed": "The provider's only effect is its static initialiser (kept), which FML 10's ServiceLoaderUtil.loadEarlyServices still runs by instantiating every provider; the three empty bodies are FML 10's initialize(ProgramArgs) and the new setMinecraftVersion/setNeoForgeVersion, where the authors' initialize already did nothing."
  }
 ]

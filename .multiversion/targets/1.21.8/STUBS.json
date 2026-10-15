@@ -2,11 +2,11 @@
  {
   "file": ".multiversion/targets/1.21.8/java/net/eca/mixin/LevelRendererMixin.java",
   "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
-  "reviewed": null
+  "reviewed": "The two removed handlers moved where 1.21.2+ draws them: renderClouds HEAD is CloudRendererMixin on CloudRenderer.render (mixin_add from 1.21.3) and renderSky TAIL is GlobalSkyboxHook on RenderLevelStageEvent.AfterSky, both in the prepared 1.21.8 tree, while renderEntity HEAD/RETURN stay."
  },
  {
   "file": ".multiversion/targets/1.21.8/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java",
   "why": "deletes overriding method(s) getGLVersion, loadingOverlay, positionWindow, setupMinecraftWindow: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
-  "reviewed": null
+  "reviewed": "The provider's only effect is its static initialiser (kept), which FML 9 still runs because it instantiates every ImmediateWindowProvider service; the deleted getGLVersion/loadingOverlay/positionWindow/setupMinecraftWindow were inert stubs of methods FML 9's interface no longer has."
  }
 ]

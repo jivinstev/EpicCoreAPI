@@ -1,24 +1,17 @@
-Gates for `eca` at `6216945` for Minecraft 1.21.10 (full environment) -- run by CI with no model and no fixes applied:
+Gates for `eca` at `bdffbe8` for Minecraft 1.21.10 (full environment) -- run by CI with no model and no fixes applied:
 
 | check | result | detail |
 |---|---|---|
-| author's own build (`build agentJar cfJar devJar jvmtiBackendJar mrJar proAgentJar proJar`) | PASS | epic-core-api-1.1.9_cf.jar, epic-core-api-1.1.9_dev.jar, epic-core-api-1.1.9_mr.jar, epic-core-api-1.1.9_pro.jar |
+| author's own build (`build agentJar cfJar devJar jvmtiBackendJar mrJar proAgentJar proJar`) | PASS | epic-core-api-1.1.9_cf-mc1.21.10.jar, epic-core-api-1.1.9_dev-mc1.21.10.jar, epic-core-api-1.1.9_mr-mc1.21.10.jar, epic-core-api-1.1.9_pro-mc1.21.10.jar |
 | Gate A -- mixin-config integrity | PASS | 2 test(s) |
 | Data -- nothing NeoForge would silently ignore | PASS | 1.21-clean |
-| Payloads -- every StreamCodec.unit payload has equal instances | PASS | audit-unit-codecs: checked 425 file(s), 0 finding(s) |
+| Payloads -- every StreamCodec.unit payload has equal instances | PASS | audit-unit-codecs: checked 427 file(s), 0 finding(s) |
 | Data loads -- the server rejected none of the mod's data files | PASS | no rejection logged |
 | Gate B -- headless server loads the mod, GameTests | PASS | 6 required test(s) passed |
 | Gate C -- real client, `launch` | PASS | PASS — reached title screen, client loaded without crashing |
 | Gate C -- real client, `spawn` | PASS | PASS — created world, spawned eca creatures, world ticked 200 ticks with no crash; 0 entity types spawned |
 | Gate C -- real client, `battle` | PASS | PASS — battle royale ran 600 ticks with no crash (survivors: team A 0, team B 0) |
 | Gate C -- real client, `gauntlet` | PASS | PASS — gauntlet ran 10 item/block/use/effect steps with no crash |
-| Shipped jar -- the built jar boots in a real server, the mod's own logs show its subsystems ran | PASS | epic-core-api-1.1.9_mr.jar: 3 check(s) green |
+| Shipped jar -- the built jar boots in a real server, the mod's own logs show its subsystems ran | PASS | epic-core-api-1.1.9_mr-mc1.21.10.jar: 3 check(s) green |
 
 Not covered by any automated gate: gameplay by a person.
-
-## Notes
-- One earlier full run failed the shipped row: the agent's self-attach was refused (InvocationTargetException in
-  ~30 ms) and FML 10 has no coremod fallback from mods/. It passed 4 times standalone and in this run, and the
-  1.21.1 control attaches on the same JDK 21. That run shared the machine with another worker's builds, which
-  also removed a harness class from under a later Gate C run. Treated as load/concurrency, not a 1.21.10 defect;
-  a 1.21.10-only AgentLoader overlay now logs the full cause chain if it recurs.

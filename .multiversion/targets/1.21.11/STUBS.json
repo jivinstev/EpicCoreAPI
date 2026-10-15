@@ -2,6 +2,6 @@
  {
   "file": ".multiversion/targets/1.21.11/java/net/eca/mixin/LevelRendererMixin.java",
   "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
-  "reviewed": null
+  "reviewed": "renderClouds HEAD is CloudRendererMixin (CloudRenderer.render), renderSky TAIL is GlobalSkyboxHook (RenderLevelStageEvent.AfterSky), and the renderEntity HEAD/RETURN bracket is the extractVisibleEntities capture plus the @Redirect of EntityRenderDispatcher.submit in submitEntities, all present in the prepared 1.21.11 tree."
  }
 ]
