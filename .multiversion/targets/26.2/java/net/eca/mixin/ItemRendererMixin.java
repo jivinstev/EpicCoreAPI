@@ -4,6 +4,9 @@
 // one), the drawing is a custom-geometry task in the collector's order 1 -- after every order-0 task, the item's own among them.
 // The 1.21.4 notes still hold: the extension pass runs once per item (net.eca.mv.ItemStacks, filled by ItemModelResolverMixin),
 // with the layer's resolved tints.
+// 26.2 (#33): the at-once drawing is no longer a custom-geometry task (26.2 runs those while PREPARING, before any draw, and the
+// carrier put a LegacyRenderType on vanilla's feature path); it is drawn at submit, or queued after the level when submitted
+// with it (net.eca.mv.SubmitPhase).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -70,15 +73,22 @@ public abstract class ItemRendererMixin {
                 if (queued) {
                     ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
                         batch.uvTransform());
+                } else if (net.eca.mv.SubmitPhase.levelSubmit) {
+                    // 26.2 (#33): a non-world display context submitted with the level (an item display, say) is
+                    // submitted before the level's clear pass; the after-level queue draws it in the frame
+                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
+                        batch.uvTransform());
                 } else {
-                    // after the item: the collector runs order 1 behind order 0. The item went into the shared buffer source,
-                    // so end its batch first (the task's own buffer, for pass.renderType(), is never written to, so ending
-                    // the batch under it is harmless).
-                    collector.order(1).submitCustomGeometry(poseStack, pass.renderType(), (pose, ignored) -> {
-                        net.eca.mv.MultiBufferSource.main().endBatch();
-                        ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
-                            batch.uvTransform());
-                    });
+                    // A GUI / tooltip item. 26.1.2 drew this from an order-1 custom-geometry task under pass.renderType()
+                    // (after the item). On 26.2 that task's callback runs while renderAllFeatures PREPARES the storage,
+                    // before anything is drawn, and the carrier put the pass's LegacyRenderType -- whose shader has
+                    // uniform blocks of its own -- on vanilla's feature path, where prepare() warns and draws nothing. So
+                    // the pass is drawn here, through LegacyGl, at the same point in the frame the task's callback ran
+                    // (before the item is executed, so in a GUI item atlas the item still covers it: open on #33). The item may have gone into the
+                    // shared buffer source, so its batch is ended first.
+                    net.eca.mv.MultiBufferSource.main().endBatch();
+                    ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
+                        batch.uvTransform());
                 }
             });
         }

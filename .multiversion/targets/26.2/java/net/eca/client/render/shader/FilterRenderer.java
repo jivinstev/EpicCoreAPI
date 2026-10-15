@@ -81,6 +81,11 @@ public class FilterRenderer {
     private static int cosmosTerrainWidth;
     private static int cosmosTerrainHeight;
 
+    // 26.2 (#33): the depth format each copy was allocated in (the main target's, see allocateDepthCopy)
+    private static com.mojang.blaze3d.GpuFormat copyDepthFormat;
+    private static com.mojang.blaze3d.GpuFormat spotlightDepthFormat;
+    private static com.mojang.blaze3d.GpuFormat cosmosTerrainDepthFormat;
+
     public static void registerShaders(RegisterShadersEvent event) throws IOException {
         event.registerShader(
                 EcaShaderInstance.create(
@@ -321,8 +326,28 @@ public class FilterRenderer {
         clearAll();
     }
 
+    /* 26.2 (#33): the main target's depth is a SIZED texture -- D32_FLOAT (GL_DEPTH_COMPONENT32F), or the depth-stencil
+       format NeoForge picks when the target has a stencil -- where 1.21.1's was the unsized GL_DEPTH_COMPONENT these copies
+       were made with. glBlitFramebuffer copies depth only between identical depth/stencil formats and otherwise fails
+       with GL_INVALID_OPERATION, which drops the whole blit (the colour copy too), and an unsized GL_DEPTH_COMPONENT never
+       resolves to a float format. So every depth copy is allocated in the main target's own format. */
+    private static com.mojang.blaze3d.GpuFormat mainDepthFormat() {
+        com.mojang.blaze3d.textures.GpuTexture depth = Minecraft.getInstance().gameRenderer.mainRenderTarget().getDepthTexture();
+        return depth != null ? depth.getFormat() : com.mojang.blaze3d.GpuFormat.D32_FLOAT;
+    }
+
+    private static void allocateDepthCopy(int width, int height) {
+        com.mojang.blaze3d.GpuFormat format = mainDepthFormat();
+        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, com.mojang.blaze3d.opengl.GlConst.toGlInternalId(format), width, height, 0,
+                com.mojang.blaze3d.opengl.GlConst.toGlExternalId(format), com.mojang.blaze3d.opengl.GlConst.toGlType(format), null);
+    }
+
+    private static int depthAttachment() {
+        return mainDepthFormat().hasStencilAspect() ? GL30.GL_DEPTH_STENCIL_ATTACHMENT : GL30.GL_DEPTH_ATTACHMENT;
+    }
+
     private static void ensureCopyTargets(int width, int height) {
-        if (copyFbo != -1 && copyWidth == width && copyHeight == height) return;
+        if (copyFbo != -1 && copyWidth == width && copyHeight == height && copyDepthFormat == mainDepthFormat()) return;
         destroyCopyTargets();
 
         depthCopyTexture = GlStateManager._genTexture();
@@ -332,8 +357,7 @@ public class FilterRenderer {
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
+        allocateDepthCopy(width, height);
 
         colorCopyTexture = GlStateManager._genTexture();
         GlStateManager._bindTexture(colorCopyTexture);
@@ -346,13 +370,14 @@ public class FilterRenderer {
 
         copyFbo = GL30.glGenFramebuffers();
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, copyFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, depthAttachment(),
                 GL11.GL_TEXTURE_2D, depthCopyTexture, 0);
         GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
                 GL11.GL_TEXTURE_2D, colorCopyTexture, 0);
 
         copyWidth = width;
         copyHeight = height;
+        copyDepthFormat = mainDepthFormat();
     }
 
     private static void destroyCopyTargets() {
@@ -371,7 +396,7 @@ public class FilterRenderer {
     }
 
     private static void ensureSpotlightTargets(int width, int height) {
-        if (spotlightFbo != -1 && spotlightWidth == width && spotlightHeight == height) return;
+        if (spotlightFbo != -1 && spotlightWidth == width && spotlightHeight == height && spotlightDepthFormat == mainDepthFormat()) return;
         destroySpotlightTargets();
 
         spotlightDepthTexture = GlStateManager._genTexture();
@@ -381,8 +406,7 @@ public class FilterRenderer {
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
+        allocateDepthCopy(width, height);
 
         spotlightColorTexture = GlStateManager._genTexture();
         GlStateManager._bindTexture(spotlightColorTexture);
@@ -395,13 +419,14 @@ public class FilterRenderer {
 
         spotlightFbo = GL30.glGenFramebuffers();
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, depthAttachment(),
                 GL11.GL_TEXTURE_2D, spotlightDepthTexture, 0);
         GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
                 GL11.GL_TEXTURE_2D, spotlightColorTexture, 0);
 
         spotlightWidth = width;
         spotlightHeight = height;
+        spotlightDepthFormat = mainDepthFormat();
     }
 
     private static void destroySpotlightTargets() {
@@ -420,7 +445,7 @@ public class FilterRenderer {
     }
 
     private static void ensureCosmosTerrainTarget(int width, int height) {
-        if (cosmosTerrainFbo != -1 && cosmosTerrainWidth == width && cosmosTerrainHeight == height) return;
+        if (cosmosTerrainFbo != -1 && cosmosTerrainWidth == width && cosmosTerrainHeight == height && cosmosTerrainDepthFormat == mainDepthFormat()) return;
         destroyCosmosTerrainTarget();
 
         cosmosTerrainDepthTexture = GlStateManager._genTexture();
@@ -430,12 +455,11 @@ public class FilterRenderer {
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
         GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._texImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_DEPTH_COMPONENT, width, height, 0,
-                GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, null);
+        allocateDepthCopy(width, height);
 
         cosmosTerrainFbo = GL30.glGenFramebuffers();
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, cosmosTerrainFbo);
-        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
+        GL30.glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, depthAttachment(),
                 GL11.GL_TEXTURE_2D, cosmosTerrainDepthTexture, 0);
         GL11.glDrawBuffer(GL11.GL_NONE);
         GL11.glReadBuffer(GL11.GL_NONE);
@@ -443,6 +467,7 @@ public class FilterRenderer {
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
         cosmosTerrainWidth = width;
         cosmosTerrainHeight = height;
+        cosmosTerrainDepthFormat = mainDepthFormat();
     }
 
     private static void destroyCosmosTerrainTarget() {

@@ -1,4 +1,4 @@
-Gates for `eca` at `6365a96` for Minecraft 26.2 (full environment) -- run by CI with no model and no fixes applied:
+Gates for `eca` at `d72e269` for Minecraft 26.2 (full environment) -- run by CI with no model and no fixes applied:
 
 | check | result | detail |
 |---|---|---|

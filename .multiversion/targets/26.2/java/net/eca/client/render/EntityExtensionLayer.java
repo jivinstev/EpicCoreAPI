@@ -1,4 +1,9 @@
 // Fork multi-version layer: 1.21.2 version of the authors' file (render state instead of entity).
+// 26.2 (#33): 26.2 submits the level's entities before the frame graph (and its clear pass) runs, so a shader pass drawn at
+// once from a level submit was erased. With the level (net.eca.mv.SubmitPhase.levelSubmit) the pass now goes to the
+// after-level queue, as the Oculus path already did, drawn through LegacyGl with the pass shader's own uniform blocks; the
+// textured layer stays in the shared buffer source, which is drawn after the translucent features. Outside the level (a
+// GUI entity) it still draws at once.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -103,7 +108,7 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
             this.getParentModel().renderToBuffer(
                 poseStack, builder, light, overlay, 0xFFFFFFFF
             );
-            if (oculus) {
+            if (oculus || net.eca.mv.SubmitPhase.levelSubmit) {
                 ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
             } else {
                 if (bufferSource instanceof MultiBufferSource.BufferSource source) {
