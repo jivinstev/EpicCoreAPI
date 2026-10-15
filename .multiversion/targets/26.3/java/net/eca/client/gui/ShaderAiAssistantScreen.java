@@ -17,9 +17,9 @@ final class ShaderAiAssistantScreen extends Screen {
 
     private static final int PADDING = 8;
     private static final int BUTTON_HEIGHT = 20;
-    private static final int KEY_ENTER = 257;
-    private static final int MOD_SHIFT = 0x0001;
-    private static final int MOUSE_BUTTON_LEFT = 0;
+    private static final int KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int MOD_SHIFT = net.eca.mv.GLFW.GLFW_MOD_SHIFT;
+    private static final int MOUSE_BUTTON_LEFT = net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT;
     private final ShaderGeneratorScreen parent;
     private ShaderAiSession session;
     private ShaderAiSettings settings;

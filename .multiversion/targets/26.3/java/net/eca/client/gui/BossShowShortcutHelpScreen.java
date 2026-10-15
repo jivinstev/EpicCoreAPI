@@ -11,7 +11,7 @@ import java.util.List;
 final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorSessionScreen {
 
     // GLFW_KEY_ESCAPE value; GLFW is no longer exposed to this target's sources.
-    private static final int KEY_ESCAPE = 256;
+    private static final int KEY_ESCAPE = net.eca.mv.GLFW.GLFW_KEY_ESCAPE;
 
     private static final List<String> SHORTCUT_KEYS = List.of(
         "space", "arrows", "home_end", "in_out", "clipboard", "undo", "delete", "context", "input"

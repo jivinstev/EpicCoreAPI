@@ -23,9 +23,9 @@ public final class ShaderSliderWidget extends AbstractWidget {
     private static final int TRACK_BG = 0xFF2A2D31;
     private static final int TRACK_FILL = 0x883C6CFF;
     private static final int BORDER = 0xFF3C4046;
-    private static final int KEY_ENTER = 257;
-    private static final int KEY_KP_ENTER = 335;
-    private static final int KEY_ESCAPE = 256;
+    private static final int KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int KEY_KP_ENTER = net.eca.mv.GLFW.GLFW_KEY_KP_ENTER;
+    private static final int KEY_ESCAPE = net.eca.mv.GLFW.GLFW_KEY_ESCAPE;
 
     private final double min;
     private final double max;
@@ -79,7 +79,7 @@ public final class ShaderSliderWidget extends AbstractWidget {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         double mouseX = event.x();
         double mouseY = event.y();
-        if (!active || !visible || event.buttonInfo().button() != 0 || !isMouseOver(mouseX, mouseY)) {
+        if (!active || !visible || event.buttonInfo().button() != net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT || !isMouseOver(mouseX, mouseY)) {
             return false;
         }
         if (editing) {

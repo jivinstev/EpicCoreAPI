@@ -1,5 +1,7 @@
 package net.eca.client.gui;
 
+import net.eca.mv.GLFW;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.eca.client.render.shader_generator.GeneratedShaderPreview;
@@ -76,26 +78,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class ShaderGeneratorScreen extends Screen {
 
-    /* Stand-ins for the LWJGL GLFW key/modifier constants, which are not on 26.3's classpath. Values match GLFW. */
-    private static final class GLFW {
-        static final int GLFW_MOD_SHIFT = 0x0001;
-        static final int GLFW_MOD_CONTROL = 0x0002;
-        static final int GLFW_KEY_0 = 48;
-        static final int GLFW_KEY_C = 67;
-        static final int GLFW_KEY_S = 83;
-        static final int GLFW_KEY_V = 86;
-        static final int GLFW_KEY_Y = 89;
-        static final int GLFW_KEY_Z = 90;
-        static final int GLFW_KEY_ESCAPE = 256;
-        static final int GLFW_KEY_ENTER = 257;
-        static final int GLFW_KEY_DELETE = 261;
-        static final int GLFW_KEY_RIGHT = 262;
-        static final int GLFW_KEY_LEFT = 263;
-        static final int GLFW_KEY_DOWN = 264;
-        static final int GLFW_KEY_UP = 265;
-        static final int GLFW_KEY_KP_0 = 320;
-        static final int GLFW_KEY_KP_ENTER = 335;
-    }
 
     /* Stand-in for the removed LWJGL TinyFileDialogs binding, backed by Swing's file chooser. */
     private static final class TinyFileDialogs {
@@ -648,11 +630,11 @@ public final class ShaderGeneratorScreen extends Screen {
         if (editingLayerIndex >= 0
             && layerNameField != null
             && !layerNameField.isMouseOver(mx, my)
-            && button == 0) {
+            && button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             confirmLayerRename();
             return true;
         }
-        if (openDropdown >= 0 && button == 0) {
+        if (openDropdown >= 0 && button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             List<? extends GuiEventListener> kids = children();
             for (int i = dropdownFirstWidgetIndex;
                  i <= dropdownLastWidgetIndex && i < kids.size();
@@ -667,14 +649,14 @@ public final class ShaderGeneratorScreen extends Screen {
             return true;
         }
         /* 中键在视口内按下即开始平移画布 */
-        if (button == 2 && previewViewport().contains(mx, my)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_MIDDLE && previewViewport().contains(mx, my)) {
             panningCanvas = true;
             return true;
         }
-        if (button == 0 && openDropdown < 0 && beginScrollbarDrag(mx, my)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && openDropdown < 0 && beginScrollbarDrag(mx, my)) {
             return true;
         }
-        if (button == 0 && handleCanvasClick(mx, my)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && handleCanvasClick(mx, my)) {
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -685,16 +667,16 @@ public final class ShaderGeneratorScreen extends Screen {
         double mx = event.x();
         double my = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && scrollbarDragTarget != ScrollbarTarget.NONE) {
             updateScrollbarScroll(my);
             return true;
         }
-        if (button == 2 && panningCanvas) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_MIDDLE && panningCanvas) {
             canvasPanX += dragX;
             canvasPanY += dragY;
             return true;
         }
-        if (button == 0 && draggingElementIndex >= 0) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && draggingElementIndex >= 0) {
             switch (canvasDragMode) {
                 case SCALE -> scaleCanvasElement(mx, my);
                 case ROTATE -> rotateCanvasElement(mx, my);
@@ -710,15 +692,15 @@ public final class ShaderGeneratorScreen extends Screen {
         double mx = event.x();
         double my = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && scrollbarDragTarget != ScrollbarTarget.NONE) {
             scrollbarDragTarget = ScrollbarTarget.NONE;
             return true;
         }
-        if (button == 2 && panningCanvas) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_MIDDLE && panningCanvas) {
             panningCanvas = false;
             return true;
         }
-        if (button == 0 && draggingElementIndex >= 0) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && draggingElementIndex >= 0) {
             resetDragState();
             rebuildWidgets();
             return true;

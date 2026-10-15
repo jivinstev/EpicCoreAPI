@@ -1,5 +1,7 @@
 package net.eca.client.gui;
 
+import net.eca.mv.GLFW;
+
 
 import net.eca.network.BossShowSaveEditorPacket;
 import net.eca.network.NetworkHandler;
@@ -43,25 +45,6 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     private static final int CONTEXT_WIDTH = 156;
     private static final int CONTEXT_ROW_HEIGHT = 18;
 
-    // Key and modifier codes, matching the GLFW values the keyPressed handling was written against.
-    private static final class GLFW {
-        static final int GLFW_KEY_SPACE = 32;
-        static final int GLFW_KEY_DELETE = 261;
-        static final int GLFW_KEY_RIGHT = 262;
-        static final int GLFW_KEY_LEFT = 263;
-        static final int GLFW_KEY_HOME = 268;
-        static final int GLFW_KEY_END = 269;
-        static final int GLFW_KEY_ESCAPE = 256;
-        static final int GLFW_KEY_C = 67;
-        static final int GLFW_KEY_I = 73;
-        static final int GLFW_KEY_O = 79;
-        static final int GLFW_KEY_V = 86;
-        static final int GLFW_KEY_X = 88;
-        static final int GLFW_KEY_Y = 89;
-        static final int GLFW_KEY_Z = 90;
-        static final int GLFW_MOD_SHIFT = 0x0001;
-        static final int GLFW_MOD_CONTROL = 0x0002;
-    }
     private static int preferredTimelineHeight = DEFAULT_TIMELINE_HEIGHT;
     private static boolean timelineCollapsed;
 
@@ -570,14 +553,14 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         double mouseY = event.y();
         int button = event.buttonInfo().button();
         if (contextMenuOpen) {
-            if (button == 0) return handleContextMenuClick(mouseX, mouseY);
+            if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT) return handleContextMenuClick(mouseX, mouseY);
             closeContextMenu();
         }
-        if (button == 1 && timeline != null && timeline.selectAt(mouseX, mouseY)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_RIGHT && timeline != null && timeline.selectAt(mouseX, mouseY)) {
             openTimelineContextMenu((int) mouseX, (int) mouseY);
             return true;
         }
-        if (button == 0 && isOverTimelineHandle(mouseX, mouseY)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && isOverTimelineHandle(mouseX, mouseY)) {
             resizingTimeline = true;
             timelineResizeMoved = false;
             timelineResizeStartY = mouseY;
@@ -592,7 +575,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && resizingTimeline) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && resizingTimeline) {
             int delta = (int) Math.round(timelineResizeStartY - mouseY);
             if (Math.abs(delta) >= 2) timelineResizeMoved = true;
             if (timelineResizeMoved) {
@@ -609,7 +592,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && resizingTimeline) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && resizingTimeline) {
             resizingTimeline = false;
             if (!timelineResizeMoved) {
                 timelineCollapsed = !timelineCollapsed;

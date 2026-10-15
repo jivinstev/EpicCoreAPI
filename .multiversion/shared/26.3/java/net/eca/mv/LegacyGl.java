@@ -6,6 +6,9 @@ import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.renderpearl.backend.opengl.GlRenderPipeline;
+import com.mojang.renderpearl.frontend.FrontendRenderPipeline;
+import com.mojang.renderpearl.api.pipeline.ShaderSource;
+import com.mojang.blaze3d.pipeline.PipelineCache;
 import com.mojang.renderpearl.api.pipeline.BlendFunction;
 import com.mojang.renderpearl.api.pipeline.ColorTargetState;
 import com.mojang.renderpearl.api.pipeline.CompiledRenderPipeline;
@@ -85,6 +88,29 @@ import java.util.OptionalDouble;
  * </ul>
  * {@code Minecraft.getMainRenderTarget()} is {@code gameRenderer.mainRenderTarget()}, and
  * {@code RenderSystem.getModelViewMatrix()} is {@code getModelViewMatrixCopy()}.
+ *
+ * <p>26.3 copy of the 26.2 file. 26.3 moved the GPU API to {@code com.mojang.renderpearl} (the class moves are generated)
+ * and changed four things this file uses, each read from the 26.3 sources (CATALOG §V101):
+ * <ul>
+ * <li><b>No synchronous precompile.</b> {@code GpuDevice.precompilePipeline(pipeline[, source])} is gone: a pipeline is
+ * compiled with {@code compilePipeline(pipeline, ShaderSource, executor)} (a future of a {@code Pending} whose
+ * {@code finishCompile()} gives the {@code CompiledRenderPipeline}, null on failure), and {@code RenderPass.setPipeline}
+ * takes the COMPILED pipeline. Vanilla looks compiled pipelines up in {@code RenderSystem}'s current {@code PipelineCache}
+ * ({@code getCompiledPipeline}), which compiles a miss from vanilla's own shader sources -- so a pipeline built from a
+ * {@link ShaderInstance}'s sources is compiled here ({@link #compiled}) and inserted into the current cache, where
+ * {@code PreparedRenderType.drawFromBuffer} finds it. A shader reload closes the cache and everything in it; a closed
+ * pipeline is compiled again on its next use.</li>
+ * <li><b>Samplers are bind-group uniforms</b> ({@code withUniform(name, UniformType.COMBINED_IMAGE_SAMPLER)};
+ * {@code withSampler} is gone) and a pass binds one with {@code setUniform(name, view, sampler)} ({@code bindTexture} is
+ * gone). Every block or sampler a shader declares must be in the pipeline's layouts, and (strict validation, a dev
+ * client) every one a layout declares must be bound at the draw, so a pipeline declares exactly what its GLSL declares:
+ * the core shaders' blocks are listed with them ({@link Vanilla}), a {@link ShaderInstance}'s are read from its sources.</li>
+ * <li><b>No output override.</b> {@code RenderSystem.outputColor/DepthTextureOverride} and {@code RenderTarget.useDepth}
+ * are gone: a draw goes into the target's own views ({@code getDepthTextureView()} is null without depth), and a
+ * render pass refuses a pipeline whose colour format is not the attachment's, so the pipeline takes the target's
+ * colour format.</li>
+ * <li>A compiled pipeline is a {@code FrontendRenderPipeline}; the GL program is its {@code backendRenderPipeline()}'s.</li>
+ * </ul>
  *
  * <p>Not expressible on 1.21.8 and logged once: a blend equation other than ADD.
  */
@@ -207,9 +233,9 @@ public final class LegacyGl {
      *  1.21.11's NO_DEPTH_TEST (the depth test disabled). */
     public record Key(BlendFunction blend, CompareOp depth, boolean depthWrite, boolean writeColor,
                       boolean writeAlpha, boolean cull, float biasScale, float biasConstant) {
-        RenderPipeline.Builder apply(RenderPipeline.Builder b) {
+        RenderPipeline.Builder apply(RenderPipeline.Builder b, GpuFormat colorFormat) {
             int mask = (writeColor ? ColorTargetState.WRITE_COLOR : 0) | (writeAlpha ? ColorTargetState.WRITE_ALPHA : 0);
-            b.withColorTargetState(new ColorTargetState(Optional.ofNullable(blend), GpuFormat.RGBA8_UNORM, mask));
+            b.withColorTargetState(new ColorTargetState(Optional.ofNullable(blend), colorFormat, mask));
             b.withDepthStencilState(depth == null ? Optional.empty()
                     : Optional.of(new DepthStencilState(depth, depthWrite, biasScale, biasConstant)));
             b.withCull(cull);
@@ -229,13 +255,49 @@ public final class LegacyGl {
     // ---- drawing ----------------------------------------------------------------------------------------------
     /** The pipeline a draw with this shader object and state uses, compiled from the shader's own sources (null: no shader). */
     static RenderPipeline pipelineFor(Object shaderObj, VertexFormat format, PrimitiveTopology topology, Key key) {
+        return pipelineFor(shaderObj, format, topology, key, GpuFormat.RGBA8_UNORM);   // the main target's colour format
+    }
+
+    /** As above, for a target whose colour texture has {@code colorFormat}. A pipeline of the shader's own is compiled
+     *  (and put where vanilla's draw path looks it up) here, as 26.2's precompilePipeline did. */
+    static RenderPipeline pipelineFor(Object shaderObj, VertexFormat format, PrimitiveTopology topology, Key key, GpuFormat colorFormat) {
         if (shaderObj instanceof ShaderInstance own) {
-            RenderPipeline pipeline = own.pipeline(format, topology, key.withBlendIfUnset(own.blend()));
-            RenderSystem.getDevice().precompilePipeline(pipeline, own::sourceFor);
+            RenderPipeline pipeline = own.pipeline(format, topology, key.withBlendIfUnset(own.blend()), colorFormat);
+            compiled(pipeline, own);
             return pipeline;
         }
-        if (shaderObj instanceof Vanilla v) return v.pipeline(format, topology, key);
+        if (shaderObj instanceof Vanilla v) return v.pipeline(format, topology, key, colorFormat);
         return null;
+    }
+
+    private static final Map<RenderPipeline, CompiledRenderPipeline> COMPILED = new java.util.IdentityHashMap<>();
+    private static final java.util.Set<String> FAILED = new java.util.HashSet<>();
+
+    /**
+     * The compiled form of a pipeline: a vanilla shader's from RenderSystem's pipeline cache; one of a
+     * {@link ShaderInstance}'s compiled from its own sources (once; again after a reload closed it) and inserted into the
+     * current pipeline cache, so vanilla's {@code getCompiledPipeline} answers with it instead of compiling it from
+     * vanilla's sources (which do not have the shader). Null when it does not compile (logged once per pipeline).
+     */
+    static CompiledRenderPipeline compiled(RenderPipeline pipeline, ShaderInstance own) {
+        if (own == null) return RenderSystem.getCompiledPipelineNullable(pipeline);
+        CompiledRenderPipeline c = COMPILED.get(pipeline);
+        if (c == null || c.isClosed()) {
+            c = RenderSystem.getDevice().compilePipeline(pipeline, own.shaderSource(), Runnable::run).join().finishCompile();
+            if (c == null) {
+                if (FAILED.add(pipeline.getLocation().toString())) {
+                    LOGGER.error("[mv] {}: pipeline {} did not compile (the device logged why)", own.getName(), pipeline.getLocation());
+                }
+                COMPILED.remove(pipeline);
+                return null;
+            }
+            COMPILED.put(pipeline, c);
+        }
+        // the current cache (replaced on every shader reload) is only reachable through its setter, which returns it
+        PipelineCache cache = RenderSystem.setCurrentPipelineCache(null);
+        RenderSystem.setCurrentPipelineCache(cache);
+        if (cache != null) cache.insert(pipeline, c);
+        return c;
     }
 
     /** The DynamicTransforms block a draw with this shader binds: the model-view (or the mod's ModelViewMat), the colour
@@ -315,11 +377,11 @@ public final class LegacyGl {
             VertexFormat format = m.drawState().format();
             PrimitiveTopology topology = m.drawState().primitiveTopology();
             ShaderInstance own = shaderObj instanceof ShaderInstance s ? s : null;
-            RenderPipeline pipeline = pipelineFor(shaderObj, format, topology, key);
-            CompiledRenderPipeline compiled = own != null
-                    ? RenderSystem.getDevice().precompilePipeline(pipeline, own::sourceFor)
-                    : RenderSystem.getDevice().precompilePipeline(pipeline);
-            if (!compiled.isValid()) return;   // the device has logged why
+            GpuTexture colorTexture = target.getColorTexture();
+            if (colorTexture == null) return;
+            RenderPipeline pipeline = pipelineFor(shaderObj, format, topology, key, colorTexture.getFormat());
+            CompiledRenderPipeline compiled = compiled(pipeline, own);
+            if (compiled == null) return;   // logged (or, for a vanilla shader, by the device)
             Uploaded up = Uploaded.of(m);
             // 1.21.1's BufferUploader/RenderType draws called shader.apply() right before drawing and shader.clear()
             // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask, an opacity
@@ -330,16 +392,13 @@ public final class LegacyGl {
             }
             boolean override = own != null && own.COLOR_MODULATOR != null && own.COLOR_MODULATOR.touched();
             GpuBufferSlice transforms = transforms(own);
-            // as PreparedRenderType.drawFromBuffer: an output override (a post-effect pass) wins over the target's own views
-            GpuTextureView colorView = RenderSystem.outputColorTextureOverride != null
-                    ? RenderSystem.outputColorTextureOverride : target.getColorTextureView();
-            GpuTextureView depthView = target.useDepth
-                    ? (RenderSystem.outputDepthTextureOverride != null ? RenderSystem.outputDepthTextureOverride : target.getDepthTextureView())
-                    : null;
+            // 26.3 has no output override: the target's own views (no depth view when it has no depth)
+            GpuTextureView colorView = target.getColorTextureView();
+            GpuTextureView depthView = target.getDepthTextureView();
             java.util.List<GpuBuffer> temps = new java.util.ArrayList<>();
             try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
                     () -> "mv draw", colorView, Optional.empty(), depthView, OptionalDouble.empty())) {
-                pass.setPipeline(pipeline);
+                pass.setPipeline(compiled);
                 RenderSystem.bindDefaultUniforms(pass);
                 pass.setUniform("DynamicTransforms", transforms);
                 if (own != null) {
@@ -354,10 +413,11 @@ public final class LegacyGl {
                 if (scissor.enabled()) pass.enableScissor(scissor.x(), scissor.y(), scissor.width(), scissor.height());
                 for (int i = 0; i < 12; i++) {
                     Slot t = SLOTS[i];
-                    if (t != null) pass.bindTexture("Sampler" + i, t.view(), t.sampler());
+                    if (t != null) pass.setUniform("Sampler" + i, t.view(), t.sampler());
                 }
                 if (own != null) {
-                    own.bind(pass, compiled instanceof GlRenderPipeline g ? g.program().getProgramId() : -1, temps);
+                    own.bind(pass, compiled instanceof FrontendRenderPipeline f && f.backendRenderPipeline() instanceof GlRenderPipeline g
+                            ? g.program().getProgramId() : -1, temps);
                 }
                 pass.setIndexBuffer(up.indices(), up.indexType());
                 pass.drawIndexed(up.indexCount(), 1, 0, 0, 0);
@@ -393,33 +453,37 @@ public final class LegacyGl {
     // ---- vanilla core shaders (1.21.4 CoreShaders.*) ----------------------------------------------------------
     /** A vanilla core shader the mod bound directly (1.21.4's CoreShaders.X), drawn with the current state. */
     public static final class Vanilla {
-        public static final Vanilla POSITION = new Vanilla("core/position");
-        public static final Vanilla POSITION_COLOR = new Vanilla("core/position_color");
-        public static final Vanilla POSITION_TEX = new Vanilla("core/position_tex", "Sampler0");
-        public static final Vanilla POSITION_TEX_COLOR = new Vanilla("core/position_tex_color", "Sampler0");
+        // the blocks each 26.3 core shader declares (shaders/core/<name>.vsh/.fsh and their includes)
+        private static final List<String> DT_PROJ = List.of("DynamicTransforms", "Projection");
+        public static final Vanilla POSITION = new Vanilla("core/position", List.of("DynamicTransforms", "Projection", "Fog"));
+        public static final Vanilla POSITION_COLOR = new Vanilla("core/position_color", DT_PROJ);
+        public static final Vanilla POSITION_TEX = new Vanilla("core/position_tex", DT_PROJ, "Sampler0");
+        public static final Vanilla POSITION_TEX_COLOR = new Vanilla("core/position_tex_color", DT_PROJ, "Sampler0");
 
         private final String path;
+        private final List<String> blocks;
         final String[] samplers;
         private final Map<java.util.List<Object>, RenderPipeline> pipelines = new HashMap<>();
 
-        private Vanilla(String path, String... samplers) {
+        private Vanilla(String path, List<String> blocks, String... samplers) {
             this.path = path;
+            this.blocks = blocks;
             this.samplers = samplers;
         }
 
-        RenderPipeline pipeline(VertexFormat format, PrimitiveTopology topology, Key key) {
-            return pipelines.computeIfAbsent(java.util.List.of(key, format, topology), l -> {
-                BindGroupLayout.Builder layout = BindGroupLayout.builder()
-                        .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)   // ModelViewMat, ColorModulator
-                        .withUniform("Projection", UniformType.UNIFORM_BUFFER);          // ProjMat
-                for (String s : samplers) layout.withSampler(s);
+        RenderPipeline pipeline(VertexFormat format, PrimitiveTopology topology, Key key, GpuFormat colorFormat) {
+            return pipelines.computeIfAbsent(java.util.List.of(key, format, topology, colorFormat), l -> {
+                // 26.3: exactly the blocks and samplers the shader declares
+                BindGroupLayout.Builder layout = BindGroupLayout.builder();
+                for (String b : blocks) layout.withUniform(b, UniformType.UNIFORM_BUFFER);
+                for (String s : samplers) layout.withUniform(s, UniformType.COMBINED_IMAGE_SAMPLER);
                 RenderPipeline.Builder b = RenderPipeline.builder()
                         .withLocation("mv/" + path.replace('/', '_') + "_" + pipelines.size())
                         .withVertexShader(path).withFragmentShader(path)
                         .withBindGroupLayout(layout.build())
                         .withVertexBinding(0, format)
                         .withPrimitiveTopology(topology);
-                return key.apply(b).build();
+                return key.apply(b, colorFormat).build();
             });
         }
     }

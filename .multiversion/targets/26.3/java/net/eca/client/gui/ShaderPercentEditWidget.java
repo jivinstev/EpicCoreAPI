@@ -18,9 +18,9 @@ import java.util.function.DoubleSupplier;
 public final class ShaderPercentEditWidget extends AbstractWidget {
 
     private static final long DOUBLE_CLICK_MS = 450L;
-    private static final int GLFW_KEY_ESCAPE = 256;
-    private static final int GLFW_KEY_ENTER = 257;
-    private static final int GLFW_KEY_KP_ENTER = 335;
+    private static final int GLFW_KEY_ESCAPE = net.eca.mv.GLFW.GLFW_KEY_ESCAPE;
+    private static final int GLFW_KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int GLFW_KEY_KP_ENTER = net.eca.mv.GLFW.GLFW_KEY_KP_ENTER;
 
     private final DoubleSupplier valueSupplier;
     private final DoubleConsumer valueConsumer;
@@ -52,7 +52,7 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
-        if (!active || !visible || button != 0 || !isMouseOver(mouseX, mouseY)) {
+        if (!active || !visible || button != net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT || !isMouseOver(mouseX, mouseY)) {
             return false;
         }
         if (editing) {

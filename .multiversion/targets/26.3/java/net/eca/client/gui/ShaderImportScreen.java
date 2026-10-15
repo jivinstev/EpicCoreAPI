@@ -14,8 +14,8 @@ import net.minecraft.network.chat.Component;
 public final class ShaderImportScreen extends Screen {
 
     // GLFW key codes; org.lwjgl.glfw is not in the 26.3 sources.
-    private static final int KEY_ENTER = 257;
-    private static final int KEY_KP_ENTER = 335;
+    private static final int KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int KEY_KP_ENTER = net.eca.mv.GLFW.GLFW_KEY_KP_ENTER;
 
     private final ShaderGeneratorScreen parent;
     private final Candidate candidate;

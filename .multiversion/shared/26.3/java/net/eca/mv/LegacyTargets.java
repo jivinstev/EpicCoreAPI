@@ -24,6 +24,10 @@ import java.util.Arrays;
  * one vanilla's render passes made for the target's views is the one returned here), and the device that owns it and
  * its {@code DirectStateAccess} is the package-private {@code GlDevice} behind {@code GpuDevice}'s private
  * {@code backend}: both are reached reflectively. Only the OpenGL backend has FBOs; on another backend this throws.
+ *
+ * <p>26.3 copy (CATALOG §V101): {@code GpuDevice} is an interface ({@code FrontendGpuDevice} holds the {@code backend}),
+ * so the field is looked up on the device's own class; {@code RenderTarget.useDepth} is gone (a target without depth has
+ * no depth texture).
  */
 public final class LegacyTargets {
     private static GpuDevice cachedFor;
@@ -37,7 +41,7 @@ public final class LegacyTargets {
         GpuDevice device = RenderSystem.getDevice();
         if (cachedFor == device && cache != null) return;
         try {
-            Field f = GpuDevice.class.getDeclaredField("backend");
+            Field f = backendField(device.getClass());
             f.setAccessible(true);
             Object backend = f.get(device);
             Method fbc = backend.getClass().getMethod("frameBufferCache");
@@ -52,6 +56,16 @@ public final class LegacyTargets {
         }
     }
 
+    private static Field backendField(Class<?> c) throws NoSuchFieldException {
+        for (Class<?> k = c; k != null; k = k.getSuperclass()) {
+            try {
+                return k.getDeclaredField("backend");
+            } catch (NoSuchFieldException ignored) {
+            }
+        }
+        throw new NoSuchFieldException("backend in " + c.getName());
+    }
+
     /** The OpenGL device's framebuffer cache (what a {@link RawGlTexture} is created against). */
     static FrameBufferCache frameBufferCache() {
         resolve();
@@ -62,7 +76,7 @@ public final class LegacyTargets {
     public static int fbo(RenderTarget target) {
         resolve();
         GlTexture color = (GlTexture) target.getColorTexture();
-        GlTexture depth = target.useDepth ? (GlTexture) target.getDepthTexture() : null;
+        GlTexture depth = (GlTexture) target.getDepthTexture();
         return cache.getFbo(dsa, Arrays.asList(color), depth);
     }
 

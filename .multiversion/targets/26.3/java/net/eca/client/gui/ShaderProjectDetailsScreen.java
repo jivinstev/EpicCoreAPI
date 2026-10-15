@@ -12,8 +12,8 @@ import net.minecraft.network.chat.Component;
 public final class ShaderProjectDetailsScreen extends Screen {
 
     private static final int DIALOG_WIDTH = 320;
-    private static final int KEY_ENTER = 257;
-    private static final int KEY_KP_ENTER = 335;
+    private static final int KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int KEY_KP_ENTER = net.eca.mv.GLFW.GLFW_KEY_KP_ENTER;
     private final Screen parent;
     private final ProjectHandler handler;
     private final String initialModId;

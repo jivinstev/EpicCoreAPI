@@ -1,5 +1,7 @@
 package net.eca.client.gui;
 
+import net.eca.mv.GLFW;
+
 import net.eca.client.render.shader_generator.GeneratedShaderPreview;
 import net.eca.client.render.shader_generator.ShaderPreviewDependencyResolver;
 import net.eca.client.render.shader_generator.ShaderPreviewRenderer;
@@ -51,15 +53,6 @@ public final class ShaderSourceEditorScreen extends Screen {
     private static final int CONTENT_TOP = 32;
     private static final int MENU_FILE = 0;
 
-    // Local copy of the GLFW key/modifier values; org.lwjgl.glfw is not on the 26.3 compile classpath.
-    private static final class GLFW {
-        static final int GLFW_MOD_CONTROL = 0x0002;
-        static final int GLFW_KEY_ESCAPE = 256;
-        static final int GLFW_KEY_ENTER = 257;
-        static final int GLFW_KEY_Y = 89;
-        static final int GLFW_KEY_Z = 90;
-        static final int GLFW_KEY_S = 83;
-    }
     private static final int MENU_EDIT = 1;
     private static final int MENU_NAVIGATION = 2;
     private static final int MENU_PREVIEW = 3;
@@ -585,10 +578,10 @@ public final class ShaderSourceEditorScreen extends Screen {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && editor != null && !editor.isMouseOver(mouseX, mouseY)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && editor != null && !editor.isMouseOver(mouseX, mouseY)) {
             clearEditorSelection();
         }
-        if (openDropdown >= 0 && button == 0) {
+        if (openDropdown >= 0 && button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             List<? extends GuiEventListener> children = children();
             for (int index = dropdownFirstWidgetIndex;
                  index <= dropdownLastWidgetIndex && index < children.size();

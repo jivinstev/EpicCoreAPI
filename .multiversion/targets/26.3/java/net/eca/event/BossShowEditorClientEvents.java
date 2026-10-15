@@ -1,5 +1,7 @@
 package net.eca.event;
 
+import net.eca.mv.GLFW;
+
 import net.eca.client.BossShowKeyBindings;
 import net.eca.client.gui.BossShowEditorHomeScreen;
 import net.eca.client.gui.BossShowEditorScreen;
@@ -47,14 +49,6 @@ import java.util.UUID;
 @EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowEditorClientEvents {
 
-    //GLFW 键码/动作常量（26.3 目标源中已无 org.lwjgl.glfw.GLFW，此处按 GLFW 原始值本地声明）
-    private static final class GLFW {
-        static final int GLFW_PRESS = 1;
-        static final int GLFW_KEY_ESCAPE = 256;
-        static final int GLFW_KEY_ENTER = 257;
-        static final int GLFW_KEY_KP_ENTER = 335;
-        static final int GLFW_MOUSE_BUTTON_RIGHT = 1;
-    }
 
     private static Entity cachedHovered = null;
     private static int sessionHeartbeatTicks = 0;

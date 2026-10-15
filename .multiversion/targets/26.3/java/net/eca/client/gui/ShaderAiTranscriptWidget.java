@@ -25,8 +25,8 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
     private static final Pattern TABLE_SEPARATOR = Pattern.compile(":?-{3,}:?");
     private static final int CARD_GAP = 6;
     private static final int CARD_PADDING = 6;
-    private static final int GLFW_MOUSE_BUTTON_LEFT = 0;
-    private static final int GLFW_KEY_C = 67;
+    private static final int GLFW_MOUSE_BUTTON_LEFT = net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT;
+    private static final int GLFW_KEY_C = net.eca.mv.GLFW.GLFW_KEY_C;
     private final Font font;
     private List<ShaderAiSession.Message> messages = List.of();
     private List<MessageLayout> layouts = List.of();
