@@ -1,10 +1,10 @@
 # Residue: gates
 
-Stopped at **gates**: 1 gate(s) red: Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/eca.
+Stopped at **gates**: 1 gate(s) red: Gate C -- real client, `launch`: FAIL -- java.lang.NoClassDefFoundError thrown in net.eca..
 
 ## Failing gates
 
-- Gate A -- mixin-config integrity: FAIL -- Gate A failed (0 failure(s)); see /home/user/eca-layer/build/mc26.2/fork-port/gates/gateA.log -- first compile error(s): eca/test/ClientBootSmokeTest.java:128
+- Gate C -- real client, `launch`: FAIL -- java.lang.NoClassDefFoundError thrown in net.eca.event.EcaClientEventHandler.onClientLoggingOut, caught and only logged (2x); java.lang.IllegalStateException t
 
 ## To resume
 
