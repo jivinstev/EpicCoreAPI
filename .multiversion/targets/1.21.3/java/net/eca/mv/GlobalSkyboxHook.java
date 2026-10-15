@@ -1,6 +1,10 @@
-// OVERLAY-ONLY: community fork multi-version layer. The authors' LevelRendererMixin.renderSky TAIL injection,
-// moved to RenderLevelStageEvent AFTER_SKY: in 1.21.2 the sky is a frame-graph pass and NeoForge fires that
-// stage at the end of it. The drawing code is the authors', unchanged.
+// OVERLAY-ONLY: community fork multi-version layer. The authors' LevelRendererMixin.renderSky TAIL injection. In
+// 1.21.2 the sky is a frame-graph pass, and NeoForge fires AFTER_SKY at the end of it -- but that pass is not added at
+// all in a foggy dimension (the Nether) or one with no sky type, where 1.21.1's renderSky still reached its TAIL, and it
+// fires even where a custom DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So the 1.21.3
+// LevelRendererMixin overlay adds its own pass before the main pass, calls render() from it and sets passOwned, and
+// the AFTER_SKY handler stands down; a target whose LevelRendererMixin does not set passOwned keeps the AFTER_SKY
+// path. The drawing code is the authors', unchanged.
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -47,13 +51,20 @@ public final class GlobalSkyboxHook {
 
     // ==================== 全局天空盒渲染 ====================
 
+    /** Set by a LevelRendererMixin overlay that draws the skybox from its own frame pass (render()). */
+    public static volatile boolean passOwned;
+
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) {
+        if (passOwned || event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) {
             return;
         }
-        Matrix4f frustumMatrix = event.getModelViewMatrix();
-        Camera camera = event.getCamera();
+        render(event.getModelViewMatrix(), event.getCamera());
+    }
+
+    /** The authors' renderSky TAIL handler body. frustumMatrix is what the PoseStack starts from: 1.21.1 passed the view
+     *  matrix because the model-view stack did not hold it yet; a caller inside a 1.21.2 frame pass passes identity. */
+    public static void render(Matrix4f frustumMatrix, Camera camera) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || camera == null) {
             return;

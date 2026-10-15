@@ -11,3 +11,12 @@ The next target's record is the first that measures a port alone.
 - model: claude-opus-5-5 (222 req); effort: medium 222
 - tokens: output 170,775 (thinking 54,133), input 448, cache read 112,895,612, cache write 645,800 (5m 0 / 1h 645,800)
 - size: 0 Java files, 0 mixin classes; target Minecraft ?
+
+## fork-port.py run since 2026-10-15T12:45:43+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $3.15** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.16 h active, 0.16 h wall (2026-10-15T12:45Z to 2026-10-15T12:55Z)
+- model: claude-opus-5-5 (67 req); effort: medium 67
+- tokens: output 828 (thinking 38), input 140, cache read 9,545,490, cache write 243,801 (5m 242,780 / 1h 1,021)
+- size: 10 Java files, 6 mixin classes; target Minecraft 1.21.3
+- ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '333': 1, '111': 1}} -- the cost includes that work
