@@ -68,7 +68,7 @@ public final class BossShowAnchorRenderer {
         Camera cam = mc.gameRenderer.mainCamera();
         Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
-        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource buffer = net.eca.mv.MultiBufferSource.main();
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
@@ -201,7 +201,7 @@ public final class BossShowAnchorRenderer {
         pose.scale(-0.025f, -0.025f, 0.025f);
         Matrix4f mat = pose.last().pose();
         float x = -font.width(label) / 2f;
-        font.drawInBatch(label, x, 0f, 0xFFFFFFFF, true, mat, buffer,
+        net.eca.mv.Fonts.drawInBatch(font, label, x, 0f, 0xFFFFFFFF, true, mat, buffer,
             Font.DisplayMode.NORMAL, 0, 0xF000F0);
         pose.popPose();
     }

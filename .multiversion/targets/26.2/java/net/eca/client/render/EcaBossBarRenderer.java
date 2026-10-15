@@ -1,11 +1,10 @@
 package net.eca.client.render;
 
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.eca.mv.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
@@ -35,14 +34,7 @@ public final class EcaBossBarRenderer {
     public static final int VANILLA_BAR_WIDTH = 182;
     public static final int VANILLA_BAR_HEIGHT = 5;
 
-    // 26.2: Tesselator is gone; this is the shared buffer it held, reused by every immediate draw below
-    private static final ByteBufferBuilder TESSELATOR_BUFFER = new ByteBufferBuilder(786432);
-
     private EcaBossBarRenderer() {}
-
-    private static BufferBuilder begin(PrimitiveTopology topology, VertexFormat format) {
-        return new BufferBuilder(TESSELATOR_BUFFER, topology, format);
-    }
 
     /*
      * 一条血条的完整外观参数。
@@ -233,11 +225,11 @@ public final class EcaBossBarRenderer {
         net.eca.mv.LegacyGl.colorMask(false, false, false, true);
         net.eca.mv.LegacyGl.enableBlend();
         net.eca.mv.LegacyGl.blendFuncSeparate(
-                BlendFactor.ZERO, BlendFactor.ZERO,
-                BlendFactor.ZERO, BlendFactor.ZERO
+                com.mojang.blaze3d.platform.BlendFactor.ZERO, com.mojang.blaze3d.platform.BlendFactor.ZERO,
+                com.mojang.blaze3d.platform.BlendFactor.ZERO, com.mojang.blaze3d.platform.BlendFactor.ZERO
         );
         net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_COLOR);
-        BufferBuilder clearBuilder = begin(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder clearBuilder = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         clearBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 255);
@@ -248,14 +240,14 @@ public final class EcaBossBarRenderer {
         // 渲染贴图，alpha 通道直接写入帧缓冲区
         net.eca.mv.LegacyGl.enableBlend();
         net.eca.mv.LegacyGl.blendFuncSeparate(
-                BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA,
-                BlendFactor.ONE, BlendFactor.ZERO
+                com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA,
+                com.mojang.blaze3d.platform.BlendFactor.ONE, com.mojang.blaze3d.platform.BlendFactor.ZERO
         );
         net.eca.mv.LegacyGl.setShaderTexture(0, texture);
         net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_TEX);
         float texU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         float texV1 = fullHeight <= 0 ? 0.0f : (float) drawHeight / (float) fullHeight;
-        BufferBuilder texBuilder = begin(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder texBuilder = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX);
         texBuilder.addVertex(matrix, x, y + drawHeight, 0).setUv(0.0f, texV1);
         texBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setUv(texU1, texV1);
         texBuilder.addVertex(matrix, x + drawWidth, y, 0).setUv(texU1, 0.0f);
@@ -266,11 +258,11 @@ public final class EcaBossBarRenderer {
         net.eca.mv.LegacyGl.colorMask(false, false, false, true);
         net.eca.mv.LegacyGl.enableBlend();
         net.eca.mv.LegacyGl.blendFuncSeparate(
-                BlendFactor.ZERO, BlendFactor.ONE,
-                BlendFactor.ZERO, BlendFactor.SRC_ALPHA
+                com.mojang.blaze3d.platform.BlendFactor.ZERO, com.mojang.blaze3d.platform.BlendFactor.ONE,
+                com.mojang.blaze3d.platform.BlendFactor.ZERO, com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA
         );
         net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_COLOR);
-        BufferBuilder scaleBuilder = begin(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder scaleBuilder = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         scaleBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 127);
@@ -281,12 +273,12 @@ public final class EcaBossBarRenderer {
         // 渲染着色器，使用 DST_ALPHA 混合（只在贴图非透明区域显示）
         net.eca.mv.LegacyGl.setupRenderState(renderType);
         net.eca.mv.LegacyGl.blendFuncSeparate(
-                BlendFactor.DST_ALPHA, BlendFactor.ONE_MINUS_DST_ALPHA,
-                BlendFactor.ZERO, BlendFactor.ONE
+                com.mojang.blaze3d.platform.BlendFactor.DST_ALPHA, com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_DST_ALPHA,
+                com.mojang.blaze3d.platform.BlendFactor.ZERO, com.mojang.blaze3d.platform.BlendFactor.ONE
         );
         float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         int light = 0xF000F0; // LightTexture.FULL_BRIGHT
-        BufferBuilder shaderBuilder = begin(PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
+        BufferBuilder shaderBuilder = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
         shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
@@ -304,36 +296,20 @@ public final class EcaBossBarRenderer {
                 m.m20(), m.m21(), 0.0f, 1.0f);
     }
 
-    // 26.2: there is no batched immediate buffer source any more; every draw here is issued when it is built
     private static void flushBuffers() {
-    }
-
-    /** 1.21.1's {@code RenderType.draw(MeshData)}: uploads the mesh and draws it with the type's pipeline and textures. */
-    private static void drawMesh(RenderType renderType, com.mojang.blaze3d.vertex.MeshData mesh) {
-        try (com.mojang.blaze3d.vertex.MeshData m = mesh) {
-            com.mojang.blaze3d.vertex.MeshData.DrawState state = m.drawState();
-            com.mojang.blaze3d.buffers.GpuBuffer vertices = RenderSystem.getDevice().createBuffer(
-                    () -> "ECA boss bar vertices", com.mojang.blaze3d.buffers.GpuBuffer.USAGE_VERTEX, m.vertexBuffer());
-            try {
-                RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(state.primitiveTopology());
-                renderType.prepare().drawFromBuffer(vertices, indices.getBuffer(state.indexCount()), indices.type(),
-                        0, 0, state.indexCount());
-            } finally {
-                vertices.close();
-            }
-        }
+        net.eca.mv.MultiBufferSource.main().endBatch();
     }
 
     private static void drawRenderType(GuiGraphicsExtractor graphics, RenderType renderType,
                                        int x, int y, int width, int height, int fullWidth) {
         float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
         Matrix4f matrix = toMatrix4f(graphics.pose());
-        BufferBuilder consumer = begin(renderType.primitiveTopology(), renderType.format());
+        VertexConsumer consumer = net.eca.mv.MultiBufferSource.main().getBuffer(renderType);
         int light = 0xF000F0; // LightTexture.FULL_BRIGHT
         consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        drawMesh(renderType, consumer.buildOrThrow());
+        flushBuffers();
     }
 }

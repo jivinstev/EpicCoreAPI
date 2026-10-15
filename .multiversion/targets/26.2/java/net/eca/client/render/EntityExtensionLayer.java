@@ -40,7 +40,7 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int packedLight, S state,
                        float netHeadYaw, float headPitch) {
-        MultiBufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        MultiBufferSource bufferSource = net.eca.mv.MultiBufferSource.main();
         // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
         if (!(EntityOf.get(state) instanceof LivingEntity entity)) {
             return;

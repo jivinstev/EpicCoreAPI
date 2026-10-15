@@ -73,7 +73,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
             BlenderEntityBinding blender = BlenderEntityBindings.resolve(entity);
             if (BlenderEntityBindings.replacesBody(blender)
                 && BlenderEntityRenderer.render(entity, blender, poseStack,
-                    Minecraft.getInstance().gameRenderer.renderBuffers().bufferSource(), packedLight,
+                    net.eca.mv.MultiBufferSource.main(), packedLight,
                     packedOverlay, state.partialTick)) {
                 eca$blenderReplacedBody = true;
                 return;

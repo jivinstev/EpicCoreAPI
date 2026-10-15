@@ -1,11 +1,2 @@
 # 26.2: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
-# X13: proposed by a file-loop worker, kept because the error count fell
-minecraft.setScreen(	minecraft.gui.setScreen(
-# X23: proposed by a file-loop worker, kept because the error count fell
-setInputValidator	setFilter
-# X27: proposed by a file-loop worker, kept because the error count fell
-member:getMainCamera	mainCamera
-# X30: proposed by a file-loop worker, kept because the error count fell
-VertexFormat.Mode	com.mojang.blaze3d.PrimitiveTopology
-# X35: proposed by a file-loop worker, kept because the error count fell
-member:setScreen	gui.setScreen
+# The file-loop rows (VertexFormat.Mode, getMainCamera, setScreen) moved to the shared 26.2 table, as generic.

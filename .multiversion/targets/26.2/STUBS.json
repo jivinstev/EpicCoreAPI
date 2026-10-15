@@ -2,7 +2,7 @@
  {
   "file": ".multiversion/targets/26.2/java/net/eca/client/render/EcaBossBarRenderer.java",
   "why": "empties 1 method body",
-  "reviewed": null
+  "reviewed": "No longer a stub: the overlay is the 26.1.2 one with only mechanical 26.2 substitutions (BlendFactor, PrimitiveTopology, the shared Tesselator helper); flushBuffers() again ends the batch of the shared MultiBufferSource.main() that the bar's render types were written into, so every draw it made on 26.1.2 is made on 26.2, through LegacyRenderType.draw (the shader's own uniforms bound)."
  },
  {
   "file": ".multiversion/targets/26.2/java/net/eca/mixin/FogRendererMixin.java",
@@ -16,7 +16,7 @@
  },
  {
   "file": ".multiversion/targets/26.2/java/net/eca/mixin/LevelRendererMixin.java",
-  "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
-  "reviewed": "(inherited from 26.1.2) The 1.21.11 overlay retargeted to 26.1.2 signatures (renderLevel, CameraRenderState descriptor): the authors' removed renderClouds/renderEntity/renderSky handlers live on as CloudRendererMixin (CloudRenderer.render HEAD), the @Redirect of EntityRenderDispatcher.submit in submitEntities and GlobalSkyboxHook (RenderLevelStageEvent.AfterSky), all three checked present in 26.1.2."
+  "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect; removes 3 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": "(26.2) The two handlers 26.1.2 already moved stay where its review put them (CloudRendererMixin; the EntityRenderDispatcher.submit @Redirect; GlobalSkyboxHook). The third, the extractVisibleEntities HEAD frustum capture, moved with the method: 26.2 put extractVisibleEntities on LevelExtractor (same arguments), so LevelExtractorMixin (mixin_add) captures the same frustum into net.eca.mv.CullingFrustum, which the cloud-occlusion check reads as before. renderLevel's two HEAD/RETURN handlers are retargeted to its 26.2 name render(...)."
  }
 ]

@@ -64,7 +64,7 @@ public final class ShaderPreviewRenderer {
             return;
         }
 
-        // 26.2: there is no immediate buffer source left to flush before the preview draws
+        net.eca.mv.MultiBufferSource.main().endBatch();
         graphics.enableScissor(left, top, right, bottom);
         try {
             switch (target) {
@@ -150,34 +150,9 @@ public final class ShaderPreviewRenderer {
         }
     }
 
-    /** 1.21.1's {@code RenderType.draw(MeshData)}: uploads the mesh and draws it with the type's pipeline and textures. */
+    /** 1.21.1's {@code RenderType.draw(MeshData)}: the shared 26.2 helper (a legacy type draws with its own uniforms). */
     private static void draw(RenderType renderType, MeshData mesh) {
-        try (MeshData m = mesh) {
-            MeshData.DrawState state = m.drawState();
-            GpuBuffer vertices = RenderSystem.getDevice()
-                .createBuffer(() -> "ECA shader preview vertices", GpuBuffer.USAGE_VERTEX, m.vertexBuffer());
-            GpuBuffer ownIndices = null;
-            try {
-                GpuBuffer indices;
-                IndexType indexType;
-                if (m.indexBuffer() == null) {
-                    RenderSystem.AutoStorageIndexBuffer sequential = RenderSystem.getSequentialBuffer(state.primitiveTopology());
-                    indices = sequential.getBuffer(state.indexCount());
-                    indexType = sequential.type();
-                } else {
-                    ownIndices = RenderSystem.getDevice()
-                        .createBuffer(() -> "ECA shader preview indices", GpuBuffer.USAGE_INDEX, m.indexBuffer());
-                    indices = ownIndices;
-                    indexType = state.indexType();
-                }
-                renderType.prepare().drawFromBuffer(vertices, indices, indexType, 0, 0, state.indexCount());
-            } finally {
-                vertices.close();
-                if (ownIndices != null) {
-                    ownIndices.close();
-                }
-            }
-        }
+        net.eca.mv.MultiBufferSource.draw(renderType, mesh);
     }
 
     private static void blockVertex(

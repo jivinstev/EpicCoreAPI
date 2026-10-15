@@ -83,7 +83,7 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
 
     private EditBox numericBox(int x, int y, int width) {
         EditBox box = new EditBox(font, x, y, width, 20, Component.empty());
-        box.setInputValidator(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
+        net.eca.mv.EditBoxes.setFilter(box, value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         addRenderableWidget(box);
         return box;
     }

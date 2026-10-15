@@ -300,8 +300,8 @@ public class FilterRenderer {
         renderFilterPass(bossShowEffectShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width,
-                    (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width,
+                    (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set((System.nanoTime() % 1_000_000_000_000L) / 1_000_000_000.0F);
@@ -458,7 +458,7 @@ public class FilterRenderer {
 
     private static void captureCosmosTerrainDepth() {
         Minecraft mc = Minecraft.getInstance();
-        RenderTarget mainTarget = net.eca.mv.LegacyTargets.main(mc);
+        RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         int width = mainTarget.width;
         int height = mainTarget.height;
 
@@ -477,7 +477,7 @@ public class FilterRenderer {
         renderFilterPass(sketchShader, shader -> {
             if (shader.getUniform("ScreenSize") != null) {
                 Minecraft mc = Minecraft.getInstance();
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width, (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
         });
     }
@@ -491,7 +491,7 @@ public class FilterRenderer {
         renderFilterPass(matrixShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width, (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -508,7 +508,7 @@ public class FilterRenderer {
         renderFilterPass(rainShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width, (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -525,7 +525,7 @@ public class FilterRenderer {
         renderFilterPass(desertShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width, (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -542,7 +542,7 @@ public class FilterRenderer {
         renderFilterPass(snowShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width, (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -559,7 +559,7 @@ public class FilterRenderer {
         renderFilterPass(toxicShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width, (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -570,7 +570,7 @@ public class FilterRenderer {
     @SuppressWarnings("deprecation")
     private static void renderSpotlight(RenderLevelStageEvent event) {
         Minecraft mc = Minecraft.getInstance();
-        RenderTarget mainTarget = net.eca.mv.LegacyTargets.main(mc);
+        RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         int width = mainTarget.width;
         int height = mainTarget.height;
 
@@ -623,7 +623,7 @@ public class FilterRenderer {
     private static void captureSpotlightEntity(RenderLevelStageEvent event) {
         Minecraft mc = Minecraft.getInstance();
         Entity target = mc.crosshairPickEntity;
-        RenderTarget mainTarget = net.eca.mv.LegacyTargets.main(mc);
+        RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
 
         if (target == null || target.isRemoved() || mc.level == null || target.level() != mc.level) {
             int width = mainTarget.width;
@@ -652,7 +652,7 @@ public class FilterRenderer {
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
 
         float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        Vec3 camPos = net.eca.mv.LegacyGl.camera(mc).position();
+        Vec3 camPos = mc.gameRenderer.mainCamera().position();
         double x = Mth.lerp(partialTick, target.xOld, target.getX()) - camPos.x;
         double y = Mth.lerp(partialTick, target.yOld, target.getY()) - camPos.y;
         double z = Mth.lerp(partialTick, target.zOld, target.getZ()) - camPos.z;
@@ -663,16 +663,19 @@ public class FilterRenderer {
 
         net.eca.mv.LegacyGl.enableDepthTest();
         net.eca.mv.LegacyGl.depthMask(true);
-        // 1.21.10: entity rendering is extract -> submit -> feature dispatch; flush it right away into the spotlight FBO
+        // 1.21.10: entity rendering is extract -> submit -> feature dispatch; flush it right away into the spotlight FBO.
+        // 26.2: GameRenderer no longer hands out its submit storage, and renderAllFeatures takes the storage to draw, so
+        // this one entity goes through a storage of its own (as vanilla's PictureInPictureRenderer does)
+        net.minecraft.client.renderer.SubmitNodeStorage storage = new net.minecraft.client.renderer.SubmitNodeStorage();
         dispatcher.submit(dispatcher.extractEntity(target, partialTick), event.getLevelRenderState().cameraRenderState,
-                x, y, z, poseStack, net.eca.mv.LegacyGl.submitNodeStorage(mc));
-        net.eca.mv.LegacyGl.featureRenderDispatcher(mc).renderAllFeatures();
+                x, y, z, poseStack, storage);
+        mc.gameRenderer.featureRenderDispatcher().renderAllFeatures(storage);
 
         net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
     }
 
     private static void drawFullscreenQuad(int width, int height) {
-        BufferBuilder builder = net.eca.mv.LegacyGl.beginQuads(DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder builder = net.eca.mv.Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX);
         builder.addVertex((float) (0.0f), (float) (0.0f), (float) (0.0f)).setUv(0.0f, 0.0f);
         builder.addVertex((float) width, 0.0f, 0.0f).setUv(1.0f, 0.0f);
         builder.addVertex((float) width, (float) height, 0.0f).setUv(1.0f, 1.0f);
@@ -686,7 +689,7 @@ public class FilterRenderer {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        RenderTarget mainTarget = net.eca.mv.LegacyTargets.main(mc);
+        RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         int width = mainTarget.width;
         int height = mainTarget.height;
 
@@ -741,7 +744,7 @@ public class FilterRenderer {
             Minecraft mc = Minecraft.getInstance();
             net.eca.mv.LegacyGl.setShaderTexture(3, cosmosTerrainDepthTexture);
             if (shader.getUniform("ScreenSize") != null) {
-                shader.getUniform("ScreenSize").set((float) net.eca.mv.LegacyTargets.main(mc).width, (float) net.eca.mv.LegacyTargets.main(mc).height);
+                shader.getUniform("ScreenSize").set((float) mc.gameRenderer.mainRenderTarget().width, (float) mc.gameRenderer.mainRenderTarget().height);
             }
             if (shader.getUniform("Time") != null) {
                 shader.getUniform("Time").set(filterTime(time));
@@ -766,7 +769,7 @@ public class FilterRenderer {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        RenderTarget mainTarget = net.eca.mv.LegacyTargets.main(mc);
+        RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         int width = mainTarget.width;
         int height = mainTarget.height;
 
@@ -781,7 +784,7 @@ public class FilterRenderer {
 
         // 相机相对反算矩阵：AFTER_LEVEL 阶段 event.getPoseStack() 实为投影栈，不能用；
         // 视图旋转改从 RenderSystem 的逆视图旋转矩阵还原，再与投影组合求逆
-        Matrix3f viewRot = new Matrix3f().rotation(net.eca.mv.LegacyGl.camera(mc).rotation()).invert();
+        Matrix3f viewRot = new Matrix3f().rotation(mc.gameRenderer.mainCamera().rotation()).invert();
         Matrix4f view = new Matrix4f().set(viewRot);
         float eca$fov = (float) Math.toRadians(mc.options.fov().get());
         float eca$far = Math.max(128.0f, mc.options.getEffectiveRenderDistance() * 16.0f * 4.0f);
@@ -789,7 +792,7 @@ public class FilterRenderer {
         Matrix4f invViewProj = new Matrix4f(eca$proj)
                 .mul(view)
                 .invert();
-        Vec3 cam = net.eca.mv.LegacyGl.camera(mc).position();
+        Vec3 cam = mc.gameRenderer.mainCamera().position();
 
         net.eca.mv.LegacyGl.disableDepthTest();
         net.eca.mv.LegacyGl.depthMask(false);

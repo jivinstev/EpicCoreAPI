@@ -57,9 +57,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
 
-    /** This frame's culling frustum: renderLevel's local, which 1.21.9 no longer keeps in a field. Taken from extractVisibleEntities. */
-    @Unique
-    private Frustum eca$cullingFrustum;
+    // This frame's culling frustum lives in net.eca.mv.CullingFrustum (26.2: taken from LevelExtractor.extractVisibleEntities).
 
     @Unique
     private boolean eca$forceLoadedFogActive;
@@ -80,11 +78,11 @@ public abstract class LevelRendererMixin {
     // ==================== 强加载实体渲染 ====================
 
     /* 云层关闭时 renderClouds 根本不会被调用，用后复位会让标志跨帧残留，只能在帧首清零 */
-    @Inject(method = "renderLevel", at = @At("HEAD"))
+    // 26.2: LevelRenderer.renderLevel is render(...), without the ChunkSectionsToRender argument
+    @Inject(method = "render", at = @At("HEAD"))
     private void eca$resetCloudOcclusion(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline,
                                          net.minecraft.client.renderer.state.level.CameraRenderState cameraState, org.joml.Matrix4fc modelView,
-                                         GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky,
-                                         net.minecraft.client.renderer.chunk.ChunkSectionsToRender sections, CallbackInfo ci) {
+                                         GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
         net.eca.mv.CloudGate.occlude = false;
     }
 
@@ -92,11 +90,10 @@ public abstract class LevelRendererMixin {
        但 shouldRender 返回 false 时 isChunkCompiled 不会被求值，登记值没有配对的消费点，
        只能由帧边界回收。ReceivingLevelScreen 在 tick 里也调 isChunkCompiled，
        读到跨帧残留会让“正在加载地形”在地形就绪前提前关闭。 */
-    @Inject(method = "renderLevel", at = {@At("HEAD"), @At("RETURN")})
+    @Inject(method = "render", at = {@At("HEAD"), @At("RETURN")})
     private void eca$clearForceLoadedRenderContext(GraphicsResourceAllocator allocator, DeltaTracker deltaTracker, boolean renderBlockOutline,
                                                    net.minecraft.client.renderer.state.level.CameraRenderState cameraState, org.joml.Matrix4fc modelView,
-                                                   GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky,
-                                                   net.minecraft.client.renderer.chunk.ChunkSectionsToRender sections, CallbackInfo ci) {
+                                                   GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
         ForceLoadingManager.clearCurrentRenderingEntity();
     }
 
@@ -111,11 +108,7 @@ public abstract class LevelRendererMixin {
         }
     }
 
-    @Inject(method = "extractVisibleEntities", at = @At("HEAD"))
-    private void eca$captureCullingFrustum(Camera camera, Frustum frustum, DeltaTracker deltaTracker,
-                                           LevelRenderState levelRenderState, CallbackInfo ci) {
-        this.eca$cullingFrustum = frustum;
-    }
+    // 26.2: extractVisibleEntities moved to LevelExtractor; LevelExtractorMixin keeps its frustum in net.eca.mv.CullingFrustum
 
     /* 1.21.9 之前这一对是 renderEntity 的 HEAD / RETURN；现在 submitEntities 逐个把渲染状态交给
        EntityRenderDispatcher.submit，这里把同样的前后处理包在那次调用外面。
@@ -176,7 +169,7 @@ public abstract class LevelRendererMixin {
             return;
         }
 
-        Frustum frustum = this.eca$cullingFrustum;
+        Frustum frustum = net.eca.mv.CullingFrustum.current;
         if (frustum != null && !eca$isVisibleToRenderer(minecraft, entity, frustum, camX, camY, camZ)) {
             return;
         }

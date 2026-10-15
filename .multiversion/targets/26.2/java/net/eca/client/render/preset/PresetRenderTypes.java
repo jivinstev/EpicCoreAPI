@@ -17,7 +17,7 @@ public final class PresetRenderTypes {
     public static RenderType bossBar(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_boss_bar",
             DefaultVertexFormat.BLOCK,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             false,
             true,
@@ -33,7 +33,7 @@ public final class PresetRenderTypes {
     public static RenderType bossLayer(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_boss_layer",
             DefaultVertexFormat.ENTITY,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             false,
             true,
@@ -49,7 +49,7 @@ public final class PresetRenderTypes {
     public static RenderType skybox(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_skybox",
             DefaultVertexFormat.BLOCK,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -65,7 +65,7 @@ public final class PresetRenderTypes {
     public static RenderType item(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_item",
             DefaultVertexFormat.ENTITY,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -97,7 +97,7 @@ public final class PresetRenderTypes {
                                    net.eca.mv.LegacyRenderType.Shard textureState) {
         return net.eca.mv.LegacyRenderType.create(name + "_block_overlay",
             DefaultVertexFormat.BLOCK,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             2097152,
             true,
             true,
@@ -117,7 +117,7 @@ public final class PresetRenderTypes {
     static RenderType entityEffect(String name, net.eca.mv.ShaderShard shaderState, Identifier texture) {
         return net.eca.mv.LegacyRenderType.create(name + "_entity_effect",
             DefaultVertexFormat.ENTITY,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             true,

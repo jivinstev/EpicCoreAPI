@@ -75,7 +75,7 @@ public abstract class ItemRendererMixin {
                     // so end its batch first (the task's own buffer, for pass.renderType(), is never written to, so ending
                     // the batch under it is harmless).
                     collector.order(1).submitCustomGeometry(poseStack, pass.renderType(), (pose, ignored) -> {
-                        Minecraft.getInstance().gameRenderer.renderBuffers().bufferSource().endBatch();
+                        net.eca.mv.MultiBufferSource.main().endBatch();
                         ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
                             batch.uvTransform());
                     });
