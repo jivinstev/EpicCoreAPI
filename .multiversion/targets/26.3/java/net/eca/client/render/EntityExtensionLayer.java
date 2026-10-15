@@ -1,4 +1,10 @@
 // Fork multi-version layer: 1.21.2 version of the authors' file (render state instead of entity).
+// 26.3 (#33): 26.3 submits the level's entities (submitFeatures) before the frame graph and its clear pass run, so a shader
+// pass drawn at once from a level submit was erased. With the level (net.eca.mv.SubmitPhase.levelSubmit) both the textured
+// layer and the shader passes now take the after-level queue the Oculus path already used (drawn through LegacyGl after
+// LevelRenderer.render returns, outside any render pass). The textured layer no longer waits in the shared
+// MultiBufferSource during the level either: 26.3 posts AfterTranslucentFeatures inside the main render pass, where the
+// shared helper's flush cannot open a pass of its own. Outside the level (a GUI entity) it still draws at once.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -78,10 +84,11 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
 
         boolean hasTexture = texture != null;
         boolean oculus = EcaShaderInstance.isOculusShadersActive();
+        boolean deferred = oculus || net.eca.mv.SubmitPhase.levelSubmit;   // 26.3 (#33): the after-level queue
 
         if (hasTexture) {
             RenderType texturedLayer = RenderTypes.entityTranslucent(texture);
-            if (oculus) {
+            if (deferred) {
                 BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(PrimitiveTopology.QUADS, texturedLayer.format());
                 this.getParentModel().renderToBuffer(
                     poseStack, builder, light, overlay,
@@ -104,7 +111,7 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
             this.getParentModel().renderToBuffer(
                 poseStack, builder, light, overlay, 0xFFFFFFFF
             );
-            if (oculus) {
+            if (deferred) {
                 ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
             } else {
                 if (bufferSource instanceof MultiBufferSource.BufferSource source) {

@@ -51,6 +51,12 @@ public final class ShaderPreviewRenderer {
 
     private static final ItemStack PREVIEW_ITEM = createPreviewItem();
     private static final ProjectionMatrixBuffer PREVIEW_PROJECTION = new ProjectionMatrixBuffer("eca_shader_preview");
+    /** 26.3 (#33): where the forced preview geometry is collected; drawn by endBatch through the shared helper, so a
+     *  LegacyRenderType draws with its shader's own uniform blocks bound (vanilla's feature path binds only its own).
+     *  A vanilla type drawn this way goes to the main target (26.3 has no per-type output target), which is where
+     *  renderFeatures draws the rest of the preview too. */
+    private static final net.eca.mv.MultiBufferSource.BufferSource PREVIEW_BUFFERS =
+        net.eca.mv.MultiBufferSource.immediate(new ByteBufferBuilder(262144));
 
     public static void render(
         GuiGraphicsExtractor graphics,
@@ -186,7 +192,7 @@ public final class ShaderPreviewRenderer {
         List<BakedQuad> quads = net.eca.mv.ItemModels.quads(PREVIEW_ITEM, level, minecraft.player, 0);
         // 1.21.10: an item is submitted as render state and drawn by a feature dispatcher; 26.2 has no buffer source to
         // force, so the submits themselves carry the preview's render type, as the forced MultiBufferSource did
-        SubmitNodeStorage submits = new ForcedSubmits(source.item());
+        SubmitNodeStorage submits = new ForcedSubmits(source.item(), PREVIEW_BUFFERS);
         FeatureRenderDispatcher features = featureDispatcher();
         ItemStackRenderState itemState = new ItemStackRenderState();
 
@@ -206,6 +212,7 @@ public final class ShaderPreviewRenderer {
             pose.mulPose(new Matrix4f().rotateY(0.65F).rotateX(-0.35F));
             minecraft.getItemModelResolver().updateForTopItem(itemState, PREVIEW_ITEM, ItemDisplayContext.GUI, level, minecraft.player, 0);
             itemState.submit(pose, submits, 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
+            PREVIEW_BUFFERS.endBatch();
             renderFeatures(features, submits);
         } finally {
             EcaShaderInstance.clearLocalUvBounds();
@@ -230,7 +237,7 @@ public final class ShaderPreviewRenderer {
         }
 
         RenderType entityType = source.entity(minecraft.player.getSkin().body().texturePath());
-        SubmitNodeStorage submits = new ForcedSubmits(entityType);
+        SubmitNodeStorage submits = new ForcedSubmits(entityType, PREVIEW_BUFFERS);
         FeatureRenderDispatcher features = featureDispatcher();
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
         int size = Math.max(24, Math.min(right - left, bottom - top) / 3);
@@ -256,6 +263,7 @@ public final class ShaderPreviewRenderer {
             state.shadowPieces.clear();
             net.eca.mv.Mv.run(() -> {
                 dispatcher.submit(state, camera, 0.0, 0.0, 0.0, pose, submits);
+                PREVIEW_BUFFERS.endBatch();
                 renderFeatures(features, submits);
             });
         } finally {
@@ -285,24 +293,38 @@ public final class ShaderPreviewRenderer {
     /** Hands every order the forcing collection below. */
     private static final class ForcedSubmits extends SubmitNodeStorage {
         private final RenderType forced;
+        private final net.eca.mv.MultiBufferSource.BufferSource buffers;
 
-        ForcedSubmits(RenderType forced) {
+        ForcedSubmits(RenderType forced, net.eca.mv.MultiBufferSource.BufferSource buffers) {
             this.forced = forced;
+            this.buffers = buffers;
         }
 
         @Override
         public SubmitNodeCollection order(int order) {
-            return this.getSubmitsPerOrder().computeIfAbsent(order, ignored -> new ForcedCollection(this.forced, false, new net.minecraft.client.renderer.feature.phase.TranslucentFeatureRenderPhase()));
+            return this.getSubmitsPerOrder().computeIfAbsent(order, ignored -> new ForcedCollection(this.forced, this.buffers, false, new net.minecraft.client.renderer.feature.phase.TranslucentFeatureRenderPhase()));
         }
     }
 
-    /** Submits every model, block and item with the forced render type, as the forced buffer source handed it out. */
+    /**
+     * Every model, block, item and custom-geometry submit with the forced render type, as the forced buffer source handed
+     * it out on 1.21. 26.3 (#33): the forced type is the preview's LegacyRenderType, whose shader has uniform blocks of its
+     * own, and 26.3's feature path (prepareFrame -> PreparedRenderType.drawFromBuffer) binds only vanilla's. So these
+     * submits are not recorded for the dispatcher: their vertices go straight into the shared MultiBufferSource helper,
+     * posed from the submit as the model feature renderer would pose them, and the caller's endBatch draws them through
+     * LegacyRenderType's own draw. Whatever else is submitted (name tags, text, shadows) keeps its vanilla type and still
+     * goes through renderFeatures.
+     */
     private static final class ForcedCollection extends SubmitNodeCollection {
         private final RenderType forced;
+        private final net.eca.mv.MultiBufferSource.BufferSource buffers;
+        private final QuadInstance quadInstance = new QuadInstance();
 
-        ForcedCollection(RenderType forced, boolean sorted, net.minecraft.client.renderer.feature.phase.TranslucentFeatureRenderPhase phase) {
+        ForcedCollection(RenderType forced, net.eca.mv.MultiBufferSource.BufferSource buffers, boolean sorted,
+                         net.minecraft.client.renderer.feature.phase.TranslucentFeatureRenderPhase phase) {
             super(sorted, phase);
             this.forced = forced;
+            this.buffers = buffers;
         }
 
         @Override
@@ -317,7 +339,17 @@ public final class ShaderPreviewRenderer {
             UvMapping uvMapping,
             int outlineColor
         ) {
-            super.submitModel(model, state, poseStack, this.forced, lightCoords, overlayCoords, tintedColor, uvMapping, outlineColor);
+            com.mojang.blaze3d.vertex.VertexConsumer consumer = this.buffers.getBuffer(this.forced);
+            if (uvMapping != null) {
+                consumer = uvMapping.wrap(consumer);
+            }
+            model.setupAnim(state);
+            var hidden = net.neoforged.neoforge.client.ClientHooks.updateModelVisibility(model, state);
+            try {
+                model.renderToBuffer(poseStack, consumer, lightCoords, overlayCoords, tintedColor);
+            } finally {
+                net.neoforged.neoforge.client.ClientHooks.resetVisibility(hidden);
+            }
         }
 
         @Override
@@ -330,15 +362,33 @@ public final class ShaderPreviewRenderer {
             int overlayCoords,
             int outlineColor
         ) {
-            super.submitBlockModel(poseStack, this.forced, parts, tintLayers, lightCoords, overlayCoords, outlineColor);
+            com.mojang.blaze3d.vertex.VertexConsumer consumer = this.buffers.getBuffer(this.forced);
+            PoseStack.Pose pose = poseStack.last();
+            this.quadInstance.setLightCoords(lightCoords);
+            this.quadInstance.setOverlayCoords(overlayCoords);
+            for (BlockStateModelPart part : parts) {
+                for (Direction side : Direction.values()) {
+                    putTinted(pose, part.getQuads(side), tintLayers, consumer);
+                }
+                putTinted(pose, part.getQuads(null), tintLayers, consumer);
+            }
+        }
+
+        private void putTinted(PoseStack.Pose pose, List<BakedQuad> quads, int[] tintLayers,
+                               com.mojang.blaze3d.vertex.VertexConsumer consumer) {
+            for (BakedQuad quad : quads) {
+                int layer = quad.materialInfo().tintIndex();
+                this.quadInstance.setColor(layer >= 0 && layer < tintLayers.length ? tintLayers[layer] : -1);
+                consumer.putBakedQuad(pose, quad, this.quadInstance);
+            }
         }
 
         @Override
         public void submitCustomGeometry(PoseStack poseStack, RenderType ignored, SubmitNodeCollector.CustomGeometryRenderer renderer) {
-            super.submitCustomGeometry(poseStack, this.forced, renderer);
+            renderer.render(poseStack.last(), this.buffers.getBuffer(this.forced));
         }
 
-        // 26.2: an item submit names no render type (each quad carries its own), so its quads go out as custom geometry
+        // 26.2: an item submit names no render type (each quad carries its own), so its quads go into the forced type
         @Override
         public void submitItem(
             PoseStack poseStack,
@@ -350,17 +400,17 @@ public final class ShaderPreviewRenderer {
             ItemQuads quads,
             ItemStackRenderState.FoilType foilType
         ) {
-            super.submitCustomGeometry(poseStack, this.forced, (pose, buffer) -> {
-                QuadInstance instance = new QuadInstance();
-                instance.setLightCoords(lightCoords);
-                instance.setOverlayCoords(overlayCoords);
-                for (BakedQuad quad : quads.all()) {
-                    BakedQuad.MaterialInfo material = quad.materialInfo();
-                    int layer = material.tintIndex();
-                    instance.setColor(material.isTinted() && layer >= 0 && layer < tintLayers.length ? tintLayers[layer] : -1);
-                    buffer.putBakedQuad(pose, quad, instance);
-                }
-            });
+            com.mojang.blaze3d.vertex.VertexConsumer consumer = this.buffers.getBuffer(this.forced);
+            PoseStack.Pose pose = poseStack.last();
+            QuadInstance instance = new QuadInstance();
+            instance.setLightCoords(lightCoords);
+            instance.setOverlayCoords(overlayCoords);
+            for (BakedQuad quad : quads.all()) {
+                BakedQuad.MaterialInfo material = quad.materialInfo();
+                int layer = material.tintIndex();
+                instance.setColor(material.isTinted() && layer >= 0 && layer < tintLayers.length ? tintLayers[layer] : -1);
+                consumer.putBakedQuad(pose, quad, instance);
+            }
         }
     }
 

@@ -7,6 +7,13 @@
 // 1.21.8 copy of the 1.21.5 overlay: renderLevel lost its GameRenderer and LightTexture and gained a GraphicsResourceAllocator, the fog buffer, the fog colour and a render-sky flag (1.21.6 shape; shared row in shared/1.21.8/renames.tsv);
 // renderClouds/renderSky became frame-graph passes, so the cloud skip moved to CloudRendererMixin and the global
 // skybox to net.eca.mv.GlobalSkyboxHook (RenderLevelStageEvent AFTER_SKY, which runs where renderSky's TAIL did).
+// 26.3 (#32, re-derived from the 26.3 sources and javap, not inherited from 26.2): clouds are no longer a frame pass of
+// their own. They are drawn inside the main pass, by executeClassicTransparency (CustomCloudsRenderer.renderClouds, else
+// CloudRenderer.render) or, with improved transparency, by executeOit (renderCloudsOit, else CloudRenderer.renderOit); each
+// first computes "clouds on and cloud colour alpha > 0". The skip makes that test false (the alpha it reads becomes 0), so
+// both the custom renderer and vanilla's are skipped on both paths, as 1.21.1's renderClouds HEAD cancel did. The sky pass
+// lambda is lambda$addSkyPass$0 (renderSky now also takes the sky fog); the skybox gets its own pass before addMainPass,
+// whose 26.3 descriptor is (FrameGraphBuilder, PreparedFrame, GpuBufferSlice, ChunkSectionsToRender, boolean).
 package net.eca.mixin;
 
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
@@ -46,7 +53,14 @@ import net.minecraft.world.level.material.FogType;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.framegraph.FrameGraphBuilder;
+import com.mojang.blaze3d.framegraph.FramePass;
+import net.minecraft.client.renderer.LevelTargetBundle;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -99,6 +113,95 @@ public abstract class LevelRendererMixin {
     }
 
     // 1.21.2: clouds are a frame-graph pass; net.eca.mixin.CloudRendererMixin cancels them (fork layer).
+    // 26.3 (#32): CloudRendererMixin only reaches vanilla's CloudRenderer, so a dimension with its own clouds
+    // (LevelRenderState.customCloudsRenderer) was still drawn. Both execute paths decide "draw clouds" from the cloud
+    // colour's alpha (ARGB.alpha, called once in each); reading 0 there while occluding skips the custom renderer and
+    // vanilla's together. CloudGate.occlude is final by then: submitFeatures runs at the top of render(), before the
+    // frame graph that runs the main pass is even built.
+    @ModifyExpressionValue(method = "executeClassicTransparency",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/ARGB;alpha(I)I"), require = 1)
+    private int eca$skipOccludingCloudsClassic(int alpha) {
+        return net.eca.mv.CloudGate.occlude ? 0 : alpha;
+    }
+
+    @ModifyExpressionValue(method = "executeOit",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/ARGB;alpha(I)I"), require = 1)
+    private int eca$skipOccludingCloudsOit(int alpha) {
+        return net.eca.mv.CloudGate.occlude ? 0 : alpha;
+    }
+
+    // ==================== 全局天空盒渲染 (fork layer, 1.21.2+) ====================
+
+    @Shadow
+    @Final
+    private LevelTargetBundle targets;
+
+    /* true when this frame's sky pass was drawn by a custom CustomSkyboxRenderer.renderSky: 1.21.1's renderSky returned
+       before its TAIL then, so the authors' skybox was not drawn. Cleared at render() HEAD every frame. */
+    @Unique
+    private boolean eca$customSkyDrawn;
+
+    @Inject(method = "render", at = @At("HEAD"), require = 1)
+    private void eca$resetCustomSky(CallbackInfo ci) {
+        eca$customSkyDrawn = false;
+    }
+
+    @ModifyExpressionValue(method = "lambda$addSkyPass$0",
+            at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/client/CustomSkyboxRenderer;renderSky(Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/state/level/SkyRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;)Z"),
+            require = 1)
+    private boolean eca$recordCustomSky(boolean handled) {
+        eca$customSkyDrawn = handled;
+        return handled;
+    }
+
+    /* 26.3 (#32): the authors' renderSky TAIL as a frame pass of its own on the main target, added right before
+       addMainPass, so it runs after the clear and the sky pass (when render() adds one) and before the terrain. AfterSky is
+       posted only inside the sky pass, which render() skips when shouldRenderSky is false and addSkyPass skips for
+       lava / powder snow, a sky-blocking effect and Skybox NONE; it is also posted after a custom renderSky drew. */
+    @Inject(method = "render",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;addMainPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;Z)V"),
+            require = 1)
+    private void eca$addGlobalSkyboxPass(GraphicsResourceAllocator allocator, boolean renderBlockOutline,
+                                         net.minecraft.client.renderer.state.level.CameraRenderState cameraState,
+                                         GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, boolean consistentDepth,
+                                         CallbackInfo ci, @Local FrameGraphBuilder frameGraph) {
+        net.eca.mv.GlobalSkyboxHook.passOwned = true;
+        FramePass pass = frameGraph.addPass("eca_global_skybox");
+        this.targets.main = pass.readsAndWrites(this.targets.main);
+        pass.executes(() -> {
+            if (eca$customSkyDrawn) {
+                return;
+            }
+            // render() hands its terrain fog to the sky pass (as skyFog) and sets it in the main pass; set the same here.
+            RenderSystem.setShaderFog(fogBuffer);
+            // render() has pushed cameraState.viewRotationMatrix onto RenderSystem's model-view stack (popped after the
+            // graph has run), and LegacyGl / LegacyRenderType upload that stack as ModelViewMat: the PoseStack starts
+            // from identity, so the view rotation is applied once. Depth: no render pass is open here (the helpers open
+            // their own on the main target), and the clear pass has just set depth to 0.0, the far plane of 26.3's
+            // reverse-Z (Projection swaps near and far). The helpers' default compare and LegacyRenderType's LEQUAL shard
+            // are GREATER_THAN_OR_EQUAL, so every fragment inside the frustum passes against 0.0 as it passed against
+            // 1.21.1's cleared 1.0; the texture skybox writes no depth (depthMask(false)), as vanilla's sky writes none.
+            net.eca.mv.GlobalSkyboxHook.render(new Matrix4f(), Minecraft.getInstance().gameRenderer.mainCamera());
+        });
+    }
+
+    /* 26.3 (#33): render() submits every feature (submitFeatures) and prepares the frame before it builds the frame graph,
+       so a pass an extension draws at once from a level submit would land before the clear pass. net.eca.mv.SubmitPhase
+       sends those passes to the after-level queue while this flag is up. */
+    @Inject(method = "render",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;submitFeatures(Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/SubmitNodeCollector;Z)V"),
+            require = 1)
+    private void eca$enterLevelSubmit(CallbackInfo ci) {
+        net.eca.mv.SubmitPhase.levelSubmit = true;
+    }
+
+    @Inject(method = "render",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;submitFeatures(Lnet/minecraft/client/renderer/state/level/LevelRenderState;Lnet/minecraft/client/renderer/SubmitNodeCollector;Z)V",
+                     shift = At.Shift.AFTER),
+            require = 1)
+    private void eca$leaveLevelSubmit(CallbackInfo ci) {
+        net.eca.mv.SubmitPhase.levelSubmit = false;
+    }
 
     // 1.21.11: isSectionCompiled became isSectionCompiledAndVisible (compiled AND faded in); forcing true keeps the same effect.
     @Inject(method = "isSectionCompiledAndVisible", at = @At("HEAD"), cancellable = true)

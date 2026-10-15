@@ -2,6 +2,12 @@
 // net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection,
 // moved to RenderLevelStageEvent AFTER_SKY: in 1.21.2 the sky is a frame-graph pass and NeoForge fires that
 // stage at the end of it. The drawing code is the authors', unchanged.
+// 26.3 (#32): AfterSky is posted only inside the sky pass (lambda$addSkyPass$0), which 26.3's render() does not add when
+// shouldRenderSky is false and addSkyPass does not add for lava / powder snow, a sky-blocking effect or Skybox NONE (the
+// Nether), and it is posted even after a custom CustomSkyboxRenderer.renderSky drew the sky. So the 26.3
+// LevelRendererMixin overlay draws the skybox from a frame pass of its own and sets passOwned; the AfterSky handler then
+// stands down. The PoseStack starts from identity: render() has pushed the view rotation onto RenderSystem's model-view
+// stack, which the helpers upload as ModelViewMat (the old mulPose(event.getModelViewMatrix()) applied it twice).
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -49,11 +55,21 @@ public final class GlobalSkyboxHook {
 
     // ==================== 全局天空盒渲染 ====================
 
+    /** Set by the 26.3 LevelRendererMixin overlay, which draws the skybox from its own frame pass. */
+    public static volatile boolean passOwned;
+
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent.AfterSky event) {
-        Matrix4f frustumMatrix = new Matrix4f(event.getModelViewMatrix());
+        if (passOwned) {
+            return;
+        }
+        render(new Matrix4f(), Minecraft.getInstance().gameRenderer.mainCamera());
+    }
+
+    /** The authors' renderSky TAIL handler body. frustumMatrix is what the PoseStack starts from: 1.21.1 passed the view
+     *  matrix because its model-view stack did not hold it; on 26.3 the stack holds it, so callers pass identity. */
+    public static void render(Matrix4f frustumMatrix, Camera camera) {
         Minecraft minecraft = Minecraft.getInstance();
-        Camera camera = minecraft.gameRenderer.mainCamera();
         if (minecraft.level == null || camera == null) {
             return;
         }
