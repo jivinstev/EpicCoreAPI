@@ -41,4 +41,9 @@ re:\bPacketDistributor\.sendToServer\(	net.neoforged.neoforge.client.network.Cli
 # widening assignment form is rewritten: a local that keeps LocalPlayer/ClientLevel needs the client class anyway.
 re:\b((?:net\.minecraft\.world\.entity\.player\.)?Player \w+ = )(?:net\.minecraft\.client\.)?Minecraft\.getInstance\(\)\.player;	\1net.eca.mv.ClientRefs.player();
 re:\b((?:net\.minecraft\.world\.level\.)?Level \w+ = )(?:net\.minecraft\.client\.)?Minecraft\.getInstance\(\)\.level;	\1net.eca.mv.ClientRefs.level();
+# ---- 1.21.6: Screen.renderWithTooltip draws the background (renderBackground) BEFORE calling render, and Screen.render no
+# longer does. A screen whose render() opens with its own renderBackground(...) call (the 1.20.2-1.21.5 idiom) now draws
+# it twice, and for a plain Screen the second menu blur throws "IllegalStateException: Can only blur once per frame" --
+# a real-client crash the moment the screen opens. Drop the leading call; the background is still drawn once, below.
+re:(public void render\(GuiGraphics (\w+),\s*int (\w+),\s*int (\w+),\s*float (\w+)\)\s*\{[ \t]*\n?(?:[ \t]*//[^\n]*\n)*)[ \t]*(?:this\.)?renderBackground\(\2,\s*\3,\s*\4,\s*\5\);[ \t]*\n	\1
 #!strict

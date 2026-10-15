@@ -124,4 +124,14 @@ software.bernie.geckolib.animation.AnimationController	software.bernie.geckolib.
 software.bernie.geckolib.animation.AnimationState	software.bernie.geckolib.animatable.processing.AnimationTest
 # AnimationController.getControllerState() is getAnimationState() (same State enum)
 re:\.getControllerState\(\)	.getAnimationState()
+# ---- GeckoLib 5 resource ids: a model/animation id is the BARE name under geckolib/{models,animations}/ (tools/fork-port.py
+# setup copies the 4.x geo/ and animations/ files there). The 4.x file-path ids do not survive every 5.x line's lookup:
+# 5.1-5.3 strip only geckolib/... and the suffix ("geo/x.geo.json" asks for "geo/x"), and 5.4.5's animation lookup strips
+# "animations/" and ".json" but not ".animation" (asks for "x.animation") -- so write the bare name everywhere.
+re:"geo/([\w/.-]+?)\.geo\.json"	"\1"
+re:"animations/([\w/.-]+?)\.animation\.json"	"\1"
+re:"([a-z0-9_.-]+):geo/([\w/.-]+?)\.geo\.json"	"\1:\2"
+re:"([a-z0-9_.-]+):animations/([\w/.-]+?)\.animation\.json"	"\1:\2"
+re:"geo/"\s*\+\s*([\w.()]+)\s*\+\s*"\.geo\.json"	\1
+re:"animations/"\s*\+\s*([\w.()]+)\s*\+\s*"\.animation\.json"	\1
 #!strict

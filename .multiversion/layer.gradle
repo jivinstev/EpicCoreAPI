@@ -98,6 +98,13 @@ def mvAt = mvChain.reverse().collect { file(".multiversion/targets/${it}/resourc
 if (mvAt != null) {
     neoForge.accessTransformers.files.setFrom(mvAt)
 }
+// nfrt_version=<v>: the NeoForm runtime that stages this target's Minecraft. Absent (every 1.21.x target): the one the
+// authors' ModDevGradle brings. Measured: MDG 2.0.146's NFRT 2.0.27 cannot stage NeoForge 26.2.0.90 (its own access
+// transformer widens HolderSet$Named.contents() and the recompile fails on an anonymous subclass); NFRT 2.0.31 (what
+// MDG 2.0.148 brings) stages it. Setting it here keeps the authors' plugins block untouched.
+if (mvProps.getProperty('nfrt_version')) {
+    neoFormRuntime.version = mvProps.getProperty('nfrt_version')      // a project extension of ModDevGradle's, not on neoForge
+}
 
 def mvRanges = mvProps.stringPropertyNames().findAll { it.startsWith('toml.') }.collectEntries { [(it.substring(5)): mvProps.getProperty(it)] }
 // mixin_add.<config file>=<array>:<Class>,<Class>;<array>:<Class> -- mixins that exist only on this target (and
@@ -146,6 +153,17 @@ def mvSubs = mvProps.stringPropertyNames().findAll { it.startsWith('substitute.'
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         mvSubs.each { k -> substitute(module(k.substring(11))).using(module(mvProps.getProperty(k))) }
+    }
+}
+// tools/layer-deps.py: a dependency with no build for this Minecraft that the port does not require is taken off
+// the classpath (exclude.<group:module>=<reason>), and a build it found on Modrinth needs Modrinth's maven.
+mvProps.stringPropertyNames().findAll { it.startsWith('exclude.') }.each { k ->
+    def (g, m) = k.substring(8).split(':', 2)
+    configurations.configureEach { exclude group: g, module: m }
+}
+if (mvSubs.any { mvProps.getProperty(it).startsWith('maven.modrinth:') }) {
+    repositories {
+        maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
     }
 }
 // ---- jar names ---------------------------------------------------------------------------------
