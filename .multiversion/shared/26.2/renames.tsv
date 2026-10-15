@@ -21,7 +21,8 @@ re:\bcom\.mojang\.blaze3d\.vertex\.Tesselator\b	net.eca.mv.Tesselator
 # MultiBufferSource (and its immediate BufferSource) is gone (26.2 records into a StagedVertexBuffer); the shared helper is
 # the 1.21 interface drawing at endBatch. Minecraft.renderBuffers().bufferSource() is its main() instance.
 re:\bnet\.minecraft\.client\.renderer\.MultiBufferSource\b	net.eca.mv.MultiBufferSource
-re:(?:\bMinecraft\.getInstance\(\)|\b(?:this\.)?[\w$]+)(?:\.gameRenderer)?\.renderBuffers\(\)\.bufferSource\(\)	net.eca.mv.MultiBufferSource.main()
+# The WHOLE receiver chain is matched (`Minecraft.getInstance().gameRenderer.renderBuffers()`), never its tail.
+re:(?<![\w$.])(?!super\b)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*\.renderBuffers\(\)\.bufferSource\(\)	net.eca.mv.MultiBufferSource.main()
 # Minecraft.getMainRenderTarget() -> GameRenderer.mainRenderTarget(); getMainRenderTarget is a Minecraft method only.
 re:\.getMainRenderTarget\(\)	.gameRenderer.mainRenderTarget()
 # RenderSystem.getModelViewMatrix() -> getModelViewMatrixCopy() (a Matrix4f copy; the Matrix4fc view is gone).
@@ -39,8 +40,12 @@ re:\bgetMainCamera\(\)	mainCamera()
 # receivers that are a Minecraft: Minecraft.getInstance(), and the conventional minecraft / mc / client fields.
 re:(\bMinecraft\.getInstance\(\)|\b(?:this\.)?minecraft|\bmc|\bclient)\.setScreen\(	\1.gui.setScreen(
 # EditBox.setFilter(Predicate) is gone in 26.2 (NeoForge's re-added filter left EditBox); the helper restores it with a
-# responder that puts the last accepted value back.
-re:\b((?:this\.)?[\w$]+)\.setFilter\(	net.eca.mv.EditBoxes.setFilter(\1,
+# responder that puts the last accepted value back (CATALOG V100: it takes the responder slot). Only a ONE-argument call
+# that is an EditBox's: a lambda or method-reference argument, or a receiver named like a box/field/input -- never
+# AbstractTexture.setFilter(blur, mipmap). The receiver is the whole chain (`this.screen.box`), never its tail.
+re:((?<![\w$.])(?!super\b)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*)\.setFilter\(\s*(?=(?:\([\w$\s,]*\)|[\w$]+)\s*->|[\w$.]+::[\w$]+\s*\))([^\s)])	net.eca.mv.EditBoxes.setFilter(\1, \2
+re:((?<![\w$.])(?!super\b)(?![\w$.]*EditBoxes\.)(?:[\w$]+(?:\(\))?\.)*[\w$]*(?i:box|field|input|edit)[\w$]*(?:\(\))?)\.setFilter\(\s*(?=(?:[^(),;]|\((?:[^()]|\([^()]*\))*\))*\))([^\s)])	net.eca.mv.EditBoxes.setFilter(\1, \2
 # Font.drawInBatch(...) is gone (world text is a submitText node); the helper draws it into the caller's MultiBufferSource.
-re:\b((?:this\.)?[\w$]+)\.drawInBatch\(	net.eca.mv.Fonts.drawInBatch(\1,
+# the receiver is the whole chain: `Minecraft.getInstance().font.drawInBatch(` -> `Fonts.drawInBatch(Minecraft.getInstance().font, `
+re:((?<![\w$.])(?!super\b)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*)\.drawInBatch\(\s*([^\s)])	net.eca.mv.Fonts.drawInBatch(\1, \2
 #!strict

@@ -108,7 +108,8 @@ re:\b(quad|bakedQuad|q)\.getTintIndex\(\)	\1.tintIndex()
 re:\b(quad|bakedQuad|q)\.isShade\(\)	\1.shade()
 re:\b(quad|bakedQuad|q)\.getLightEmission\(\)	\1.lightEmission()
 # ---- RenderTarget is textures, not a framebuffer: frameBufferId / bindWrite(viewport) ask the backend for the FBO
-re:([\w.]+(?:\(\))?)\.frameBufferId\b	net.eca.mv.LegacyTargets.fbo(\1)
+# the receiver is the whole chain (`Minecraft.getInstance().getMainRenderTarget()`), never its tail
+re:((?<![\w$.])(?!super\.frameBufferId\b)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*)\.frameBufferId\b	net.eca.mv.LegacyTargets.fbo(\1)
 re:([\w.]+(?:\(\))?)\.bindWrite\(\s*(true|false)\s*\)	net.eca.mv.LegacyTargets.bindWrite(\1, \2)
 # GlStateManager no longer tracks the clear colour; the GL call is the same
 re:\bGlStateManager\._clearColor\(	org.lwjgl.opengl.GL11.glClearColor(

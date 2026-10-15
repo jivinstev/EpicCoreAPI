@@ -19,4 +19,10 @@ re:\.mulPose\(\s*(?=new\s+(?:org\.joml\.)?Quaternionf\()	.rotate(
 re:\bnet\.minecraft\.util\.AbortableIterationConsumer\.Continuation\b	net.minecraft.util.Continuation
 re:\bAbortableIterationConsumer\.Continuation\b	net.minecraft.util.Continuation
 re:Lnet/minecraft/util/AbortableIterationConsumer\$Continuation;	Lnet/minecraft/util/Continuation;
+# ---- NeoForge 26.3 deleted the legacy net.neoforged.neoforge.energy package (IEnergyStorage, EnergyStorage, the
+# EnergyHandler adapter; deprecated for removal since 1.21.9) -- CATALOG §V105. The helpers are the same interface, the
+# same IEnergyStorage.of(EnergyHandler) adapter and the same reference EnergyStorage. ComponentEnergyStorage and
+# EmptyEnergyStorage have no helper: port them to ItemAccessEnergyHandler / EmptyEnergyHandler.
+net.neoforged.neoforge.energy.IEnergyStorage	net.eca.mv.IEnergyStorage
+net.neoforged.neoforge.energy.EnergyStorage	net.eca.mv.EnergyStorage
 #!strict

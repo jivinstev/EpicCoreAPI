@@ -1,6 +1,7 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 package net.eca.mv;
 
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
@@ -8,6 +9,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+
+import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -18,6 +21,9 @@ import java.util.List;
  *  old model answered for an ordinary item. Null when the item has no baked geometry.
  *  26.1.2 copy: BakedQuad moved to net.minecraft.client.resources.model.geometry. */
 public final class ItemModels {
+    // before the Field lookups below: field() logs through it during class initialisation
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static boolean warned;
     private static final Field LAYERS = field(ItemStackRenderState.class, "layers");
 
     private ItemModels() {
@@ -34,6 +40,7 @@ public final class ItemModels {
             Object[] layers = (Object[]) LAYERS.get(state);
             return layers.length == 0 ? null : ((ItemStackRenderState.LayerRenderState) layers[0]).prepareQuadList();
         } catch (ReflectiveOperationException e) {
+            warnOnce("reading the item layers", e);
             return null;
         }
     }
@@ -44,7 +51,16 @@ public final class ItemModels {
             f.setAccessible(true);
             return f;
         } catch (ReflectiveOperationException | RuntimeException e) {
+            warnOnce("looking up " + owner.getSimpleName() + "." + name, e);
             return null;
+        }
+    }
+
+    /** A failed reflective step makes every quads() null (the caller's item draw is skipped): say so once. */
+    private static void warnOnce(String what, Exception e) {
+        if (!warned) {
+            warned = true;
+            LOGGER.warn("ItemModels: {} failed ({}); item quads resolve to null", what, e.toString());
         }
     }
 }

@@ -157,10 +157,16 @@ configurations.configureEach {
 }
 // tools/layer-deps.py: a dependency with no build for this Minecraft that the port does not require is taken off
 // the classpath (exclude.<group:module>=<reason>), and a build it found on Modrinth needs Modrinth's maven.
+// BEGIN-EXCLUDES (tools/test-port-tools.sh runs this block)
 mvProps.stringPropertyNames().findAll { it.startsWith('exclude.') }.each { k ->
-    def (g, m) = k.substring(8).split(':', 2)
-    configurations.configureEach { exclude group: g, module: m }
+    def ga = k.substring(8).split(':', 2)
+    // a key with no ':' (an unescaped one is cut there by java.util.Properties) would exclude a WHOLE group
+    if (ga.length != 2 || !ga[0] || !ga[1]) {
+        throw new GradleException("target.properties: ${k} is not exclude.<group>\\:<module> (escape the ':')")
+    }
+    configurations.configureEach { exclude group: ga[0], module: ga[1] }
 }
+// END-EXCLUDES
 if (mvSubs.any { mvProps.getProperty(it).startsWith('maven.modrinth:') }) {
     repositories {
         maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }

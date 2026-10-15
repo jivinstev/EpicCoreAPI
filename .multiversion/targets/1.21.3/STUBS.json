@@ -1,0 +1,7 @@
+[
+ {
+  "file": ".multiversion/targets/1.21.3/java/net/eca/mixin/LevelRendererMixin.java",
+  "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": null
+ }
+]

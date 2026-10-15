@@ -45,5 +45,7 @@ re:\b((?:net\.minecraft\.world\.level\.)?Level \w+ = )(?:net\.minecraft\.client\
 # longer does. A screen whose render() opens with its own renderBackground(...) call (the 1.20.2-1.21.5 idiom) now draws
 # it twice, and for a plain Screen the second menu blur throws "IllegalStateException: Can only blur once per frame" --
 # a real-client crash the moment the screen opens. Drop the leading call; the background is still drawn once, below.
-re:(public void render\(GuiGraphics (\w+),\s*int (\w+),\s*int (\w+),\s*float (\w+)\)\s*\{[ \t]*\n?(?:[ \t]*//[^\n]*\n)*)[ \t]*(?:this\.)?renderBackground\(\2,\s*\3,\s*\4,\s*\5\);[ \t]*\n	\1
+# Only in a Screen: the match starts at an `extends ...Screen` and takes the first render(GuiGraphics, ...) after it, so a
+# widget or other Renderable's render() in a file with no Screen class is left alone.
+re:(\bextends\s+[\w$.]*Screen\b(?:(?!public void render\(GuiGraphics\b)[\s\S])*?public void render\(GuiGraphics (\w+),\s*int (\w+),\s*int (\w+),\s*float (\w+)\)\s*\{[ \t]*\n?(?:[ \t]*//[^\n]*\n)*)[ \t]*(?:this\.)?renderBackground\(\2,\s*\3,\s*\4,\s*\5\);[ \t]*\n	\1
 #!strict

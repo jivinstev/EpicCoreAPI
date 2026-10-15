@@ -38,7 +38,8 @@ re:RenderSystem\.setShader\(GameRenderer::getPositionShader\)	RenderSystem.setSh
 re:GlStateManager\._clear\(([^;]*), false\);	GlStateManager._clear(\1);
 re:\bLevelRenderer\.renderLineBox\(	net.minecraft.client.renderer.ShapeRenderer.renderLineBox(
 re:RenderSystem\.runAsFancy\(	net.eca.mv.Mv.run(
-re:\b(?!super\b|this\b)(\w+)\.getBoundingBoxForCulling\(\)	net.eca.mv.Mv.cullingBox(\1)
+# the receiver is the whole chain (`this.entity`, `a.b()`), never its tail; a bare super./this. receiver is left alone
+re:((?<![\w$.])(?!(?:super|this)\.getBoundingBoxForCulling\b)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*)\.getBoundingBoxForCulling\(\)	net.eca.mv.Mv.cullingBox(\1)
 re:\(EntityRenderer<\? super (\w+)>	(EntityRenderer<? super \1, ?>
 re:EntityRenderer<\? super (\w+)> (\w+) =	EntityRenderer<? super \1, ?> \2 =
 # 1.21.2 dropped the yaw argument of EntityRenderDispatcher.render(entity, x, y, z, yaw, partialTick, ...)
