@@ -1,4 +1,10 @@
 // Fork multi-version layer: 1.21.2 version of the authors' file (render state instead of entity).
+// 26.2 (#33): 26.2 submits the level's entities before the frame graph (and its clear pass) runs, so a shader pass drawn at
+// once from a level submit was erased. With the level (net.eca.mv.SubmitPhase.levelSubmit) the pass now goes to the
+// level's queue, as the Oculus path already did, drawn through LegacyGl with the pass shader's own uniform blocks inside the
+// level's main pass at AfterTranslucentFeatures (#37; ShaderMaskRenderQueue.InLevelPass); the
+// textured layer stays in the shared buffer source, which is drawn after the translucent features. Outside the level (a
+// GUI entity) it still draws at once.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -12,7 +18,7 @@ import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.eca.blender.client.entity.BlenderEntityBindings;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.eca.mv.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -40,7 +46,7 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int packedLight, S state,
                        float netHeadYaw, float headPitch) {
-        MultiBufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        MultiBufferSource bufferSource = net.eca.mv.MultiBufferSource.main();
         // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
         if (!(EntityOf.get(state) instanceof LivingEntity entity)) {
             return;
@@ -81,7 +87,7 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         if (hasTexture) {
             RenderType texturedLayer = RenderTypes.entityTranslucent(texture);
             if (oculus) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
+                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, texturedLayer.format());
                 this.getParentModel().renderToBuffer(
                     poseStack, builder, light, overlay,
                     ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
@@ -99,11 +105,11 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
 
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
+            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, pass.renderType().format());
             this.getParentModel().renderToBuffer(
                 poseStack, builder, light, overlay, 0xFFFFFFFF
             );
-            if (oculus) {
+            if (oculus || net.eca.mv.SubmitPhase.levelSubmit) {
                 ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
             } else {
                 if (bufferSource instanceof MultiBufferSource.BufferSource source) {

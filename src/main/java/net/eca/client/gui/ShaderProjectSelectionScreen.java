@@ -48,7 +48,7 @@ public final class ShaderProjectSelectionScreen extends Screen {
                 Component.literal(reference.id()),
                 button -> {
                     selectionHandler.accept(reference);
-                    minecraft.setScreen(parent);
+                    minecraft.gui.setScreen(parent);
                 }
             ).bounds(left, y, LIST_WIDTH, 20).build());
         }
@@ -87,6 +87,6 @@ public final class ShaderProjectSelectionScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 }

@@ -10,7 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.object.skull.SkullModelBase;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.eca.mv.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
@@ -65,10 +65,10 @@ public final class BossShowAnchorRenderer {
         double az = BossShowEditorState.getAnchorZ();
         float anchorYaw = BossShowEditorState.getAnchorYawDeg();
 
-        Camera cam = mc.gameRenderer.getMainCamera();
+        Camera cam = mc.gameRenderer.mainCamera();
         Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
-        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+        MultiBufferSource.BufferSource buffer = net.eca.mv.MultiBufferSource.main();
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
@@ -80,14 +80,14 @@ public final class BossShowAnchorRenderer {
             ax - BEAM_HALF, ay, az - BEAM_HALF,
             ax + BEAM_HALF, ay + BEAM_HEIGHT, az + BEAM_HALF
         );
-        net.minecraft.client.renderer.ShapeRenderer.renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(beam), 0.0, 0.0, 0.0,
+        renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(beam), 0.0, 0.0, 0.0,
             net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f);
 
         AABB base = new AABB(
             ax - BASE_HALF, ay, az - BASE_HALF,
             ax + BASE_HALF, ay + 0.02, az + BASE_HALF
         );
-        net.minecraft.client.renderer.ShapeRenderer.renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(base), 0.0, 0.0, 0.0,
+        renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(base), 0.0, 0.0, 0.0,
             net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f);
 
         //摄像机路径折线
@@ -117,6 +117,37 @@ public final class BossShowAnchorRenderer {
         }
 
         pose.popPose();
+    }
+
+    // 26.2: no shape-outline helper is left to call, so each edge VoxelShape.forAllEdges reports becomes one line
+    // segment here: both ends offset by (x, y, z), the segment's unit direction as the line normal.
+    private static void renderShape(PoseStack pose, VertexConsumer vc, net.minecraft.world.phys.shapes.VoxelShape shape,
+                                    double x, double y, double z, int color, float lineWidth) {
+        final PoseStack.Pose entry = pose.last();
+        shape.forAllEdges((fromX, fromY, fromZ, toX, toY, toZ) -> lineSegment(vc, entry,
+                (float) (x + fromX), (float) (y + fromY), (float) (z + fromZ),
+                (float) (x + toX), (float) (y + toY), (float) (z + toZ), color, lineWidth));
+    }
+
+    private static void lineSegment(VertexConsumer vc, PoseStack.Pose entry,
+                                    float sx, float sy, float sz, float ex, float ey, float ez, int argb, float width) {
+        float dirX = ex - sx;
+        float dirY = ey - sy;
+        float dirZ = ez - sz;
+        float length = (float) Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+        if (length < 1.0e-6f) {
+            return;   // a zero-length edge has no direction to give the line
+        }
+        dirX /= length;
+        dirY /= length;
+        dirZ /= length;
+        for (int end = 0; end < 2; end++) {
+            boolean start = end == 0;
+            vc.addVertex(entry, start ? sx : ex, start ? sy : ey, start ? sz : ez)
+                    .setColor(argb)
+                    .setNormal(entry, dirX, dirY, dirZ)
+                    .setLineWidth(width);
+        }
     }
 
     private static void renderCameraPath(PoseStack pose, VertexConsumer vc,
@@ -188,7 +219,7 @@ public final class BossShowAnchorRenderer {
         pose.scale(-0.025f, -0.025f, 0.025f);
         Matrix4f mat = pose.last().pose();
         float x = -font.width(label) / 2f;
-        font.drawInBatch(label, x, 0f, 0xFFFFFFFF, true, mat, buffer,
+        net.eca.mv.Fonts.drawInBatch(font, label, x, 0f, 0xFFFFFFFF, true, mat, buffer,
             Font.DisplayMode.NORMAL, 0, 0xF000F0);
         pose.popPose();
     }

@@ -6,6 +6,7 @@ import net.eca.util.bossshow.Curve;
 import net.eca.util.filter.FilterType;
 import net.eca.util.shader_generator.ShaderOutputEffectDefinition;
 import net.eca.util.shader_generator.ShaderOutputEffectRegistry;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -82,7 +83,7 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
 
     private EditBox numericBox(int x, int y, int width) {
         EditBox box = new EditBox(font, x, y, width, 20, Component.empty());
-        box.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
+        net.eca.mv.EditBoxes.setFilter(box, value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         addRenderableWidget(box);
         return box;
     }
@@ -143,7 +144,7 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
     private void saveAndClose() {
         storeCurrent();
         BossShowEditorState.replaceEffectsAtTick(tick, cues);
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     private void load(BossShowEffectCue cue) {
@@ -238,6 +239,6 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 }

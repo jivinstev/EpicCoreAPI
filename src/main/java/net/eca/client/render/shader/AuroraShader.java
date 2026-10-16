@@ -4,6 +4,7 @@ import net.eca.mv.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
 import net.eca.mv.ShaderInstance;
 import net.minecraft.resources.Identifier;
 import net.eca.mv.RegisterShadersEvent;
@@ -52,9 +53,10 @@ public class AuroraShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().yRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().xRot());
+                Entity camera = mc.getCameraEntity();
+                if (mc.gameRenderer != null && camera != null) {
+                    float yaw = (float) Math.toRadians(camera.getYRot());
+                    float pitch = (float) Math.toRadians(camera.getXRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

@@ -124,7 +124,7 @@ public final class FrustumGuard {
     }
 
     private static void reportCamera(Minecraft minecraft) {
-        Camera camera = minecraft.gameRenderer == null ? null : minecraft.gameRenderer.getMainCamera();
+        Camera camera = minecraft.gameRenderer == null ? null : minecraft.gameRenderer.mainCamera();
         if (camera == null) {
             return;
         }

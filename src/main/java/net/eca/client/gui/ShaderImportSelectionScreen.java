@@ -75,6 +75,6 @@ public final class ShaderImportSelectionScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        net.minecraft.client.Minecraft.getInstance().gui.setScreen(parent);
     }
 }

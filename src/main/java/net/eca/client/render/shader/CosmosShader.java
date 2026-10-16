@@ -52,9 +52,10 @@ public class CosmosShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().yRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().xRot());
+                var camera = mc.getCameraEntity();
+                if (mc.gameRenderer != null && camera != null) {
+                    float yaw = (float) Math.toRadians(camera.getYRot());
+                    float pitch = (float) Math.toRadians(camera.getXRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

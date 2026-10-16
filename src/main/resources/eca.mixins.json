@@ -27,7 +27,10 @@
     "ItemModelResolverMixin",
     "ItemStackRenderStateAccessor",
     "ItemStackRenderStateLayersAccessor",
-    "CameraDepthFarMixin"
+    "CameraDepthFarMixin",
+    "LevelExtractorMixin",
+    "GuiItemAtlasFeaturesMixin",
+    "PictureInPictureFeaturesMixin"
   ],
   "mixins": [
     "NetworkCodecMixin",

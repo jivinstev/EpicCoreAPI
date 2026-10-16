@@ -4,6 +4,7 @@ import net.eca.util.shader_generator.ai.ShaderAiToolRegistry;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
 import net.eca.util.shader_generator.mcp.ShaderMcpSessionInfo;
 import net.eca.util.shader_generator.mcp.ShaderMcpSettings;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -62,7 +63,6 @@ final class ShaderMcpScreen extends Screen {
             Component.translatable("gui.eca.shader_generator.mcp.port")
         );
         portField.setMaxLength(5);
-        portField.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         portField.setValue(Integer.toString(settings.port()));
         portField.setEditable(!projectScreen.isMcpRunning());
         addRenderableWidget(portField);
@@ -248,7 +248,7 @@ final class ShaderMcpScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(returnScreen);
+        Minecraft.getInstance().gui.setScreen(returnScreen);
     }
 
     @Override

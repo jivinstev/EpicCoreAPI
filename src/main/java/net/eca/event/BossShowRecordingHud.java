@@ -25,7 +25,7 @@ public final class BossShowRecordingHud {
     public static void onRenderGui(RenderGuiEvent.Post event) {
         if (BossShowEditorState.isPoseCaptureArmed()) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.screen != null) return;
+            if (mc.gui.screen() != null) return;
             int w = mc.getWindow().getGuiScaledWidth();
             int h = mc.getWindow().getGuiScaledHeight();
             GuiGraphicsExtractor g = event.getGuiGraphics();
@@ -36,7 +36,7 @@ public final class BossShowRecordingHud {
         }
         if (!BossShowEditorState.isRecordingMode()) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null || mc.level == null) return;
+        if (mc.gui.screen() != null || mc.level == null) return;
 
         GuiGraphicsExtractor g = event.getGuiGraphics();
         Font font = mc.font;

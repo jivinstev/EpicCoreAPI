@@ -28,7 +28,7 @@ final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorS
     }
 
     private void closePanel() {
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.gui.setScreen(new BossShowEditorScreen());
     }
 
     @Override

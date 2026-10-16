@@ -145,7 +145,7 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     private void openSettings() {
-        minecraft.setScreen(new ShaderAiSettingsScreen(this, settings));
+        minecraft.gui.setScreen(new ShaderAiSettingsScreen(this, settings));
     }
 
     void settingsSaved(ShaderAiSettings savedSettings) {
@@ -172,7 +172,7 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     private void openMcp() {
-        minecraft.setScreen(new ShaderMcpScreen(this, parent));
+        minecraft.gui.setScreen(new ShaderMcpScreen(this, parent));
     }
 
     @Override
@@ -220,11 +220,11 @@ final class ShaderAiAssistantScreen extends Screen {
     @Override
     public void onClose() {
         parent.returnFromAiAssistant();
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     ShaderAiToolResult capturePreview() {
-        if (minecraft.screen != this) return parent.captureToolPreview();
+        if (minecraft.gui.screen() != this) return parent.captureToolPreview();
         return ShaderPreviewCapture.capture(
             previewLeft, previewTop, previewRight, previewBottom
         );

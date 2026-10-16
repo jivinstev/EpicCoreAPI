@@ -22,7 +22,10 @@
     "ItemRendererMixin",
     "EntityFactionGlowMixin",
     "ItemStackClientMixin",
-    "FallingBlockRendererMixin"
+    "FallingBlockRendererMixin",
+    "LevelExtractorMixin",
+    "GuiItemAtlasFeaturesMixin",
+    "PictureInPictureFeaturesMixin"
   ],
   "mixins": [
     "ChunkMapMixin",

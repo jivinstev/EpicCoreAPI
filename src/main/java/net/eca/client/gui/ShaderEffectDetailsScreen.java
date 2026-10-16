@@ -5,6 +5,7 @@ import net.eca.util.shader_generator.ShaderModuleDefinition;
 import net.eca.util.shader_generator.ShaderModuleInstance;
 import net.eca.util.shader_generator.ShaderProjectCodec;
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -127,7 +128,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
     }
 
     private void openColorPicker() {
-        minecraft.setScreen(new ShaderColorPickerScreen(
+        Minecraft.getInstance().gui.setScreen(new ShaderColorPickerScreen(
             this,
             effect.value("color_r"),
             effect.value("color_g"),
@@ -170,7 +171,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
             return;
         }
         confirmHandler.accept(effect);
-        minecraft.setScreen(returnScreen);
+        Minecraft.getInstance().gui.setScreen(returnScreen);
     }
 
     @Override
@@ -220,7 +221,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     private int colorArgb() {

@@ -1,6 +1,7 @@
 package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderProjectCodec;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -76,7 +77,7 @@ public final class ShaderProjectDetailsScreen extends Screen {
             error = Component.translatable("gui.eca.shader_generator.project.operation_failed");
             return;
         }
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override
@@ -114,7 +115,7 @@ public final class ShaderProjectDetailsScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @FunctionalInterface

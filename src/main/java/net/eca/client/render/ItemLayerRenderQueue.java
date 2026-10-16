@@ -18,7 +18,7 @@ public final class ItemLayerRenderQueue {
     private ItemLayerRenderQueue() {
     }
 
-    public static BufferBuilder acquireBuilder(VertexFormat.Mode mode, VertexFormat format) {
+    public static BufferBuilder acquireBuilder(com.mojang.blaze3d.PrimitiveTopology mode, VertexFormat format) {
         return ShaderMaskRenderQueue.acquireBuilder(mode, format);
     }
 

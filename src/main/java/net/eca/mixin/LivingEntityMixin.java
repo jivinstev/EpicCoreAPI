@@ -1,4 +1,5 @@
 // Fork multi-version layer, 1.21.8: addAdditionalSaveData/readAdditionalSaveData take a ValueOutput/ValueInput (CATALOG §V31 shape, 1.21.6 on); same keys and tag types on disk.
+// Fork multi-version layer, 26.2: readAdditionalSaveData can run on a client entity with no id yet (a spawner's display entity); the invulnerable fast path skips it then (CATALOG §V104).
 package net.eca.mixin;
 
 import net.eca.api.EcaAPI;
@@ -151,7 +152,7 @@ LivingEntityMixin {
             entity.getEntityData().set(EntityUtil.INVULNERABLE, invulnerable);
             if (invulnerable) {
                 InvulnerableEntityManager.addInvulnerable(entity);
-                EcaAPI.restoreInvulnerableFastPath(entity.getId());
+                if (net.eca.mv.EntityIds.assigned(entity)) EcaAPI.restoreInvulnerableFastPath(entity.getId());
             } else {
                 InvulnerableEntityManager.removeInvulnerable(entity);
             }

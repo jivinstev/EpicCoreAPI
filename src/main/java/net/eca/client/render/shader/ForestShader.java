@@ -52,9 +52,10 @@ public class ForestShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().yRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().xRot());
+                var cameraEntity = mc.getCameraEntity();
+                if (cameraEntity != null) {
+                    float yaw = (float) Math.toRadians(cameraEntity.getYRot());
+                    float pitch = (float) Math.toRadians(cameraEntity.getXRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

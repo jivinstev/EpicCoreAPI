@@ -1,3 +1,4 @@
+// Fork multi-version layer, 26.2: Entity.getId() throws until an id is assigned (CATALOG §V104); the id-keyed invulnerable fast path (isInvulnerable, reached from the isAlive/isDeadOrDying/isRemoved hooks) treats an entity without one as having no entry, as 1.21's fresh id never had one.
 package net.eca.api;
 
 import net.eca.coremod.AllReturnToggle;
@@ -359,7 +360,7 @@ public final class EcaAPI {
             return false;
         }
         // 快速路径：绝大多数实体不无敌，直接返回 false，跳过 SynchedEntityData 读取
-        if (!INVULNERABLE_IDS.contains(entity.getId())) {
+        if (!INVULNERABLE_IDS.contains(net.eca.mv.EntityIds.peek(entity))) {
             return false;
         }
         boolean dataInvulnerable;
@@ -412,7 +413,7 @@ public final class EcaAPI {
         if (invulnerable) {
             // 先保存当前值，因为复活流程会临时把真实血量恢复到最大值。
             float currentHealth = EntityUtil.getHealth(livingEntity);
-            INVULNERABLE_IDS.add(entity.getId());
+            if (net.eca.mv.EntityIds.assigned(entity)) INVULNERABLE_IDS.add(entity.getId());
             revive(livingEntity);
             float lockValue = Math.max(currentHealth, 1.0f);
             lockHealth(livingEntity, lockValue);
@@ -424,7 +425,7 @@ public final class EcaAPI {
             InvulnerableEntityManager.addInvulnerable(entity);
         } else {
             // 关闭无敌：解除无敌状态 + 解锁血量 + 移除记录
-            INVULNERABLE_IDS.remove(entity.getId());
+            INVULNERABLE_IDS.remove(net.eca.mv.EntityIds.peek(entity));
             if (EntityUtil.INVULNERABLE != null) {
                 livingEntity.getEntityData().set(EntityUtil.INVULNERABLE, false);
             } else {

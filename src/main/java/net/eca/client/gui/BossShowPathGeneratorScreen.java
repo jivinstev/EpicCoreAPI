@@ -472,7 +472,7 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
     }
 
     private void closePanel() {
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.gui.setScreen(new BossShowEditorScreen());
     }
 
     @Override

@@ -1,5 +1,6 @@
 package net.eca.client.gui;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -83,7 +84,7 @@ public final class ShaderColorPickerScreen extends Screen {
             (rgb & 0xFF) / 255.0F,
             alpha
         );
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override
@@ -107,7 +108,7 @@ public final class ShaderColorPickerScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     private int currentArgb() {

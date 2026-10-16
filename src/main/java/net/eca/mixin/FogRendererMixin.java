@@ -73,7 +73,7 @@ public class FogRendererMixin {
         if (minecraft.level == null) {
             return null;
         }
-        Camera camera = minecraft.gameRenderer.getMainCamera();
+        Camera camera = minecraft.gameRenderer.mainCamera();
         if (camera == null || camera.getFluidInCamera() != FogType.NONE) {
             return null;
         }

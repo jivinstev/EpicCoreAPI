@@ -1,3 +1,4 @@
+// Fork multi-version layer, 26.2: Entity.getId() throws until an id is assigned (CATALOG §V104); the id-keyed faction-glow lookup (a GUI preview entity never gets an id) treats an entity without one as having no entry, as 1.21's fresh id never had one.
 package net.eca.mixin;
 
 import net.eca.client.FactionGlowData;
@@ -24,7 +25,7 @@ public class EntityFactionGlowMixin {
     @Inject(method = "isCurrentlyGlowing", at = @At("HEAD"), cancellable = true)
     private void eca$factionGlow(CallbackInfoReturnable<Boolean> cir) {
         Entity self = (Entity) (Object) this;
-        if (self.level().isClientSide() && FactionGlowData.isGlowing(self.getId())) {
+        if (self.level().isClientSide() && FactionGlowData.isGlowing(net.eca.mv.EntityIds.peek(self))) {
             cir.setReturnValue(true);
         }
     }
@@ -33,8 +34,9 @@ public class EntityFactionGlowMixin {
     @Inject(method = "getTeamColor", at = @At("HEAD"), cancellable = true)
     private void eca$factionGlowColor(CallbackInfoReturnable<Integer> cir) {
         Entity self = (Entity) (Object) this;
-        if (self.level().isClientSide() && FactionGlowData.isGlowing(self.getId())) {
-            cir.setReturnValue(FactionGlowData.getColor(self.getId()));
+        int id = net.eca.mv.EntityIds.peek(self);
+        if (self.level().isClientSide() && FactionGlowData.isGlowing(id)) {
+            cir.setReturnValue(FactionGlowData.getColor(id));
         }
     }
 }

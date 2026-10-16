@@ -1,4 +1,9 @@
 #version 150
+// Fork multi-version layer (26.2, #33): 26.2 renders with REVERSE-Z. Its projection swaps near and far (the depth buffer
+// holds 1.0 at the near plane and 0.0 at the far plane; it is cleared to 0.0 and tested GREATER_THAN_OR_EQUAL). For one
+// view distance the stored value is exactly 1.0 minus what 1.21.1 stored (the depth mapping is hyperbolic in distance,
+// and swapping near/far turns d into 1 - d, with or without GL_ARB_clip_control), so the sampled depth is flipped back
+// once on read and the authors' forward-Z maths below is unchanged.
 
 uniform sampler2D Sampler0;
 uniform sampler2D Sampler1;
@@ -11,6 +16,7 @@ in vec2 texCoord;
 out vec4 fragColor;
 
 float linearize(float depth) {
+    depth = 1.0 - depth;   // 26.2 reverse-Z -> the forward-Z value this formula expects
     float near = 0.05;
     float far = 1024.0;
     float z = near * far / (far - depth * (far - near));

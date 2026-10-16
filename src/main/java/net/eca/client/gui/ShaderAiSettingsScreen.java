@@ -122,11 +122,9 @@ final class ShaderAiSettingsScreen extends Screen {
         ).bounds(fieldLeft + fieldWidth - 72, apiKeyField.getY(), 72, FIELD_HEIGHT).build(), currentRow);
         apiKeyEnvField = textField(row++, 256);
         timeoutField = textField(row++, 3);
-        timeoutField.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
+        digitsOnly(timeoutField);
         maxToolRoundsField = textField(row++, 2);
-        maxToolRoundsField.setFilter(
-            value -> value.isEmpty() || value.chars().allMatch(Character::isDigit)
-        );
+        digitsOnly(maxToolRoundsField);
         maxToolRoundsField.setValue(Integer.toString(originalAssistant.maxToolRounds()));
 
         autoApplyButton = booleanButton(row++, () -> {
@@ -175,6 +173,18 @@ final class ShaderAiSettingsScreen extends Screen {
         );
         field.setMaxLength(maxLength);
         return addScrollWidget(field, row);
+    }
+
+    // 26.2: EditBox.setFilter is gone; restore the last all-digit value when an edit introduces anything else
+    private static void digitsOnly(EditBox field) {
+        String[] last = {field.getValue()};
+        field.setResponder(value -> {
+            if (value.isEmpty() || value.chars().allMatch(Character::isDigit)) {
+                last[0] = value;
+            } else {
+                field.setValue(last[0]);
+            }
+        });
     }
 
     private Button booleanButton(int row, Runnable action) {
@@ -296,7 +306,7 @@ final class ShaderAiSettingsScreen extends Screen {
             return;
         }
         parent.settingsSaved(saved);
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     private Component validate(ProfileDraft profile) {
@@ -444,7 +454,7 @@ final class ShaderAiSettingsScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     private static final class ProfileDraft {

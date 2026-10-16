@@ -7,10 +7,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.pipeline.BindGroupLayout;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.BlendFactor;
 import com.mojang.blaze3d.preprocessor.GlslPreprocessor;
 import com.mojang.blaze3d.shaders.ShaderType;
 import com.mojang.blaze3d.shaders.UniformType;
@@ -78,6 +79,13 @@ import java.util.regex.Pattern;
  *
  * <p>Ids are made unique per instance: the device caches compiled shaders by id, so a mod that rebuilds a shader under
  * the same name (a live shader editor) would otherwise keep drawing the first version it compiled.
+ *
+ * <p>26.2 copy of the 1.21.11 file: a pipeline declares its uniforms and samplers as ONE {@code BindGroupLayout}
+ * ({@code withUniform}/{@code withSampler} left {@code RenderPipeline.Builder}; a name may appear in only one layout), takes
+ * a vertex binding and a {@code PrimitiveTopology} instead of {@code withVertexFormat(format, mode)}, blend factors are the
+ * single {@code BlendFactor} enum, and {@code GameRenderer.getMainCamera()} is {@code mainCamera()}. The uniform-block
+ * layouts (DynamicTransforms, Projection, Globals, Lighting, Fog) are unchanged from 1.21.11 (read from 26.2's
+ * {@code shaders/include/*.glsl}).
  */
 public class ShaderInstance implements AutoCloseable {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -205,21 +213,27 @@ public class ShaderInstance implements AutoCloseable {
         return null;
     }
 
-    RenderPipeline pipeline(VertexFormat format, VertexFormat.Mode mode, LegacyGl.Key key) {
-        return pipelines.computeIfAbsent(List.of(key, format, mode), l -> {
-            LegacyGl.Key k = key;
+    RenderPipeline pipeline(VertexFormat format, PrimitiveTopology topology, LegacyGl.Key key) {
+        return pipelines.computeIfAbsent(List.of(key, format, topology), l -> {
+            // vanilla's own draws declare DynamicTransforms; Projection/Fog/Globals/Lighting are found in the program
+            // (GlProgram.BUILT_IN_UNIFORMS) and bound by RenderSystem.bindDefaultUniforms
+            BindGroupLayout.Builder layout = BindGroupLayout.builder().withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER);
+            for (String s : samplers) layout.withSampler(s);
+            for (Uniform u : blockUniforms()) layout.withUniform(u.blockName(), UniformType.UNIFORM_BUFFER);
             RenderPipeline.Builder b = RenderPipeline.builder()
                     .withLocation(vertexId.withSuffix("_p" + pipelines.size()))
                     .withVertexShader(vertexId)
                     .withFragmentShader(fragmentId)
-                    .withVertexFormat(format, mode)
-                    // vanilla's own draws declare it; Projection/Fog/Globals/Lighting are found in the program
-                    // (GlProgram.BUILT_IN_UNIFORMS) and bound by RenderSystem.bindDefaultUniforms
-                    .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER);
-            for (String s : samplers) b.withSampler(s);
-            for (Uniform u : blockUniforms()) b.withUniform(u.blockName(), UniformType.UNIFORM_BUFFER);
-            return k.apply(b).build();
+                    .withBindGroupLayout(layout.build())
+                    .withVertexBinding(0, format)
+                    .withPrimitiveTopology(topology);
+            return key.apply(b).build();
         });
+    }
+
+    /** Whether this shader carries uniform blocks of its own (which only {@link LegacyGl}'s own draw binds). */
+    boolean hasOwnBlocks() {
+        return !blockUniforms().isEmpty();
     }
 
     /** The uniforms that travel as blocks of their own: everything that is not a vanilla block's member. */
@@ -260,7 +274,7 @@ public class ShaderInstance implements AutoCloseable {
         float time = wrote(GAME_TIME) ? GAME_TIME.floats()[0]
                 : ((float) ((mc.level == null ? 0L : mc.level.getGameTime()) % 24000L)
                         + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / 24000.0F;
-        Vec3 camera = mc.gameRenderer.getMainCamera().position();
+        Vec3 camera = mc.gameRenderer.mainCamera().position();
         int cx = Mth.floor(camera.x), cy = Mth.floor(camera.y), cz = Mth.floor(camera.z);
         ByteBuffer bb = ByteBuffer.allocateDirect(Math.max(32, GlobalSettingsUniform.UBO_SIZE)).order(ByteOrder.nativeOrder());
         Std140Builder.intoBuffer(bb).putIVec3(cx, cy, cz).putVec3((float) (cx - camera.x), (float) (cy - camera.y), (float) (cz - camera.z))
@@ -308,16 +322,22 @@ public class ShaderInstance implements AutoCloseable {
         lastProgramId = programId;
         for (Uniform u : blockUniforms()) u.applyTo(pass, temps);
         for (String s : samplers) {
-            LegacyGl.Slot t = boundSamplers.get(s);
-            if (t == null) t = LegacyGl.slotTexture(s);
-            // 1.21.1's GL let a declared sampler stay unset: its uniform is 0, so it read texture unit 0. 1.21.11's
-            // command encoder refuses the draw instead ("Missing sampler X", thrown from the frame), so a sampler the
-            // mod only binds on some paths (a mask set only when a mask source is chosen) takes unit 0's texture, and
-            // with nothing there the missing-texture sprite -- never an unbound sampler
-            if (t == null) t = LegacyGl.slotTexture("Sampler0");
-            if (t == null) t = LegacyGl.missingTextureSlot();
+            LegacyGl.Slot t = samplerSlot(s);
             if (t != null) pass.bindTexture(s, t.view(), t.sampler());
         }
+    }
+
+    /** What sampler {@code s} reads in a draw: what the mod bound to it, else its SamplerN slot. */
+    LegacyGl.Slot samplerSlot(String s) {
+        LegacyGl.Slot t = boundSamplers.get(s);
+        if (t == null) t = LegacyGl.slotTexture(s);
+        // 1.21.1's GL let a declared sampler stay unset: its uniform is 0, so it read texture unit 0. 1.21.11's
+        // command encoder refuses the draw instead ("Missing sampler X", thrown from the frame), so a sampler the
+        // mod only binds on some paths (a mask set only when a mask source is chosen) takes unit 0's texture, and
+        // with nothing there the missing-texture sprite -- never an unbound sampler
+        if (t == null) t = LegacyGl.slotTexture("Sampler0");
+        if (t == null) t = LegacyGl.missingTextureSlot();
+        return t;
     }
 
     // ---- 1.21.1 plain uniforms -> 1.21.8 uniform blocks ----------------------------------------------------------
@@ -451,10 +471,10 @@ public class ShaderInstance implements AutoCloseable {
         if (!"add".equalsIgnoreCase(func)) {
             LOGGER.warn("[mv] {}: blend func {} has no 1.21.8 pipeline equivalent; ADD is used", name, func);
         }
-        SourceFactor src = src(o, "srcrgb", SourceFactor.ONE);
-        DestFactor dst = dst(o, "dstrgb", DestFactor.ZERO);
+        BlendFactor src = factor(o, "srcrgb", BlendFactor.ONE);
+        BlendFactor dst = factor(o, "dstrgb", BlendFactor.ZERO);
         boolean separate = o.has("srcalpha") || o.has("dstalpha");
-        return separate ? new BlendFunction(src, dst, src(o, "srcalpha", SourceFactor.ONE), dst(o, "dstalpha", DestFactor.ZERO))
+        return separate ? new BlendFunction(src, dst, factor(o, "srcalpha", BlendFactor.ONE), factor(o, "dstalpha", BlendFactor.ZERO))
                 : new BlendFunction(src, dst);
     }
 
@@ -476,13 +496,8 @@ public class ShaderInstance implements AutoCloseable {
         return e == null ? null : (minus ? "ONE_MINUS_" + e : e);
     }
 
-    private static SourceFactor src(JsonObject o, String key, SourceFactor dflt) {
+    private static BlendFactor factor(JsonObject o, String key, BlendFactor dflt) {
         String f = factor(o, key);
-        try { return f == null ? dflt : SourceFactor.valueOf(f); } catch (IllegalArgumentException e) { return dflt; }
-    }
-
-    private static DestFactor dst(JsonObject o, String key, DestFactor dflt) {
-        String f = factor(o, key);
-        try { return f == null ? dflt : DestFactor.valueOf(f); } catch (IllegalArgumentException e) { return dflt; }
+        try { return f == null ? dflt : BlendFactor.valueOf(f); } catch (IllegalArgumentException e) { return dflt; }
     }
 }

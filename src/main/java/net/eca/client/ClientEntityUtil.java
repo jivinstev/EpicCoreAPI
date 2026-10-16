@@ -241,7 +241,7 @@ public final class ClientEntityUtil {
     private static void removeBossOverlayEntries(Minecraft minecraft, List<UUID> bossEventUUIDs) {
         if (bossEventUUIDs.isEmpty()) return;
         try {
-            BossHealthOverlay bossOverlay = minecraft.gui.getBossOverlay();
+            BossHealthOverlay bossOverlay = minecraft.gui.hud.getBossOverlay();
             for (UUID uuid : bossEventUUIDs) {
                 bossOverlay.events.remove(uuid);
             }

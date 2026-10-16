@@ -114,7 +114,7 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
     }
 
     private void closePanel() {
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.gui.setScreen(new BossShowEditorScreen());
     }
 
     private Component triggerText(Trigger trigger) {

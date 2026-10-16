@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.neoforged.api.distmarker.Dist;
@@ -70,7 +71,7 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
 
     private BufferBuilder newBuilder() {
         return new BufferBuilder(new ByteBufferBuilder(format.getVertexSize() * 256),
-            VertexFormat.Mode.QUADS, format);
+            PrimitiveTopology.QUADS, format);
     }
 
     private BufferBuilder direct() {

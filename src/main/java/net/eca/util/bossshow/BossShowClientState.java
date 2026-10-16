@@ -107,8 +107,8 @@ public final class BossShowClientState {
         //如果 editor session 还活着（试播结束），自动回到 Home
         if (BossShowEditorState.isActive()) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.screen == null) {
-                mc.setScreen(new BossShowEditorHomeScreen());
+            if (mc.gui.screen() == null) {
+                mc.gui.setScreen(new BossShowEditorHomeScreen());
             }
         }
     }

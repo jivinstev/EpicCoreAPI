@@ -36,7 +36,7 @@ public final class BlenderModelLayer<S extends LivingEntityRenderState, M extend
         }
         int overlay = LivingEntityRenderer.getOverlayCoords(state, 0.0f);
         // 1.21.10: the layer gets a SubmitNodeCollector; the Blender renderer still writes straight into a MultiBufferSource
-        BlenderEntityRenderer.render(entity, model, poseStack, Minecraft.getInstance().renderBuffers().bufferSource(),
+        BlenderEntityRenderer.render(entity, model, poseStack, net.eca.mv.MultiBufferSource.main(),
                 packedLight, overlay, partialTick);
     }
 }

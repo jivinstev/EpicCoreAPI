@@ -11,7 +11,7 @@ import com.mojang.math.Axis;
 import net.eca.util.EcaLogger;
 import net.eca.blender.model.BlenderRenderRequest;
 import net.eca.blender.animation.BlenderPlaybackState;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.eca.mv.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;

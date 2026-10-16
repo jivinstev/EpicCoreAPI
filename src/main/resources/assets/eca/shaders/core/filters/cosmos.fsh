@@ -1,4 +1,11 @@
 #version 150
+// Fork multi-version layer (26.2, #33): 26.2 renders with REVERSE-Z. Its projection swaps near and far (the depth buffer
+// holds 1.0 at the near plane and 0.0 at the far plane; it is cleared to 0.0 and tested GREATER_THAN_OR_EQUAL). For one
+// view distance the stored value is exactly 1.0 minus what 1.21.1 stored (the depth mapping is hyperbolic in distance,
+// and swapping near/far turns d into 1 - d, with or without GL_ARB_clip_control), so the sampled depth is flipped back
+// once on read and the authors' forward-Z maths below is unchanged.
+// Here that keeps the entity test (nearer = smaller), the sky test (depth >= 0.9999 on the cleared value) and the NDC
+// reconstruction (depth * 2 - 1 against FilterRenderer's forward JOML perspective) as they were.
 
 uniform sampler2D Sampler0;
 uniform sampler2D Sampler1;
@@ -170,11 +177,11 @@ vec3 twinkleStars(vec2 uv, float t) {
 }
 
 void main() {
-    float depth = texture(Sampler0, texCoord).r;
+    float depth = 1.0 - texture(Sampler0, texCoord).r;   // 26.2 reverse-Z -> forward-Z (sky: 0.0 -> 1.0)
     vec3 scene  = texture(Sampler1, texCoord).rgb;
 
     // 实体遮罩：该像素深度比地形快照更近，说明是实体，保留原色不应用滤镜
-    float terrainDepth = texture(Sampler3, texCoord).r;
+    float terrainDepth = 1.0 - texture(Sampler3, texCoord).r;   // same flip, so 'nearer' stays 'smaller'
     if (depth < terrainDepth - 0.0001) {
         fragColor = vec4(scene, 1.0);
         return;

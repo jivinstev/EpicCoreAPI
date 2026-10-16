@@ -198,7 +198,7 @@ public final class ShaderGeneratorScreen extends Screen {
 
     public static void open() {
         Minecraft minecraft = Minecraft.getInstance();
-        minecraft.execute(() -> minecraft.setScreen(new ShaderGeneratorScreen()));
+        minecraft.execute(() -> minecraft.gui.setScreen(new ShaderGeneratorScreen()));
     }
 
     /* ---------- undo / redo ---------- */
@@ -369,7 +369,7 @@ public final class ShaderGeneratorScreen extends Screen {
         dropdownOption(mx, y + row * MENU_ITEM_H, w,
             Component.translatable("gui.eca.shader_generator.file.open"), () -> {
                 openDropdown = -1;
-                minecraft.setScreen(new ShaderProjectSelectionScreen(
+                minecraft.gui.setScreen(new ShaderProjectSelectionScreen(
                     this,
                     ShaderProjectCodec.listSavedProjects(),
                     this::openProject
@@ -1256,7 +1256,7 @@ public final class ShaderGeneratorScreen extends Screen {
         selectLayerForInspector(layerIndex);
         ensureSelectedLayerVisible();
         ShaderLayer layer = project.layers().get(layerIndex);
-        minecraft.setScreen(new ShaderColorPickerScreen(
+        minecraft.gui.setScreen(new ShaderColorPickerScreen(
             this,
             layer.baseRed(),
             layer.baseGreen(),
@@ -1537,7 +1537,7 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     private void openElementColorPicker(ShaderModuleInstance element) {
-        minecraft.setScreen(new ShaderColorPickerScreen(
+        minecraft.gui.setScreen(new ShaderColorPickerScreen(
             this,
             element.value("color_r"),
             element.value("color_g"),
@@ -1725,12 +1725,12 @@ public final class ShaderGeneratorScreen extends Screen {
             ShaderModuleRegistry.all(),
             definition -> openEffectDetails(definition)
         );
-        minecraft.setScreen(selectionScreen);
+        minecraft.gui.setScreen(selectionScreen);
     }
 
     private void openEffectDetails(ShaderModuleDefinition definition) {
-        minecraft.setScreen(new ShaderEffectDetailsScreen(
-            minecraft.screen,
+        minecraft.gui.setScreen(new ShaderEffectDetailsScreen(
+            minecraft.gui.screen(),
             this,
             definition,
             currentProjectRef(),
@@ -1751,7 +1751,7 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     private void openOutputEffectDetails(ShaderOutputEffectInstance effect, int existingIndex) {
-        minecraft.setScreen(new ShaderOutputEffectDetailsScreen(
+        minecraft.gui.setScreen(new ShaderOutputEffectDetailsScreen(
             this,
             this,
             effect,
@@ -1833,7 +1833,7 @@ public final class ShaderGeneratorScreen extends Screen {
             : "gui.eca.shader_generator.project.new_title");
         String initialModId = rename ? projectModId : "";
         String initialShaderName = rename ? projectShaderName : "";
-        minecraft.setScreen(new ShaderProjectDetailsScreen(
+        minecraft.gui.setScreen(new ShaderProjectDetailsScreen(
             this,
             title,
             initialModId,
@@ -1892,7 +1892,7 @@ public final class ShaderGeneratorScreen extends Screen {
         ConfirmScreen confirm = new ConfirmScreen(
             confirmed -> {
                 if (confirmed) deleteProject(reference);
-                minecraft.setScreen(this);
+                minecraft.gui.setScreen(this);
             },
             Component.translatable("gui.eca.shader_generator.delete.title"),
             Component.translatable(
@@ -1901,7 +1901,7 @@ public final class ShaderGeneratorScreen extends Screen {
             Component.translatable("gui.eca.shader_generator.delete.confirm"),
             Component.translatable("gui.eca.shader_generator.button.cancel")
         );
-        minecraft.setScreen(confirm);
+        minecraft.gui.setScreen(confirm);
     }
 
     private void deleteProject(ProjectRef reference) {
@@ -1969,7 +1969,7 @@ public final class ShaderGeneratorScreen extends Screen {
             if (initializedIndependentSource && hasVisualContent()) {
                 project.sourceWorkspace().setVisualOverlayEnabled(true);
             }
-            minecraft.setScreen(new ShaderSourceEditorScreen(this, project, reference));
+            minecraft.gui.setScreen(new ShaderSourceEditorScreen(this, project, reference));
         } catch (RuntimeException exception) {
             statusError = true;
             status = Component.literal(conciseMessage(exception));
@@ -1985,7 +1985,7 @@ public final class ShaderGeneratorScreen extends Screen {
             return;
         }
         openDropdown = -1;
-        minecraft.setScreen(new ShaderAiAssistantScreen(this, aiSession()));
+        minecraft.gui.setScreen(new ShaderAiAssistantScreen(this, aiSession()));
     }
 
     private void openShaderFolderImport() {
@@ -2004,9 +2004,9 @@ public final class ShaderGeneratorScreen extends Screen {
                 status = Component.translatable("gui.eca.shader_generator.import.none_found");
                 rebuildWidgets();
             } else if (candidates.size() == 1) {
-                minecraft.setScreen(new ShaderImportScreen(this, candidates.get(0)));
+                minecraft.gui.setScreen(new ShaderImportScreen(this, candidates.get(0)));
             } else {
-                minecraft.setScreen(new ShaderImportSelectionScreen(
+                minecraft.gui.setScreen(new ShaderImportSelectionScreen(
                     this, candidates, this::openShaderImportDetails
                 ));
             }
@@ -2031,7 +2031,7 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     private void openShaderImportDetails(Candidate candidate) {
-        minecraft.setScreen(new ShaderImportScreen(this, candidate));
+        minecraft.gui.setScreen(new ShaderImportScreen(this, candidate));
     }
 
     boolean importShader(Candidate candidate, String modId, String shaderName) {
@@ -2639,7 +2639,7 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     ShaderAiToolResult captureToolPreview() {
-        Screen current = minecraft.screen;
+        Screen current = minecraft.gui.screen();
         if (current instanceof ShaderAiAssistantScreen assistant) {
             return assistant.capturePreview();
         }

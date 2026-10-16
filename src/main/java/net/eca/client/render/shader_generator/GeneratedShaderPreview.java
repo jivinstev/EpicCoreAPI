@@ -293,7 +293,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_boss_bar",
             DefaultVertexFormat.BLOCK,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             false,
             true,
@@ -315,7 +315,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_skybox",
             DefaultVertexFormat.BLOCK,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -336,7 +336,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_item",
             DefaultVertexFormat.ENTITY,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -360,7 +360,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_entity",
             DefaultVertexFormat.ENTITY,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             true,
@@ -425,15 +425,15 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             } else if (legacyTime != null) {
                 legacyTime.set((System.currentTimeMillis() % 1000000L) / 100.0F);
             }
-            if (minecraft.gameRenderer != null && minecraft.gameRenderer.getMainCamera() != null) {
+            if (minecraft.gameRenderer != null && minecraft.gameRenderer.mainCamera() != null) {
                 if (cameraYaw != null) {
                     cameraYaw.set((float) Math.toRadians(
-                        minecraft.gameRenderer.getMainCamera().yRot()
+                        minecraft.gameRenderer.mainCamera().yRot()
                     ));
                 }
                 if (cameraPitch != null) {
                     cameraPitch.set((float) Math.toRadians(
-                        minecraft.gameRenderer.getMainCamera().xRot()
+                        minecraft.gameRenderer.mainCamera().xRot()
                     ));
                 }
             }

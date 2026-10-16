@@ -21,7 +21,7 @@ public class TheLastEndRenderTypes {
 
     public static final RenderType BOSS_BAR = net.eca.mv.LegacyRenderType.create("the_last_end_boss_bar",
         DefaultVertexFormat.BLOCK,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -35,7 +35,7 @@ public class TheLastEndRenderTypes {
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("the_last_end_boss_layer",
         DefaultVertexFormat.ENTITY,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -49,7 +49,7 @@ public class TheLastEndRenderTypes {
 
     public static final RenderType SKYBOX = net.eca.mv.LegacyRenderType.create("the_last_end_skybox",
         DefaultVertexFormat.BLOCK,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -63,7 +63,7 @@ public class TheLastEndRenderTypes {
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("the_last_end_item",
         DefaultVertexFormat.ENTITY,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -81,7 +81,7 @@ public class TheLastEndRenderTypes {
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("the_last_end_entity_effect",
             DefaultVertexFormat.ENTITY,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             true,

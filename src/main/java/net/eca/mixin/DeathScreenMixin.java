@@ -45,7 +45,7 @@ public class DeathScreenMixin {
         Minecraft minecraft = Minecraft.getInstance();
         if (eca$shouldCloseDeathScreen(minecraft.player)) {
             ci.cancel();
-            minecraft.setScreen(null);
+            minecraft.gui.setScreen(null);
         }
     }
 }

@@ -1,3 +1,4 @@
+// Fork multi-version layer, 26.2: Entity.getId() throws until an id is assigned (CATALOG §V104); the id-keyed heal-ban fast path treats an entity without one as having no entry, as 1.21's fresh id never had one.
 package net.eca.util.health.health_lock;
 
 import net.eca.util.EcaLogger;
@@ -195,7 +196,7 @@ public class HealthLockManager {
             try {
                 healBan = entity.getEntityData().get(EntityUtil.HEAL_BAN_VALUE);
             } catch (Throwable ignored) {}
-            if (healBan != null && !healBan.isEmpty()) {
+            if (healBan != null && !healBan.isEmpty() && net.eca.mv.EntityIds.assigned(entity)) {
                 HEAL_BAN_IDS.add(entity.getId());
             }
         }
@@ -548,7 +549,7 @@ public class HealthLockManager {
 
     public static void setHealBan(LivingEntity entity, float value) {
         if (entity == null) return;
-        HEAL_BAN_IDS.add(entity.getId());
+        if (net.eca.mv.EntityIds.assigned(entity)) HEAL_BAN_IDS.add(entity.getId());
         String encrypted = Float.toString(value - ENCRYPTION_OFFSET);
         if (EntityUtil.HEAL_BAN_VALUE != null) {
             entity.getEntityData().set(EntityUtil.HEAL_BAN_VALUE, encrypted);
@@ -559,7 +560,7 @@ public class HealthLockManager {
 
     public static void removeHealBan(LivingEntity entity) {
         if (entity == null) return;
-        HEAL_BAN_IDS.remove(entity.getId());
+        HEAL_BAN_IDS.remove(net.eca.mv.EntityIds.peek(entity));
         if (EntityUtil.HEAL_BAN_VALUE != null) {
             entity.getEntityData().set(EntityUtil.HEAL_BAN_VALUE, "");
         } else {
@@ -569,7 +570,7 @@ public class HealthLockManager {
 
     public static Float getHealBan(LivingEntity entity) {
         if (entity == null) return null;
-        if (!HEAL_BAN_IDS.contains(entity.getId())) return null;
+        if (!HEAL_BAN_IDS.contains(net.eca.mv.EntityIds.peek(entity))) return null;
         String encrypted;
         if (EntityUtil.HEAL_BAN_VALUE != null) {
             encrypted = readSynchedSafely(entity, EntityUtil.HEAL_BAN_VALUE);

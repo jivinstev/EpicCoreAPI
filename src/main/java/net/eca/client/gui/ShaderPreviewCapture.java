@@ -13,7 +13,7 @@ final class ShaderPreviewCapture {
 
     static ShaderAiToolResult capture(int left, int top, int right, int bottom) {
         Minecraft minecraft = Minecraft.getInstance();
-        NativeImage screenshot = net.eca.mv.Screenshots.take(minecraft.getMainRenderTarget());
+        NativeImage screenshot = net.eca.mv.Screenshots.take(minecraft.gameRenderer.mainRenderTarget());
         try {
             double scale = minecraft.getWindow().getGuiScale();
             int pixelLeft = clamp(

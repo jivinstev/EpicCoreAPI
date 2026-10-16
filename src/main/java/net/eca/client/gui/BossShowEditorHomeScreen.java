@@ -37,7 +37,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     public static void openFromPacket(BossShowOpenEditorHomePacket msg) {
         BossShowEditorState.beginSession(msg.definitions());
         Minecraft mc = Minecraft.getInstance();
-        mc.execute(() -> mc.setScreen(new BossShowEditorHomeScreen()));
+        mc.execute(() -> mc.gui.setScreen(new BossShowEditorHomeScreen()));
     }
 
     @Override
@@ -72,13 +72,13 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     //进入实体选择模式：关闭 Screen 让游戏恢复运行，事件处理器接管
     private void startSelectionMode() {
         BossShowEditorState.enterSelectionMode();
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 
     //进入"播放选择"模式：和 selection 类似，但右键命中后客户端发包让服务端播放
     private void startPlaySelection(BossShowDefinition def) {
         BossShowEditorState.enterPlaySelection(def.id());
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 
     private void editExisting(BossShowDefinition def) {
@@ -99,7 +99,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                 }
             }
         }
-        this.minecraft.setScreen(new BossShowEditorScreen());
+        this.minecraft.gui.setScreen(new BossShowEditorScreen());
     }
 
     //请求删除：弹二次确认 → 发包 → 服务端删完会重发 Home 包刷新列表
@@ -110,18 +110,18 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                     NetworkHandler.sendToServer(new BossShowDeleteEditorPacket(def.id()));
                     //服务端会重发 Home 包，届时 openFromPacket 会重建本界面
                 }
-                this.minecraft.setScreen(this);
+                this.minecraft.gui.setScreen(this);
             },
             Component.translatable("gui.eca.bossshow.home.delete.title"),
             Component.translatable("gui.eca.bossshow.home.delete.body", def.id().toString())
         );
-        this.minecraft.setScreen(confirm);
+        this.minecraft.gui.setScreen(confirm);
     }
 
     private void doClose() {
         NetworkHandler.sendToServer(new BossShowExitEditorPacket());
         BossShowEditorState.exit();
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 
     @Override

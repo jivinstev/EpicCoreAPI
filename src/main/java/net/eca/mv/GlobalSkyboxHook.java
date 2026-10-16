@@ -1,19 +1,24 @@
-// OVERLAY-ONLY: community fork multi-version layer (26.1.2 copy of the 1.21.11 overlay: the draw calls go through
-// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection. 26.1.2's sky is a
-// frame-graph pass and NeoForge posts RenderLevelStageEvent.AfterSky at the end of it (lambda$addSkyPass$0) -- but
-// renderLevel adds no sky pass when its shouldRenderSky flag is false (GameRenderer passes
-// !bossOverlay.shouldCreateWorldFog()), and addSkyPass adds none for Skybox NONE (the Nether), lava/powder snow or a
-// sky-blocking mob effect (cameraState.entityRenderState.doesMobEffectBlockSky), where 1.21.1's renderSky still reached
-// its TAIL; and AfterSky is posted even where a custom CustomSkyboxRenderer.renderSky took over (1.21.1 returned early
-// there). So the 26.1.2 LevelRendererMixin overlay adds its own pass before the main pass, calls render() from it and
-// sets passOwned, and the AfterSky handler stands down. The drawing code is the authors', unchanged.
+// OVERLAY-ONLY: community fork multi-version layer (1.21.5 copy of the 1.21.3 overlay: the draw calls go through
+// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection,
+// moved to RenderLevelStageEvent AFTER_SKY: in 1.21.2 the sky is a frame-graph pass and NeoForge fires that
+// stage at the end of it. The drawing code is the authors', unchanged.
+// 26.2 (#32): as on 26.1.2, AfterSky is posted only inside the sky pass lambda (lambda$addSkyPass$0), which render() does not
+// add when shouldRenderSky is false and addSkyPass does not add for lava/powder snow, doesMobEffectBlockSky or Skybox NONE
+// (the Nether), and it is posted even after a custom CustomSkyboxRenderer.renderSky drew the sky. So the 26.2
+// LevelRendererMixin overlay draws the skybox from a frame pass of its own (render()) and sets passOwned; the AfterSky
+// handler then stands down. The PoseStack starts from identity: render() has multiplied the view rotation onto
+// RenderSystem's model-view stack, which the helpers upload as ModelViewMat (the old mulPose(event.getModelViewMatrix())
+// applied it twice).
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
+
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import net.eca.client.render.shader.EcaShaderInstance;
@@ -26,7 +31,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -59,13 +64,11 @@ public final class GlobalSkyboxHook {
         if (passOwned) {
             return;
         }
-        // 26.1.2's AfterSky carries no camera (and a null PoseStack); its model-view matrix is cameraState.viewRotationMatrix,
-        // which renderLevel has already multiplied onto RenderSystem's model-view stack, so the PoseStack starts from identity.
-        render(new Matrix4f(), Minecraft.getInstance().gameRenderer.getMainCamera());
+        render(new Matrix4f(), Minecraft.getInstance().gameRenderer.mainCamera());
     }
 
     /** The authors' renderSky TAIL handler body. frustumMatrix is what the PoseStack starts from: 1.21.1 passed the view
-     *  matrix because the model-view stack did not hold it yet; on 26.1.2 the stack holds it, so callers pass identity. */
+     *  matrix because the model-view stack did not hold it yet; on 26.2 the stack holds it, so callers pass identity. */
     public static void render(Matrix4f frustumMatrix, Camera camera) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || camera == null) {
@@ -115,19 +118,20 @@ public final class GlobalSkyboxHook {
         int blue = (int)(Mth.clamp(skybox.textureBlue(), 0.0f, 1.0f) * 255.0f);
         int alphaInt = (int)(alpha * 255.0f);
 
-        Tesselator tesselator = Tesselator.getInstance();
-
-        for (int i = 0; i < 6; ++i) {
-            poseStack.pushPose();
-            rotateToFace(poseStack, i);
-            Matrix4f matrix = poseStack.last().pose();
-            BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-            bufferBuilder.addVertex(matrix, -size, -size, -size).setUv(0.0f, 0.0f).setColor(red, green, blue, alphaInt);
-            bufferBuilder.addVertex(matrix, -size, -size, size).setUv(0.0f, uvScale).setColor(red, green, blue, alphaInt);
-            bufferBuilder.addVertex(matrix, size, -size, size).setUv(uvScale, uvScale).setColor(red, green, blue, alphaInt);
-            bufferBuilder.addVertex(matrix, size, -size, -size).setUv(uvScale, 0.0f).setColor(red, green, blue, alphaInt);
-            LegacyGl.drawWithShader(bufferBuilder.buildOrThrow());
-            poseStack.popPose();
+        // 26.2 dropped Tesselator: a BufferBuilder is built over its own ByteBufferBuilder
+        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(786432)) {
+            for (int i = 0; i < 6; ++i) {
+                poseStack.pushPose();
+                rotateToFace(poseStack, i);
+                Matrix4f matrix = poseStack.last().pose();
+                BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                bufferBuilder.addVertex(matrix, -size, -size, -size).setUv(0.0f, 0.0f).setColor(red, green, blue, alphaInt);
+                bufferBuilder.addVertex(matrix, -size, -size, size).setUv(0.0f, uvScale).setColor(red, green, blue, alphaInt);
+                bufferBuilder.addVertex(matrix, size, -size, size).setUv(uvScale, uvScale).setColor(red, green, blue, alphaInt);
+                bufferBuilder.addVertex(matrix, size, -size, -size).setUv(uvScale, 0.0f).setColor(red, green, blue, alphaInt);
+                LegacyGl.drawWithShader(bufferBuilder.buildOrThrow());
+                poseStack.popPose();
+            }
         }
 
         LegacyGl.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -141,37 +145,47 @@ public final class GlobalSkyboxHook {
         int segments = 32;
         int rings = 16;
 
-        Tesselator tesselator = Tesselator.getInstance();
         Matrix4f matrix = poseStack.last().pose();
 
-        BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+        // 26.2 dropped Tesselator: a BufferBuilder is built over its own ByteBufferBuilder
+        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(786432)) {
+            BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
 
-        for (int ring = 0; ring < rings; ring++) {
-            float phi1 = (float) Math.PI * ring / rings;
-            float phi2 = (float) Math.PI * (ring + 1) / rings;
-            float y1 = (float) Math.cos(phi1) * radius;
-            float y2 = (float) Math.cos(phi2) * radius;
-            float r1 = (float) Math.sin(phi1) * radius;
-            float r2 = (float) Math.sin(phi2) * radius;
+            for (int ring = 0; ring < rings; ring++) {
+                float phi1 = (float) Math.PI * ring / rings;
+                float phi2 = (float) Math.PI * (ring + 1) / rings;
+                float y1 = (float) Math.cos(phi1) * radius;
+                float y2 = (float) Math.cos(phi2) * radius;
+                float r1 = (float) Math.sin(phi1) * radius;
+                float r2 = (float) Math.sin(phi2) * radius;
 
-            for (int seg = 0; seg < segments; seg++) {
-                float theta1 = (float) (2.0 * Math.PI * seg / segments);
-                float theta2 = (float) (2.0 * Math.PI * (seg + 1) / segments);
+                for (int seg = 0; seg < segments; seg++) {
+                    float theta1 = (float) (2.0 * Math.PI * seg / segments);
+                    float theta2 = (float) (2.0 * Math.PI * (seg + 1) / segments);
 
-                float x1 = (float) Math.cos(theta1);
-                float z1 = (float) Math.sin(theta1);
-                float x2 = (float) Math.cos(theta2);
-                float z2 = (float) Math.sin(theta2);
+                    float x1 = (float) Math.cos(theta1);
+                    float z1 = (float) Math.sin(theta1);
+                    float x2 = (float) Math.cos(theta2);
+                    float z2 = (float) Math.sin(theta2);
 
-                bufferBuilder.addVertex(matrix, x1 * r1, y1, z1 * r1).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x1, y1 / radius, z1);
-                bufferBuilder.addVertex(matrix, x1 * r2, y2, z1 * r2).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x1, y2 / radius, z1);
-                bufferBuilder.addVertex(matrix, x2 * r2, y2, z2 * r2).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x2, y2 / radius, z2);
-                bufferBuilder.addVertex(matrix, x2 * r1, y1, z2 * r1).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x2, y1 / radius, z2);
+                    bufferBuilder.addVertex(matrix, x1 * r1, y1, z1 * r1).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x1, y1 / radius, z1);
+                    bufferBuilder.addVertex(matrix, x1 * r2, y2, z1 * r2).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x1, y2 / radius, z1);
+                    bufferBuilder.addVertex(matrix, x2 * r2, y2, z2 * r2).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x2, y2 / radius, z2);
+                    bufferBuilder.addVertex(matrix, x2 * r1, y1, z2 * r1).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(x2, y1 / radius, z2);
+                }
+            }
+
+            // 1.21.5: a RenderType carries its own pipeline state, so it draws the mesh itself (setup, draw, clear);
+            // 26.2's RenderType has no draw(MeshData), so the layer's LegacyRenderType draws it
+            MeshData mesh = bufferBuilder.buildOrThrow();
+            if (renderType instanceof LegacyRenderType legacy) {
+                legacy.draw(mesh);
+            } else {
+                LegacyGl.setupRenderState(renderType);
+                LegacyGl.drawWithShader(mesh);
+                LegacyGl.clearRenderState(renderType);
             }
         }
-
-        // 1.21.5: a RenderType carries its own pipeline state, so it draws the mesh itself (setup, draw, clear)
-        renderType.draw(bufferBuilder.buildOrThrow());
     }
 
     private static void rotateToFace(PoseStack poseStack, int face) {

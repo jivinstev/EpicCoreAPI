@@ -22,7 +22,7 @@ public class CosmosRenderTypes {
 
     public static final RenderType BOSS_BAR = net.eca.mv.LegacyRenderType.create("cosmos_boss_bar",
         DefaultVertexFormat.BLOCK,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -36,7 +36,7 @@ public class CosmosRenderTypes {
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("cosmos_boss_layer",
         DefaultVertexFormat.ENTITY,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -50,7 +50,7 @@ public class CosmosRenderTypes {
 
     public static final RenderType SKYBOX = net.eca.mv.LegacyRenderType.create("cosmos_skybox",
         DefaultVertexFormat.BLOCK,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -64,7 +64,7 @@ public class CosmosRenderTypes {
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("cosmos_item",
         DefaultVertexFormat.ENTITY,
-        VertexFormat.Mode.QUADS,
+        com.mojang.blaze3d.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -82,7 +82,7 @@ public class CosmosRenderTypes {
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("cosmos_entity_effect",
             DefaultVertexFormat.ENTITY,
-            VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.PrimitiveTopology.QUADS,
             256,
             true,
             true,

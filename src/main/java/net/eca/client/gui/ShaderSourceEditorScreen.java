@@ -756,7 +756,7 @@ public final class ShaderSourceEditorScreen extends Screen {
             preview = null;
         }
         parent.returnFromSourceEditor();
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     private record NavigationEntry(

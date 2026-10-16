@@ -1,30 +1,35 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-STAND-IN: shared/26.1.2's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
+// MV-STAND-IN: shared/26.2's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
 // MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
 // MV-REQUIRES: LegacyGl
 // MV-REQUIRES: ShaderInstance
 // MV-REQUIRES: ShaderShard
 package net.eca.mv;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.platform.BlendFactor;
 import com.mojang.blaze3d.platform.CompareOp;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.ScissorState;
+import com.mojang.logging.LogUtils;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
@@ -42,6 +47,17 @@ import java.util.function.UnaryOperator;
  *
  * <p>26.1.2 copy: the depth-test shards are {@code CompareOp}s ({@link LegacyGl.Key}; null = no depth test), and
  * 1.21.4's {@code LIGHTMAP} binds {@code GameRenderer.lightmap()} (26.1 removed {@code lightTexture()}).
+ *
+ * <p>26.2 copy: {@code RenderType.draw(MeshData)} and {@code mode()} are gone. A RenderType is now drawn from the frame's
+ * one {@code StagedVertexBuffer}: vanilla's feature renderers call {@code prepare()} when geometry is RECORDED and
+ * {@code PreparedRenderType.drawFromBuffer} when the frame executes. So this type keeps {@link #draw} as its own method
+ * (what {@link MultiBufferSource} and the mod's direct draws call -- the full {@link LegacyGl} draw, the shader's own
+ * uniform blocks included) and overrides {@link #prepare()} for the vanilla path: the legacy pipeline and the textures
+ * the shards and the shader bind, snapshotted then. That path binds only vanilla's blocks (Projection, Fog, Globals,
+ * Lighting, DynamicTransforms), so a shader with uniform blocks of its own drawn through it is logged once (and fails
+ * GL validation in a dev client): draw such a type through {@link MultiBufferSource} or {@link LegacyGl}.
+ * Reverse-Z (see {@link LegacyGl}): the LEQUAL/GREATER shards are {@code GREATER_THAN_OR_EQUAL}/{@code LESS_THAN} and
+ * POLYGON_OFFSET_LAYERING's bias is {@code (1, 10)}, as vanilla's 26.2 pipelines.
  */
 public class LegacyRenderType extends RenderType {
     /** What 1.21.4's RenderStateShard was to this layer: something set up before a draw and cleared after it. */
@@ -122,51 +138,60 @@ public class LegacyRenderType extends RenderType {
     public static final Modifier LIGHTNING_TRANSPARENCY = blend("lightning_transparency", BlendFunction.LIGHTNING);
     public static final Modifier GLINT_TRANSPARENCY = blend("glint_transparency", BlendFunction.GLINT);
     public static final Modifier CRUMBLING_TRANSPARENCY = blend("crumbling_transparency",
-            new BlendFunction(SourceFactor.DST_COLOR, DestFactor.SRC_COLOR, SourceFactor.ONE, DestFactor.ZERO));
+            new BlendFunction(BlendFactor.DST_COLOR, BlendFactor.SRC_COLOR, BlendFactor.ONE, BlendFactor.ZERO));
     public static final Modifier OVERLAY_TRANSPARENCY = blend("overlay_transparency", BlendFunction.OVERLAY);
     public static final Modifier TRANSLUCENT_TRANSPARENCY = blend("translucent_transparency", BlendFunction.TRANSLUCENT);
     public static final Modifier VIGNETTE_TRANSPARENCY = blend("vignette_transparency",
-            new BlendFunction(SourceFactor.ZERO, DestFactor.ONE_MINUS_SRC_COLOR));
+            new BlendFunction(BlendFactor.ZERO, BlendFactor.ONE_MINUS_SRC_COLOR));
     public static final Modifier NO_DEPTH_TEST = depth("no_depth_test", null);
     public static final Modifier EQUAL_DEPTH_TEST = depth("equal_depth_test", CompareOp.EQUAL);
-    public static final Modifier LEQUAL_DEPTH_TEST = depth("lequal_depth_test", CompareOp.LESS_THAN_OR_EQUAL);
-    public static final Modifier GREATER_DEPTH_TEST = depth("greater_depth_test", CompareOp.GREATER_THAN);
+    // 26.2 is reverse-Z: 1.21's "nearer or equal" (GL_LEQUAL) is GREATER_THAN_OR_EQUAL, and its GL_GREATER is LESS_THAN
+    public static final Modifier LEQUAL_DEPTH_TEST = depth("lequal_depth_test", CompareOp.GREATER_THAN_OR_EQUAL);
+    public static final Modifier GREATER_DEPTH_TEST = depth("greater_depth_test", CompareOp.LESS_THAN);
     public static final Modifier COLOR_DEPTH_WRITE = write("color_depth_write", true, true);
     public static final Modifier COLOR_WRITE = write("color_write", true, false);
     public static final Modifier DEPTH_WRITE = write("depth_write", false, true);
     public static final Modifier CULL = cull("cull", true);
     public static final Modifier NO_CULL = cull("no_cull", false);
-    /** 1.21.4's POLYGON_OFFSET_LAYERING (glPolygonOffset(-1, -10)) is a depth bias on 1.21.5+. */
+    /** 1.21.4's POLYGON_OFFSET_LAYERING (glPolygonOffset(-1, -10)) is a depth bias on 1.21.5+; on reverse-Z 26.2 its sign
+     *  flips, as vanilla's own layering pipelines (DepthStencilState(..., 1.0F, 10.0F)). */
     public static final Modifier POLYGON_OFFSET_LAYERING = new Modifier("polygon_offset_layering",
-            k -> new LegacyGl.Key(k.blend(), k.depth(), k.depthWrite(), k.writeColor(), k.writeAlpha(), k.cull(), -1.0F, -10.0F));
+            k -> new LegacyGl.Key(k.blend(), k.depth(), k.depthWrite(), k.writeColor(), k.writeAlpha(), k.cull(), 1.0F, 10.0F));
 
-    /** 1.21.4's defaults for a shard nobody set: no blending, LEQUAL depth test, colour and depth written, culled. */
-    private static final LegacyGl.Key DEFAULTS = new LegacyGl.Key(null, CompareOp.LESS_THAN_OR_EQUAL, true, true, true, true, 0, 0);
+    /** 1.21.4's defaults for a shard nobody set: no blending, LEQUAL depth test (reverse-Z: GREATER_THAN_OR_EQUAL), colour
+     *  and depth written, culled. */
+    private static final LegacyGl.Key DEFAULTS = new LegacyGl.Key(null, CompareOp.GREATER_THAN_OR_EQUAL, true, true, true, true, 0, 0);
 
     public static State.Builder state() {
         return new State.Builder();
     }
 
-    public static LegacyRenderType create(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
+    /** {@code bufferSize} is kept for the 1.21.4 shape and ignored: 26.2's RenderSetup has no buffer size (geometry is
+     *  staged in one frame-wide buffer). */
+    public static LegacyRenderType create(String name, VertexFormat format, PrimitiveTopology mode, int bufferSize,
                                           boolean affectsCrumbling, boolean sortOnUpload, State state) {
-        return new LegacyRenderType(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, state);
+        return new LegacyRenderType(name, format, mode, affectsCrumbling, sortOnUpload, state);
     }
 
-    /** The RenderSetup vanilla's batching reads buffer size and the crumbling / sort flags from; its pipeline is never used. */
-    private static RenderSetup placeholder(int bufferSize, boolean affectsCrumbling, boolean sortOnUpload) {
-        RenderSetup.RenderSetupBuilder b = RenderSetup.builder(RenderPipelines.SOLID_BLOCK).bufferSize(bufferSize);
+    /** The RenderSetup vanilla's batching reads the crumbling / sort flags and the output target from; its pipeline is
+     *  never drawn with ({@link #pipeline()} and {@link #prepare()} answer with the legacy one). */
+    private static RenderSetup placeholder(boolean affectsCrumbling, boolean sortOnUpload, OutputTarget output) {
+        RenderSetup.RenderSetupBuilder b = RenderSetup.builder(RenderPipelines.SOLID_BLOCK).setOutputTarget(output);
         if (affectsCrumbling) b.affectsCrumbling();
         if (sortOnUpload) b.sortOnUpload();
         return b.createRenderSetup();
     }
 
+    private static final org.slf4j.Logger LOGGER = LogUtils.getLogger();
+    private static final Set<String> WARNED = new HashSet<>();
+
     private final VertexFormat format;
-    private final VertexFormat.Mode mode;
+    private final PrimitiveTopology mode;
     private final State state;
 
-    private LegacyRenderType(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
+    private LegacyRenderType(String name, VertexFormat format, PrimitiveTopology mode,
                              boolean affectsCrumbling, boolean sortOnUpload, State state) {
-        super(name, placeholder(bufferSize, affectsCrumbling, sortOnUpload));
+        super(name, placeholder(affectsCrumbling, sortOnUpload, state.output));
         this.format = format;
         this.mode = mode;
         this.state = state;
@@ -184,7 +209,7 @@ public class LegacyRenderType extends RenderType {
         state.real.forEach(Shard::clearRenderState);
     }
 
-    @Override
+    /** 1.21's {@code RenderType.draw(MeshData)} (26.2 removed it): the type's shards and shader, one LegacyGl draw. */
     public void draw(MeshData mesh) {
         setupRenderState();
         try {
@@ -192,6 +217,44 @@ public class LegacyRenderType extends RenderType {
         } finally {
             clearRenderState();
         }
+    }
+
+    /**
+     * 26.2's vanilla draw path (a feature renderer recording this type's geometry): the legacy pipeline, the
+     * DynamicTransforms and the textures this type's shards and shader bind, taken now -- as vanilla's own
+     * {@code RenderType.prepare()} snapshots its state when geometry is recorded, not when the frame draws.
+     */
+    @Override
+    public PreparedRenderType prepare() {
+        setupRenderState();
+        try {
+            Object s = state.shader.shader();
+            RenderPipeline pipeline = LegacyGl.pipelineFor(s, format, mode, state.key);
+            if (pipeline == null) {
+                throw new IllegalStateException(this + " has no shader to build a pipeline from");
+            }
+            if (s instanceof ShaderInstance i && i.hasOwnBlocks() && WARNED.add(name)) {
+                LOGGER.warn("[mv] {} is drawn through 26.2's feature renderers, which bind only vanilla's uniform blocks; "
+                        + "its shader's own uniforms are not bound there (draw it through MultiBufferSource or LegacyGl)", name);
+            }
+            List<PreparedRenderType.Texture> textures = new ArrayList<>(LegacyGl.textures(s));
+            for (int i = 0; i < 12; i++) {
+                String sampler = "Sampler" + i;
+                LegacyGl.Slot slot = LegacyGl.slotTexture(sampler);
+                if (slot != null && textures.stream().noneMatch(t -> t.name().equals(sampler))) {
+                    textures.add(new PreparedRenderType.Texture(sampler, slot.view(), slot.sampler()));
+                }
+            }
+            return new PreparedRenderType(pipeline, state.output, LegacyGl.transforms(s instanceof ShaderInstance i ? i : null),
+                    new ScissorState(RenderSystem.getScissorStateForRenderTypeDraws()), List.copyOf(textures));
+        } finally {
+            clearRenderState();
+        }
+    }
+
+    @Override
+    public boolean hasBlending() {
+        return state.key.blend() != null;
     }
 
     /** The target this type draws into. Not a vanilla hook: only {@link #draw} reads it. */
@@ -202,9 +265,9 @@ public class LegacyRenderType extends RenderType {
     /** The pipeline this type's current shader and state compile to. */
     public RenderPipeline getRenderPipeline() {
         Object s = state.shader.shader();
-        if (s instanceof ShaderInstance i) return i.pipeline(format, mode, state.key.withBlendIfUnset(i.blend()));
-        if (s instanceof LegacyGl.Vanilla v) return v.pipeline(format, mode, state.key);
-        throw new IllegalStateException(this + " has no shader to build a pipeline from");
+        RenderPipeline p = LegacyGl.pipelineFor(s, format, mode, state.key);
+        if (p == null) throw new IllegalStateException(this + " has no shader to build a pipeline from");
+        return p;
     }
 
     /** {@code pipeline()} is what the buffer source batches on; it answers with the pipeline {@link #getRenderPipeline()}
@@ -220,7 +283,12 @@ public class LegacyRenderType extends RenderType {
     }
 
     @Override
-    public VertexFormat.Mode mode() {
+    public PrimitiveTopology primitiveTopology() {
+        return mode;
+    }
+
+    /** 1.21's {@code RenderType.mode()} (26.2: {@code primitiveTopology()}), for code written against this type. */
+    public PrimitiveTopology mode() {
         return mode;
     }
 

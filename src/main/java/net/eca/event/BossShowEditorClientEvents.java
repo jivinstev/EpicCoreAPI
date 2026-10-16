@@ -1,7 +1,5 @@
 package net.eca.event;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.eca.client.BossShowKeyBindings;
 import net.eca.client.gui.BossShowEditorHomeScreen;
 import net.eca.client.gui.BossShowEditorScreen;
@@ -19,8 +17,8 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.gizmos.GizmoStyle;
+import net.minecraft.gizmos.Gizmos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -87,13 +85,13 @@ public final class BossShowEditorClientEvents {
         Minecraft mc = Minecraft.getInstance();
         tickEditorSessionHeartbeat(mc);
 
-        if (mc.screen instanceof BossShowEditorScreen editor && BossShowEditorState.isPreviewPlaying()) {
+        if (mc.gui.screen() instanceof BossShowEditorScreen editor && BossShowEditorState.isPreviewPlaying()) {
             BossShowEditorState.tickPreviewPlayback();
             editor.syncFromState();
         }
 
         //=== 录制相关快捷键（无 screen 时）===
-        if (mc.screen == null && BossShowEditorState.isActive() && BossShowEditorState.hasAnchor()) {
+        if (mc.gui.screen() == null && BossShowEditorState.isActive() && BossShowEditorState.hasAnchor()) {
             //J = 开始/恢复
             while (BossShowKeyBindings.REC_START.consumeClick()) {
                 if (mc.level != null) {
@@ -115,11 +113,11 @@ public final class BossShowEditorClientEvents {
         }
 
         //=== 每 tick 采样（仅 RECORDING 状态）===
-        if (mc.screen == null
+        if (mc.gui.screen() == null
             && BossShowEditorState.isActivelyRecording()
             && BossShowEditorState.hasAnchor()
             && mc.gameRenderer != null) {
-            Camera cam = mc.gameRenderer.getMainCamera();
+            Camera cam = mc.gameRenderer.mainCamera();
             BossShowEditorState.captureFrameFromCamera(
                 cam.position().x, cam.position().y, cam.position().z,
                 cam.yRot(), cam.xRot()
@@ -131,7 +129,7 @@ public final class BossShowEditorClientEvents {
             cachedHovered = null;
             return;
         }
-        if (mc.level == null || mc.player == null || mc.screen != null) {
+        if (mc.level == null || mc.player == null || mc.gui.screen() != null) {
             BossShowEditorState.setHoveredEntityUuid(null);
             cachedHovered = null;
             return;
@@ -154,9 +152,9 @@ public final class BossShowEditorClientEvents {
         boolean worldOperation = BossShowEditorState.isRecordingMode()
             || BossShowEditorState.isAnySelectionMode()
             || BossShowEditorState.isPoseCaptureArmed();
-        boolean validContext = minecraft.screen instanceof BossShowEditorSessionScreen
-            || minecraft.screen instanceof ConfirmScreen
-            || worldOperation && (minecraft.screen == null || minecraft.screen instanceof PauseScreen);
+        boolean validContext = minecraft.gui.screen() instanceof BossShowEditorSessionScreen
+            || minecraft.gui.screen() instanceof ConfirmScreen
+            || worldOperation && (minecraft.gui.screen() == null || minecraft.gui.screen() instanceof PauseScreen);
         if (!validContext || minecraft.getConnection() == null) return;
 
         sessionHeartbeatTicks++;
@@ -180,26 +178,26 @@ public final class BossShowEditorClientEvents {
         Minecraft mc = Minecraft.getInstance();
 
         if (BossShowEditorState.isPoseCaptureArmed()) {
-            if (mc.screen != null) return;
+            if (mc.gui.screen() != null) return;
             if (event.getKey() == GLFW.GLFW_KEY_ESCAPE) {
                 BossShowEditorState.cancelPoseCapture();
-                mc.setScreen(new BossShowEditorScreen());
+                mc.gui.setScreen(new BossShowEditorScreen());
                 return;
             }
             if (event.getKey() == GLFW.GLFW_KEY_ENTER || event.getKey() == GLFW.GLFW_KEY_KP_ENTER) {
                 if (mc.gameRenderer != null) {
-                    Camera cam = mc.gameRenderer.getMainCamera();
+                    Camera cam = mc.gameRenderer.mainCamera();
                     BossShowEditorState.commitPoseCapture(
                         cam.position().x, cam.position().y, cam.position().z,
                         cam.yRot(), cam.xRot());
                 }
-                mc.setScreen(new BossShowEditorScreen());
+                mc.gui.setScreen(new BossShowEditorScreen());
             }
             return;
         }
 
         if (!BossShowEditorState.isRecordingMode()) return;
-        if (mc.screen != null) return;
+        if (mc.gui.screen() != null) return;
         if (event.getKey() == GLFW.GLFW_KEY_ENTER || event.getKey() == GLFW.GLFW_KEY_KP_ENTER) {
             finishRecording(true);
         }
@@ -212,7 +210,7 @@ public final class BossShowEditorClientEvents {
         } else {
             BossShowEditorState.discardRecording();
         }
-        Minecraft.getInstance().setScreen(new BossShowEditorScreen());
+        Minecraft.getInstance().gui.setScreen(new BossShowEditorScreen());
     }
 
     @SubscribeEvent
@@ -221,22 +219,9 @@ public final class BossShowEditorClientEvents {
         Entity target = cachedHovered;
         if (target == null || target.isRemoved()) return;
 
-        Minecraft mc = Minecraft.getInstance();
-        Camera cam = mc.gameRenderer.getMainCamera();
-        Vec3 camPos = cam.position();
-
-        PoseStack pose = event.getPoseStack();
-        pose.pushPose();
-        pose.translate(-camPos.x, -camPos.y, -camPos.z);
-
-        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
-        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
+        //26.2：世界线框改为 Gizmos（世界坐标，渲染线程 collector 在 gameRenderer.render 期间生效）
         AABB box = target.getBoundingBox().inflate(0.02);
-        net.minecraft.client.renderer.ShapeRenderer.renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(box), 0.0, 0.0, 0.0,
-            net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f);
-        buffer.endBatch(RenderTypes.lines());
-
-        pose.popPose();
+        Gizmos.cuboid(box, GizmoStyle.stroke(net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f));
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -246,7 +231,7 @@ public final class BossShowEditorClientEvents {
         if (event.getButton() != GLFW.GLFW_MOUSE_BUTTON_RIGHT) return;
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) return;
+        if (mc.gui.screen() != null) return;
 
         event.setCanceled(true);
 
@@ -258,14 +243,14 @@ public final class BossShowEditorClientEvents {
             if (defId == null) {
                 BossShowEditorState.exitSelectionMode();
                 cachedHovered = null;
-                mc.setScreen(new BossShowEditorHomeScreen());
+                mc.gui.setScreen(new BossShowEditorHomeScreen());
                 return;
             }
             NetworkHandler.sendToServer(
                 new BossShowPlaySelectionPacket(defId, cachedHovered.getUUID()));
             BossShowEditorState.exitSelectionMode();
             cachedHovered = null;
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             return;
         }
 
@@ -279,7 +264,7 @@ public final class BossShowEditorClientEvents {
             BossShowEditorState.exitSelectionMode();
             cachedHovered = null;
             BossShowEditorState.enterRecordingStandby(mc.level.getGameTime());
-            mc.setScreen(null);
+            mc.gui.setScreen(null);
             return;
         }
 
@@ -303,7 +288,7 @@ public final class BossShowEditorClientEvents {
         if (mc.level != null) {
             BossShowEditorState.enterRecordingStandby(mc.level.getGameTime());
         }
-        mc.setScreen(null);
+        mc.gui.setScreen(null);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -313,7 +298,7 @@ public final class BossShowEditorClientEvents {
         if (BossShowEditorState.isPoseCaptureArmed()) {
             event.setCanceled(true);
             BossShowEditorState.cancelPoseCapture();
-            Minecraft.getInstance().setScreen(new BossShowEditorScreen());
+            Minecraft.getInstance().gui.setScreen(new BossShowEditorScreen());
             return;
         }
 
@@ -327,7 +312,7 @@ public final class BossShowEditorClientEvents {
             boolean recordingSelection = BossShowEditorState.isRecordSelectionMode();
             BossShowEditorState.exitSelectionMode();
             cachedHovered = null;
-            Minecraft.getInstance().setScreen(recordingSelection
+            Minecraft.getInstance().gui.setScreen(recordingSelection
                 ? new BossShowEditorScreen()
                 : new BossShowEditorHomeScreen());
             return;
@@ -335,7 +320,7 @@ public final class BossShowEditorClientEvents {
         //在编辑器 session 活着且无 screen 状态下按 ESC 也回到 Home
         if (BossShowEditorState.isActive()) {
             event.setCanceled(true);
-            Minecraft.getInstance().setScreen(new BossShowEditorHomeScreen());
+            Minecraft.getInstance().gui.setScreen(new BossShowEditorHomeScreen());
         }
     }
 
@@ -344,7 +329,7 @@ public final class BossShowEditorClientEvents {
     public static void onRenderGuiToast(RenderGuiEvent.Post event) {
         if (System.currentTimeMillis() >= toastUntilMillis) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) return;
+        if (mc.gui.screen() != null) return;
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
         event.getGuiGraphics().centeredText(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
@@ -354,7 +339,7 @@ public final class BossShowEditorClientEvents {
     public static void onRenderGui(RenderGuiEvent.Post event) {
         if (!BossShowEditorState.isAnySelectionMode()) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) return;
+        if (mc.gui.screen() != null) return;
 
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();

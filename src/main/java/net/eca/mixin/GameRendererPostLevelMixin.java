@@ -2,11 +2,11 @@
 // GameRenderer.getDepthFar became Camera.depthFar -- see CameraDepthFarMixin).
 package net.eca.mixin;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import net.eca.client.render.ShaderMaskRenderQueue;
 import net.eca.client.render.shader.EcaShaderInstance;
@@ -70,9 +70,10 @@ public class GameRendererPostLevelMixin {
         ShaderMaskRenderQueue.flush();
     }
 
+    // 26.2: LevelRenderer.renderLevel(..., ChunkSectionsToRender) is render(...) without the sections argument
     @Inject(method = "renderLevel",
             at = @At(value = "INVOKE",
-                     target = "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZLnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;)V",
+                     target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V",
                      shift = At.Shift.AFTER))
     private void eca$flushItemLayersAfterWorld(DeltaTracker deltaTracker, CallbackInfo ci) {
         if (!EcaShaderInstance.isOculusShadersActive()) {
@@ -107,15 +108,15 @@ public class GameRendererPostLevelMixin {
         int alphaInt = (int) (Mth.clamp(alpha, 0.0f, 1.0f) * 255.0f);
         int light = 15728880;
 
-        Tesselator tesselator = Tesselator.getInstance();
-
+        // 26.2: Tesselator is gone; a local ByteBufferBuilder backs each face's BufferBuilder
+        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(DefaultVertexFormat.BLOCK.getVertexSize() * 4)) {
         net.eca.mv.LegacyGl.setupRenderState(renderType);
 
         for (int i = 0; i < 6; ++i) {
             poseStack.pushPose();
             rotateToFace(poseStack, i);
             Matrix4f matrix = poseStack.last().pose();
-            BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+            BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
             bufferBuilder.addVertex(matrix, -size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, -size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
@@ -125,6 +126,7 @@ public class GameRendererPostLevelMixin {
         }
 
         net.eca.mv.LegacyGl.clearRenderState(renderType);
+        }
     }
 
     private static void rotateToFace(PoseStack poseStack, int face) {

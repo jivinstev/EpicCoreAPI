@@ -3,6 +3,7 @@ package net.eca.client.gui;
 import net.eca.util.EcaLogger;
 import net.eca.util.shader_generator.ShaderProjectCodec;
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -81,7 +82,7 @@ public final class ShaderLayerDetailsScreen extends Screen {
     }
 
     private void openColorPicker() {
-        minecraft.setScreen(new ShaderColorPickerScreen(
+        Minecraft.getInstance().gui.setScreen(new ShaderColorPickerScreen(
             this,
             red,
             green,
@@ -130,7 +131,7 @@ public final class ShaderLayerDetailsScreen extends Screen {
             return;
         }
         confirmHandler.accept(new LayerDetails(name, red, green, blue, alpha, imagePath));
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override
@@ -157,7 +158,7 @@ public final class ShaderLayerDetailsScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     private int colorArgb() {

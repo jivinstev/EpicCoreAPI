@@ -52,9 +52,9 @@ public class OceanShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().yRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().xRot());
+                if (mc.gameRenderer != null && mc.gameRenderer.mainCamera() != null) {
+                    float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().yRot());
+                    float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().xRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

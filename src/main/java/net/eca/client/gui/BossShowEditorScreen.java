@@ -91,7 +91,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     protected void init() {
         super.init();
         if (!BossShowEditorState.isActive() || BossShowEditorState.getEditingId() == null) {
-            this.minecraft.setScreen(null);
+            this.minecraft.gui.setScreen(null);
             return;
         }
         preferredTimelineHeight = clampTimelineHeight(preferredTimelineHeight);
@@ -414,22 +414,22 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         closeDropdown();
         if (BossShowEditorState.armPoseCapture()) {
             BossShowEditorState.setPreviewEnabled(false);
-            this.minecraft.setScreen(null);
+            this.minecraft.gui.setScreen(null);
         }
     }
 
-    private void openSettings() { closeDropdown(); this.minecraft.setScreen(new BossShowEditorSettingsScreen()); }
-    private void openRangeTransform() { closeDropdown(); if (BossShowEditorState.hasValidRange()) this.minecraft.setScreen(new BossShowRangeTransformScreen()); }
-    private void openPathGenerator() { closeDropdown(); if (BossShowEditorState.frameCount() > 0) this.minecraft.setScreen(new BossShowPathGeneratorScreen()); }
+    private void openSettings() { closeDropdown(); this.minecraft.gui.setScreen(new BossShowEditorSettingsScreen()); }
+    private void openRangeTransform() { closeDropdown(); if (BossShowEditorState.hasValidRange()) this.minecraft.gui.setScreen(new BossShowRangeTransformScreen()); }
+    private void openPathGenerator() { closeDropdown(); if (BossShowEditorState.frameCount() > 0) this.minecraft.gui.setScreen(new BossShowPathGeneratorScreen()); }
     private void openEffectEditor() {
         closeDropdown();
         if (BossShowEditorState.frameCount() > 0) {
-            this.minecraft.setScreen(new BossShowEffectEditorScreen(this, BossShowEditorState.getPlayhead()));
+            this.minecraft.gui.setScreen(new BossShowEffectEditorScreen(this, BossShowEditorState.getPlayhead()));
         }
     }
     private void setIn() { BossShowEditorState.setInPoint(BossShowEditorState.getPlayhead()); closeDropdown(); syncFromState(); }
     private void setOut() { BossShowEditorState.setOutPoint(BossShowEditorState.getPlayhead()); closeDropdown(); syncFromState(); }
-    private void openShortcutHelp() { closeDropdown(); this.minecraft.setScreen(new BossShowShortcutHelpScreen()); }
+    private void openShortcutHelp() { closeDropdown(); this.minecraft.gui.setScreen(new BossShowShortcutHelpScreen()); }
     private void deleteRange() { if (BossShowEditorState.deleteRange()) syncFromState(); closeDropdown(); }
     private void undo() { if (BossShowEditorState.undo()) syncFromState(); closeDropdown(); }
     private void redo() { if (BossShowEditorState.redo()) syncFromState(); closeDropdown(); }
@@ -438,8 +438,8 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         closeDropdown();
         if (!BossShowEditorState.hasAnchor()) return;
         if (BossShowEditorState.frameCount() > 0) {
-            this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
-                if (confirmed) doStartRecording(); else this.minecraft.setScreen(new BossShowEditorScreen());
+            this.minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
+                if (confirmed) doStartRecording(); else this.minecraft.gui.setScreen(new BossShowEditorScreen());
             }, Component.translatable("gui.eca.bossshow.editor.start_rec.title"),
                 Component.translatable("gui.eca.bossshow.editor.start_rec.body", BossShowEditorState.frameCount())));
         } else doStartRecording();
@@ -447,7 +447,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
 
     private void doStartRecording() {
         BossShowEditorState.enterRecordSelection();
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 
     private void doSave() {
@@ -469,8 +469,8 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     private void attemptClose() {
         closeDropdown();
         if (BossShowEditorState.isDirty()) {
-            this.minecraft.setScreen(new ConfirmScreen(confirmed -> {
-                if (confirmed) backToHome(); else this.minecraft.setScreen(new BossShowEditorScreen());
+            this.minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
+                if (confirmed) backToHome(); else this.minecraft.gui.setScreen(new BossShowEditorScreen());
             }, Component.translatable("gui.eca.bossshow.editor.discard.title"),
                 Component.translatable("gui.eca.bossshow.editor.discard.body")));
         } else backToHome();
@@ -478,7 +478,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
 
     private void backToHome() {
         BossShowEditorState.clearDirty();
-        this.minecraft.setScreen(new BossShowEditorHomeScreen());
+        this.minecraft.gui.setScreen(new BossShowEditorHomeScreen());
     }
 
     private void rebuildWidgetsForDropdown() {

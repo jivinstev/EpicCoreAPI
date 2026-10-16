@@ -2,6 +2,7 @@ package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderModuleDefinition;
 import net.eca.util.shader_generator.ShaderOutputEffectInstance;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -83,7 +84,7 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
                 Component.translatable("gui.eca.shader_generator.output_effect.remove"),
                 button -> {
                     removeHandler.run();
-                    minecraft.setScreen(returnScreen);
+                    Minecraft.getInstance().gui.setScreen(returnScreen);
                 }
             ).bounds(width / 2 - 156, height - 30, 88, 20).build());
         }
@@ -104,7 +105,7 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
 
     private void confirm() {
         confirmHandler.accept(effect);
-        minecraft.setScreen(returnScreen);
+        Minecraft.getInstance().gui.setScreen(returnScreen);
     }
 
     @Override
@@ -135,6 +136,6 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 }

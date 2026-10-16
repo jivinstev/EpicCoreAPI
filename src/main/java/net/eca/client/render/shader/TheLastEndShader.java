@@ -52,9 +52,9 @@ public class TheLastEndShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().yRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().xRot());
+                if (mc.getCameraEntity() != null) {
+                    float yaw = (float) Math.toRadians(mc.getCameraEntity().getYRot());
+                    float pitch = (float) Math.toRadians(mc.getCameraEntity().getXRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }
