@@ -12,9 +12,9 @@ its id, or by an `item` row for the id. `reviewer` names the reviewing agent, di
 (`git rev-parse --short HEAD`). tools/fork-port.py adds a `?` row for every item it finds unreviewed
 (an `item` row for every unaccounted inventory item); it never changes a verdict.
 
-- reviewer: fresh agent (independent target reviewer, R1 brief; subagent of session_01YLkedK6f5qY1xnQGeaz4Zy), not the fixer; re-review r2 of the F1/F2 fix (ebeee64), changed rows only
+- reviewer: fresh agent (independent target reviewer, R1 brief; subagent of session_01YLkedK6f5qY1xnQGeaz4Zy), not the fixer; re-review r2 of the F1/F2 fix (ebeee64), changed rows only; r3 of the renames.tsv change 408f58e, that row only
 - date: 2026-10-16
-- commit: 148f443a67a38304dffc4eb7da65c584b5b8acd8
+- commit: 00574a2fa52734aee65725667506c72a6b8ef8be
 
 | kind | file | verdict | note |
 |---|---|---|---|
@@ -170,4 +170,4 @@ and ShaderMaskRenderQueue.java).
   prepared trees of all six at 148f443 against e568b80 differ only in those two files and only by header lines (checked by
   preparing each; ShaderMaskRenderQueue's 1.21.5 overlay does not reach them). Those targets therefore still carry F1/F2's
   pattern (their own LegacyRenderType/LegacyGl; 1.21.8+ already call apply()) -- for their own reviews.
-| renames | .multiversion/targets/1.21.5/renames.tsv @5cc3f453af66 | ? | ? |
+| renames | .multiversion/targets/1.21.5/renames.tsv @5cc3f453af66 | ok | the rows of @bddce9da7be9 (ok above) unchanged, plus 408f58e's four re: rows in a #!exhaustive...#!strict block. javap of the 1.21.5 CompoundTag (neoforge-21.5.98 merged): getFloat/getInt/getLong/getDouble(String) now return Optional; the primitive reads are getFloatOr (Ljava/lang/String;F)F, getIntOr (Ljava/lang/String;I)I, getLongOr (Ljava/lang/String;J)J, getDoubleOr (Ljava/lang/String;D)D -- the replacement keys exactly. DualityTable matches calls by owner#name#desc, so the 1.21.1 keys could never match a 1.21.5 call. Semantics: 1.21.5 getXxxOr(k, d) returns the NumericTag's value or d; 1.21.1 getXxx(k) returned the numeric value or 0 (CompoundTag.getFloat :371-380 there), so getXxxOr(k, 0) is 1.21.1's getXxx(k) -- and the rows register the read as an identity (invert returns the target for the operand that holds the sink): the default operand is a constant in the mapped shape, and where the sink is in the receiver chain the identity is right whatever the default. Application: layer.py prepare 1.21.5 into this worktree's build/mc1.21.5/mv/java (dead-rule check dead=0): each row rewrote exactly the authors' two copies (HealthDataflowAnalyzer.java:2106-2113) and nothing else -- the prepared file differs from the authors' only by those 8 lines and the 1.21.3 hurtServer/actuallyHurt rows, which still apply once each (McMethod HURT/ACTUALLY_HURT, prepared :79-80; one source occurrence each); no other file holds the matched text. The put side (isNbtPut: putFloat etc., unchanged names on 1.21.5) needs nothing. Not covered: getXxx(k).orElse(d) (CompoundTag#getFloat#(String)Optional and Optional#orElse have no rule). The authors' own prepared code never uses that form (all NBT numeric reads are getXxxOr, no .getXxx(..).orElse/get/map), so it does not matter for them; a third-party 1.21.5 mod that reads a health value that way still meets INVERTER_MISSING/a dead-end root, as every NBT read did before this change -- a coverage gap with no 1.21.1 counterpart (the form did not exist there), worth a later rule pair, not a regression. |
