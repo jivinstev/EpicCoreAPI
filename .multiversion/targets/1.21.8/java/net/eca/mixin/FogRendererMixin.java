@@ -26,7 +26,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.minecraft.client.DeltaTracker;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import java.nio.ByteBuffer;
 import org.joml.Vector4f;
 
 @OnlyIn(Dist.CLIENT)
@@ -46,36 +48,51 @@ public class FogRendererMixin {
         cir.setReturnValue(eca$blendColor(cir.getReturnValue(), fog, strengthHolder[0]));
     }
 
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private static Vector4f eca$modifyBufferColor(Vector4f color) {
+    // 1.21.8: the colour and distances that reach the shaders are the arguments of setupFog's one updateBuffer call (the
+    // world fog buffer; the constructor's call fills the no-fog buffer and is left alone). As 1.21.1 did: the colour is
+    // tinted with no fluid check (setupColor TAIL -> levelFogColor); the distances are changed only with no fluid in the
+    // camera (setupFog TAIL). 1.21.1 forced FogShape.CYLINDER unless the extension asked otherwise at full strength;
+    // fog.glsl takes the max of a spherical (environmental) and a cylindrical (render-distance) fog, with 1.21.1's
+    // cylindrical distance, so the shape is which pair of fields gets the custom start/end: the other pair is pushed out.
+    @WrapOperation(method = "setupFog", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/fog/FogRenderer;updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
+    private void eca$applyGlobalFogBuffer(FogRenderer self, ByteBuffer buffer, int offset, Vector4f color,
+                                          float envStart, float envEnd, float renderStart, float renderEnd,
+                                          float skyEnd, float cloudEnd, Operation<Void> original) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Camera camera = minecraft.gameRenderer.getMainCamera();
         float[] strengthHolder = new float[]{0.0f};
-        GlobalFogExtension fog = eca$currentFog(strengthHolder);
-        return fog == null ? color : eca$blendColor(color, fog, strengthHolder[0]);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private static float eca$modifyEnvStart(float value) {
-        return eca$distance(value, 0);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 1)
-    private static float eca$modifyEnvEnd(float value) {
-        return eca$distance(value, 1);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 2)
-    private static float eca$modifyRenderStart(float value) {
-        return eca$distance(value, 0);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 3)
-    private static float eca$modifyRenderEnd(float value) {
-        return eca$distance(value, 1);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 4)
-    private static float eca$modifySkyEnd(float value) {
-        return eca$distance(value, 2);
+        GlobalFogExtension fog = eca$resolveFogContext(minecraft.level, camera, strengthHolder);
+        if (fog == null) {
+            original.call(self, buffer, offset, color, envStart, envEnd, renderStart, renderEnd, skyEnd, cloudEnd);
+            return;
+        }
+        float strength = strengthHolder[0];
+        color = eca$blendColor(color, fog, strength);
+        if (camera.getFluidInCamera() == FogType.NONE) {
+            float renderDistance = minecraft.options.getEffectiveRenderDistance() * 16.0f;
+            float customStart = fog.terrainFogStart(renderDistance);
+            float customEnd = fog.terrainFogEnd(renderDistance);
+            GlobalFogExtension.Shape shape = strength >= 0.999f ? fog.fogShape() : null;
+            if (shape == GlobalFogExtension.Shape.SPHERE) {
+                float start = Mth.lerp(strength, envStart, customStart);
+                float end = Mth.lerp(strength, envEnd, customEnd);
+                envStart = start;
+                envEnd = end <= start ? start + 1.0f : end;
+                renderStart = Mth.lerp(strength, renderStart, Float.MAX_VALUE);
+                renderEnd = Mth.lerp(strength, renderEnd, Float.MAX_VALUE);
+            } else {
+                float start = Mth.lerp(strength, renderStart, customStart);
+                float end = Mth.lerp(strength, renderEnd, customEnd);
+                renderStart = start;
+                renderEnd = end <= start ? start + 1.0f : end;
+                envStart = Mth.lerp(strength, envStart, Float.MAX_VALUE);
+                envEnd = Mth.lerp(strength, envEnd, Float.MAX_VALUE);
+            }
+            // the sky shader fogs from 0 to FogSkyEnd (1.21.1's FOG_SKY start has no field)
+            skyEnd = Mth.lerp(strength, skyEnd, fog.skyFogEnd(renderDistance));
+        }
+        original.call(self, buffer, offset, color, envStart, envEnd, renderStart, renderEnd, skyEnd, cloudEnd);
     }
 
     @Unique
@@ -85,37 +102,6 @@ public class FogRendererMixin {
                 Mth.lerp(strength, base.y, eca$clampColor(fog.fogGreen())),
                 Mth.lerp(strength, base.z, eca$clampColor(fog.fogBlue())),
                 base.w);
-    }
-
-    @Unique
-    private static GlobalFogExtension eca$currentFog(float[] strengthHolder) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null) {
-            return null;
-        }
-        Camera camera = minecraft.gameRenderer.getMainCamera();
-        if (camera == null || camera.getFluidInCamera() != FogType.NONE) {
-            return null;
-        }
-        return eca$resolveFogContext(minecraft.level, camera, strengthHolder);
-    }
-
-    // kind: 0 terrain start, 1 terrain end, 2 sky end
-    @Unique
-    private static float eca$distance(float original, int kind) {
-        if (net.eca.mv.Mv.isFogSuspended()) {
-            return Float.MAX_VALUE;
-        }
-        float[] strengthHolder = new float[]{0.0f};
-        GlobalFogExtension fog = eca$currentFog(strengthHolder);
-        if (fog == null) {
-            return original;
-        }
-        float renderDistance = Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0f;
-        float custom = kind == 0 ? fog.terrainFogStart(renderDistance)
-                : kind == 1 ? fog.terrainFogEnd(renderDistance)
-                : fog.skyFogEnd(renderDistance);
-        return Mth.lerp(strengthHolder[0], original, custom);
     }
 
     @Unique

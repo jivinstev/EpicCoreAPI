@@ -63,10 +63,7 @@ public abstract class LevelRendererMixin {
     private boolean eca$forceLoadedFogActive;
 
     @Unique
-    private float eca$savedFogStart;
-
-    @Unique
-    private float eca$savedFogEnd;
+    private GpuBufferSlice eca$savedShaderFog;
 
     /* 本帧存在横跨云层平面的可见强加载实体。云层绘制在实体之后并吃雾色，
        远处的云挡住巨型模型时看起来不像云，而像模型被挖掉一块。 */
@@ -83,6 +80,8 @@ public abstract class LevelRendererMixin {
                                          Matrix4f frustumMatrix, Matrix4f projectionMatrix,
                                          GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
         net.eca.mv.CloudGate.occlude = false;
+        // FilterRenderer's world-space pass inverts this frame's level projection (1.21.1: event.getProjectionMatrix())
+        net.eca.client.render.shader.FilterRenderer.captureLevelProjection(projectionMatrix);
     }
 
     /* shouldRender 每次进入都会登记当前实体，isChunkCompiled 是它在同一个判断表达式里的读取方。
@@ -220,7 +219,10 @@ public abstract class LevelRendererMixin {
         }
 
         flushEntityBuffers(minecraft);
-        net.eca.mv.Mv.suspendFog();
+        // 1.21.8: the entity's draws bind RenderSystem.getShaderFog() when the buffers are flushed; draw this entity
+        // (flushed at RETURN) with the no-fog slice, as 1.21.1's setShaderFogStart/End(MAX_VALUE) did
+        eca$savedShaderFog = RenderSystem.getShaderFog();
+        RenderSystem.setShaderFog(minecraft.gameRenderer.fogRenderer.getBuffer(net.minecraft.client.renderer.fog.FogRenderer.FogMode.NONE));
         eca$forceLoadedFogActive = true;
     }
 
@@ -232,7 +234,8 @@ public abstract class LevelRendererMixin {
             return;
         }
         flushEntityBuffers(Minecraft.getInstance());
-        net.eca.mv.Mv.restoreFog();
+        RenderSystem.setShaderFog(eca$savedShaderFog);
+        eca$savedShaderFog = null;
         eca$forceLoadedFogActive = false;
     }
 
