@@ -5,6 +5,9 @@
 // LevelRenderer.render returns, outside any render pass). The textured layer no longer waits in the shared
 // MultiBufferSource during the level either: 26.3 posts AfterTranslucentFeatures inside the main render pass, where the
 // shared helper's flush cannot open a pass of its own. Outside the level (a GUI entity) it still draws at once.
+// 26.3 (#37): that queue is now drawn INTO the level's main pass at AfterTranslucentFeatures (ShaderMaskRenderQueue.InLevelPass),
+// so glass, water, particles and weather draw over the layers again; the after-level flush is left for improved
+// transparency (no AfterTranslucentFeatures is posted) and Oculus.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
