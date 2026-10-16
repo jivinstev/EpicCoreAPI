@@ -16,9 +16,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.UvMapping;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -60,13 +59,13 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"
+            target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/UvMapping;I)V"
         )
     )
+    // the redirected call's generic state is erased to Object: the handler must take Object there (Mixin checks it)
     private void eca$renderBlenderReplacement(SubmitNodeCollector collector, Model model, Object modelState,
                                               PoseStack poseStack, RenderType renderType, int packedLight,
-                                              int packedOverlay, int color, TextureAtlasSprite sprite, int outlineColor,
-                                              ModelFeatureRenderer.CrumblingOverlay crumbling,
+                                              int packedOverlay, int color, UvMapping uvMapping, int outlineColor,
                                               S state, PoseStack methodPoseStack, SubmitNodeCollector methodCollector,
                                               CameraRenderState cameraState) {
         if (EntityOf.get(state) instanceof LivingEntity entity) {
@@ -79,8 +78,8 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
                 return;
             }
         }
-        collector.submitModel(model, modelState, poseStack, renderType, packedLight, packedOverlay, color, sprite,
-            outlineColor, crumbling);
+        collector.submitModel((Model) model, modelState, poseStack, renderType, packedLight, packedOverlay, color, uvMapping,
+            outlineColor);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

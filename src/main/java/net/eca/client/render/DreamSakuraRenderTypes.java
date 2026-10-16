@@ -1,7 +1,7 @@
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -24,7 +24,7 @@ public class DreamSakuraRenderTypes {
 
     public static final RenderType BOSS_BAR = net.eca.mv.LegacyRenderType.create("dream_sakura_boss_bar",
         DefaultVertexFormat.BLOCK,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -39,7 +39,7 @@ public class DreamSakuraRenderTypes {
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("dream_sakura_boss_layer",
         DefaultVertexFormat.ENTITY,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -54,7 +54,7 @@ public class DreamSakuraRenderTypes {
 
     public static final RenderType SKYBOX = net.eca.mv.LegacyRenderType.create("dream_sakura_skybox",
         DefaultVertexFormat.BLOCK,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -69,7 +69,7 @@ public class DreamSakuraRenderTypes {
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("dream_sakura_item",
         DefaultVertexFormat.ENTITY,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -87,7 +87,7 @@ public class DreamSakuraRenderTypes {
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("dream_sakura_entity_effect",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             true,

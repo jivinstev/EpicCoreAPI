@@ -9,7 +9,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import java.awt.FileDialog;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
@@ -107,13 +107,10 @@ public final class ShaderLayerDetailsScreen extends Screen {
             return;
         }
         try {
-            String selected = TinyFileDialogs.tinyfd_openFileDialog(
-                "Select PNG Image",
-                null,
-                null,
-                "PNG Image (*.png)",
-                false
-            );
+            FileDialog dialog = new FileDialog((java.awt.Frame) null, "Select PNG Image", FileDialog.LOAD);
+            dialog.setFilenameFilter((dir, name) -> name.toLowerCase(java.util.Locale.ROOT).endsWith(".png"));
+            dialog.setVisible(true);
+            String selected = dialog.getFile() == null ? null : dialog.getDirectory() + dialog.getFile();
             if (selected != null) {
                 imagePath = ShaderProjectCodec.importTexture(projectRef, Path.of(selected));
                 clearWidgets();

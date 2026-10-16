@@ -1,25 +1,20 @@
-// OVERLAY-ONLY: community fork multi-version layer, 26.2 copy (#37). 26.2 draws every GUI, tooltip, oversized and
-// picture-in-picture item into an offscreen texture -- GuiItemAtlas.drawToSlot or PictureInPictureRenderer.prepare -- by
-// submitting it, then calling FeatureRenderDispatcher.renderAllFeatures(storage) with RenderSystem's output overrides set to
-// that texture. An item extension's shader passes drawn at submit therefore went into the texture BEFORE the item and the
-// item covered them (a regression from 26.1.2). They are collected here at submit instead and drawn right after
-// renderAllFeatures returns (GuiItemAtlasFeaturesMixin, PictureInPictureFeaturesMixin, kept to 26.2 by mixin_add_only),
-// with the overrides, scissor and projection still the texture's, and the model-view captured at submit.
-// 26.3 has its own copy (its features draw into a render pass it hands over).
+// OVERLAY-ONLY: community fork multi-version layer, 26.3 only (#33). 26.3 draws every GUI, tooltip, oversized and
+// picture-in-picture item into an offscreen texture -- GuiItemAtlas's slot (redrawn only when the item changes) or a
+// PictureInPictureRenderer's -- in a render pass vanilla opens on that texture after the item was submitted. An item
+// extension's shader passes submitted then are collected here and drawn INTO that pass, right after vanilla's features
+// (GuiItemAtlasMixin, PictureInPictureRendererMixin), through the shared helper's net.eca.mv.LegacyGl.draw(mesh, pass):
+// so they land in the texture, at its projection and scissor, with the item.
 package net.eca.client.render;
 
-import com.mojang.blaze3d.ProjectionType;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
-import org.joml.Matrix4f;
+import com.mojang.renderpearl.api.commands.RenderPass;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class GuiTexturePasses {
-    private static int depth;
+    private static boolean collecting;
     private static final List<Entry> PENDING = new ArrayList<>();
 
     private GuiTexturePasses() {
@@ -27,53 +22,35 @@ public final class GuiTexturePasses {
 
     /** Vanilla starts drawing an item into an offscreen texture (GuiItemAtlas.drawToSlot, PictureInPictureRenderer.prepare). */
     public static void begin() {
-        if (depth++ == 0) {
-            discard();   // what an earlier texture left (it threw before its end)
-        }
+        discard();   // what an earlier texture left (it threw before its end)
+        collecting = true;
     }
 
-    /** Whether a pass submitted now is drawn by {@link #drawAfterFeatures} after vanilla's features. */
+    /** Whether an item submitted now is drawn into an offscreen texture whose pass {@link #drawInto} will be handed. */
     public static boolean collecting() {
-        return depth > 0;
+        return collecting;
     }
 
     public static void add(ShaderMaskPass pass, BufferBuilder builder, MeshData mesh, MaskUvTransform uvTransform) {
-        PENDING.add(new Entry(pass, builder, mesh, uvTransform, new Matrix4f(RenderSystem.getModelViewStack()),
-            RenderSystem.getProjectionMatrixBuffer(), RenderSystem.getProjectionType()));
+        PENDING.add(new Entry(pass, builder, mesh, uvTransform));
     }
 
-    /** renderAllFeatures returned: the item is in the texture. Draw what was collected over it, in submit order. */
-    public static void drawAfterFeatures() {
+    /** Vanilla drew its features into {@code into} (still open): draw what was collected into it too. */
+    public static void drawInto(RenderPass into) {
         if (PENDING.isEmpty()) {
             return;
         }
         List<Entry> now = new ArrayList<>(PENDING);
         PENDING.clear();
-        // the item may have gone into the shared buffer source; end it first so the passes land over it
-        net.eca.mv.MultiBufferSource.main().endBatch();
-        GpuBufferSlice savedProjection = RenderSystem.getProjectionMatrixBuffer();
-        ProjectionType savedType = RenderSystem.getProjectionType();
-        try {
-            for (Entry e : now) {
-                RenderSystem.getModelViewStack().pushMatrix();
-                try {
-                    RenderSystem.getModelViewStack().set(e.modelView());
-                    RenderSystem.setProjectionMatrix(e.projection(), e.projectionType());
-                    ShaderMaskRenderQueue.drawNow(e.pass(), e.builder(), e.mesh(), e.uvTransform());
-                } finally {
-                    RenderSystem.getModelViewStack().popMatrix();
-                }
-            }
-        } finally {
-            RenderSystem.setProjectionMatrix(savedProjection, savedType);
+        for (Entry e : now) {
+            ShaderMaskRenderQueue.drawInto(e.pass(), e.builder(), e.mesh(), e.uvTransform(), into);
         }
     }
 
-    /** The texture is done; anything not drawn is dropped. */
+    /** The texture is done; anything its pass did not take is dropped. */
     public static void end() {
-        if (depth > 0 && --depth == 0) {
-            discard();
-        }
+        collecting = false;
+        discard();
     }
 
     private static void discard() {
@@ -83,7 +60,6 @@ public final class GuiTexturePasses {
         PENDING.clear();
     }
 
-    private record Entry(ShaderMaskPass pass, BufferBuilder builder, MeshData mesh, MaskUvTransform uvTransform,
-                         Matrix4f modelView, GpuBufferSlice projection, ProjectionType projectionType) {
+    private record Entry(ShaderMaskPass pass, BufferBuilder builder, MeshData mesh, MaskUvTransform uvTransform) {
     }
 }

@@ -1,7 +1,7 @@
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.StarlightShader;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -22,7 +22,7 @@ public class StarlightRenderTypes {
 
     public static final RenderType BOSS_BAR = net.eca.mv.LegacyRenderType.create("starlight_boss_bar",
         DefaultVertexFormat.BLOCK,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -36,7 +36,7 @@ public class StarlightRenderTypes {
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("starlight_boss_layer",
         DefaultVertexFormat.ENTITY,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -50,7 +50,7 @@ public class StarlightRenderTypes {
 
     public static final RenderType SKYBOX = net.eca.mv.LegacyRenderType.create("starlight_skybox",
         DefaultVertexFormat.BLOCK,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -64,7 +64,7 @@ public class StarlightRenderTypes {
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("starlight_item",
         DefaultVertexFormat.ENTITY,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -82,7 +82,7 @@ public class StarlightRenderTypes {
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("starlight_entity_effect",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             true,

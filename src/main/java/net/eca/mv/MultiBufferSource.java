@@ -1,11 +1,16 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 package net.eca.mv;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.StagedVertexBuffer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -18,18 +23,32 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.SequencedMap;
 
 /**
- * 26.2 has no {@code MultiBufferSource} (geometry is recorded into the frame's staged buffer, CATALOG §V100). This is
+ * 26.2 and 26.3 have no {@code MultiBufferSource} (geometry is recorded into the frame's staged buffer, CATALOG §V100). This is
  * the 1.21 shape for fork code that still asks a buffer source for a {@link VertexConsumer} per render type and ends
  * the batch itself: the vertices are collected in {@link ByteBufferBuilder}s and each type's mesh is drawn on
- * {@code endBatch} -- a fork-layer {@link LegacyRenderType} through its own draw, a vanilla type through
- * {@code prepare().drawFromBuffer(...)}, which draws into the type's output target (or the output override) itself.
- * {@link #main()} stands in for {@code renderBuffers().bufferSource()} and is flushed by {@link Flush}.
+ * {@code endBatch} -- a fork-layer {@link LegacyRenderType} through its own draw (into its own output target), a
+ * vanilla type through {@code prepare().drawFromBuffer(info, pass)} in a pass this opens (26.3 copy, §V101: a vanilla
+ * type names no target and there is no output override any more, so the pass goes, as {@code LegacyGl.draw}'s does,
+ * to the main target's own views, with no depth view when it has no depth). {@link #main()} stands in for
+ * {@code renderBuffers().bufferSource()} and is flushed by {@link Flush}.
+ *
+ * <p>26.3 posts most {@code RenderLevelStageEvent} stages inside the main render pass, where no other pass can be opened
+ * ({@link RenderPasses}). So {@link BufferSource#endBatch(RenderPass)} draws into a pass that is already open (an in-pass
+ * stage event's {@code getRenderPass()}: {@link Flush} ends the main batch at AfterTranslucentFeatures that way), and a
+ * batch ended while a pass is open without one (a type switch in {@code getBuffer}, the mod's own {@code endBatch()} from
+ * an in-pass stage) is DEFERRED: its mesh is kept and drawn at the next flush outside a pass (AfterLevel, the frame's
+ * end). A {@link LegacyRenderType} with an output target of its own is not the open pass's, so it is deferred too.
+ * A handler at an in-pass stage that mixes types opens {@link BufferSource#drawingInto} on the event's pass, so its
+ * type switches and ends draw into that pass (with the stage's model-view) instead of being deferred.
  */
 // MV-REQUIRES: LegacyRenderType
 // MV-REQUIRES: LegacyGl
+// MV-REQUIRES: RenderPasses
 public interface MultiBufferSource {
     VertexConsumer getBuffer(RenderType type);
 
@@ -69,6 +88,8 @@ public interface MultiBufferSource {
         protected final Map<RenderType, BufferBuilder> startedBuilders = new HashMap<>();
         /** The type currently writing into {@link #sharedBuffer}, or null. */
         protected RenderType lastSharedType;
+        /** While a {@link #drawingInto} scope is open: the pass a batch ended without one goes into, else null. */
+        protected RenderPass scopePass;
 
         protected BufferSource(ByteBufferBuilder sharedBuffer, SequencedMap<RenderType, ByteBufferBuilder> fixedBuffers) {
             this.sharedBuffer = sharedBuffer;
@@ -103,6 +124,29 @@ public interface MultiBufferSource {
             return fresh;
         }
 
+        /**
+         * Until the returned scope is closed, every batch this source ends without a pass of its own -- a type switch in
+         * {@link #getBuffer}, {@link #endBatch()}, {@link #endBatch(RenderType)} -- is drawn INTO {@code pass} (an in-pass
+         * stage event's {@code getRenderPass()}) instead of being deferred to the next pass-free flush. For a handler that
+         * mixes render types at an in-pass stage (lines, then a model, then its label): each switch ends the previous
+         * type's batch, which would otherwise wait for AfterLevel, after the level's model-view has been popped.
+         */
+        public Scope drawingInto(RenderPass pass) {
+            if (pass == null) throw new IllegalArgumentException("[mv] BufferSource.drawingInto a null render pass");
+            RenderPass outer = scopePass;
+            scopePass = pass;
+            return () -> {
+                endBatch(pass);   // what the scope began is drawn while its pass is still the open one
+                scopePass = outer;
+            };
+        }
+
+        /** A {@link #drawingInto} scope; closing it ends what it began into its pass and restores the outer scope. */
+        public interface Scope extends AutoCloseable {
+            @Override
+            void close();
+        }
+
         /** Draws the type currently on the shared buffer, if any. */
         public void endLastBatch() {
             if (lastSharedType != null) {
@@ -112,17 +156,38 @@ public interface MultiBufferSource {
 
         /** Draws everything begun: the shared-buffer type, then the fixed-buffer types in order, then any other. */
         public void endBatch() {
-            endLastBatch();
+            endBatch((RenderPass) null);
+        }
+
+        /** As {@link #endBatch()}, INTO {@code into}, a pass that is already open (null: each draw opens its own). */
+        public void endBatch(RenderPass into) {
+            if (into == null) {
+                into = scopePass;
+            }
+            if (into == null) {
+                Deferred.drawIfNoPassOpen();   // what an earlier in-pass end left, first: it was written first
+            }
+            if (lastSharedType != null) {
+                endBatch(lastSharedType, into);
+            }
             for (RenderType type : List.copyOf(fixedBuffers.keySet())) {
-                endBatch(type);
+                endBatch(type, into);
             }
             for (RenderType type : new ArrayList<>(startedBuilders.keySet())) {
-                endBatch(type);
+                endBatch(type, into);
             }
         }
 
         /** Draws what was written for {@code type}, if anything. */
         public void endBatch(RenderType type) {
+            endBatch(type, null);
+        }
+
+        /** Draws what was written for {@code type}, if anything, into {@code into} (an open pass; null: a pass of its own). */
+        public void endBatch(RenderType type, RenderPass into) {
+            if (into == null) {
+                into = scopePass;
+            }
             BufferBuilder builder = startedBuilders.remove(type);
             if (type == lastSharedType) {
                 lastSharedType = null;
@@ -140,27 +205,92 @@ public interface MultiBufferSource {
                 ByteBufferBuilder written = fixedBuffers.getOrDefault(type, sharedBuffer);
                 mesh.sortQuads(written, RenderSystem.getProjectionType().vertexSorting());
             }
-            draw(type, mesh);
+            draw(type, mesh, into);
         }
 
         static void draw(RenderType type, MeshData mesh) {
+            draw(type, mesh, null);
+        }
+
+        /** Draws one mesh of {@code type} into {@code into} (an open pass) or, with none, in a pass of its own -- deferred
+         *  to the next flush outside a pass when a pass is open (the encoder would refuse to open another). */
+        static void draw(RenderType type, MeshData mesh, RenderPass into) {
             if (mesh == null) {
                 return;
             }
+            if (into == null ? LegacyGl.inRenderPass() : type instanceof LegacyRenderType l && !l.drawsIntoMainTarget()) {
+                Deferred.add(type, mesh);
+                return;
+            }
             if (type instanceof LegacyRenderType legacy) {
-                legacy.draw(mesh);   // closes the mesh
+                if (into == null) {
+                    legacy.draw(mesh);   // closes the mesh
+                } else {
+                    legacy.draw(mesh, into);
+                }
+                return;
+            }
+            if (into != null) {
+                try (MeshData m = mesh) {
+                    LegacyGl.Uploaded up = LegacyGl.Uploaded.inPass(m);
+                    type.prepare().drawFromBuffer(new StagedVertexBuffer.ExecuteInfo(up.vertices(), up.indices(),
+                            up.indexType(), up.baseVertex(), up.firstIndex(), up.indexCount(), m.drawState().primitiveTopology()), into);
+                }
                 return;
             }
             try (MeshData m = mesh) {
+                RenderTarget target = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+                GpuTextureView colorView = target.getColorTextureView();
+                if (colorView == null) {
+                    return;
+                }
+                GpuTextureView depthView = target.getDepthTextureView();   // null: the target has no depth
                 LegacyGl.Uploaded up = LegacyGl.Uploaded.of(m);
-                // vanilla's own immediate draw: it opens the pass on the type's output target and honours
-                // RenderSystem.outputColor/DepthTextureOverride, as LegacyGl.draw does for a legacy type
-                type.prepare().drawFromBuffer(up.vertices(), up.indices(), up.indexType(), 0, 0, up.indexCount());
+                StagedVertexBuffer.ExecuteInfo info = new StagedVertexBuffer.ExecuteInfo(up.vertices(), up.indices(),
+                        up.indexType(), 0, 0, up.indexCount(), m.drawState().primitiveTopology());
+                try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                        () -> "mv buffer source " + type, colorView, Optional.empty(), depthView, OptionalDouble.empty())) {
+                    type.prepare().drawFromBuffer(info, pass);
+                }
             }
         }
     }
 
-    /** 26.2's level renderer no longer ends the main batch: end it after the translucent features, the level and the frame. */
+    /** Meshes whose batch ended while a render pass was open and could not go into it: drawn, in the order they were
+     *  ended, at the next flush outside a pass. */
+    final class Deferred {
+        private static final List<Map.Entry<RenderType, MeshData>> MESHES = new ArrayList<>();
+
+        private Deferred() {
+        }
+
+        static void add(RenderType type, MeshData mesh) {
+            MESHES.add(Map.entry(type, mesh));
+        }
+
+        /** How many meshes wait for a flush outside a pass. */
+        public static int pending() {
+            return MESHES.size();
+        }
+
+        /** Draws what waits, unless a pass is (still) open. */
+        public static void drawIfNoPassOpen() {
+            if (MESHES.isEmpty() || LegacyGl.inRenderPass()) {
+                return;
+            }
+            List<Map.Entry<RenderType, MeshData>> now = new ArrayList<>(MESHES);
+            MESHES.clear();
+            for (Map.Entry<RenderType, MeshData> e : now) {
+                BufferSource.draw(e.getKey(), e.getValue(), null);
+            }
+        }
+    }
+
+    /**
+     * 26.2's level renderer no longer ends the main batch: end it after the translucent features, the level and the frame.
+     * 26.3 posts AfterTranslucentFeatures inside the main render pass, so that end draws into the event's pass; AfterLevel
+     * and the frame's end are outside any pass and also draw what an in-pass end deferred.
+     */
     @EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
     final class Flush {
         private Flush() {
@@ -168,7 +298,7 @@ public interface MultiBufferSource {
 
         @SubscribeEvent
         public static void afterTranslucentFeatures(RenderLevelStageEvent.AfterTranslucentFeatures event) {
-            main().endBatch();
+            main().endBatch(event.getRenderPass());
         }
 
         @SubscribeEvent

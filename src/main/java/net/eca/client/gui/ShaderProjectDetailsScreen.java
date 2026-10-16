@@ -8,11 +8,12 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 public final class ShaderProjectDetailsScreen extends Screen {
 
     private static final int DIALOG_WIDTH = 320;
+    private static final int KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int KEY_KP_ENTER = net.eca.mv.GLFW.GLFW_KEY_KP_ENTER;
     private final Screen parent;
     private final ProjectHandler handler;
     private final String initialModId;
@@ -83,7 +84,7 @@ public final class ShaderProjectDetailsScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+        if (keyCode == KEY_ENTER || keyCode == KEY_KP_ENTER) {
             submit();
             return true;
         }

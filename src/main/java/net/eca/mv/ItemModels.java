@@ -5,6 +5,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.geometry.ItemQuads;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -19,12 +20,15 @@ import java.util.List;
  *  1.21.4 resolves an item into an ItemStackRenderState instead, and 1.21.5 has no BakedModel at all: a layer holds the
  *  model's quads. This resolves one and returns its first layer's quads (all faces, culled or not), which is what the
  *  old model answered for an ordinary item. Null when the item has no baked geometry.
- *  26.1.2 copy: BakedQuad moved to net.minecraft.client.resources.model.geometry. */
+ *  26.1.2 copy: BakedQuad moved to net.minecraft.client.resources.model.geometry.
+ *  26.3 copy (CATALOG §V101): {@code LayerRenderState.prepareQuadList()} is gone; a layer holds an {@code ItemQuads}
+ *  (all / solid / translucent) in its private {@code quads}, and {@code all()} is the old list. */
 public final class ItemModels {
     // before the Field lookups below: field() logs through it during class initialisation
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean warned;
     private static final Field LAYERS = field(ItemStackRenderState.class, "layers");
+    private static final Field QUADS = field(ItemStackRenderState.LayerRenderState.class, "quads");
 
     private ItemModels() {
     }
@@ -38,8 +42,9 @@ public final class ItemModels {
         }
         try {
             Object[] layers = (Object[]) LAYERS.get(state);
-            return layers.length == 0 ? null : ((ItemStackRenderState.LayerRenderState) layers[0]).prepareQuadList();
-        } catch (ReflectiveOperationException e) {
+            if (layers.length == 0 || QUADS == null) return null;
+            return ((ItemQuads) QUADS.get(layers[0])).all();
+        } catch (ReflectiveOperationException | ClassCastException e) {
             warnOnce("reading the item layers", e);
             return null;
         }

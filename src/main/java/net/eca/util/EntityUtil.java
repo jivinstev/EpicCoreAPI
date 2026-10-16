@@ -984,12 +984,29 @@ public class EntityUtil {
             entity.lastDamageSource = damageSource;
             entity.lastDamageStamp = entity.level().getGameTime();
             entity.hurtTime = entity.hurtDuration = 10;
-            entity.hurtMarked = true;
+            eca$markHurt(entity);
             entity.getCombatTracker().recordDamage(damageSource, amount);
             //让客户端播受击闪红与音效，否则强制路径在视觉上毫无反馈
             entity.level().broadcastDamageEvent(entity, damageSource);
         } catch (Exception e) {
             EcaLogger.info("[EntityUtil] damage source record failed entity={} msg={}",
+                    entity.getClass().getName(), e.getMessage());
+        }
+    }
+
+    //Entity.markHurt() 为 protected，跨包通过反射调用（缓存 Method）
+    private static java.lang.reflect.Method eca$markHurtMethod;
+
+    private static void eca$markHurt(Entity entity) {
+        try {
+            if (eca$markHurtMethod == null) {
+                java.lang.reflect.Method m = Entity.class.getDeclaredMethod("markHurt");
+                m.setAccessible(true);
+                eca$markHurtMethod = m;
+            }
+            eca$markHurtMethod.invoke(entity);
+        } catch (ReflectiveOperationException e) {
+            EcaLogger.info("[EntityUtil] markHurt failed entity={} msg={}",
                     entity.getClass().getName(), e.getMessage());
         }
     }

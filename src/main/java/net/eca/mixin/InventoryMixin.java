@@ -1,3 +1,4 @@
+// Fork multi-version layer: 26.3 copy -- clearOrCountMatchingItems gained the countingOnly flag (a boolean, second).
 package net.eca.mixin;
 
 import net.eca.api.EcaAPI;
@@ -25,7 +26,7 @@ public abstract class InventoryMixin {
 
     //拦截清除匹配物品，防止无敌玩家的物品被清除
     @Inject(method = "clearOrCountMatchingItems", at = @At("HEAD"), cancellable = true)
-    private void eca$onClearOrCountMatchingItems(Predicate<ItemStack> predicate, int maxCount, Container container, CallbackInfoReturnable<Integer> cir) {
+    private void eca$onClearOrCountMatchingItems(Predicate<ItemStack> predicate, boolean countingOnly, int maxCount, Container container, CallbackInfoReturnable<Integer> cir) {
         if (EcaAPI.isInvulnerable(this.player)) {
             cir.setReturnValue(0);
         }

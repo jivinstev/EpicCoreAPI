@@ -1,16 +1,17 @@
-// Fork multi-version layer, 26.2 (#37): the queue the level's extension passes go to (submitted before the clear pass, see
-// net.eca.mv.SubmitPhase) is drawn INSIDE the level's main pass, at AfterTranslucentFeatures (InLevelPass below): after
-// the entities, before translucent terrain, particles and weather, as 26.1.2's entity pass drew them. The after-level flushes
-// (GameRendererPostLevelMixin) still draw what is queued later (a first-person item) and, with Oculus shaders, everything.
+// Fork multi-version layer, 26.3 (#37): as 26.2's copy, the queue the level's extension passes go to (submitted before the
+// clear pass, see net.eca.mv.SubmitPhase) is drawn INSIDE the level's main pass at AfterTranslucentFeatures (InLevelPass
+// below) -- on 26.3 INTO that event's render pass, which is open there (net.eca.mv.RenderPasses). The after-level flushes
+// (GameRendererPostLevelMixin) still draw, in a pass of their own, what is queued later (a first-person item, the block
+// extension passes with Oculus) and everything under improved transparency, where 26.3 posts no AfterTranslucentFeatures.
 package net.eca.client.render;
 
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.neoforged.api.distmarker.Dist;
@@ -59,15 +60,24 @@ public final class ShaderMaskRenderQueue {
     }
 
     /**
-     * 26.2 (#37): queue a draw of the caller's own (a blend material's, with the uniforms it captured at submit), drawn
+     * 26.3 (#37): queue a draw of the caller's own (a blend material's, with the uniforms it captured at submit), drawn
      * in submit order with the extension passes, under the model-view and projection captured now. {@code draw} takes
-     * the mesh and closes it; the builder is recycled after.
+     * the mesh and closes it, and gets the render pass to draw INTO (the level's main pass) or null (a pass-free
+     * flush: it opens its own); the builder is recycled after.
      */
     public static void enqueueDraw(BufferBuilder builder, MeshData renderedBuffer,
-                                   java.util.function.Consumer<MeshData> draw) {
+                                   java.util.function.BiConsumer<MeshData, com.mojang.renderpearl.api.commands.RenderPass> draw) {
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
         GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(null, builder, renderedBuffer, modelView, projection, MaskUvTransform.IDENTITY, draw));
+    }
+
+    /** Order a translucent mesh built in {@link #acquireBuilder}'s builder back to front for the current projection. */
+    public static void sortQuads(BufferBuilder builder, MeshData mesh) {
+        ByteBufferBuilder backing = BUILDER_BACKING.get(builder);
+        if (backing != null && mesh != null) {
+            mesh.sortQuads(backing, RenderSystem.getProjectionType().vertexSorting());
+        }
     }
 
     public static void drawNow(ShaderMaskPass pass, BufferBuilder builder,
@@ -85,15 +95,20 @@ public final class ShaderMaskRenderQueue {
         }
     }
 
-    /** Order a translucent mesh built in {@link #acquireBuilder}'s builder back to front for the current projection. */
-    public static void sortQuads(BufferBuilder builder, MeshData mesh) {
-        ByteBufferBuilder backing = BUILDER_BACKING.get(builder);
-        if (backing != null && mesh != null) {
-            mesh.sortQuads(backing, RenderSystem.getProjectionType().vertexSorting());
+    /** 26.3 (#33): drawn INTO {@code into}, a render pass vanilla already opened (an offscreen GUI texture's), which
+     *  stays open; see GuiTexturePasses. */
+    public static void drawInto(ShaderMaskPass pass, BufferBuilder builder,
+                                MeshData renderedBuffer,
+                                MaskUvTransform uvTransform,
+                                com.mojang.renderpearl.api.commands.RenderPass into) {
+        try {
+            draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform, into);
+        } finally {
+            recycle(builder);
         }
     }
 
-    /** A collected pass that will not be drawn (GuiTexturePasses): free its mesh and builder. */
+    /** 26.3 (#33): a collected pass that is not drawn after all: its mesh is closed and its builder recycled. */
     public static void release(BufferBuilder builder, MeshData renderedBuffer) {
         try {
             if (renderedBuffer != null) {
@@ -118,7 +133,21 @@ public final class ShaderMaskRenderQueue {
         }
     }
 
+    /** 26.3 (#37): draw what is queued INTO {@code into}, a render pass that is open (the level's main pass). */
+    public static void flushInto(com.mojang.renderpearl.api.commands.RenderPass into) {
+        if (QUEUE.isEmpty()) {
+            return;
+        }
+        List<QueuedPass> entries = new ArrayList<>(QUEUE);
+        QUEUE.clear();
+        flushEntries(entries, into);
+    }
+
     private static void flushEntries(List<QueuedPass> entries) {
+        flushEntries(entries, null);
+    }
+
+    private static void flushEntries(List<QueuedPass> entries, com.mojang.renderpearl.api.commands.RenderPass into) {
         GpuBufferSlice savedProjection = RenderSystem.getProjectionMatrixBuffer();
         try {
             for (QueuedPass entry : entries) {
@@ -128,9 +157,9 @@ public final class ShaderMaskRenderQueue {
                     RenderSystem.getModelViewStack().mul(entry.modelView());
                     RenderSystem.setProjectionMatrix(entry.projection(), com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
                     if (entry.customDraw() != null) {
-                        entry.customDraw().accept(entry.renderedBuffer());
+                        entry.customDraw().accept(entry.renderedBuffer(), into);
                     } else {
-                        draw(entry.pass(), entry.renderedBuffer(), entry.uvTransform());
+                        draw(entry.pass(), entry.renderedBuffer(), entry.uvTransform(), into);
                     }
                 } finally {
                     RenderSystem.getModelViewStack().popMatrix();
@@ -144,6 +173,13 @@ public final class ShaderMaskRenderQueue {
 
     private static void draw(ShaderMaskPass pass, MeshData renderedBuffer,
                              MaskUvTransform uvTransform) {
+        draw(pass, renderedBuffer, uvTransform, null);
+    }
+
+    // 26.3 (#33): into an open pass when one is given (net.eca.mv.LegacyGl.draw(mesh, pass)), else a pass of its own
+    private static void draw(ShaderMaskPass pass, MeshData renderedBuffer,
+                             MaskUvTransform uvTransform,
+                             com.mojang.renderpearl.api.commands.RenderPass into) {
         applyMask(pass);
         EcaShaderInstance.setLocalUvBounds(uvTransform.minU(), uvTransform.minV(),
             uvTransform.scaleU(), uvTransform.scaleV());
@@ -152,7 +188,11 @@ public final class ShaderMaskRenderQueue {
         try {
             net.eca.mv.LegacyGl.setupRenderState(pass.renderType());
             stateActive = true;
-            net.eca.mv.LegacyGl.drawWithShader(renderedBuffer);
+            if (into == null) {
+                net.eca.mv.LegacyGl.drawWithShader(renderedBuffer);
+            } else {
+                net.eca.mv.LegacyGl.draw(renderedBuffer, into);
+            }
         } finally {
             if (stateActive) {
                 net.eca.mv.LegacyGl.clearRenderState(pass.renderType());
@@ -202,17 +242,19 @@ public final class ShaderMaskRenderQueue {
         Matrix4f modelView,
         GpuBufferSlice projection,
         MaskUvTransform uvTransform,
-        java.util.function.Consumer<MeshData> customDraw
+        java.util.function.BiConsumer<MeshData, com.mojang.renderpearl.api.commands.RenderPass> customDraw
     ) {
     }
 
     /**
-     * 26.2 (#37): draw the level's queued passes inside its main frame pass. 26.2 posts AfterTranslucentFeatures from
-     * LevelRenderer's main-pass lambda, after the clear and PreparedFrame.executeTranslucent, before translucent terrain,
-     * executeTranslucentAfterTerrain (particles) and the separate weather pass (javap of the 26.2 client). LegacyGl may
-     * draw there on 26.2 (no GPU render pass is held open between those calls): the shared helper's
-     * MultiBufferSource.Flush already ends the main batch through LegacyGl at this same event. It is ended here first
-     * (this listener runs at LOW priority after it anyway), so a layer's textured part is under its shader passes.
+     * 26.3 (#37): draw the level's queued passes inside its main pass, as 26.2's copy does. 26.3 posts
+     * AfterTranslucentFeatures from LevelRenderer.executeClassicTransparency, inside the "Main" render pass, after the clear
+     * pass (FrameGraphBuilder runs "clear" before "main") and featureFrame.executeTranslucent, before translucent terrain,
+     * AfterTranslucentBlocks, executeTranslucentAfterTerrain (particles), the clouds, the weather and the world border,
+     * all drawn into that same pass. A pass is open there, so the queue is drawn INTO the event's pass (LegacyGl.draw(mesh,
+     * pass)); the shared MultiBufferSource.Flush ends the main batch into it at this event too, and this listener (LOW)
+     * runs after it, so a layer's textured part is under its shader passes. With improved transparency 26.3 posts no
+     * AfterTranslucentFeatures and the after-level flush draws the queue, as before.
      */
     @net.neoforged.fml.common.EventBusSubscriber(modid = net.eca.EcaMod.MOD_ID, value = Dist.CLIENT)
     public static final class InLevelPass {
@@ -224,8 +266,8 @@ public final class ShaderMaskRenderQueue {
             if (QUEUE.isEmpty() || EcaShaderInstance.isOculusShadersActive()) {
                 return;
             }
-            net.eca.mv.MultiBufferSource.main().endBatch();
-            flush();
+            net.eca.mv.MultiBufferSource.main().endBatch(event.getRenderPass());
+            flushInto(event.getRenderPass());
         }
     }
 }

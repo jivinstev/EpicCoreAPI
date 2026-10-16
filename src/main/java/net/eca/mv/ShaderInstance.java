@@ -7,15 +7,16 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.pipeline.BindGroupLayout;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.BlendFactor;
-import com.mojang.blaze3d.preprocessor.GlslPreprocessor;
-import com.mojang.blaze3d.shaders.ShaderType;
-import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.BindGroupLayout;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.ShaderType;
+import com.mojang.renderpearl.api.pipeline.ShaderSource;
+import com.mojang.renderpearl.api.GpuFormat;
+import com.mojang.renderpearl.api.pipeline.UniformType;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -25,11 +26,11 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.renderer.GlobalSettingsUniform;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.systems.RenderPass;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.GpuTexture;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.util.FileUtil;
 import net.minecraft.client.renderer.texture.AbstractTexture;
@@ -86,6 +87,23 @@ import java.util.regex.Pattern;
  * single {@code BlendFactor} enum, and {@code GameRenderer.getMainCamera()} is {@code mainCamera()}. The uniform-block
  * layouts (DynamicTransforms, Projection, Globals, Lighting, Fog) are unchanged from 1.21.11 (read from 26.2's
  * {@code shaders/include/*.glsl}).
+ *
+ * <p>26.3 copy of the 26.2 file (CATALOG §V101). 26.3 compiles every shader with shaderc to SPIR-V (Vulkan GLSL) and,
+ * for the OpenGL backend, back to GLSL, so a 1.21 {@code #version 150} source no longer compiles as it is. When a source
+ * is read it is therefore, after the steps above, put into that dialect ({@link #vulkanDialect}), as 26.3's own core
+ * shaders are written: {@code #version 330} (at least) with {@code GL_ARB_separate_shader_objects}; every stage input and
+ * output given an explicit {@code layout(location = N)} (vertex inputs and fragment outputs in declaration order; a
+ * varying keeps one location across the two stages, matched by NAME as GL's linker did -- the pipeline builder now
+ * matches them by location); {@code gl_VertexID}/{@code gl_InstanceID} spelled {@code gl_VertexIndex}/{@code gl_InstanceIndex};
+ * and a vertex input the vertex format has no element for (GL left it at its default value) declared as a plain global
+ * with that value, since the pipeline builder refuses an input with no matching element. {@code GlslPreprocessor} is gone,
+ * so {@code #moj_import} (and 26.3's {@code #include}) are inlined here, before the uniform rewrite, so an imported file's
+ * plain uniforms are rewritten too. A pipeline's bind-group layout is exactly the blocks and samplers the final sources
+ * declare (26.3 refuses a shader uniform the layout lacks and, under strict validation, a layout entry left unbound); a
+ * sampler the GLSL declares and the JSON does not is bound like a declared one. The {@code DynamicTransforms} and
+ * {@code Globals} blocks changed member order (TextureMat second; GlintAlpha / GameTime pack after the vec3s), as
+ * 26.3's {@code DynamicGpuData.Transform} and {@code GlobalSettingsUniform} write them. A pipeline is compiled from
+ * {@link #shaderSource()} by {@link LegacyGl#compiled}.
  */
 public class ShaderInstance implements AutoCloseable {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -112,6 +130,12 @@ public class ShaderInstance implements AutoCloseable {
     private final BlendFunction blend;
     private final Map<List<Object>, RenderPipeline> pipelines = new HashMap<>();
     private final int serial = SERIAL.incrementAndGet();
+    /** The blocks and samplers the final GLSL of both stages declares: the pipeline layout (26.3 wants exactly these). */
+    private final Set<String> glslBlocks = new java.util.LinkedHashSet<>();
+    private final Set<String> glslSamplers = new java.util.LinkedHashSet<>();
+    /** Varying name -> location, shared by the two stages (the vertex source is read first). */
+    private final Map<String, Integer> varyings = new HashMap<>();
+    private int nextVarying;
     private int lastProgramId = -1;
 
     public ShaderInstance(ResourceProvider provider, Identifier location, VertexFormat format) throws IOException {
@@ -167,6 +191,7 @@ public class ShaderInstance implements AutoCloseable {
             }
         }
         this.blend = json.has("blend") ? blend(json.getAsJsonObject("blend")) : null;
+        for (String s : glslSamplers) if (!samplers.contains(s)) samplers.add(s);   // 26.3: every declared sampler is bound
     }
 
     public String getName() { return name; }
@@ -213,13 +238,27 @@ public class ShaderInstance implements AutoCloseable {
         return null;
     }
 
-    RenderPipeline pipeline(VertexFormat format, PrimitiveTopology topology, LegacyGl.Key key) {
-        return pipelines.computeIfAbsent(List.of(key, format, topology), l -> {
-            // vanilla's own draws declare DynamicTransforms; Projection/Fog/Globals/Lighting are found in the program
-            // (GlProgram.BUILT_IN_UNIFORMS) and bound by RenderSystem.bindDefaultUniforms
-            BindGroupLayout.Builder layout = BindGroupLayout.builder().withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER);
-            for (String s : samplers) layout.withSampler(s);
-            for (Uniform u : blockUniforms()) layout.withUniform(u.blockName(), UniformType.UNIFORM_BUFFER);
+    /** 26.3's ShaderSource over this instance's two (already inlined) sources: no includes are left to resolve. */
+    ShaderSource shaderSource() {
+        return new ShaderSource() {
+            @Override
+            public String getShader(Identifier id, ShaderType type) { return sourceFor(id, type); }
+
+            @Override
+            public ShaderSource.CachedIncludeSource getInclude(Identifier id) { return null; }
+
+            @Override
+            public void close() {}
+        };
+    }
+
+    RenderPipeline pipeline(VertexFormat format, PrimitiveTopology topology, LegacyGl.Key key, GpuFormat colorFormat) {
+        return pipelines.computeIfAbsent(List.of(key, format, topology, colorFormat), l -> {
+            // exactly what the GLSL declares: vanilla's blocks (bound by LegacyGl.draw / RenderSystem.bindDefaultUniforms),
+            // this helper's own one-member blocks (bind) and the samplers
+            BindGroupLayout.Builder layout = BindGroupLayout.builder();
+            for (String b : glslBlocks) layout.withUniform(b, UniformType.UNIFORM_BUFFER);
+            for (String s : glslSamplers) layout.withUniform(s, UniformType.COMBINED_IMAGE_SAMPLER);
             RenderPipeline.Builder b = RenderPipeline.builder()
                     .withLocation(vertexId.withSuffix("_p" + pipelines.size()))
                     .withVertexShader(vertexId)
@@ -227,7 +266,7 @@ public class ShaderInstance implements AutoCloseable {
                     .withBindGroupLayout(layout.build())
                     .withVertexBinding(0, format)
                     .withPrimitiveTopology(topology);
-            return key.apply(b).build();
+            return key.apply(b, colorFormat).build();
         });
     }
 
@@ -277,8 +316,10 @@ public class ShaderInstance implements AutoCloseable {
         Vec3 camera = mc.gameRenderer.mainCamera().position();
         int cx = Mth.floor(camera.x), cy = Mth.floor(camera.y), cz = Mth.floor(camera.z);
         ByteBuffer bb = ByteBuffer.allocateDirect(Math.max(32, GlobalSettingsUniform.UBO_SIZE)).order(ByteOrder.nativeOrder());
-        Std140Builder.intoBuffer(bb).putIVec3(cx, cy, cz).putVec3((float) (cx - camera.x), (float) (cy - camera.y), (float) (cz - camera.z))
-                .putVec2(size[0], size[1]).putFloat(glint).putFloat(time)
+        // 26.3's member order, as GlobalSettingsUniform.update writes it
+        Std140Builder.intoBuffer(bb).putIVec3(cx, cy, cz).putFloat(glint)
+                .putVec3((float) (cx - camera.x), (float) (cy - camera.y), (float) (cz - camera.z)).putFloat(time)
+                .putVec2(size[0], size[1])
                 .putInt(mc.options.getMenuBackgroundBlurriness())
                 .putInt(mc.options.textureFiltering().get() == TextureFilteringMethod.RGSS ? 1 : 0);
         return upload(bb, "mv Globals", temps);
@@ -323,7 +364,7 @@ public class ShaderInstance implements AutoCloseable {
         for (Uniform u : blockUniforms()) u.applyTo(pass, temps);
         for (String s : samplers) {
             LegacyGl.Slot t = samplerSlot(s);
-            if (t != null) pass.bindTexture(s, t.view(), t.sampler());
+            if (t != null) pass.setUniform(s, t.view(), t.sampler());
         }
     }
 
@@ -345,11 +386,11 @@ public class ShaderInstance implements AutoCloseable {
     // exactly). They are spelled out here rather than #moj_import-ed so a ResourceProvider that only knows the mod's
     // own shaders (a generated-shader provider) still compiles.
     private static final String DYNAMIC_BLOCK = "layout(std140) uniform DynamicTransforms {\n    mat4 ModelViewMat;\n"
-            + "    vec4 ColorModulator;\n    vec3 ModelOffset;\n    mat4 TextureMat;\n};\n";   // 1.21.11: no LineWidth member (DynamicUniforms.TRANSFORM_UBO_SIZE)
+            + "    mat4 TextureMat;\n    vec4 ColorModulator;\n    vec3 ModelOffset;\n};\n";   // 26.3 order (DynamicGpuData.Transform); no LineWidth
     private static final String PROJECTION_BLOCK = "layout(std140) uniform Projection {\n    mat4 ProjMat;\n};\n";
     private static final String GLOBALS_BLOCK = "layout(std140) uniform Globals {\n    ivec3 CameraBlockPos;\n"
-            + "    vec3 CameraOffset;\n    vec2 ScreenSize;\n"
-            + "    float GlintAlpha;\n    float GameTime;\n    int MenuBlurRadius;\n    int UseRgss;\n};\n";
+            + "    float GlintAlpha;\n    vec3 CameraOffset;\n    float GameTime;\n    vec2 ScreenSize;\n"
+            + "    int MenuBlurRadius;\n    int UseRgss;\n};\n";   // 26.3 order (GlobalSettingsUniform.update)
     private static final String LIGHTING_BLOCK = "layout(std140) uniform Lighting {\n    vec3 Light0_Direction;\n"
             + "    vec3 Light1_Direction;\n};\n";
     private static final String FOG_BLOCK = "layout(std140) uniform Fog {\n    vec4 FogColor;\n"
@@ -409,8 +450,13 @@ public class ShaderInstance implements AutoCloseable {
             m.appendReplacement(out, Matcher.quoteReplacement(replacement));
         }
         m.appendTail(out);
-        String header = (dynamic ? DYNAMIC_BLOCK : "") + (projection ? PROJECTION_BLOCK : "") + (globals ? GLOBALS_BLOCK : "")
-                + (lighting ? LIGHTING_BLOCK : "") + (fog ? FOG_BLOCK : "");
+        // a block an inlined 26.3 include already declares (fog.glsl's Fog, ...) is not declared twice
+        String body = out.toString();
+        String header = (dynamic && !declaresBlock(body, "DynamicTransforms") ? DYNAMIC_BLOCK : "")
+                + (projection && !declaresBlock(body, "Projection") ? PROJECTION_BLOCK : "")
+                + (globals && !declaresBlock(body, "Globals") ? GLOBALS_BLOCK : "")
+                + (lighting && !declaresBlock(body, "Lighting") ? LIGHTING_BLOCK : "")
+                + (fog && !declaresBlock(body, "Fog") ? FOG_BLOCK : "");
         if (header.isEmpty()) return out.toString();
         // the blocks go straight after #version, which GLSL wants first
         Matcher v = Pattern.compile("(?m)^[ \\t]*#version[^\\n]*\\n").matcher(out);
@@ -445,24 +491,132 @@ public class ShaderInstance implements AutoCloseable {
         try (Reader reader = provider.openAsReader(file)) {
             text = IOUtils.toString(reader);
         }
-        text = legacyUniforms(text, id);
         Identifier dir = file.withPath(FileUtil::getFullResourcePath);
         Set<Identifier> imported = new HashSet<>();
-        GlslPreprocessor preprocessor = new GlslPreprocessor() {
-            @Override
-            public String applyImport(boolean relative, String path) {
-                Identifier target = relative
-                        ? dir.withPath(p -> FileUtil.normalizeResourcePath(p + path))
-                        : Identifier.parse(path).withPrefix("shaders/include/");
-                if (!imported.add(target)) return null;
-                try (Reader reader = provider.openAsReader(target)) {
-                    return IOUtils.toString(reader);
-                } catch (IOException e) {
-                    return "#error " + e.getMessage();
-                }
+        text = expandImports(text, provider, dir, imported);
+        text = legacyUniforms(text, id);
+        return vulkanDialect(text, type);
+    }
+
+    private static final java.util.regex.Pattern IMPORT = java.util.regex.Pattern.compile("^\\s*#(?:moj_import|include)\\s+(?:<([^>]+)>|\"([^\"]+)\")\\s*$");
+
+    /** 26.3 dropped GlslPreprocessor: inline each {@code #moj_import} (or 26.3 {@code #include}) line once per shader,
+     *  as it did. */
+    private static String expandImports(String text, ResourceProvider provider, Identifier dir, Set<Identifier> imported) {
+        StringBuilder out = new StringBuilder();
+        for (String line : text.split("\n", -1)) {
+            java.util.regex.Matcher m = IMPORT.matcher(line);
+            if (!m.matches()) {
+                out.append(line).append('\n');
+                continue;
             }
+            boolean relative = m.group(2) != null;
+            String path = relative ? m.group(2) : m.group(1);
+            Identifier target = relative
+                    ? dir.withPath(p -> FileUtil.normalizeResourcePath(p + path))
+                    : Identifier.parse(path).withPrefix("shaders/include/");
+            if (!imported.add(target)) continue;
+            try (Reader reader = provider.openAsReader(target)) {
+                out.append(expandImports(IOUtils.toString(reader), provider, dir, imported));
+            } catch (IOException e) {
+                out.append("#error ").append(e.getMessage()).append('\n');
+            }
+        }
+        return out.toString();
+    }
+
+    private static boolean declaresBlock(String text, String block) {
+        return Pattern.compile("\\buniform\\s+" + block + "\\s*\\{").matcher(text).find();
+    }
+
+    private static final Pattern VERSION = Pattern.compile("(?m)^[ \\t]*#version[ \\t]+(\\d+)[^\\n]*(\\n|$)");
+    private static final Pattern IO_DECL = Pattern.compile(
+            "(?m)^([ \\t]*)((?:(?:flat|smooth|noperspective|centroid|invariant|highp|mediump|lowp)[ \\t]+)*)(in|out)[ \\t]+(\\w+)[ \\t]+([\\w \\t,\\[\\]]+?)[ \\t]*;");
+    private static final Pattern BLOCK_DECL = Pattern.compile("\\buniform[ \\t]+(\\w+)[ \\t\\r\\n]*\\{");
+    private static final Pattern SAMPLER_DECL = Pattern.compile(
+            "(?m)^[ \\t]*uniform[ \\t]+(?:(?:highp|mediump|lowp)[ \\t]+)?[iu]?sampler\\w*[ \\t]+(\\w+)[ \\t]*;");
+
+    /**
+     * A 1.21 (GL) shader source in the dialect 26.3's shaderc front end compiles (see the class doc): version, extension,
+     * explicit stage-interface locations, the Vulkan vertex/instance index names, and vertex inputs the format lacks as
+     * plain globals. Records the blocks and samplers the result declares (the pipeline layout).
+     */
+    private String vulkanDialect(String text, ShaderType type) {
+        boolean vertex = type == ShaderType.VERTEX;
+        int[] next = {0};                       // vertex inputs / fragment outputs, in declaration order
+        Matcher m = IO_DECL.matcher(text);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            String indent = m.group(1), qual = m.group(2), dir = m.group(3), glslType = m.group(4);
+            StringBuilder decl = new StringBuilder();
+            for (String raw : m.group(5).split(",")) {
+                String n = raw.trim();
+                if (n.isEmpty()) continue;
+                String base = n.replaceAll("\\s*\\[.*", "");
+                int size = slots(glslType) * arrayLength(n);
+                boolean varying = vertex ? dir.equals("out") : dir.equals("in");
+                if (vertex && dir.equals("in") && format != null && !format.contains(base)) {
+                    // GL left an attribute with no array at its default (0, 0, 0, 1); 26.3 refuses the input outright
+                    decl.append(indent).append(glslType).append(' ').append(n).append(" = ").append(defaultValue(glslType)).append(";\n");
+                    continue;
+                }
+                int location;
+                if (varying) {
+                    Integer known = varyings.get(base);
+                    if (known == null) {
+                        known = nextVarying;
+                        nextVarying += size;
+                        varyings.put(base, known);
+                    }
+                    location = known;
+                } else {
+                    location = next[0];
+                    next[0] += size;
+                }
+                decl.append(indent).append("layout(location = ").append(location).append(") ").append(qual).append(dir)
+                        .append(' ').append(glslType).append(' ').append(n).append(";\n");
+            }
+            if (decl.length() > 0) decl.setLength(decl.length() - 1);
+            m.appendReplacement(out, Matcher.quoteReplacement(decl.toString()));
+        }
+        m.appendTail(out);
+        String s = out.toString();
+        if (vertex) {
+            s = s.replaceAll("\\bgl_VertexID\\b", "gl_VertexIndex").replaceAll("\\bgl_InstanceID\\b", "gl_InstanceIndex");
+        }
+        Matcher v = VERSION.matcher(s);
+        String ext = s.contains("GL_ARB_separate_shader_objects") ? "" : "#extension GL_ARB_separate_shader_objects : require\n";
+        if (v.find()) {
+            int version = Math.max(330, Integer.parseInt(v.group(1)));
+            s = s.substring(0, v.start()) + "#version " + version + "\n" + ext + s.substring(v.end());
+        } else {
+            s = "#version 330\n" + ext + s;
+        }
+        Matcher b = BLOCK_DECL.matcher(s);
+        while (b.find()) glslBlocks.add(b.group(1));
+        Matcher sm = SAMPLER_DECL.matcher(s);
+        while (sm.find()) glslSamplers.add(sm.group(1));
+        return s;
+    }
+
+    /** Locations a stage-interface variable of this type takes (a matrix one per column). */
+    private static int slots(String glslType) {
+        Matcher m = Pattern.compile("^d?mat(\\d)(?:x\\d)?$").matcher(glslType);
+        return m.matches() ? Integer.parseInt(m.group(1)) : 1;
+    }
+
+    private static int arrayLength(String declarator) {
+        Matcher m = Pattern.compile("\\[\\s*(\\d+)\\s*\\]").matcher(declarator);
+        return m.find() ? Integer.parseInt(m.group(1)) : 1;
+    }
+
+    private static String defaultValue(String glslType) {
+        return switch (glslType) {
+            case "vec4" -> "vec4(0.0, 0.0, 0.0, 1.0)";
+            case "ivec4" -> "ivec4(0, 0, 0, 1)";
+            case "uvec4" -> "uvec4(0u, 0u, 0u, 1u)";
+            default -> glslType + "(0)";
         };
-        return String.join("", preprocessor.process(text));
     }
 
     /** The "blend" object of a 1.21.1 shader JSON. 1.21.8 blends with ADD only; another "func" is logged and ignored. */

@@ -1,3 +1,4 @@
+// Fork multi-version layer: 26.3 copy -- shouldRender gained the partial tick (a float, last).
 package net.eca.mixin;
 
 import net.eca.config.EcaConfiguration;
@@ -15,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class EntityRenderDispatcherMixin {
 
     @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
-    private void eca$forceLoadedShouldRender(Entity entity, Frustum frustum, double camX, double camY, double camZ, CallbackInfoReturnable<Boolean> cir) {
+    private void eca$forceLoadedShouldRender(Entity entity, Frustum frustum, double camX, double camY, double camZ, float partialTicks, CallbackInfoReturnable<Boolean> cir) {
         ForceLoadingManager.setCurrentRenderingEntity(entity);
 
         if (ForceLoadingManager.shouldForceLoad(entity)) {

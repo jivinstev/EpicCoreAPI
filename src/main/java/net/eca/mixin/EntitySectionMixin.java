@@ -4,6 +4,7 @@ import net.eca.api.EcaAPI;
 import net.eca.util.EntityRemovalQuarantine;
 import net.eca.util.EntityUtil;
 import net.minecraft.util.AbortableIterationConsumer;
+import net.minecraft.util.Continuation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.entity.EntityAccess;
@@ -28,7 +29,7 @@ public class EntitySectionMixin {
 
     // 空间查询只隔离正在清除的实例，避免误伤同类型存活实体的交互。
     @ModifyVariable(
-        method = "getEntities(Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/AbortableIterationConsumer$Continuation;",
+        method = "getEntities(Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/Continuation;",
         at = @At("HEAD"),
         argsOnly = true,
         ordinal = 0
@@ -37,12 +38,12 @@ public class EntitySectionMixin {
         AbortableIterationConsumer<EntityAccess> consumer
     ) {
         return entity -> entity instanceof Entity realEntity && EntityRemovalQuarantine.isQueryHidden(realEntity)
-            ? AbortableIterationConsumer.Continuation.CONTINUE
+            ? Continuation.CONTINUE
             : consumer.accept(entity);
     }
 
     @ModifyVariable(
-        method = "getEntities(Lnet/minecraft/world/level/entity/EntityTypeTest;Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/AbortableIterationConsumer$Continuation;",
+        method = "getEntities(Lnet/minecraft/world/level/entity/EntityTypeTest;Lnet/minecraft/world/phys/AABB;Lnet/minecraft/util/AbortableIterationConsumer;)Lnet/minecraft/util/Continuation;",
         at = @At("HEAD"),
         argsOnly = true,
         ordinal = 0
@@ -51,7 +52,7 @@ public class EntitySectionMixin {
         AbortableIterationConsumer<EntityAccess> consumer
     ) {
         return entity -> entity instanceof Entity realEntity && EntityRemovalQuarantine.isQueryHidden(realEntity)
-            ? AbortableIterationConsumer.Continuation.CONTINUE
+            ? Continuation.CONTINUE
             : consumer.accept(entity);
     }
 

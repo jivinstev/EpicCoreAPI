@@ -103,7 +103,7 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == 256) {
+        if (event.key() == net.eca.mv.GLFW.GLFW_KEY_ESCAPE) {
             closePanel();
             return true;
         }

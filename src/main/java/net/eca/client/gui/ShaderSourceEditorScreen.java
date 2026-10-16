@@ -1,5 +1,7 @@
 package net.eca.client.gui;
 
+import net.eca.mv.GLFW;
+
 import net.eca.client.render.shader_generator.GeneratedShaderPreview;
 import net.eca.client.render.shader_generator.ShaderPreviewDependencyResolver;
 import net.eca.client.render.shader_generator.ShaderPreviewRenderer;
@@ -25,7 +27,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -51,6 +52,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     private static final int MENU_HEIGHT = 20;
     private static final int CONTENT_TOP = 32;
     private static final int MENU_FILE = 0;
+
     private static final int MENU_EDIT = 1;
     private static final int MENU_NAVIGATION = 2;
     private static final int MENU_PREVIEW = 3;
@@ -576,10 +578,10 @@ public final class ShaderSourceEditorScreen extends Screen {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && editor != null && !editor.isMouseOver(mouseX, mouseY)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && editor != null && !editor.isMouseOver(mouseX, mouseY)) {
             clearEditorSelection();
         }
-        if (openDropdown >= 0 && button == 0) {
+        if (openDropdown >= 0 && button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             List<? extends GuiEventListener> children = children();
             for (int index = dropdownFirstWidgetIndex;
                  index <= dropdownLastWidgetIndex && index < children.size();

@@ -1,7 +1,7 @@
 package net.eca.client.render.preset;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
@@ -17,7 +17,7 @@ public final class PresetRenderTypes {
     public static RenderType bossBar(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_boss_bar",
             DefaultVertexFormat.BLOCK,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             false,
             true,
@@ -33,7 +33,7 @@ public final class PresetRenderTypes {
     public static RenderType bossLayer(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_boss_layer",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             false,
             true,
@@ -49,7 +49,7 @@ public final class PresetRenderTypes {
     public static RenderType skybox(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_skybox",
             DefaultVertexFormat.BLOCK,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -65,7 +65,7 @@ public final class PresetRenderTypes {
     public static RenderType item(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_item",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -97,7 +97,7 @@ public final class PresetRenderTypes {
                                    net.eca.mv.LegacyRenderType.Shard textureState) {
         return net.eca.mv.LegacyRenderType.create(name + "_block_overlay",
             DefaultVertexFormat.BLOCK,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             2097152,
             true,
             true,
@@ -117,7 +117,7 @@ public final class PresetRenderTypes {
     static RenderType entityEffect(String name, net.eca.mv.ShaderShard shaderState, Identifier texture) {
         return net.eca.mv.LegacyRenderType.create(name + "_entity_effect",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             true,

@@ -2,7 +2,7 @@ package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -19,7 +19,7 @@ public final class EntityLayerRenderQueue {
     private EntityLayerRenderQueue() {
     }
 
-    public static BufferBuilder acquireBuilder(com.mojang.blaze3d.PrimitiveTopology mode, VertexFormat format) {
+    public static BufferBuilder acquireBuilder(com.mojang.renderpearl.api.pipeline.PrimitiveTopology mode, VertexFormat format) {
         return ShaderMaskRenderQueue.acquireBuilder(mode, format);
     }
 

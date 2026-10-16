@@ -10,7 +10,6 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Locale;
 import java.util.function.DoubleConsumer;
@@ -19,6 +18,9 @@ import java.util.function.DoubleSupplier;
 public final class ShaderPercentEditWidget extends AbstractWidget {
 
     private static final long DOUBLE_CLICK_MS = 450L;
+    private static final int GLFW_KEY_ESCAPE = net.eca.mv.GLFW.GLFW_KEY_ESCAPE;
+    private static final int GLFW_KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int GLFW_KEY_KP_ENTER = net.eca.mv.GLFW.GLFW_KEY_KP_ENTER;
 
     private final DoubleSupplier valueSupplier;
     private final DoubleConsumer valueConsumer;
@@ -50,7 +52,7 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
-        if (!active || !visible || button != 0 || !isMouseOver(mouseX, mouseY)) {
+        if (!active || !visible || button != net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT || !isMouseOver(mouseX, mouseY)) {
             return false;
         }
         if (editing) {
@@ -94,11 +96,11 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
         if (!editing) {
             return super.keyPressed(event);
         }
-        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+        if (keyCode == GLFW_KEY_ENTER || keyCode == GLFW_KEY_KP_ENTER) {
             confirm();
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+        if (keyCode == GLFW_KEY_ESCAPE) {
             cancel();
             return true;
         }

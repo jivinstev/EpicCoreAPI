@@ -22,7 +22,7 @@ public class ForestRenderTypes {
 
     public static final RenderType BOSS_BAR = net.eca.mv.LegacyRenderType.create("forest_boss_bar",
         DefaultVertexFormat.BLOCK,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -37,7 +37,7 @@ public class ForestRenderTypes {
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("forest_boss_layer",
         DefaultVertexFormat.ENTITY,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         false,
         true,
@@ -52,7 +52,7 @@ public class ForestRenderTypes {
 
     public static final RenderType SKYBOX = net.eca.mv.LegacyRenderType.create("forest_skybox",
         DefaultVertexFormat.BLOCK,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -67,7 +67,7 @@ public class ForestRenderTypes {
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("forest_item",
         DefaultVertexFormat.ENTITY,
-        com.mojang.blaze3d.PrimitiveTopology.QUADS,
+        com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
         256,
         true,
         false,
@@ -85,7 +85,7 @@ public class ForestRenderTypes {
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("forest_entity_effect",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             true,

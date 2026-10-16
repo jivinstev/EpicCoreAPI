@@ -1,4 +1,8 @@
 // Fork multi-version layer: 1.21.5 version of the authors' file (BakedModel is BlockStateModel/BlockModelPart).
+// 26.3 (#37): AfterTranslucentBlocks is posted inside the level's main render pass, after translucent terrain and before
+// the particles, clouds and weather drawn into the same pass. The block passes are drawn INTO that pass
+// (ShaderMaskRenderQueue.drawInto, under the stage's model-view and projection) instead of going to the after-level queue,
+// which drew them over the particles and the weather. With Oculus shaders they still go to that queue.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -151,7 +155,9 @@ public final class BlockExtensionRenderer {
         for (BlockPos pos : stale) {
             onBlockChanged(level, pos, level.getBlockState(pos));
         }
-        batches.forEach((key, batch) -> enqueue(key.pass(), batch));
+        com.mojang.renderpearl.api.commands.RenderPass into =
+            net.eca.client.render.shader.EcaShaderInstance.isOculusShadersActive() ? null : event.getRenderPass();
+        batches.forEach((key, batch) -> enqueue(key.pass(), batch, into));
     }
 
     private static void renderBlock(ClientLevel level, PoseStack poseStack, Vec3 camPos, BlockPos pos,
@@ -173,9 +179,17 @@ public final class BlockExtensionRenderer {
         poseStack.popPose();
     }
 
-    private static void enqueue(ShaderMaskPass pass, SpriteBatchingVertexConsumer batch) {
-        batch.finish(spriteBatch -> ShaderMaskRenderQueue.enqueue(pass, spriteBatch.builder(),
-            spriteBatch.builder().buildOrThrow(), spriteBatch.uvTransform()));
+    private static void enqueue(ShaderMaskPass pass, SpriteBatchingVertexConsumer batch,
+                                com.mojang.renderpearl.api.commands.RenderPass into) {
+        batch.finish(spriteBatch -> {
+            if (into != null) {
+                ShaderMaskRenderQueue.drawInto(pass, spriteBatch.builder(), spriteBatch.builder().buildOrThrow(),
+                    spriteBatch.uvTransform(), into);
+            } else {
+                ShaderMaskRenderQueue.enqueue(pass, spriteBatch.builder(), spriteBatch.builder().buildOrThrow(),
+                    spriteBatch.uvTransform());
+            }
+        });
     }
 
     // 发光是消费端属性而非 pass 属性，共用同一 pass 的发光与非发光方块必须分批

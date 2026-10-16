@@ -5,12 +5,13 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
-
 import java.util.List;
 
 //快捷键说明独立显示，避免持续占用编辑工作区。
 final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorSessionScreen {
+
+    // GLFW_KEY_ESCAPE value; GLFW is no longer exposed to this target's sources.
+    private static final int KEY_ESCAPE = net.eca.mv.GLFW.GLFW_KEY_ESCAPE;
 
     private static final List<String> SHORTCUT_KEYS = List.of(
         "space", "arrows", "home_end", "in_out", "clipboard", "undo", "delete", "context", "input"
@@ -38,7 +39,7 @@ final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorS
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (event.key() == KEY_ESCAPE) {
             closePanel();
             return true;
         }

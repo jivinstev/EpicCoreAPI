@@ -1,26 +1,25 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-STAND-IN: shared/26.2's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
+// MV-STAND-IN: shared/26.3's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
 // MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
 // MV-REQUIRES: LegacyGl
 // MV-REQUIRES: ShaderInstance
 // MV-REQUIRES: ShaderShard
 package net.eca.mv;
 
-import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.BlendFactor;
-import com.mojang.blaze3d.platform.CompareOp;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.CompareOp;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.systems.ScissorState;
 import com.mojang.logging.LogUtils;
-import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.rendertype.OutputTarget;
 import net.minecraft.client.renderer.rendertype.PreparedRenderType;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -58,6 +57,11 @@ import java.util.function.UnaryOperator;
  * GL validation in a dev client): draw such a type through {@link MultiBufferSource} or {@link LegacyGl}.
  * Reverse-Z (see {@link LegacyGl}): the LEQUAL/GREATER shards are {@code GREATER_THAN_OR_EQUAL}/{@code LESS_THAN} and
  * POLYGON_OFFSET_LAYERING's bias is {@code (1, 10)}, as vanilla's 26.2 pipelines.
+ *
+ * <p>26.3 copy (CATALOG §V101): {@code OutputTarget} and {@code RenderSetupBuilder.setOutputTarget} are gone (a feature
+ * renderer draws into the pass the frame opened), and {@code PreparedRenderType} takes the type's name and an optional
+ * OIT pipeline set ({@code null}: this type has none). So the state's output is a {@code RenderTarget} -- the main one
+ * unless {@code setOutputState(target)} named another -- which only this type's own {@link #draw} reads.
  */
 public class LegacyRenderType extends RenderType {
     /** What 1.21.4's RenderStateShard was to this layer: something set up before a draw and cleared after it. */
@@ -175,8 +179,8 @@ public class LegacyRenderType extends RenderType {
 
     /** The RenderSetup vanilla's batching reads the crumbling / sort flags and the output target from; its pipeline is
      *  never drawn with ({@link #pipeline()} and {@link #prepare()} answer with the legacy one). */
-    private static RenderSetup placeholder(boolean affectsCrumbling, boolean sortOnUpload, OutputTarget output) {
-        RenderSetup.RenderSetupBuilder b = RenderSetup.builder(RenderPipelines.SOLID_BLOCK).setOutputTarget(output);
+    private static RenderSetup placeholder(boolean affectsCrumbling, boolean sortOnUpload) {
+        RenderSetup.RenderSetupBuilder b = RenderSetup.builder(RenderPipelines.SOLID_BLOCK);
         if (affectsCrumbling) b.affectsCrumbling();
         if (sortOnUpload) b.sortOnUpload();
         return b.createRenderSetup();
@@ -191,7 +195,7 @@ public class LegacyRenderType extends RenderType {
 
     private LegacyRenderType(String name, VertexFormat format, PrimitiveTopology mode,
                              boolean affectsCrumbling, boolean sortOnUpload, State state) {
-        super(name, placeholder(affectsCrumbling, sortOnUpload, state.output));
+        super(name, placeholder(affectsCrumbling, sortOnUpload));
         this.format = format;
         this.mode = mode;
         this.state = state;
@@ -220,6 +224,25 @@ public class LegacyRenderType extends RenderType {
     }
 
     /**
+     * 26.3: {@link #draw(MeshData)} INTO a render pass that is already open (an in-pass {@code RenderLevelStageEvent}'s
+     * {@code getRenderPass()}, or one vanilla opened on an offscreen texture), which stays open. The pass is the caller's
+     * choice: the type's own output target ({@link #getRenderTarget}) is not consulted.
+     */
+    public void draw(MeshData mesh, com.mojang.renderpearl.api.commands.RenderPass into) {
+        setupRenderState();
+        try {
+            LegacyGl.draw(mesh, state.shader.shader(), state.key, null, null, into, LegacyGl.passColorFormat(into));
+        } finally {
+            clearRenderState();
+        }
+    }
+
+    /** Whether this type draws into the main target (no {@code setOutputState} target of its own). */
+    public boolean drawsIntoMainTarget() {
+        return state.output == null;
+    }
+
+    /**
      * 26.2's vanilla draw path (a feature renderer recording this type's geometry): the legacy pipeline, the
      * DynamicTransforms and the textures this type's shards and shader bind, taken now -- as vanilla's own
      * {@code RenderType.prepare()} snapshots its state when geometry is recorded, not when the frame draws.
@@ -245,7 +268,7 @@ public class LegacyRenderType extends RenderType {
                     textures.add(new PreparedRenderType.Texture(sampler, slot.view(), slot.sampler()));
                 }
             }
-            return new PreparedRenderType(pipeline, state.output, LegacyGl.transforms(s instanceof ShaderInstance i ? i : null),
+            return new PreparedRenderType(name, pipeline, null, LegacyGl.transforms(s instanceof ShaderInstance i ? i : null),
                     new ScissorState(RenderSystem.getScissorStateForRenderTypeDraws()), List.copyOf(textures));
         } finally {
             clearRenderState();
@@ -259,7 +282,7 @@ public class LegacyRenderType extends RenderType {
 
     /** The target this type draws into. Not a vanilla hook: only {@link #draw} reads it. */
     public RenderTarget getRenderTarget() {
-        return state.output.getRenderTarget();
+        return state.output != null ? state.output : Minecraft.getInstance().gameRenderer.mainRenderTarget();
     }
 
     /** The pipeline this type's current shader and state compile to. */
@@ -295,11 +318,11 @@ public class LegacyRenderType extends RenderType {
     /** 1.21.4's RenderType.CompositeState, split into what is still set up and what is baked into the pipeline. */
     public static final class State {
         final ShaderShard shader;
-        final OutputTarget output;
+        final RenderTarget output;   // null: the main target
         final List<Shard> real;
         final LegacyGl.Key key;
 
-        private State(ShaderShard shader, OutputTarget output, List<Shard> real, LegacyGl.Key key) {
+        private State(ShaderShard shader, RenderTarget output, List<Shard> real, LegacyGl.Key key) {
             this.shader = shader;
             this.output = output;
             this.real = real;
@@ -308,7 +331,7 @@ public class LegacyRenderType extends RenderType {
 
         public static final class Builder {
             private ShaderShard shader = new ShaderShard();
-            private OutputTarget output = OutputTarget.MAIN_TARGET;
+            private RenderTarget output;
             private final List<Shard> real = new ArrayList<>();
             private LegacyGl.Key key = DEFAULTS;
 
@@ -318,7 +341,8 @@ public class LegacyRenderType extends RenderType {
             public Builder setOverlayState(Shard s) { real.add(s); return this; }
             public Builder setTexturingState(Shard s) { real.add(s); return this; }
             public Builder setLineState(Shard s) { real.add(s); return this; }
-            public Builder setOutputState(OutputTarget s) { this.output = s; return this; }
+            /** 26.3 has no OutputTarget: a type's own draw goes into this target (default: the main one). */
+            public Builder setOutputState(RenderTarget s) { this.output = s; return this; }
             public Builder setLayeringState(Shard s) { return add(s); }
             public Builder setTransparencyState(Modifier m) { return add(m); }
             public Builder setDepthTestState(Modifier m) { return add(m); }

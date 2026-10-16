@@ -7,7 +7,7 @@ package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
 import net.eca.util.block_extension.BlockExtensionSafeAccess;
@@ -89,7 +89,7 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable, R ext
                             ShaderMaskPass pass) {
         if (pass == null || pass.alpha() <= 0.0f) return;
         RenderType renderType = pass.renderType();
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, renderType.format());
+        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, renderType.format());
         // GeckoLib's own model task (GeoRenderer.submitRenderTasks), into our buffer: push the pass's pose stack, set it to the
         // pose the task was submitted with, draw inside renderPosed where the bones' snapshots are live. Always queued
         // (flushed after the level): drawing at once would have to endBatch() the buffer the feature renderer is writing into.

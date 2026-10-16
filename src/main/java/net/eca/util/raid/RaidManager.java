@@ -4,6 +4,7 @@ import net.eca.api.RegisterRaid;
 import net.eca.util.EcaLogger;
 import net.eca.util.faction.FactionManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
@@ -206,11 +207,11 @@ public class RaidManager {
     private static BlockPos resolveCenter(ServerLevel level, RaidDefinition def, BlockPos pos) {
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
-            Structure structure = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).getValue(key);
+            Holder<Structure> structure = level.registryAccess().lookupOrThrow(Registries.STRUCTURE).get(key).orElse(null);
             if (structure == null) {
                 return null;
             }
-            StructureStart start = level.structureManager().getStructureWithPieceAt(pos, structure);
+            StructureStart start = level.structureManager().getStructureWithPieceAt(pos, holder -> holder.value() == structure.value());
             return start.isValid() ? start.getBoundingBox().getCenter() : null;
         }
         TagKey<Structure> tag = def.getTargetStructureTag();

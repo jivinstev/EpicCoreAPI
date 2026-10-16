@@ -2,7 +2,7 @@ package net.eca.client.render.shader;
 
 import net.eca.mv.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.eca.client.render.ShaderMaskSource;
 import net.minecraft.client.Minecraft;
 import net.eca.mv.ShaderInstance;

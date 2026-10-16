@@ -1,14 +1,14 @@
+// 26.3: the layer's quads are an ItemQuads (all / solid / translucent); the extension pass draws all() as before.
 // Fork multi-version layer: 26.1.2 copy (tintLayers is an IntList) of the 1.21.10 copy of the 1.21.5 mixin. 1.21.9 draws items in two steps: LayerRenderState.submit hands the
 // item's quads to a SubmitNodeCollector and a feature renderer draws them later. The extension pass is therefore built at
 // the end of submit (the pose stack is only right now) and, when it must be drawn at once (a GUI / tooltip item, not a world
 // one), the drawing is a custom-geometry task in the collector's order 1 -- after every order-0 task, the item's own among them.
 // The 1.21.4 notes still hold: the extension pass runs once per item (net.eca.mv.ItemStacks, filled by ItemModelResolverMixin),
 // with the layer's resolved tints.
-// 26.2 (#33): the at-once drawing is no longer a custom-geometry task (26.2 runs those while PREPARING, before any draw, and the
-// carrier put a LegacyRenderType on vanilla's feature path); it is drawn at submit, or queued after the level when submitted
-// with it (net.eca.mv.SubmitPhase).
-// 26.2 (#37): a GUI item's pass is drawn after the item, once renderAllFeatures has drawn it into the atlas or
-// picture-in-picture texture (net.eca.client.render.GuiTexturePasses).
+// 26.3 (#33): no custom-geometry task any more. 26.3 runs a task's callback while the frame is PREPARED (prepareFrame), before
+// anything is drawn, and the carrier put the pass's LegacyRenderType on vanilla's feature path. A pass submitted with the
+// level is queued after the level (net.eca.mv.SubmitPhase); a GUI / tooltip pass is drawn into the offscreen texture's own
+// pass (net.eca.client.render.GuiTexturePasses, see eca$renderItemExtension).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -40,7 +40,7 @@ public abstract class ItemRendererMixin {
 
     @Shadow
     @Final
-    private List<BakedQuad> quads;
+    private net.minecraft.client.resources.model.geometry.ItemQuads quads;   // 26.3: all / solid / translucent
 
     // 26.1: the layer's tints are a nullable IntList (int[] up to 1.21.11)
     @Shadow
@@ -67,37 +67,48 @@ public abstract class ItemRendererMixin {
         if (passes == null || passes.isEmpty()) return;
 
         boolean queued = eca$isWorldContext(displayContext);
+        if (!queued && !net.eca.mv.SubmitPhase.levelSubmit) {
+            // 26.3 (#33): a GUI / tooltip item. On 26.3 every such item is drawn into an offscreen texture -- GuiItemAtlas's
+            // slot (redrawn only when the item changes), an oversized item's or a picture-in-picture texture -- in a render
+            // pass the dispatcher opens on that texture. The fork layer's helpers have no output override on 26.3 and draw
+            // into the main target, so drawing the pass at submit (or from the old order-1 task, whose callback ran inside
+            // prepareFrame) put it on the main framebuffer at the atlas' coordinates and projection. So the pass is
+            // collected and drawn INTO the pass vanilla opens on that texture, right after its features
+            // (GuiTexturePasses; the shared helper's LegacyGl.draw(mesh, pass)). A GUI submit outside those textures
+            // (none is known on 26.3) is still not drawn (logged once).
+            if (!net.eca.client.render.GuiTexturePasses.collecting()) {
+                eca$warnGuiPassSkipped();
+                return;
+            }
+            for (ShaderMaskPass pass : passes) {
+                if (pass == null || pass.alpha() <= 0.0f) continue;
+                SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
+                ItemStacks.renderModelLists(quads.all(), tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
+                consumer.finish(batch -> net.eca.client.render.GuiTexturePasses.add(pass, batch.builder(),
+                    batch.builder().buildOrThrow(), batch.uvTransform()));
+            }
+            return;
+        }
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
             SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
-            ItemStacks.renderModelLists(quads, tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
-            consumer.finish(batch -> {
-                if (queued) {
-                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
-                        batch.uvTransform());
-                } else if (net.eca.mv.SubmitPhase.levelSubmit) {
-                    // 26.2 (#33): a non-world display context submitted with the level (an item display, say) is
-                    // submitted before the level's clear pass; the after-level queue draws it in the frame
-                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
-                        batch.uvTransform());
-                } else if (net.eca.client.render.GuiTexturePasses.collecting()) {
-                    // A GUI / tooltip item (#37). 26.1.2 drew this from an order-1 custom-geometry task under
-                    // pass.renderType() (after the item). On 26.2 that task's callback runs while renderAllFeatures
-                    // PREPARES the storage, before anything is drawn, and the carrier put the pass's LegacyRenderType --
-                    // whose shader has uniform blocks of its own -- on vanilla's feature path, where prepare() warns and
-                    // draws nothing. Drawn here at submit, the item (drawn later by renderAllFeatures) covered it. So it
-                    // is collected and drawn through LegacyGl right after renderAllFeatures returns into the GUI item
-                    // atlas slot or picture-in-picture texture (GuiItemAtlasFeaturesMixin, PictureInPictureFeaturesMixin).
-                    net.eca.client.render.GuiTexturePasses.add(pass, batch.builder(), batch.builder().buildOrThrow(),
-                        batch.uvTransform());
-                } else {
-                    // A GUI submit outside those textures (none is known on 26.2): drawn at once, as before. The item
-                    // may have gone into the shared buffer source, so its batch is ended first.
-                    net.eca.mv.MultiBufferSource.main().endBatch();
-                    ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
-                        batch.uvTransform());
-                }
-            });
+            ItemStacks.renderModelLists(quads.all(), tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
+            // a world context, or (26.3, #33) any context submitted with the level (an item display, say), which is
+            // submitted before the level's clear pass: the after-level queue draws it in the frame
+            consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
+                batch.uvTransform()));
+        }
+    }
+
+    @org.spongepowered.asm.mixin.Unique
+    private static boolean eca$guiPassWarned;
+
+    @org.spongepowered.asm.mixin.Unique
+    private static void eca$warnGuiPassSkipped() {
+        if (!eca$guiPassWarned) {
+            eca$guiPassWarned = true;
+            com.mojang.logging.LogUtils.getLogger().warn("[mv 26.3] item extension shader passes are not drawn on a GUI item "
+                + "submitted outside an offscreen GUI texture (GuiItemAtlas / picture-in-picture)");
         }
     }
 

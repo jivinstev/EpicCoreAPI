@@ -10,13 +10,16 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+
 
 
 final class ShaderAiAssistantScreen extends Screen {
 
     private static final int PADDING = 8;
     private static final int BUTTON_HEIGHT = 20;
+    private static final int KEY_ENTER = net.eca.mv.GLFW.GLFW_KEY_ENTER;
+    private static final int MOD_SHIFT = net.eca.mv.GLFW.GLFW_MOD_SHIFT;
+    private static final int MOUSE_BUTTON_LEFT = net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT;
     private final ShaderGeneratorScreen parent;
     private ShaderAiSession session;
     private ShaderAiSettings settings;
@@ -121,8 +124,8 @@ final class ShaderAiAssistantScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == GLFW.GLFW_KEY_ENTER && getFocused() == prompt
-                && (event.modifiers() & GLFW.GLFW_MOD_SHIFT) == 0) {
+        if (event.key() == KEY_ENTER && getFocused() == prompt
+                && (event.modifiers() & MOD_SHIFT) == 0) {
             send();
             return true;
         }
@@ -177,7 +180,7 @@ final class ShaderAiAssistantScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.buttonInfo().button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
+        if (event.buttonInfo().button() == MOUSE_BUTTON_LEFT
                 && !transcript.containsInteractionPoint(event.x(), event.y())) {
             transcript.clearSelection();
         }

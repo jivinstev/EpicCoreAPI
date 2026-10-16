@@ -9,7 +9,7 @@ import net.neoforged.fml.config.ModConfig;
 public class ModConfigs {
     public static void register() {
         ModLoadingContext.get().getActiveContainer().registerConfig(
-            ModConfig.Type.COMMON,
+            ModConfig.Type.STARTUP,
             EcaConfiguration.SPEC,
             "eca.toml"
         );

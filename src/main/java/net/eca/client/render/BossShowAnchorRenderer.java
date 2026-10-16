@@ -60,6 +60,18 @@ public final class BossShowAnchorRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
+        MultiBufferSource.BufferSource buffer = net.eca.mv.MultiBufferSource.main();
+
+        // 26.3 (#37): AfterTranslucentBlocks is posted inside the level's main render pass. Every batch this handler ends
+        // -- its own endBatch calls and each switch between the lines, head and label types -- is drawn INTO that pass
+        // (with the view rotation still on the model-view stack) instead of being deferred to AfterLevel.
+        try (MultiBufferSource.BufferSource.Scope inPass = buffer.drawingInto(event.getRenderPass())) {
+            render(event, mc, buffer);
+        }
+    }
+
+    private static void render(RenderLevelStageEvent.AfterTranslucentBlocks event, Minecraft mc,
+                               MultiBufferSource.BufferSource buffer) {
         double ax = BossShowEditorState.getAnchorX();
         double ay = BossShowEditorState.getAnchorY();
         double az = BossShowEditorState.getAnchorZ();
@@ -68,7 +80,6 @@ public final class BossShowAnchorRenderer {
         Camera cam = mc.gameRenderer.mainCamera();
         Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
-        MultiBufferSource.BufferSource buffer = net.eca.mv.MultiBufferSource.main();
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
@@ -119,33 +130,33 @@ public final class BossShowAnchorRenderer {
         pose.popPose();
     }
 
-    // 26.2: no shape-outline helper is left to call, so each edge VoxelShape.forAllEdges reports becomes one line
-    // segment here: both ends offset by (x, y, z), the segment's unit direction as the line normal.
+    // 26.3: no shape-outline helper is left to call. Every edge VoxelShape.forAllEdges reports is shifted by the
+    // offset and handed to outlineEdge, which emits it as one line segment whose normal is its own direction.
     private static void renderShape(PoseStack pose, VertexConsumer vc, net.minecraft.world.phys.shapes.VoxelShape shape,
                                     double x, double y, double z, int color, float lineWidth) {
         final PoseStack.Pose entry = pose.last();
-        shape.forAllEdges((fromX, fromY, fromZ, toX, toY, toZ) -> lineSegment(vc, entry,
-                (float) (x + fromX), (float) (y + fromY), (float) (z + fromZ),
-                (float) (x + toX), (float) (y + toY), (float) (z + toZ), color, lineWidth));
+        final float ox = (float) x, oy = (float) y, oz = (float) z;
+        shape.forAllEdges((ax, ay, az, bx, by, bz) -> outlineEdge(vc, entry,
+                new float[] {ox + (float) ax, oy + (float) ay, oz + (float) az},
+                new float[] {ox + (float) bx, oy + (float) by, oz + (float) bz},
+                color, lineWidth));
     }
 
-    private static void lineSegment(VertexConsumer vc, PoseStack.Pose entry,
-                                    float sx, float sy, float sz, float ex, float ey, float ez, int argb, float width) {
-        float dirX = ex - sx;
-        float dirY = ey - sy;
-        float dirZ = ez - sz;
-        float length = (float) Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-        if (length < 1.0e-6f) {
-            return;   // a zero-length edge has no direction to give the line
+    private static void outlineEdge(VertexConsumer vc, PoseStack.Pose entry, float[] from, float[] to,
+                                    int argb, float width) {
+        float[] dir = {to[0] - from[0], to[1] - from[1], to[2] - from[2]};
+        float lenSq = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
+        if (lenSq <= 1.0e-12f) {
+            return;   // a degenerate edge has no direction for the line normal
         }
-        dirX /= length;
-        dirY /= length;
-        dirZ /= length;
-        for (int end = 0; end < 2; end++) {
-            boolean start = end == 0;
-            vc.addVertex(entry, start ? sx : ex, start ? sy : ey, start ? sz : ez)
+        float inv = 1.0f / (float) Math.sqrt(lenSq);
+        for (int i = 0; i < 3; i++) {
+            dir[i] *= inv;
+        }
+        for (float[] end : new float[][] {from, to}) {
+            vc.addVertex(entry, end[0], end[1], end[2])
                     .setColor(argb)
-                    .setNormal(entry, dirX, dirY, dirZ)
+                    .setNormal(entry, dir[0], dir[1], dir[2])
                     .setLineWidth(width);
         }
     }
@@ -215,7 +226,7 @@ public final class BossShowAnchorRenderer {
         String label = Integer.toString(ordinal);
         pose.pushPose();
         pose.translate(wp.x, wp.y + LABEL_Y_OFFSET, wp.z);
-        pose.mulPose(camRot);
+        pose.last().pose().rotate(camRot);
         pose.scale(-0.025f, -0.025f, 0.025f);
         Matrix4f mat = pose.last().pose();
         float x = -font.width(label) / 2f;

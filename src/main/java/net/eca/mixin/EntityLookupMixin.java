@@ -4,6 +4,7 @@ import net.eca.api.EcaAPI;
 import net.eca.util.EntityRemovalQuarantine;
 import net.eca.util.EntityUtil;
 import net.minecraft.util.AbortableIterationConsumer;
+import net.minecraft.util.Continuation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.entity.EntityAccess;
@@ -37,7 +38,7 @@ public class EntityLookupMixin {
         AbortableIterationConsumer<EntityAccess> consumer
     ) {
         return entity -> entity instanceof Entity realEntity && EntityRemovalQuarantine.isQueryHidden(realEntity)
-            ? AbortableIterationConsumer.Continuation.CONTINUE
+            ? Continuation.CONTINUE
             : consumer.accept(entity);
     }
 

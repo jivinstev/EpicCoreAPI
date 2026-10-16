@@ -1,5 +1,7 @@
 package net.eca.client.gui;
 
+import net.eca.mv.GLFW;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.eca.client.render.shader_generator.GeneratedShaderPreview;
@@ -53,8 +55,8 @@ import net.minecraft.util.Mth;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.fml.loading.FMLPaths;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import org.joml.Quaternionf;
 
 import java.io.IOException;
@@ -75,6 +77,35 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class ShaderGeneratorScreen extends Screen {
+
+
+    /* Stand-in for the removed LWJGL TinyFileDialogs binding, backed by Swing's file chooser. */
+    private static final class TinyFileDialogs {
+        static String tinyfd_openFileDialog(
+            String title, String defaultPath, String filterPatterns, String description, boolean multiple
+        ) {
+            JFileChooser chooser = new JFileChooser(defaultPath);
+            chooser.setDialogTitle(title);
+            chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            chooser.setMultiSelectionEnabled(false);
+            /* Only PNG callers exist in this screen. */
+            chooser.setFileFilter(new FileNameExtensionFilter(description, "png"));
+            if (chooser.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
+                return null;
+            }
+            return chooser.getSelectedFile().getAbsolutePath();
+        }
+
+        static String tinyfd_selectFolderDialog(String title, String defaultPath) {
+            JFileChooser chooser = new JFileChooser(defaultPath);
+            chooser.setDialogTitle(title);
+            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            if (chooser.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
+                return null;
+            }
+            return chooser.getSelectedFile().getAbsolutePath();
+        }
+    }
 
     private static final AtomicLong PREVIEW_REVISION = new AtomicLong();
     private static final int TOP_HEIGHT = 40;
@@ -599,11 +630,11 @@ public final class ShaderGeneratorScreen extends Screen {
         if (editingLayerIndex >= 0
             && layerNameField != null
             && !layerNameField.isMouseOver(mx, my)
-            && button == 0) {
+            && button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             confirmLayerRename();
             return true;
         }
-        if (openDropdown >= 0 && button == 0) {
+        if (openDropdown >= 0 && button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             List<? extends GuiEventListener> kids = children();
             for (int i = dropdownFirstWidgetIndex;
                  i <= dropdownLastWidgetIndex && i < kids.size();
@@ -618,14 +649,14 @@ public final class ShaderGeneratorScreen extends Screen {
             return true;
         }
         /* 中键在视口内按下即开始平移画布 */
-        if (button == 2 && previewViewport().contains(mx, my)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_MIDDLE && previewViewport().contains(mx, my)) {
             panningCanvas = true;
             return true;
         }
-        if (button == 0 && openDropdown < 0 && beginScrollbarDrag(mx, my)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && openDropdown < 0 && beginScrollbarDrag(mx, my)) {
             return true;
         }
-        if (button == 0 && handleCanvasClick(mx, my)) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && handleCanvasClick(mx, my)) {
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -636,16 +667,16 @@ public final class ShaderGeneratorScreen extends Screen {
         double mx = event.x();
         double my = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && scrollbarDragTarget != ScrollbarTarget.NONE) {
             updateScrollbarScroll(my);
             return true;
         }
-        if (button == 2 && panningCanvas) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_MIDDLE && panningCanvas) {
             canvasPanX += dragX;
             canvasPanY += dragY;
             return true;
         }
-        if (button == 0 && draggingElementIndex >= 0) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && draggingElementIndex >= 0) {
             switch (canvasDragMode) {
                 case SCALE -> scaleCanvasElement(mx, my);
                 case ROTATE -> rotateCanvasElement(mx, my);
@@ -661,15 +692,15 @@ public final class ShaderGeneratorScreen extends Screen {
         double mx = event.x();
         double my = event.y();
         int button = event.buttonInfo().button();
-        if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && scrollbarDragTarget != ScrollbarTarget.NONE) {
             scrollbarDragTarget = ScrollbarTarget.NONE;
             return true;
         }
-        if (button == 2 && panningCanvas) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_MIDDLE && panningCanvas) {
             panningCanvas = false;
             return true;
         }
-        if (button == 0 && draggingElementIndex >= 0) {
+        if (button == net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT && draggingElementIndex >= 0) {
             resetDragState();
             rebuildWidgets();
             return true;
@@ -680,7 +711,7 @@ public final class ShaderGeneratorScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-        int scanCode = event.scancode();
+
         int modifiers = event.modifiers();
         if (editingLayerIndex >= 0) {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {

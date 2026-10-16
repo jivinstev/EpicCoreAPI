@@ -24,8 +24,8 @@
     "ItemStackClientMixin",
     "FallingBlockRendererMixin",
     "LevelExtractorMixin",
-    "GuiItemAtlasFeaturesMixin",
-    "PictureInPictureFeaturesMixin"
+    "GuiItemAtlasMixin",
+    "PictureInPictureRendererMixin"
   ],
   "mixins": [
     "ChunkMapMixin",

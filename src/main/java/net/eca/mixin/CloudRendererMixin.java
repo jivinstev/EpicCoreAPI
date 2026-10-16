@@ -17,9 +17,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(CloudRenderer.class)
 public class CloudRendererMixin {
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    private void eca$skipOccludingClouds(int color, net.minecraft.client.CloudStatus status, float height,
-                                        int range, net.minecraft.world.phys.Vec3 cameraPosition, long gameTime, float ticks, CallbackInfo ci) {
+    // 26.3: the clouds are built in extract/prepare and drawn by render(CloudStatus, RenderPass) or, with improved
+    // transparency, renderOit(...); both draw through this private render(RenderPass, RenderPipeline), so the skip is here.
+    @Inject(method = "render(Lcom/mojang/renderpearl/api/commands/RenderPass;Lcom/mojang/renderpearl/api/pipeline/RenderPipeline;)V",
+            at = @At("HEAD"), cancellable = true)
+    private void eca$skipOccludingClouds(com.mojang.renderpearl.api.commands.RenderPass renderPass,
+                                        com.mojang.renderpearl.api.pipeline.RenderPipeline pipeline, CallbackInfo ci) {
         if (CloudGate.occlude) {
             ci.cancel();
         }

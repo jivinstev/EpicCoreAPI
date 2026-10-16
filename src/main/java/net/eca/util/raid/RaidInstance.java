@@ -5,6 +5,7 @@ import net.eca.network.RaidBossBarSyncPacket;
 import net.eca.util.EcaLogger;
 import net.eca.util.faction.FactionManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -216,10 +217,10 @@ public class RaidInstance {
 
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
-            Structure targetStructure = level.registryAccess()
-                    .lookupOrThrow(Registries.STRUCTURE).getValue(key);
+            Holder<Structure> targetStructure = level.registryAccess()
+                    .lookupOrThrow(Registries.STRUCTURE).get(key).orElse(null);
             if (targetStructure == null) return false;
-            return level.structureManager().getStructureWithPieceAt(center, targetStructure).isValid();
+            return level.structureManager().getStructureWithPieceAt(center, h -> h.is(key)).isValid();
         }
         TagKey<Structure> tag = def.getTargetStructureTag();
         if (tag != null) {

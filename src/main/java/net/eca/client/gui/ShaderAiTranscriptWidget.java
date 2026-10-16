@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +25,8 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
     private static final Pattern TABLE_SEPARATOR = Pattern.compile(":?-{3,}:?");
     private static final int CARD_GAP = 6;
     private static final int CARD_PADDING = 6;
+    private static final int GLFW_MOUSE_BUTTON_LEFT = net.eca.mv.GLFW.GLFW_MOUSE_BUTTON_LEFT;
+    private static final int GLFW_KEY_C = net.eca.mv.GLFW.GLFW_KEY_C;
     private final Font font;
     private List<ShaderAiSession.Message> messages = List.of();
     private List<MessageLayout> layouts = List.of();
@@ -330,7 +331,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         double mouseY = event.y();
         int button = event.buttonInfo().button();
         boolean handled = super.mouseClicked(event, doubleClick);
-        if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || !withinContentAreaPoint(mouseX, mouseY)) {
+        if (button != GLFW_MOUSE_BUTTON_LEFT || !withinContentAreaPoint(mouseX, mouseY)) {
             return handled;
         }
         int caret = caretAt(mouseX, mouseY);
@@ -355,7 +356,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.buttonInfo().button();
-        if (selecting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (selecting && button == GLFW_MOUSE_BUTTON_LEFT) {
             int caret = caretAt(mouseX, mouseY);
             if (caret >= 0) selectionCaret = caret;
             return true;
@@ -365,13 +366,13 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (event.buttonInfo().button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) selecting = false;
+        if (event.buttonInfo().button() == GLFW_MOUSE_BUTTON_LEFT) selecting = false;
         return super.mouseReleased(event);
     }
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.key() == GLFW.GLFW_KEY_C && event.hasControlDown() && hasSelection()) {
+        if (event.key() == GLFW_KEY_C && event.hasControlDown() && hasSelection()) {
             Minecraft.getInstance().keyboardHandler.setClipboard(selectedText());
             return true;
         }

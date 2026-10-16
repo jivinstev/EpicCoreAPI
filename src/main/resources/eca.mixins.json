@@ -29,8 +29,8 @@
     "ItemStackRenderStateLayersAccessor",
     "CameraDepthFarMixin",
     "LevelExtractorMixin",
-    "GuiItemAtlasFeaturesMixin",
-    "PictureInPictureFeaturesMixin"
+    "GuiItemAtlasMixin",
+    "PictureInPictureRendererMixin"
   ],
   "mixins": [
     "NetworkCodecMixin",

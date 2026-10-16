@@ -5,11 +5,13 @@ package net.eca.pro;
 
 import net.eca.coremod.RuntimeExtensionBridge;
 import net.neoforged.fml.ModLoadingIssue;
+import net.neoforged.fml.loading.EarlyLoadingScreenController;
 import net.neoforged.fml.loading.ProgramArgs;
 import net.neoforged.neoforgespi.earlywindow.ImmediateWindowProvider;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Supplier;
 
 
 // This service is loaded before transformation services, closing the unprotected startup window.
@@ -55,9 +57,16 @@ public final class EcaProImmediateWindowProvider implements ImmediateWindowProvi
     // FML 7 (NeoForge 21.5): ImmediateWindowProvider is an EarlyLoadingScreenController, and the window/overlay methods the
     // 1.21.4 version stubbed out (updateFramebufferSize, setupMinecraftWindow, positionWindow, loadingOverlay, getGLVersion)
     // left the interface. This provider still draws nothing and never owns the window.
+    // FML 12 (NeoForge 26.x): takeOverGlfwWindow is gone; the window is handed over through handOverToMinecraft, which
+    // returns the window state Minecraft should restore. This provider owns no window, so it reports Minecraft's default size.
     @Override
-    public long takeOverGlfwWindow() {
-        return 0L;
+    public EarlyLoadingScreenController.WindowState handOverToMinecraft(Supplier<Object> renderBackend) {
+        return new EarlyLoadingScreenController.WindowState(0, 0, 854, 480, false, false, false, false);
+    }
+
+    // This provider polls no window events, so there is nothing to stop before the handoff.
+    @Override
+    public void stopEventPolling() {
     }
 
     @Override

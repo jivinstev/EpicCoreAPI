@@ -2,7 +2,7 @@
 // GameRenderer.getDepthFar became Camera.depthFar -- see CameraDepthFarMixin).
 package net.eca.mixin;
 
-import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -49,7 +49,8 @@ public class GameRendererPostLevelMixin {
 
     // 在renderLevel()返回后注入，此时Oculus延迟渲染管线已完成合成，主帧缓冲区活跃
     @Inject(method = "renderLevel", at = @At("RETURN"))
-    private void eca$renderPostLevel(DeltaTracker deltaTracker, CallbackInfo ci) {
+    // 26.3: renderLevel() takes no DeltaTracker
+    private void eca$renderPostLevel(CallbackInfo ci) {
         if (minecraft.level == null) {
             return;
         }
@@ -70,12 +71,13 @@ public class GameRendererPostLevelMixin {
         ShaderMaskRenderQueue.flush();
     }
 
-    // 26.2: LevelRenderer.renderLevel(..., ChunkSectionsToRender) is render(...) without the sections argument
+    // 26.2: LevelRenderer.renderLevel(..., ChunkSectionsToRender) is render(...) without the sections argument;
+    // 26.3: render(allocator, outline, cameraState, terrainFog, fogColor, renderSky, consistentDepth) (no DeltaTracker / model-view)
     @Inject(method = "renderLevel",
             at = @At(value = "INVOKE",
-                     target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V",
+                     target = "Lnet/minecraft/client/renderer/LevelRenderer;render(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lcom/mojang/renderpearl/api/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZZ)V",
                      shift = At.Shift.AFTER))
-    private void eca$flushItemLayersAfterWorld(DeltaTracker deltaTracker, CallbackInfo ci) {
+    private void eca$flushItemLayersAfterWorld(CallbackInfo ci) {
         if (!EcaShaderInstance.isOculusShadersActive()) {
             ShaderMaskRenderQueue.flush();
         }
@@ -131,15 +133,15 @@ public class GameRendererPostLevelMixin {
 
     private static void rotateToFace(PoseStack poseStack, int face) {
         if (face == 1) {
-            poseStack.mulPose(Axis.XP.rotationDegrees(90.0f));
+            poseStack.mulPose(new Matrix4f().rotationX((float) Math.toRadians(90.0)));
         } else if (face == 2) {
-            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
+            poseStack.mulPose(new Matrix4f().rotationX((float) Math.toRadians(-90.0)));
         } else if (face == 3) {
-            poseStack.mulPose(Axis.XP.rotationDegrees(180.0f));
+            poseStack.mulPose(new Matrix4f().rotationX((float) Math.toRadians(180.0)));
         } else if (face == 4) {
-            poseStack.mulPose(Axis.ZP.rotationDegrees(90.0f));
+            poseStack.mulPose(new Matrix4f().rotationZ((float) Math.toRadians(90.0)));
         } else if (face == 5) {
-            poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0f));
+            poseStack.mulPose(new Matrix4f().rotationZ((float) Math.toRadians(-90.0)));
         }
     }
 }

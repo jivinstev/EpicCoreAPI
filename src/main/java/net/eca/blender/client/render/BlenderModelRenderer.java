@@ -64,9 +64,9 @@ public final class BlenderModelRenderer {
             poseStack.translate(definition.translation().x + request.offsetX(),
                 definition.translation().y + request.offsetY(),
                 definition.translation().z + request.offsetZ());
-            poseStack.mulPose(Axis.ZP.rotationDegrees(definition.rotation().z));
-            poseStack.mulPose(Axis.YP.rotationDegrees(definition.rotation().y));
-            poseStack.mulPose(Axis.XP.rotationDegrees(definition.rotation().x));
+            poseStack.mulPose(new Matrix4f().rotate(Axis.ZP.rotationDegrees(definition.rotation().z)));
+            poseStack.mulPose(new Matrix4f().rotate(Axis.YP.rotationDegrees(definition.rotation().y)));
+            poseStack.mulPose(new Matrix4f().rotate(Axis.XP.rotationDegrees(definition.rotation().x)));
             poseStack.scale(scale, -scale, scale);
 
             BlenderPlaybackState playback = request.playback();

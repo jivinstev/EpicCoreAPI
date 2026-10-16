@@ -2,8 +2,8 @@ package net.eca.client.render.shader_generator;
 
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.IndexType;
-import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.pipeline.IndexType;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -16,15 +16,17 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
-import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import com.mojang.renderpearl.api.commands.RenderPass;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import net.minecraft.client.resources.model.geometry.ItemQuads;
+import net.minecraft.client.renderer.texture.UvMapping;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -42,13 +44,17 @@ import org.joml.Matrix4fStack;
 import org.joml.Quaternionf;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalDouble;
 
 public final class ShaderPreviewRenderer {
 
     private static final ItemStack PREVIEW_ITEM = createPreviewItem();
     private static final ProjectionMatrixBuffer PREVIEW_PROJECTION = new ProjectionMatrixBuffer("eca_shader_preview");
-    /** 26.2 (#33): where the forced preview geometry is collected; drawn by endBatch through the shared helper, so a
-     *  LegacyRenderType draws with its shader's own uniform blocks bound (vanilla's feature path binds only its own). */
+    /** 26.3 (#33): where the forced preview geometry is collected; drawn by endBatch through the shared helper, so a
+     *  LegacyRenderType draws with its shader's own uniform blocks bound (vanilla's feature path binds only its own).
+     *  A vanilla type drawn this way goes to the main target (26.3 has no per-type output target), which is where
+     *  renderFeatures draws the rest of the preview too. */
     private static final net.eca.mv.MultiBufferSource.BufferSource PREVIEW_BUFFERS =
         net.eca.mv.MultiBufferSource.immediate(new ByteBufferBuilder(262144));
 
@@ -203,11 +209,11 @@ public final class ShaderPreviewRenderer {
             );
             pose.translate((left + right) / 2.0, (top + bottom) / 2.0, 180.0);
             pose.scale(size, -size, size);
-            pose.mulPose(new Quaternionf().rotateY(0.65F).rotateX(-0.35F));
+            pose.mulPose(new Matrix4f().rotateY(0.65F).rotateX(-0.35F));
             minecraft.getItemModelResolver().updateForTopItem(itemState, PREVIEW_ITEM, ItemDisplayContext.GUI, level, minecraft.player, 0);
             itemState.submit(pose, submits, 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
             PREVIEW_BUFFERS.endBatch();
-            features.renderAllFeatures(submits);
+            renderFeatures(features, submits);
         } finally {
             EcaShaderInstance.clearLocalUvBounds();
             pose.popPose();
@@ -237,7 +243,7 @@ public final class ShaderPreviewRenderer {
         int size = Math.max(24, Math.min(right - left, bottom - top) / 3);
         float horizontal = (float) Math.atan(((left + right) * 0.5F - mouseX) / 80.0F);
         float vertical = (float) Math.atan(((top + bottom) * 0.5F - mouseY) / 80.0F);
-        Quaternionf orientation = new Quaternionf()
+        Matrix4f orientation = new Matrix4f()
             .rotateZ((float) Math.PI)
             .rotateX(vertical * 0.35F)
             .rotateY(horizontal * 0.35F);
@@ -258,10 +264,24 @@ public final class ShaderPreviewRenderer {
             net.eca.mv.Mv.run(() -> {
                 dispatcher.submit(state, camera, 0.0, 0.0, 0.0, pose, submits);
                 PREVIEW_BUFFERS.endBatch();
-                features.renderAllFeatures(submits);
+                renderFeatures(features, submits);
             });
         } finally {
             pose.popPose();
+        }
+    }
+
+    // 26.3: the dispatcher prepares a frame from the storage and draws it in a render pass on the main target
+    private static void renderFeatures(FeatureRenderDispatcher features, SubmitNodeStorage submits) {
+        RenderTarget target = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        try (
+            FeatureRenderDispatcher.PreparedFrame frame = features.prepareFrame(submits);
+            RenderPass renderPass = RenderSystem.getDevice()
+                .createCommandEncoder()
+                .createRenderPass(() -> "ECA shader preview", target.getColorTextureView(), Optional.empty(), target.getDepthTextureView(), OptionalDouble.empty())
+        ) {
+            RenderSystem.bindDefaultUniforms(renderPass);
+            FeatureRenderDispatcher.renderAllFeatures(renderPass, frame);
         }
     }
 
@@ -282,25 +302,27 @@ public final class ShaderPreviewRenderer {
 
         @Override
         public SubmitNodeCollection order(int order) {
-            return this.getSubmitsPerOrder().computeIfAbsent(order, ignored -> new ForcedCollection(this.forced, this.buffers));
+            return this.getSubmitsPerOrder().computeIfAbsent(order, ignored -> new ForcedCollection(this.forced, this.buffers, false, new net.minecraft.client.renderer.feature.phase.TranslucentFeatureRenderPhase()));
         }
     }
 
     /**
      * Every model, block, item and custom-geometry submit with the forced render type, as the forced buffer source handed
-     * it out on 1.21. 26.2 (#33): the forced type is the preview's LegacyRenderType, whose shader has uniform blocks of its
-     * own, and vanilla's feature renderers (renderAllFeatures -> PreparedRenderType.drawFromBuffer) bind only vanilla's
-     * blocks. So these submits are not recorded for the feature dispatcher at all: their vertices are written at once into
-     * the shared MultiBufferSource helper, and the caller's endBatch draws them through LegacyRenderType's own draw (the
-     * shader's blocks bound). Whatever else the dispatcher submits (name tags, text, shadows) keeps its vanilla type and
-     * still goes through renderAllFeatures.
+     * it out on 1.21. 26.3 (#33): the forced type is the preview's LegacyRenderType, whose shader has uniform blocks of its
+     * own, and 26.3's feature path (prepareFrame -> PreparedRenderType.drawFromBuffer) binds only vanilla's. So these
+     * submits are not recorded for the dispatcher: their vertices go straight into the shared MultiBufferSource helper,
+     * posed from the submit as the model feature renderer would pose them, and the caller's endBatch draws them through
+     * LegacyRenderType's own draw. Whatever else is submitted (name tags, text, shadows) keeps its vanilla type and still
+     * goes through renderFeatures.
      */
     private static final class ForcedCollection extends SubmitNodeCollection {
         private final RenderType forced;
         private final net.eca.mv.MultiBufferSource.BufferSource buffers;
         private final QuadInstance quadInstance = new QuadInstance();
 
-        ForcedCollection(RenderType forced, net.eca.mv.MultiBufferSource.BufferSource buffers) {
+        ForcedCollection(RenderType forced, net.eca.mv.MultiBufferSource.BufferSource buffers, boolean sorted,
+                         net.minecraft.client.renderer.feature.phase.TranslucentFeatureRenderPhase phase) {
+            super(sorted, phase);
             this.forced = forced;
             this.buffers = buffers;
         }
@@ -314,15 +336,13 @@ public final class ShaderPreviewRenderer {
             int lightCoords,
             int overlayCoords,
             int tintedColor,
-            TextureAtlasSprite sprite,
-            int outlineColor,
-            ModelFeatureRenderer.CrumblingOverlay crumblingOverlay
+            UvMapping uvMapping,
+            int outlineColor
         ) {
             com.mojang.blaze3d.vertex.VertexConsumer consumer = this.buffers.getBuffer(this.forced);
-            if (sprite != null) {
-                consumer = sprite.wrap(consumer);
+            if (uvMapping != null) {
+                consumer = uvMapping.wrap(consumer);
             }
-            // posed now, from this submit's state, the way the model feature renderer poses it when it records the model
             model.setupAnim(state);
             var hidden = net.neoforged.neoforge.client.ClientHooks.updateModelVisibility(model, state);
             try {
@@ -347,7 +367,6 @@ public final class ShaderPreviewRenderer {
             this.quadInstance.setLightCoords(lightCoords);
             this.quadInstance.setOverlayCoords(overlayCoords);
             for (BlockStateModelPart part : parts) {
-                // every culled face, then the unculled quads (null direction)
                 for (Direction side : Direction.values()) {
                     putTinted(pose, part.getQuads(side), tintLayers, consumer);
                 }
@@ -378,7 +397,7 @@ public final class ShaderPreviewRenderer {
             int overlayCoords,
             int outlineColor,
             int[] tintLayers,
-            List<BakedQuad> quads,
+            ItemQuads quads,
             ItemStackRenderState.FoilType foilType
         ) {
             com.mojang.blaze3d.vertex.VertexConsumer consumer = this.buffers.getBuffer(this.forced);
@@ -386,7 +405,7 @@ public final class ShaderPreviewRenderer {
             QuadInstance instance = new QuadInstance();
             instance.setLightCoords(lightCoords);
             instance.setOverlayCoords(overlayCoords);
-            for (BakedQuad quad : quads) {
+            for (BakedQuad quad : quads.all()) {
                 BakedQuad.MaterialInfo material = quad.materialInfo();
                 int layer = material.tintIndex();
                 instance.setColor(material.isTinted() && layer >= 0 && layer < tintLayers.length ? tintLayers[layer] : -1);

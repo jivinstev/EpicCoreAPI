@@ -3,7 +3,7 @@ package net.eca.client.render.shader_generator;
 import net.eca.mv.Uniform;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.shader_generator.ShaderExportBundle;
 import net.eca.util.shader_generator.ShaderExportMode;
@@ -293,7 +293,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_boss_bar",
             DefaultVertexFormat.BLOCK,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             false,
             true,
@@ -315,7 +315,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_skybox",
             DefaultVertexFormat.BLOCK,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -336,7 +336,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_item",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             false,
@@ -360,7 +360,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         return net.eca.mv.LegacyRenderType.create(
             name + "_entity",
             DefaultVertexFormat.ENTITY,
-            com.mojang.blaze3d.PrimitiveTopology.QUADS,
+            com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
             256,
             true,
             true,

@@ -487,7 +487,7 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-        if (keyCode == 256) {
+        if (keyCode == net.eca.mv.GLFW.GLFW_KEY_ESCAPE) {
             closePanel();
             return true;
         }

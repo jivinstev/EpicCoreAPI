@@ -1,5 +1,7 @@
 package net.eca.event;
 
+import net.eca.mv.GLFW;
+
 import net.eca.client.BossShowKeyBindings;
 import net.eca.client.gui.BossShowEditorHomeScreen;
 import net.eca.client.gui.BossShowEditorScreen;
@@ -39,13 +41,14 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import org.lwjgl.glfw.GLFW;
+
 
 import java.util.UUID;
 
 //BossShow 编辑器：实体选择 + 录制状态机
 @EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowEditorClientEvents {
+
 
     private static Entity cachedHovered = null;
     private static int sessionHeartbeatTicks = 0;

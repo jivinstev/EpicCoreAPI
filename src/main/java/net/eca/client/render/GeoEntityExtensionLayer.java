@@ -13,15 +13,15 @@
 //    (pose-stack push, set to the task's pose, renderPosed -> BakedGeoModel.render), with the layer's light / overlay / colour.
 //  * The plain textured pass (no Oculus) is a task of its own at order(1), like GeckoLib's TextureLayerGeoLayer, so the
 //    translucent pass lands over the models; with Oculus, and for the shader-mask passes, the geometry goes into the mod's own
-//    BufferBuilder and is QUEUED (ShaderMaskRenderQueue.enqueue, flushed at AfterTranslucentFeatures or after the level) -- endBatch() in the middle of a
+//    BufferBuilder and is QUEUED (ShaderMaskRenderQueue.enqueue, flushed after the level) -- endBatch() in the middle of a
 //    feature renderer's own batch would close the buffer it is still writing into.
 package net.eca.client.render;
 
-import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;

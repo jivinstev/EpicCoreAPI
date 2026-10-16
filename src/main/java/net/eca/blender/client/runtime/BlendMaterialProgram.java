@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.eca.blender.client.runtime.BlendNodeGraph.Expr;
 import net.eca.blender.client.runtime.BlendNodeGraph.Input;
 import net.eca.blender.client.runtime.BlendNodeGraph.Value;
@@ -170,7 +170,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
             shader = null;
             throw new IOException("Material requires more texture units than the renderer or GPU supports");
         }
-        type = net.eca.mv.LegacyRenderType.create("eca_blend_" + id, DefaultVertexFormat.ENTITY, com.mojang.blaze3d.PrimitiveTopology.QUADS, 256, true, true,
+        type = net.eca.mv.LegacyRenderType.create("eca_blend_" + id, DefaultVertexFormat.ENTITY, com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, 256, true, true,
             net.eca.mv.LegacyRenderType.state().setShaderState(new net.eca.mv.ShaderShard(() -> shader))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY).setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
                 .setLightmapState(net.eca.mv.LegacyRenderType.LIGHTMAP).setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)
@@ -193,9 +193,11 @@ public final class BlendMaterialProgram implements AutoCloseable {
         if (positions.length == 0) { min = new float[3]; max = new float[3]; }
         Uniforms uniforms = new Uniforms(driverValues, inverse, min, new float[] {max[0] - min[0], max[1] - min[1], max[2] - min[2]});
         if (net.eca.mv.SubmitPhase.levelSubmit) {
-            // 26.2 (#37): submitted with the level, which 26.2 does before the frame graph's clear pass: drawn now, the
-            // material would be erased. Its geometry goes into a builder of its own and is drawn with these uniforms
-            // in the level's main pass (ShaderMaskRenderQueue, AfterTranslucentFeatures), see end().
+            // 26.3 (#37): submitted with the level (LevelRenderer.render: submitFeatures, then the frame graph, whose
+            // "clear" pass clears the main target's colour and depth before "main" runs). Drawn now, through its own
+            // pass on the main target, the material would be erased. Its geometry goes into a builder of its own and is
+            // drawn with these uniforms INTO the level's main pass (ShaderMaskRenderQueue.InLevelPass at
+            // AfterTranslucentFeatures), or in a pass of its own by the after-level flush; see end().
             deferred = uniforms;
             deferredBuilder = net.eca.client.render.ShaderMaskRenderQueue.acquireBuilder(type.primitiveTopology(), type.format());
             return deferredBuilder;
@@ -220,10 +222,12 @@ public final class BlendMaterialProgram implements AutoCloseable {
         }
         if (type.sortOnUpload()) net.eca.client.render.ShaderMaskRenderQueue.sortQuads(builder, mesh);
         RenderType drawType = type;
-        net.eca.client.render.ShaderMaskRenderQueue.enqueueDraw(builder, mesh, m -> {
+        net.eca.client.render.ShaderMaskRenderQueue.enqueueDraw(builder, mesh, (m, pass) -> {
             if (shader == null || type != drawType) { m.close(); return; }   // reloaded or closed since the submit
             apply(uniforms);
-            ((net.eca.mv.LegacyRenderType) drawType).draw(m);   // closes the mesh
+            net.eca.mv.LegacyRenderType legacy = (net.eca.mv.LegacyRenderType) drawType;
+            if (pass != null) legacy.draw(m, pass);   // into the open main pass (closes the mesh)
+            else legacy.draw(m);                      // a pass of its own on the main target (closes the mesh)
         });
     }
 
@@ -235,7 +239,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
         for (int i = 0; i < textures.size(); i++) shader.setSampler("Image" + i, Minecraft.getInstance().getTextureManager().getTexture(textures.get(i)));
     }
 
-    /** 26.2 (#37): the per-draw uniforms begin() computes, kept for a draw deferred past the clear pass. */
+    /** 26.2 / 26.3 (#37): the per-draw uniforms begin() computes, kept for a draw deferred past the clear pass. */
     private record Uniforms(float[] drivers, Matrix4f nodeInverse, float[] boundsMin, float[] boundsSize) {
     }
 
