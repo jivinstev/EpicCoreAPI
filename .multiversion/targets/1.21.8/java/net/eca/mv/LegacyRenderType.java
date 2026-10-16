@@ -1,6 +1,6 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-STAND-IN: shared/1.21.8's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
-// MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
+// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.8 LegacyRenderType with its F1 fix (mc-mod-version-upgrade 3f4022c),
+// MV-AHEAD-OF-TEMPLATE: package filled in. Delete once sync-shared brings it.
 // MV-REQUIRES: LegacyGl
 // MV-REQUIRES: ShaderInstance
 // MV-REQUIRES: ShaderShard
@@ -17,7 +17,9 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
@@ -104,6 +106,8 @@ public class LegacyRenderType extends RenderType {
     private final VertexFormat format;
     private final VertexFormat.Mode mode;
     private final State state;
+    /** LegacyGl's state before each (possibly nested) setupRenderState, restored by clearRenderState. */
+    private final Deque<LegacyGl.Saved> saved = new ArrayDeque<>();
 
     private LegacyRenderType(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
                              boolean affectsCrumbling, boolean sortOnUpload, State state) {
@@ -115,14 +119,30 @@ public class LegacyRenderType extends RenderType {
         this.state = state;
     }
 
+    /** 1.21.4's RenderType.setupRenderState: the texture / lightmap / overlay shards, then the shader and the
+     *  transparency / depth / write-mask / cull / layering state it folded into the pipeline, loaded into {@link LegacyGl}
+     *  so a following {@code LegacyGl.drawWithShader} draws with them (see {@link LegacyGl#load}), then the shader shard's
+     *  own setup (the mod's override pushes its uniforms there, as in 1.21.4). */
+    @Override
+    public void setupRenderState() {
+        super.setupRenderState();
+        saved.push(LegacyGl.load(state.key, state.shader.shader(), getRenderTarget()));
+        state.shader.setupRenderState();
+    }
+
+    @Override
+    public void clearRenderState() {
+        state.shader.clearRenderState();
+        if (!saved.isEmpty()) LegacyGl.restore(saved.pop());
+        super.clearRenderState();
+    }
+
     @Override
     public void draw(MeshData mesh) {
         setupRenderState();
         try {
-            state.shader.setupRenderState();   // the mod's override pushes its uniforms here, as in 1.21.4
             LegacyGl.draw(mesh, state.shader.shader(), state.key, getRenderTarget());
         } finally {
-            state.shader.clearRenderState();
             clearRenderState();
         }
     }
