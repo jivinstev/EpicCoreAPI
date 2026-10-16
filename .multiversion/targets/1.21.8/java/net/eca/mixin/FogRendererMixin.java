@@ -53,7 +53,8 @@ public class FogRendererMixin {
     // tinted with no fluid check (setupColor TAIL -> levelFogColor); the distances are changed only with no fluid in the
     // camera (setupFog TAIL). 1.21.1 forced FogShape.CYLINDER unless the extension asked otherwise at full strength;
     // fog.glsl takes the max of a spherical (environmental) and a cylindrical (render-distance) fog, with 1.21.1's
-    // cylindrical distance, so the shape is which pair of fields gets the custom start/end: the other pair is pushed out.
+    // cylindrical distance, so the shape is which pair of fields gets the custom start/end: the other pair is lerped (by
+    // strength, from vanilla's) to a finite distance where it is never the nearer fog, so s=0 is vanilla, s=1 1.21.1's shape.
     @WrapOperation(method = "setupFog", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/fog/FogRenderer;updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
     private void eca$applyGlobalFogBuffer(FogRenderer self, ByteBuffer buffer, int offset, Vector4f color,
@@ -79,15 +80,21 @@ public class FogRendererMixin {
                 float end = Mth.lerp(strength, envEnd, customEnd);
                 envStart = start;
                 envEnd = end <= start ? start + 1.0f : end;
-                renderStart = Mth.lerp(strength, renderStart, Float.MAX_VALUE);
-                renderEnd = Mth.lerp(strength, renderEnd, Float.MAX_VALUE);
+                // the cylindrical distance is at most the spherical one, so a render-distance fog that starts at the
+                // custom end can never be the nearer of the two (fog.glsl total_fog_value takes the max)
+                renderStart = Mth.lerp(strength, renderStart, envEnd);
+                renderEnd = Mth.lerp(strength, renderEnd, envEnd + 1.0f);
             } else {
                 float start = Mth.lerp(strength, renderStart, customStart);
                 float end = Mth.lerp(strength, renderEnd, customEnd);
                 renderStart = start;
                 renderEnd = end <= start ? start + 1.0f : end;
-                envStart = Mth.lerp(strength, envStart, Float.MAX_VALUE);
-                envEnd = Mth.lerp(strength, envEnd, Float.MAX_VALUE);
+                // the spherical distance is at most sqrt(2) times the cylindrical one (length(pos) against
+                // max(length(pos.xz), abs(pos.y))), so an environmental fog that starts at sqrt(2) x the custom end can
+                // never be the nearer of the two; lerped from vanilla's, so the fog fades in with strength as on 1.21.1
+                float pushed = renderEnd * Mth.SQRT_OF_TWO;
+                envStart = Mth.lerp(strength, envStart, pushed);
+                envEnd = Mth.lerp(strength, envEnd, pushed + 1.0f);
             }
             // the sky shader fogs from 0 to FogSkyEnd (1.21.1's FOG_SKY start has no field)
             skyEnd = Mth.lerp(strength, skyEnd, fog.skyFogEnd(renderDistance));
