@@ -55,3 +55,25 @@ The block below was appended by tools/fork-port.py for its own last run only:
 - tokens: output 150 (thinking 0), input 16, cache read 1,162,778, cache write 6,594 (5m 6,594 / 1h 0)
 - size: 16 Java files, 6 mixin classes; target Minecraft 1.21.5
 - ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '111': 1, '333': 1}} -- the cost includes that work
+
+## fork-port.py run since 2026-10-16T10:45:21+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $2.96** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 1.09 h active, 1.11 h wall (2026-10-16T09:48Z to 2026-10-16T10:55Z)
+- model: claude-opus-5-5 (28 req); effort: medium 28
+- tokens: output 347 (thinking 0), input 56, cache read 2,661,544, cache write 483,188 (5m 483,188 / 1h 0)
+- size: 16 Java files, 6 mixin classes; target Minecraft 1.21.5
+- ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '333': 1, '111': 1}} -- the cost includes that work
+- attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 60 (≈ $5.46), other targets' 416, outside this checkout 3538. Records of concurrent targets add up.
+- window: requests from 2026-10-15T18:39:00.000Z to 2026-10-16T10:55:20.971Z (requests before it are not in this record)
+
+## fork-port.py run since 2026-10-16T10:45:21+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $10.09** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.77 h active, 0.77 h wall (2026-10-16T11:05Z to 2026-10-16T11:51Z)
+- model: claude-opus-5-5 (182 req); effort: medium 182
+- tokens: output 9,661 (thinking 1,368), input 368, cache read 33,679,529, cache write 621,000 (5m 604,452 / 1h 16,548)
+- size: 19 Java files, 6 mixin classes; target Minecraft 1.21.5
+- ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '333': 1, '111': 1}} -- the cost includes that work
+- attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 10 (≈ $0.53), other targets' 27, outside this checkout 251. Records of concurrent targets add up.
+- window: requests from 2026-10-16T10:55:20.972Z to 2026-10-16T11:51:29.996Z (requests before it are not in this record)
