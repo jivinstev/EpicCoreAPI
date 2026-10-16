@@ -1,6 +1,6 @@
 package net.eca.util.bossshow;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ public final class BossShowDefinition {
         CODE    //纯 Java @RegisterBossShow 类声明的
     }
 
-    private final ResourceLocation id;
+    private final Identifier id;
     private final EntityType<?> targetType;
     private final Trigger trigger;
     private final boolean cinematic;
@@ -68,7 +68,7 @@ public final class BossShowDefinition {
     //录制时的参考朝向，仅供无实体编辑预览还原；正式播放使用触发实体的起始朝向。
     private final float anchorYawDeg;
 
-    public BossShowDefinition(ResourceLocation id,
+    public BossShowDefinition(Identifier id,
                               EntityType<?> targetType,
                               Trigger trigger,
                               boolean cinematic,
@@ -80,7 +80,7 @@ public final class BossShowDefinition {
             deriveEventCues(frames), deriveSubtitleCues(frames), List.of());
     }
 
-    public BossShowDefinition(ResourceLocation id,
+    public BossShowDefinition(Identifier id,
                               EntityType<?> targetType,
                               Trigger trigger,
                               boolean cinematic,
@@ -94,7 +94,7 @@ public final class BossShowDefinition {
             eventCues, subtitleCues, List.of());
     }
 
-    public BossShowDefinition(ResourceLocation id,
+    public BossShowDefinition(Identifier id,
                               EntityType<?> targetType,
                               Trigger trigger,
                               boolean cinematic,
@@ -118,7 +118,7 @@ public final class BossShowDefinition {
         this.anchorYawDeg = anchorYawDeg;
     }
 
-    public ResourceLocation id() { return id; }
+    public Identifier id() { return id; }
     public EntityType<?> targetType() { return targetType; }
     public Trigger trigger() { return trigger; }
     public boolean cinematic() { return cinematic; }

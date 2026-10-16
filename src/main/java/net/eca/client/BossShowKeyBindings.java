@@ -17,7 +17,7 @@ public final class BossShowKeyBindings {
 
     public static final net.minecraft.client.KeyMapping.Category CATEGORY =
         net.minecraft.client.KeyMapping.Category.register(
-            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("eca", "categories"));
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("eca", "categories"));
 
     //J = 开始/恢复录制
     public static final KeyMapping REC_START = new KeyMapping(

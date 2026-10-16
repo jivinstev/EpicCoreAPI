@@ -1,3 +1,5 @@
+// MV-STAND-IN: 1.21.11's prepared copy of the 1.21.10 HealthDataflowAnalyzer overlay as it was before 1.21.10's hurtServer/actuallyHurt
+// MV-STAND-IN: descriptors and getXxxOr(String, prim) identity keys, unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
 package net.eca.util.health;
 
 import net.eca.util.health.report.HealthReportText;
@@ -76,8 +78,8 @@ public final class HealthDataflowAnalyzer {
     public static final McMethod GET_MAX_HEALTH   = new McMethod("getMaxHealth", "getMaxHealth", "()F");
     public static final McMethod IS_ALIVE         = new McMethod("isAlive", "isAlive", "()Z");
     public static final McMethod IS_DEAD_OR_DYING = new McMethod("isDeadOrDying", "isDeadOrDying", "()Z");
-    public static final McMethod HURT             = new McMethod("hurtServer", "hurtServer", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)Z");
-    public static final McMethod ACTUALLY_HURT    = new McMethod("actuallyHurt", "actuallyHurt", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)V");
+    public static final McMethod HURT             = new McMethod("hurt", "hurt", "(" + DAMAGE_SOURCE_DESC + "F)Z");
+    public static final McMethod ACTUALLY_HURT    = new McMethod("actuallyHurt", "actuallyHurt", "(" + DAMAGE_SOURCE_DESC + "F)V");
     public static final McMethod SET_HEALTH       = new McMethod("setHealth", "setHealth", "(F)V");
     public static final McMethod TICK             = new McMethod("tick", "tick", "()V");
     public static final McMethod BASE_TICK        = new McMethod("baseTick", "baseTick", "()V");
@@ -2103,14 +2105,14 @@ public final class HealthDataflowAnalyzer {
         registerIdentityCall("java/lang/Long", "valueOf", "(J)Ljava/lang/Long;");
 
         // Minecraft CompoundTag getXxx (identity,写回由 sink IO 完成)
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloatOr", "(Ljava/lang/String;F)F");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getIntOr", "(Ljava/lang/String;I)I");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLongOr", "(Ljava/lang/String;J)J");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDoubleOr", "(Ljava/lang/String;D)D");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloatOr", "(Ljava/lang/String;F)F");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getIntOr", "(Ljava/lang/String;I)I");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLongOr", "(Ljava/lang/String;J)J");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDoubleOr", "(Ljava/lang/String;D)D");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDouble", "(Ljava/lang/String;)D");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDouble", "(Ljava/lang/String;)D");
 
         // String.substring(str, begin, end)：sink 在 arg[0] 时，从当前值取前缀/后缀还原完整字符串
         TABLE.registerCall("java/lang/String", "substring", "(II)Ljava/lang/String;",

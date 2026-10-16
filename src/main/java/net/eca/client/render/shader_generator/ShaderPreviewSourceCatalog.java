@@ -14,9 +14,9 @@ import net.eca.client.render.TheLastEndRenderTypes;
 import net.eca.client.render.VolcanoRenderTypes;
 import net.eca.client.render.preset.ShaderPreset;
 import net.eca.client.render.preset.ShaderPresetRegistry;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,7 +53,7 @@ public final class ShaderPreviewSourceCatalog {
             BlackHoleRenderTypes.SKYBOX, BlackHoleRenderTypes.ITEM, BlackHoleRenderTypes::createEntityEffect));
 
         ShaderPresetRegistry.getPresetIds().stream()
-            .sorted(Comparator.comparing(ResourceLocation::toString))
+            .sorted(Comparator.comparing(Identifier::toString))
             .map(ShaderPresetRegistry::getPreset)
             .filter(preset -> preset != null)
             .map(ShaderPreviewSourceCatalog::registered)
@@ -76,7 +76,7 @@ public final class ShaderPreviewSourceCatalog {
         RenderType bossBar,
         RenderType skybox,
         RenderType item,
-        Function<ResourceLocation, RenderType> entityFactory
+        Function<Identifier, RenderType> entityFactory
     ) {
         return new ShaderPreviewSource() {
             @Override
@@ -100,7 +100,7 @@ public final class ShaderPreviewSourceCatalog {
             }
 
             @Override
-            public RenderType entity(ResourceLocation texture) {
+            public RenderType entity(Identifier texture) {
                 return entityFactory.apply(texture);
             }
         };

@@ -1,6 +1,6 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.10 LegacyRenderType with its F1 fix (mc-mod-version-upgrade 3f4022c),
-// MV-AHEAD-OF-TEMPLATE: package filled in. Delete once sync-shared brings it.
+// MV-STAND-IN: shared/1.21.11's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
+// MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
 // MV-REQUIRES: LegacyGl
 // MV-REQUIRES: ShaderInstance
 // MV-REQUIRES: ShaderShard
@@ -12,47 +12,90 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.resources.Identifier;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
 /**
- * 1.21.4's {@code RenderType.create(name, format, mode, size, crumbling, sort, CompositeState)} on 1.21.8, where a
- * RenderType's blend/depth/cull/write-mask state and its shader became one RenderPipeline. The builder keeps the
- * 1.21.4 shape: the shards 1.21.8 still has (texture, lightmap, overlay, layering, output, texturing, line) are
- * set up as before, and the ones it folded into the pipeline (shader, transparency, depth test, write mask, cull)
- * become the pipeline {@link LegacyGl} derives at draw time.
+ * 1.21.4's {@code RenderType.create(name, format, mode, size, crumbling, sort, CompositeState)} on 1.21.11, where a
+ * RenderType is a name plus a {@code RenderSetup} around one fixed RenderPipeline and RenderStateShard no longer exists.
+ * The builder keeps the 1.21.4 shape: the blend/depth/cull/write-mask/layering state becomes the pipeline {@link LegacyGl}
+ * derives at draw time, the shader is a {@link ShaderShard}, and what is left (texture, lightmap, overlay) are the small
+ * {@link Shard}s below, which bind {@link LegacyGl}'s texture slots.
  *
- * <p>What 1.21.8 asks of a RenderType subclass is exactly three abstract methods: {@code draw(MeshData)},
- * {@code format()} and {@code mode()}. Everything else a buffer source needs -- {@code bufferSize()},
- * {@code affectsCrumbling()}, {@code sortOnUpload()}, {@code canConsolidateConsecutiveGeometry()}, {@code outline()}
- * (empty) -- has a working default, and its own {@code CompositeRenderType} (package-private, so not extendable) keeps
- * its pipeline in a private field and draws inside {@code draw}: set up the shards, write the DynamicTransforms
- * block, run a RenderPass with the default uniforms and the 12 sampler slots, tear the shards down. This class does
- * the same in {@code draw} through {@link LegacyGl#draw}. Nothing in 1.21.8 calls {@link #getRenderTarget()} or
- * {@link #getRenderPipeline()} (1.21.5 had hooks of those names that vanilla's batching read); they are kept as plain
- * accessors for the draw path and for a mod that wants the pipeline, and are deliberately NOT {@code @Override}.
- *
- * <p>1.21.10 copy: from 1.21.9 {@code RenderType.pipeline()} is a fourth abstract method, implemented below (with
- * {@code @Override}) on top of {@link #getRenderPipeline()}.
+ * <p>1.21.11 made RenderType's only constructor private and its pipeline immutable; the fork's access transformer
+ * opens {@code RenderType(String, RenderSetup)}, and this subclass hands it a placeholder {@code RenderSetup} (only its
+ * buffer size and crumbling / sort flags are read by vanilla's batching) and overrides {@code draw}, {@code format},
+ * {@code mode} and {@code pipeline} with the legacy ones, as the 1.21.10 copy did.
  */
 public class LegacyRenderType extends RenderType {
-    /** A 1.21.4 shard 1.21.8 folded into the pipeline: it edits the draw state instead of setting GL state. */
-    public static final class Modifier extends RenderStateShard {
+    /** What 1.21.4's RenderStateShard was to this layer: something set up before a draw and cleared after it. */
+    public abstract static class Shard {
+        public abstract void setupRenderState();
+
+        public void clearRenderState() {
+        }
+    }
+
+    /** A 1.21.4 shard 1.21.11 folded into the pipeline: it edits the draw state instead of setting GL state. */
+    public static final class Modifier extends Shard {
         final UnaryOperator<LegacyGl.Key> edit;
 
         Modifier(String name, UnaryOperator<LegacyGl.Key> edit) {
-            super(name, () -> {}, () -> {});
             this.edit = edit;
         }
+
+        @Override
+        public void setupRenderState() {
+        }
     }
+
+    /** 1.21.4's TextureStateShard: names the texture bound to sampler slot 0 (the texture's own sampler decides filtering). */
+    public static class TextureStateShard extends Shard {
+        private final Identifier texture;
+
+        public TextureStateShard(Identifier texture, boolean mipmap) {
+            this.texture = texture;
+        }
+
+        @Override
+        public void setupRenderState() {
+            LegacyGl.setShaderTexture(0, texture);
+        }
+    }
+
+    /** 1.21.4's {@code RenderType.BLOCK_SHEET_MIPPED}. */
+    public static final TextureStateShard BLOCK_SHEET_MIPPED = new TextureStateShard(TextureAtlas.LOCATION_BLOCKS, true);
+
+    /** 1.21.4's {@code RenderType.OVERLAY}: the entity overlay texture in sampler slot 1. */
+    public static final Shard OVERLAY = new Shard() {
+        @Override
+        public void setupRenderState() {
+            LegacyGl.setShaderTexture(1, Minecraft.getInstance().gameRenderer.overlayTexture().getTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+        }
+    };
+
+    /** 1.21.4's {@code RenderType.LIGHTMAP}: the light texture in sampler slot 2. */
+    public static final Shard LIGHTMAP = new Shard() {
+        @Override
+        public void setupRenderState() {
+            LegacyGl.setShaderTexture(2, Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+        }
+    };
 
     private static Modifier blend(String name, BlendFunction f) {
         return new Modifier(name, k -> new LegacyGl.Key(f, k.depth(), k.depthWrite(), k.writeColor(), k.writeAlpha(), k.cull(), k.biasScale(), k.biasConstant()));
@@ -90,7 +133,7 @@ public class LegacyRenderType extends RenderType {
     public static final Modifier DEPTH_WRITE = write("depth_write", false, true);
     public static final Modifier CULL = cull("cull", true);
     public static final Modifier NO_CULL = cull("no_cull", false);
-    /** 1.21.4's POLYGON_OFFSET_LAYERING (glPolygonOffset(-1, -10)) is a depth bias on 1.21.5. */
+    /** 1.21.4's POLYGON_OFFSET_LAYERING (glPolygonOffset(-1, -10)) is a depth bias on 1.21.5+. */
     public static final Modifier POLYGON_OFFSET_LAYERING = new Modifier("polygon_offset_layering",
             k -> new LegacyGl.Key(k.blend(), k.depth(), k.depthWrite(), k.writeColor(), k.writeAlpha(), k.cull(), -1.0F, -10.0F));
 
@@ -106,38 +149,36 @@ public class LegacyRenderType extends RenderType {
         return new LegacyRenderType(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, state);
     }
 
+    /** The RenderSetup vanilla's batching reads buffer size and the crumbling / sort flags from; its pipeline is never used. */
+    private static RenderSetup placeholder(int bufferSize, boolean affectsCrumbling, boolean sortOnUpload) {
+        RenderSetup.RenderSetupBuilder b = RenderSetup.builder(RenderPipelines.SOLID_BLOCK).bufferSize(bufferSize);
+        if (affectsCrumbling) b.affectsCrumbling();
+        if (sortOnUpload) b.sortOnUpload();
+        return b.createRenderSetup();
+    }
+
     private final VertexFormat format;
     private final VertexFormat.Mode mode;
     private final State state;
-    /** LegacyGl's state before each (possibly nested) setupRenderState, restored by clearRenderState. */
-    private final Deque<LegacyGl.Saved> saved = new ArrayDeque<>();
 
     private LegacyRenderType(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
                              boolean affectsCrumbling, boolean sortOnUpload, State state) {
-        super(name, bufferSize, affectsCrumbling, sortOnUpload,
-                () -> state.real.forEach(RenderStateShard::setupRenderState),
-                () -> state.real.forEach(RenderStateShard::clearRenderState));
+        super(name, placeholder(bufferSize, affectsCrumbling, sortOnUpload));
         this.format = format;
         this.mode = mode;
         this.state = state;
     }
 
-    /** 1.21.4's RenderType.setupRenderState: the texture / lightmap / overlay shards, then the shader and the
-     *  transparency / depth / write-mask / cull / layering state it folded into the pipeline, loaded into {@link LegacyGl}
-     *  so a following {@code LegacyGl.drawWithShader} draws with them (see {@link LegacyGl#load}), then the shader shard's
-     *  own setup (the mod's override pushes its uniforms there, as in 1.21.4). */
-    @Override
+    /** 1.21.4's RenderType.setupRenderState: the texture / lightmap / overlay shards, then the shader's (the mod's override
+     *  pushes its uniforms there, as in 1.21.4). */
     public void setupRenderState() {
-        super.setupRenderState();
-        saved.push(LegacyGl.load(state.key, state.shader.shader(), getRenderTarget()));
+        state.real.forEach(Shard::setupRenderState);
         state.shader.setupRenderState();
     }
 
-    @Override
     public void clearRenderState() {
         state.shader.clearRenderState();
-        if (!saved.isEmpty()) LegacyGl.restore(saved.pop());
-        super.clearRenderState();
+        state.real.forEach(Shard::clearRenderState);
     }
 
     @Override
@@ -150,7 +191,7 @@ public class LegacyRenderType extends RenderType {
         }
     }
 
-    /** The target this type draws into (its OutputStateShard's). Not a 1.21.8 hook: only {@link #draw} reads it. */
+    /** The target this type draws into. Not a vanilla hook: only {@link #draw} reads it. */
     public RenderTarget getRenderTarget() {
         return state.output.getRenderTarget();
     }
@@ -163,8 +204,8 @@ public class LegacyRenderType extends RenderType {
         throw new IllegalStateException(this + " has no shader to build a pipeline from");
     }
 
-    /** 1.21.9 made {@code pipeline()} an abstract method of RenderType (the buffer source batches on it); it answers with the
-     *  pipeline {@link #getRenderPipeline()} derives, which is what {@link #draw} draws with. */
+    /** {@code pipeline()} is what the buffer source batches on; it answers with the pipeline {@link #getRenderPipeline()}
+     *  derives, which is what {@link #draw} draws with. */
     @Override
     public RenderPipeline pipeline() {
         return getRenderPipeline();
@@ -180,14 +221,14 @@ public class LegacyRenderType extends RenderType {
         return mode;
     }
 
-    /** 1.21.4's RenderType.CompositeState, split into what 1.21.8 still sets up and what it bakes into the pipeline. */
+    /** 1.21.4's RenderType.CompositeState, split into what is still set up and what is baked into the pipeline. */
     public static final class State {
         final ShaderShard shader;
-        final RenderStateShard.OutputStateShard output;
-        final List<RenderStateShard> real;
+        final OutputTarget output;
+        final List<Shard> real;
         final LegacyGl.Key key;
 
-        private State(ShaderShard shader, RenderStateShard.OutputStateShard output, List<RenderStateShard> real, LegacyGl.Key key) {
+        private State(ShaderShard shader, OutputTarget output, List<Shard> real, LegacyGl.Key key) {
             this.shader = shader;
             this.output = output;
             this.real = real;
@@ -196,24 +237,24 @@ public class LegacyRenderType extends RenderType {
 
         public static final class Builder {
             private ShaderShard shader = new ShaderShard();
-            private RenderStateShard.OutputStateShard output = RenderStateShard.MAIN_TARGET;
-            private final List<RenderStateShard> real = new ArrayList<>();
+            private OutputTarget output = OutputTarget.MAIN_TARGET;
+            private final List<Shard> real = new ArrayList<>();
             private LegacyGl.Key key = DEFAULTS;
 
             public Builder setShaderState(ShaderShard s) { this.shader = s; return this; }
-            public Builder setTextureState(RenderStateShard s) { real.add(s); return this; }
-            public Builder setLightmapState(RenderStateShard s) { real.add(s); return this; }
-            public Builder setOverlayState(RenderStateShard s) { real.add(s); return this; }
-            public Builder setTexturingState(RenderStateShard s) { real.add(s); return this; }
-            public Builder setLineState(RenderStateShard s) { real.add(s); return this; }
-            public Builder setOutputState(RenderStateShard.OutputStateShard s) { this.output = s; return this; }
-            public Builder setLayeringState(RenderStateShard s) { return add(s); }
+            public Builder setTextureState(Shard s) { real.add(s); return this; }
+            public Builder setLightmapState(Shard s) { real.add(s); return this; }
+            public Builder setOverlayState(Shard s) { real.add(s); return this; }
+            public Builder setTexturingState(Shard s) { real.add(s); return this; }
+            public Builder setLineState(Shard s) { real.add(s); return this; }
+            public Builder setOutputState(OutputTarget s) { this.output = s; return this; }
+            public Builder setLayeringState(Shard s) { return add(s); }
             public Builder setTransparencyState(Modifier m) { return add(m); }
             public Builder setDepthTestState(Modifier m) { return add(m); }
             public Builder setWriteMaskState(Modifier m) { return add(m); }
             public Builder setCullState(Modifier m) { return add(m); }
 
-            private Builder add(RenderStateShard s) {
+            private Builder add(Shard s) {
                 if (s instanceof Modifier m) key = m.edit.apply(key); else real.add(s);
                 return this;
             }

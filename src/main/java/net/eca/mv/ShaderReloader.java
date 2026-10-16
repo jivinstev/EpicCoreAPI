@@ -10,7 +10,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import org.slf4j.Logger;
 
@@ -28,7 +28,7 @@ public final class ShaderReloader implements ResourceManagerReloadListener {
 
     @SubscribeEvent
     public static void onRegisterReloadListeners(AddClientReloadListenersEvent event) {
-        event.addListener(ResourceLocation.fromNamespaceAndPath("eca", "mv_shaders"), new ShaderReloader());
+        event.addListener(Identifier.fromNamespaceAndPath("eca", "mv_shaders"), new ShaderReloader());
     }
 
     @Override

@@ -20,7 +20,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -121,7 +121,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         x = addMenuButton(x, Component.translatable("gui.eca.bossshow.editor.menu.show"), MENU_SHOW, menuWidth);
         x = addMenuButton(x, Component.translatable("gui.eca.bossshow.editor.menu.track"), MENU_TRACK, compact ? 50 : 58);
         x = addMenuButton(x, Component.translatable("gui.eca.bossshow.editor.menu.preview"), MENU_PREVIEW, compact ? 58 : 68);
-        ResourceLocation id = BossShowEditorState.getEditingId();
+        Identifier id = BossShowEditorState.getEditingId();
         int idLeft = x + 4;
         int idRight = this.width - 126;
         if (idRight - idLeft >= 80) {
@@ -451,9 +451,9 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     }
 
     private void doSave() {
-        ResourceLocation id = BossShowEditorState.getEditingId();
+        Identifier id = BossShowEditorState.getEditingId();
         if (id == null) return;
-        ResourceLocation typeId = BossShowEditorState.getTargetType() == null ? null
+        Identifier typeId = BossShowEditorState.getTargetType() == null ? null
             : BuiltInRegistries.ENTITY_TYPE.getKey(BossShowEditorState.getTargetType());
         NetworkHandler.sendToServer(new BossShowSaveEditorPacket(id, typeId, BossShowEditorState.getTrigger(),
             BossShowEditorState.isCinematic(), BossShowEditorState.isAllowRepeat(),

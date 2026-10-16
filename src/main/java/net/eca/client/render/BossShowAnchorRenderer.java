@@ -8,10 +8,11 @@ import net.eca.util.bossshow.BossShowInterpolator;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.model.SkullModelBase;
+import net.minecraft.client.model.object.skull.SkullModelBase;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -66,27 +67,29 @@ public final class BossShowAnchorRenderer {
         float anchorYaw = BossShowEditorState.getAnchorYawDeg();
 
         Camera cam = mc.gameRenderer.getMainCamera();
-        Vec3 camPos = cam.getPosition();
+        Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
 
-        VertexConsumer vc = buffer.getBuffer(RenderType.lines());
+        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
 
         //锚点光柱
         AABB beam = new AABB(
             ax - BEAM_HALF, ay, az - BEAM_HALF,
             ax + BEAM_HALF, ay + BEAM_HEIGHT, az + BEAM_HALF
         );
-        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose.last(), vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(beam), 0.0, 0.0, 0.0,
+            net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f);
 
         AABB base = new AABB(
             ax - BASE_HALF, ay, az - BASE_HALF,
             ax + BASE_HALF, ay + 0.02, az + BASE_HALF
         );
-        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose.last(), vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(base), 0.0, 0.0, 0.0,
+            net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f);
 
         //摄像机路径折线
         List<Frame> frames = BossShowEditorState.getFrames();
@@ -94,7 +97,7 @@ public final class BossShowAnchorRenderer {
             renderCameraPath(pose, vc, frames, ax, ay, az, anchorYaw);
         }
 
-        buffer.endBatch(RenderType.lines());
+        buffer.endBatch(RenderTypes.lines());
 
         //关键帧头颅 + 顺序序号
         List<Integer> kfIndices = BossShowEditorState.getKeyframeFrameIndices();
@@ -197,6 +200,6 @@ public final class BossShowAnchorRenderer {
             net.eca.mv.Skulls.createSkullRenderers(mc.getEntityModels());
         playerHeadModel = models.get(SkullBlock.Types.PLAYER);
         //translucent 渲染类型支持 alpha 混合，用 vanilla 头颅同款默认皮肤纹理
-        playerHeadRenderType = RenderType.entityTranslucent(DefaultPlayerSkin.getDefaultTexture());
+        playerHeadRenderType = RenderTypes.entityTranslucent(DefaultPlayerSkin.getDefaultTexture());
     }
 }

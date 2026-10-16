@@ -14,12 +14,13 @@ import net.eca.blender.client.entity.BlenderEntityBindings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.eca.mv.EntityOf;
@@ -59,7 +60,7 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
             return;
         }
 
-        ResourceLocation texture = layerExtension.getTexture();
+        Identifier texture = layerExtension.getTexture();
         List<ShaderMaskPass> shaderPasses = layerExtension.getShaderPasses();
         if (shaderPasses == null) {
             shaderPasses = List.of();
@@ -78,7 +79,7 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         boolean oculus = EcaShaderInstance.isOculusShadersActive();
 
         if (hasTexture) {
-            RenderType texturedLayer = RenderType.entityTranslucent(texture);
+            RenderType texturedLayer = RenderTypes.entityTranslucent(texture);
             if (oculus) {
                 BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
                 this.getParentModel().renderToBuffer(

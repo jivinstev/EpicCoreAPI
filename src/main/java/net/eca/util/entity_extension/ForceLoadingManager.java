@@ -11,7 +11,7 @@ import net.minecraft.world.level.entity.EntityInLevelCallback;
 import net.minecraft.world.level.entity.EntitySection;
 import net.minecraft.world.level.entity.PersistentEntitySectionManager;
 import net.minecraft.core.SectionPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
 import net.neoforged.neoforge.common.world.chunk.TicketController;
 
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ForceLoadingManager {
 
     private static final TicketController TICKET_CONTROLLER = new TicketController(
-            ResourceLocation.fromNamespaceAndPath(EcaMod.MOD_ID, "force_loading"),
+            Identifier.fromNamespaceAndPath(EcaMod.MOD_ID, "force_loading"),
             (level, ticketHelper) -> {
                 // 保留所有实体票据，让 NeoForge 恢复区块加载。
                 // 实体加载后会通过 onEntityJoin 重新纳入 TRACKED 管理。

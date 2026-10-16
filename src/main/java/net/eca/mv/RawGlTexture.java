@@ -9,13 +9,14 @@ import java.util.Map;
 
 /**
  * A GL texture the mod created and manages itself (glGenTextures, its own framebuffers), seen as the GpuTexture a
- * 1.21.5 RenderPass binds. Uses NeoForge 21.5's "external" GlTexture: closing it never deletes the mod's texture.
+ * RenderPass binds. 1.21.11 copy: NeoForge's GlTexture has an "external" flag (the ninth constructor argument), which
+ * is what keeps closing this wrapper from deleting the mod's texture.
  */
 public final class RawGlTexture extends GlTexture {
     private static final Map<Integer, RawGlTexture> BY_ID = new HashMap<>();
 
     private RawGlTexture(int id) {
-        super(0, "mv_raw_" + id, TextureFormat.RGBA8, 1, 1, 1, 1, id);
+        super(0, "mv_raw_" + id, TextureFormat.RGBA8, 1, 1, 1, 1, id, true);
     }
 
     public static RawGlTexture of(int glId) {

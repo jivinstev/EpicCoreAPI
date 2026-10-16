@@ -10,7 +10,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 //BossShow 全局演出设置面板，避免把固定属性挤进时间线工作区。
 final class BossShowEditorSettingsScreen extends Screen implements BossShowEditorSessionScreen {
@@ -37,7 +37,7 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
         targetTypeBox = new EditBox(this.font, fieldX, 58, 200, 18,
             Component.translatable("gui.eca.bossshow.editor.target_type_placeholder"));
         targetTypeBox.setMaxLength(128);
-        ResourceLocation typeId = BossShowEditorState.getTargetType() == null ? null
+        Identifier typeId = BossShowEditorState.getTargetType() == null ? null
             : BuiltInRegistries.ENTITY_TYPE.getKey(BossShowEditorState.getTargetType());
         targetTypeBox.setValue(typeId == null ? "" : typeId.toString());
         this.addRenderableWidget(targetTypeBox);
@@ -93,7 +93,7 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
 
     private void apply() {
         String type = targetTypeBox.getValue().trim();
-        ResourceLocation typeId = type.isEmpty() ? null : ResourceLocation.tryParse(type);
+        Identifier typeId = type.isEmpty() ? null : Identifier.tryParse(type);
         if (typeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(typeId)) {
             BossShowEditorState.setTargetType(BuiltInRegistries.ENTITY_TYPE.getValue(typeId));
         } else if (type.isEmpty()) {

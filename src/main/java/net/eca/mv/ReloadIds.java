@@ -1,7 +1,7 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 package net.eca.mv;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Locale;
 
@@ -11,8 +11,8 @@ public final class ReloadIds {
     private ReloadIds() {
     }
 
-    public static ResourceLocation of(Object listener) {
+    public static Identifier of(Object listener) {
         String name = listener.getClass().getName().replace('$', '_').replace('.', '_').toLowerCase(Locale.ROOT);
-        return ResourceLocation.fromNamespaceAndPath("eca", name);
+        return Identifier.fromNamespaceAndPath("eca", name);
     }
 }

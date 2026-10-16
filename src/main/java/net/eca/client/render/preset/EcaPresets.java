@@ -1,7 +1,7 @@
 package net.eca.client.render.preset;
 
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -15,7 +15,7 @@ public final class EcaPresets {
     private EcaPresets() {}
 
     private static ShaderPreset resolve(String id) {
-        ResourceLocation resourceId = ResourceLocation.tryParse(id);
+        Identifier resourceId = Identifier.tryParse(id);
         if (resourceId == null) return null;
         return ShaderPresetRegistry.getPreset(resourceId);
     }
@@ -51,13 +51,13 @@ public final class EcaPresets {
     }
 
     /** GeckoLib 方块实体额外渲染层 */
-    public static RenderType geoBlock(String id, ResourceLocation texture) {
+    public static RenderType geoBlock(String id, Identifier texture) {
         ShaderPreset preset = resolve(id);
         return preset != null ? preset.geoBlock(texture) : null;
     }
 
     /** 枚举所有已注册的预设 id */
-    public static Set<ResourceLocation> getPresetIds() {
+    public static Set<Identifier> getPresetIds() {
         return ShaderPresetRegistry.getPresetIds();
     }
 }

@@ -4,9 +4,8 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.CosmosShader;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -71,16 +70,16 @@ public class CosmosRenderTypes {
         false,
         net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
-            .setTextureState(RenderType.BLOCK_SHEET_MIPPED)
+            .setTextureState(net.eca.mv.LegacyRenderType.BLOCK_SHEET_MIPPED)
             .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
             .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
-            .setOverlayState(RenderType.OVERLAY)
+            .setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)
             .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
             .createCompositeState(true)
     );
 
-    public static RenderType createEntityEffect(ResourceLocation texture) {
+    public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("cosmos_entity_effect",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,
@@ -89,11 +88,11 @@ public class CosmosRenderTypes {
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
+                .setTextureState(new net.eca.mv.LegacyRenderType.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
-                .setLightmapState(RenderType.LIGHTMAP)
-                .setOverlayState(RenderType.OVERLAY)
+                .setLightmapState(net.eca.mv.LegacyRenderType.LIGHTMAP)
+                .setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)
                 .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true)

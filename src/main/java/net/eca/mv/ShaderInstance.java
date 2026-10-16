@@ -19,16 +19,20 @@ import com.mojang.blaze3d.buffers.Std140Builder;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.TextureFilteringMethod;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.renderer.GlobalSettingsUniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
-import net.minecraft.FileUtil;
+import net.minecraft.util.FileUtil;
 import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -86,8 +90,8 @@ public class ShaderInstance implements AutoCloseable {
 
     private final String name;
     private final VertexFormat format;
-    private final ResourceLocation vertexId;
-    private final ResourceLocation fragmentId;
+    private final Identifier vertexId;
+    private final Identifier fragmentId;
     private final String vertexSource;
     private final String fragmentSource;
     private final List<String> samplers = new ArrayList<>();
@@ -96,18 +100,18 @@ public class ShaderInstance implements AutoCloseable {
      *  exposed -- 1.21.1's getUniform answered null for them. */
     private final Map<String, Uniform> hidden = new LinkedHashMap<>();
     private final Map<String, Uniform.Kind> declared = new LinkedHashMap<>();
-    private final Map<String, GpuTextureView> boundSamplers = new HashMap<>();
+    private final Map<String, LegacyGl.Slot> boundSamplers = new HashMap<>();
     private final BlendFunction blend;
     private final Map<List<Object>, RenderPipeline> pipelines = new HashMap<>();
     private final int serial = SERIAL.incrementAndGet();
     private int lastProgramId = -1;
 
-    public ShaderInstance(ResourceProvider provider, ResourceLocation location, VertexFormat format) throws IOException {
+    public ShaderInstance(ResourceProvider provider, Identifier location, VertexFormat format) throws IOException {
         this.name = location.toString();
         this.format = format;
         JsonObject json = readConfig(provider, location);
-        ResourceLocation vertex = ResourceLocation.parse(json.get("vertex").getAsString());
-        ResourceLocation fragment = ResourceLocation.parse(json.get("fragment").getAsString());
+        Identifier vertex = Identifier.parse(json.get("vertex").getAsString());
+        Identifier fragment = Identifier.parse(json.get("fragment").getAsString());
         this.vertexSource = source(provider, vertex, ShaderType.VERTEX);
         this.fragmentSource = source(provider, fragment, ShaderType.FRAGMENT);
         this.vertexId = vertex.withSuffix("/mv_" + serial);
@@ -172,11 +176,12 @@ public class ShaderInstance implements AutoCloseable {
     /** 1.21.1 accepted a texture object for any sampler; 1.21.8 binds a GpuTextureView. */
     public void setSampler(String sampler, Object texture) {
         if (texture instanceof AbstractTexture t) {
-            boundSamplers.put(sampler, t.getTextureView());
+            boundSamplers.put(sampler, new LegacyGl.Slot(t.getTextureView(), t.getSampler()));
         } else if (texture instanceof GpuTextureView v) {
-            boundSamplers.put(sampler, v);
+            boundSamplers.put(sampler, new LegacyGl.Slot(v, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)));
         } else if (texture instanceof GpuTexture g) {
-            boundSamplers.put(sampler, com.mojang.blaze3d.systems.RenderSystem.getDevice().createTextureView(g));
+            boundSamplers.put(sampler, new LegacyGl.Slot(RenderSystem.getDevice().createTextureView(g),
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)));
         } else if (texture != null) {
             LOGGER.warn("[mv] {}: sampler {} given a {}, which 1.21.8 cannot bind", name, sampler, texture.getClass().getName());
         }
@@ -194,7 +199,7 @@ public class ShaderInstance implements AutoCloseable {
 
     List<String> samplers() { return samplers; }
 
-    String sourceFor(ResourceLocation id, ShaderType type) {
+    String sourceFor(Identifier id, ShaderType type) {
         if (type == ShaderType.VERTEX && id.equals(vertexId)) return vertexSource;
         if (type == ShaderType.FRAGMENT && id.equals(fragmentId)) return fragmentSource;
         return null;
@@ -255,9 +260,13 @@ public class ShaderInstance implements AutoCloseable {
         float time = wrote(GAME_TIME) ? GAME_TIME.floats()[0]
                 : ((float) ((mc.level == null ? 0L : mc.level.getGameTime()) % 24000L)
                         + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / 24000.0F;
+        Vec3 camera = mc.gameRenderer.getMainCamera().position();
+        int cx = Mth.floor(camera.x), cy = Mth.floor(camera.y), cz = Mth.floor(camera.z);
         ByteBuffer bb = ByteBuffer.allocateDirect(Math.max(32, GlobalSettingsUniform.UBO_SIZE)).order(ByteOrder.nativeOrder());
-        Std140Builder.intoBuffer(bb).putVec2(size[0], size[1]).putFloat(glint).putFloat(time)
-                .putInt(mc.options.getMenuBackgroundBlurriness());
+        Std140Builder.intoBuffer(bb).putIVec3(cx, cy, cz).putVec3((float) (cx - camera.x), (float) (cy - camera.y), (float) (cz - camera.z))
+                .putVec2(size[0], size[1]).putFloat(glint).putFloat(time)
+                .putInt(mc.options.getMenuBackgroundBlurriness())
+                .putInt(mc.options.textureFiltering().get() == TextureFilteringMethod.RGSS ? 1 : 0);
         return upload(bb, "mv Globals", temps);
     }
 
@@ -299,15 +308,15 @@ public class ShaderInstance implements AutoCloseable {
         lastProgramId = programId;
         for (Uniform u : blockUniforms()) u.applyTo(pass, temps);
         for (String s : samplers) {
-            GpuTextureView t = boundSamplers.get(s);
+            LegacyGl.Slot t = boundSamplers.get(s);
             if (t == null) t = LegacyGl.slotTexture(s);
-            // 1.21.1's GL let a declared sampler stay unset: its uniform is 0, so it read texture unit 0. From 1.21.5 the
+            // 1.21.1's GL let a declared sampler stay unset: its uniform is 0, so it read texture unit 0. 1.21.11's
             // command encoder refuses the draw instead ("Missing sampler X", thrown from the frame), so a sampler the
             // mod only binds on some paths (a mask set only when a mask source is chosen) takes unit 0's texture, and
             // with nothing there the missing-texture sprite -- never an unbound sampler
             if (t == null) t = LegacyGl.slotTexture("Sampler0");
-            if (t == null) t = LegacyGl.missingTexture();
-            if (t != null) pass.bindSampler(s, t);
+            if (t == null) t = LegacyGl.missingTextureSlot();
+            if (t != null) pass.bindTexture(s, t.view(), t.sampler());
         }
     }
 
@@ -316,10 +325,11 @@ public class ShaderInstance implements AutoCloseable {
     // exactly). They are spelled out here rather than #moj_import-ed so a ResourceProvider that only knows the mod's
     // own shaders (a generated-shader provider) still compiles.
     private static final String DYNAMIC_BLOCK = "layout(std140) uniform DynamicTransforms {\n    mat4 ModelViewMat;\n"
-            + "    vec4 ColorModulator;\n    vec3 ModelOffset;\n    mat4 TextureMat;\n    float LineWidth;\n};\n";
+            + "    vec4 ColorModulator;\n    vec3 ModelOffset;\n    mat4 TextureMat;\n};\n";   // 1.21.11: no LineWidth member (DynamicUniforms.TRANSFORM_UBO_SIZE)
     private static final String PROJECTION_BLOCK = "layout(std140) uniform Projection {\n    mat4 ProjMat;\n};\n";
-    private static final String GLOBALS_BLOCK = "layout(std140) uniform Globals {\n    vec2 ScreenSize;\n"
-            + "    float GlintAlpha;\n    float GameTime;\n    int MenuBlurRadius;\n};\n";
+    private static final String GLOBALS_BLOCK = "layout(std140) uniform Globals {\n    ivec3 CameraBlockPos;\n"
+            + "    vec3 CameraOffset;\n    vec2 ScreenSize;\n"
+            + "    float GlintAlpha;\n    float GameTime;\n    int MenuBlurRadius;\n    int UseRgss;\n};\n";
     private static final String LIGHTING_BLOCK = "layout(std140) uniform Lighting {\n    vec3 Light0_Direction;\n"
             + "    vec3 Light1_Direction;\n};\n";
     private static final String FOG_BLOCK = "layout(std140) uniform Fog {\n    vec4 FogColor;\n"
@@ -346,7 +356,7 @@ public class ShaderInstance implements AutoCloseable {
      * Rewrites a 1.21.1 shader's plain {@code uniform} declarations for 1.21.8 (see the class doc) and records the type of
      * every one it turned into a block of its own. Samplers stay as they are: a sampler is still a plain uniform.
      */
-    private String legacyUniforms(String text, ResourceLocation id) {
+    private String legacyUniforms(String text, Identifier id) {
         boolean dynamic = false, projection = false, globals = false, lighting = false, fog = false;
         Matcher m = UNIFORM_DECL.matcher(text);
         StringBuilder out = new StringBuilder();
@@ -360,7 +370,8 @@ public class ShaderInstance implements AutoCloseable {
                 LOGGER.warn("[mv] {}: uniform array {}{} in {} stays a plain uniform; 1.21.8 cannot set it", name, n, m.group(3), id);
                 continue;
             }
-            if (DYNAMIC.contains(n)) { dynamic = true; replacement = ""; }
+            if (n.equals("LineWidth")) { replacement = "#define LineWidth 1.0"; }   // 1.21.11's DynamicTransforms has no line width
+            else if (DYNAMIC.contains(n)) { dynamic = true; replacement = ""; }
             else if (n.equals("ProjMat")) { projection = true; replacement = ""; }
             else if (GLOBALS.contains(n)) { globals = true; replacement = ""; }
             else if (LIGHTING.contains(n)) { lighting = true; replacement = ""; }
@@ -401,28 +412,28 @@ public class ShaderInstance implements AutoCloseable {
         };
     }
 
-    private static JsonObject readConfig(ResourceProvider provider, ResourceLocation location) throws IOException {
-        ResourceLocation file = location.withPath(p -> "shaders/core/" + p + ".json");
+    private static JsonObject readConfig(ResourceProvider provider, Identifier location) throws IOException {
+        Identifier file = location.withPath(p -> "shaders/core/" + p + ".json");
         try (Reader reader = provider.openAsReader(file)) {
             return JsonParser.parseReader(reader).getAsJsonObject();
         }
     }
 
-    private String source(ResourceProvider provider, ResourceLocation id, ShaderType type) throws IOException {
-        ResourceLocation file = id.withPath(p -> "shaders/core/" + p + (type == ShaderType.VERTEX ? ".vsh" : ".fsh"));
+    private String source(ResourceProvider provider, Identifier id, ShaderType type) throws IOException {
+        Identifier file = id.withPath(p -> "shaders/core/" + p + (type == ShaderType.VERTEX ? ".vsh" : ".fsh"));
         String text;
         try (Reader reader = provider.openAsReader(file)) {
             text = IOUtils.toString(reader);
         }
         text = legacyUniforms(text, id);
-        ResourceLocation dir = file.withPath(FileUtil::getFullResourcePath);
-        Set<ResourceLocation> imported = new HashSet<>();
+        Identifier dir = file.withPath(FileUtil::getFullResourcePath);
+        Set<Identifier> imported = new HashSet<>();
         GlslPreprocessor preprocessor = new GlslPreprocessor() {
             @Override
             public String applyImport(boolean relative, String path) {
-                ResourceLocation target = relative
+                Identifier target = relative
                         ? dir.withPath(p -> FileUtil.normalizeResourcePath(p + path))
-                        : ResourceLocation.parse(path).withPrefix("shaders/include/");
+                        : Identifier.parse(path).withPrefix("shaders/include/");
                 if (!imported.add(target)) return null;
                 try (Reader reader = provider.openAsReader(target)) {
                     return IOUtils.toString(reader);

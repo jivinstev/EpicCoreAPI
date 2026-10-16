@@ -1,7 +1,7 @@
 package net.eca.util.raid;
 
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -53,7 +53,7 @@ public class RaidBossBarExtension {
     /**
      * @return the frame texture, or null for none
      */
-    public ResourceLocation getFrameTexture() {
+    public Identifier getFrameTexture() {
         return null;
     }
 
@@ -62,7 +62,7 @@ public class RaidBossBarExtension {
      * @param state the current raid snapshot
      * @return the frame texture for this state; defaults to {@link #getFrameTexture()}
      */
-    public ResourceLocation getFrameTexture(RaidBarState state) {
+    public Identifier getFrameTexture(RaidBarState state) {
         return getFrameTexture();
     }
 
@@ -132,7 +132,7 @@ public class RaidBossBarExtension {
     /**
      * @return the fill texture, or null for none
      */
-    public ResourceLocation getFillTexture() {
+    public Identifier getFillTexture() {
         return null;
     }
 
@@ -141,7 +141,7 @@ public class RaidBossBarExtension {
      * @param state the current raid snapshot
      * @return the fill texture for this state; defaults to {@link #getFillTexture()}
      */
-    public ResourceLocation getFillTexture(RaidBarState state) {
+    public Identifier getFillTexture(RaidBarState state) {
         return getFillTexture();
     }
 

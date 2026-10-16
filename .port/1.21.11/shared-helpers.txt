@@ -1,0 +1,21 @@
+# shared-library helpers as installed (path blob): tools/fork-branches.py
+src/main/java/net/eca/mv/EntityOf.java 4a6e6dc6f75fc11a642cbfffb13ceda8e1e57296
+src/main/java/net/eca/mv/ItemModels.java 10eb99b0776162907e2caa0e6f267d6dd8741d10
+src/main/java/net/eca/mv/ItemStacks.java 71c5e7096d3479a983ef7e97e05ec245e3338ab4
+src/main/java/net/eca/mv/LegacyTargets.java a8043e4d416f0c75d82722ab92458ecec57206f5
+src/main/java/net/eca/mv/Mv.java 16623191ee84da48519a3a988a2a9e009cd1df2a
+src/main/java/net/eca/mv/Nbt.java 3b2003bf9e1ef13b3991d8462918ffe15ad4ab8f
+src/main/java/net/eca/mv/Owners.java b7653f095a408e7f31a43a9f0d07fcd654d9d4f4
+src/main/java/net/eca/mv/PartEntities.java 45265737d47f81a88b0dc8a4174a8cc833889b4a
+src/main/java/net/eca/mv/RawGlTexture.java 9d3e257cd00987a0e4c3a8d810e43771863f9661
+src/main/java/net/eca/mv/RegisterShadersEvent.java 7e8af9e9142b20ae5a658051c00ec88168521f3f
+src/main/java/net/eca/mv/ReloadIds.java 18101703395cb1f0c7f0623f7588c8ef0d33185d
+src/main/java/net/eca/mv/SavedDatas.java 7c24b5cdc8c98aca1de1ffafd82e0c72b9629d5f
+src/main/java/net/eca/mv/Screenshots.java 5176d3234a2d8420ac70399d4f70c43003b806c6
+src/main/java/net/eca/mv/ShaderInstance.java 1ec4068385ff861fec8fb6ab7b21d1248836856c
+src/main/java/net/eca/mv/ShaderReloader.java 3050f18cf8e43cfec175b834ed7b9e8f4dacf43c
+src/main/java/net/eca/mv/ShaderShard.java 653caa929d2e72f3323ecf70c8b4baab18ff3bf7
+src/main/java/net/eca/mv/Skulls.java 8c810dd78d700710ea45ece183823b9e86046faa
+src/main/java/net/eca/mv/Textures.java e35a30787d6c2d2039f69b0e021a52e910ea6838
+src/main/java/net/eca/mv/Tickets.java d7820830926b3ef88e6fbad1fca037e9b74e70f1
+src/main/java/net/eca/mv/Uniform.java a9df894a78a3b9b10809115e741d48908d51f79c

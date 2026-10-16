@@ -1,8 +1,8 @@
 package net.eca.util.entity_extension;
 
 import net.eca.client.render.ShaderMaskPass;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -50,7 +50,7 @@ public class EntityLayerExtension {
      * </ul>
      * @return texture resource location, or {@code null} for shader‑only / no‑overlay
      */
-    public ResourceLocation getTexture() {
+    public Identifier getTexture() {
         return null;
     }
 
@@ -62,7 +62,7 @@ public class EntityLayerExtension {
      * @deprecated Return the mask texture from {@link #getShaderPasses()} instead.
      */
     @Deprecated
-    public ResourceLocation getMaskTexture() {
+    public Identifier getMaskTexture() {
         return null;
     }
 

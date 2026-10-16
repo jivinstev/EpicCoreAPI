@@ -6,7 +6,7 @@ import net.eca.network.EntityExtensionOverridePacket.SkyboxData;
 import net.eca.network.EntityExtensionOverridePacket.MusicData;
 import net.eca.network.NetworkHandler;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -27,7 +27,7 @@ public final class GlobalEffectOverrideManager {
             return;
         }
         FOG_OVERRIDES.put(level.dimension(), data);
-        ResourceLocation dimensionId = level.dimension().location();
+        Identifier dimensionId = level.dimension().identifier();
         NetworkHandler.sendToDimension(EntityExtensionOverridePacket.setFog(dimensionId, data), level);
     }
 
@@ -36,7 +36,7 @@ public final class GlobalEffectOverrideManager {
             return;
         }
         FOG_OVERRIDES.remove(level.dimension());
-        ResourceLocation dimensionId = level.dimension().location();
+        Identifier dimensionId = level.dimension().identifier();
         NetworkHandler.sendToDimension(EntityExtensionOverridePacket.clearFog(dimensionId), level);
     }
 
@@ -47,7 +47,7 @@ public final class GlobalEffectOverrideManager {
             return;
         }
         SKYBOX_OVERRIDES.put(level.dimension(), data);
-        ResourceLocation dimensionId = level.dimension().location();
+        Identifier dimensionId = level.dimension().identifier();
         NetworkHandler.sendToDimension(EntityExtensionOverridePacket.setSkybox(dimensionId, data), level);
     }
 
@@ -56,7 +56,7 @@ public final class GlobalEffectOverrideManager {
             return;
         }
         SKYBOX_OVERRIDES.remove(level.dimension());
-        ResourceLocation dimensionId = level.dimension().location();
+        Identifier dimensionId = level.dimension().identifier();
         NetworkHandler.sendToDimension(EntityExtensionOverridePacket.clearSkybox(dimensionId), level);
     }
 
@@ -67,7 +67,7 @@ public final class GlobalEffectOverrideManager {
             return;
         }
         MUSIC_OVERRIDES.put(level.dimension(), data);
-        ResourceLocation dimensionId = level.dimension().location();
+        Identifier dimensionId = level.dimension().identifier();
         NetworkHandler.sendToDimension(EntityExtensionOverridePacket.setMusic(dimensionId, data), level);
     }
 
@@ -76,7 +76,7 @@ public final class GlobalEffectOverrideManager {
             return;
         }
         MUSIC_OVERRIDES.remove(level.dimension());
-        ResourceLocation dimensionId = level.dimension().location();
+        Identifier dimensionId = level.dimension().identifier();
         NetworkHandler.sendToDimension(EntityExtensionOverridePacket.clearMusic(dimensionId), level);
     }
 
@@ -92,7 +92,7 @@ public final class GlobalEffectOverrideManager {
         boolean hadMusic = MUSIC_OVERRIDES.remove(key) != null;
 
         if (hadFog || hadSkybox || hadMusic) {
-            ResourceLocation dimensionId = key.location();
+            Identifier dimensionId = key.identifier();
             byte fogAction = hadFog ? (byte) 2 : (byte) 0;
             byte skyboxAction = hadSkybox ? (byte) 2 : (byte) 0;
             byte musicAction = hadMusic ? (byte) 2 : (byte) 0;
@@ -123,7 +123,7 @@ public final class GlobalEffectOverrideManager {
         }
 
         ResourceKey<Level> key = level.dimension();
-        ResourceLocation dimensionId = key.location();
+        Identifier dimensionId = key.identifier();
 
         FogData fog = FOG_OVERRIDES.get(key);
         SkyboxData skybox = SKYBOX_OVERRIDES.get(key);

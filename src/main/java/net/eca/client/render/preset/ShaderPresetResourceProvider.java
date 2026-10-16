@@ -1,6 +1,6 @@
 package net.eca.client.render.preset;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceProvider;
 
@@ -30,10 +30,10 @@ public final class ShaderPresetResourceProvider implements ResourceProvider {
     }
 
     @Override
-    public Optional<Resource> getResource(ResourceLocation location) {
+    public Optional<Resource> getResource(Identifier location) {
         String path = location.getPath();
         if (path.startsWith(CORE_PREFIX)) {
-            ResourceLocation canonical = ResourceLocation.tryBuild(location.getNamespace(),
+            Identifier canonical = Identifier.tryBuild(location.getNamespace(),
                     PRESET_PREFIX + path.substring(CORE_PREFIX.length()));
             if (canonical != null) {
                 Optional<Resource> resource = delegate.getResource(canonical);

@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -14,7 +14,7 @@ import java.util.UUID;
 /** Client observations affect diagnostics only, never server health or mutation success. */
 public record HealthSyncResponsePacket(UUID request, UUID entityUuid, boolean verified, float actual) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<HealthSyncResponsePacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "health_sync_response_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "health_sync_response_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, HealthSyncResponsePacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> HealthSyncResponsePacket.encode(msg, buf), HealthSyncResponsePacket::decode);
 

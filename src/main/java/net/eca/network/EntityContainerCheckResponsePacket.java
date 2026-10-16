@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.LinkedHashMap;
@@ -14,7 +14,7 @@ import java.util.UUID;
 
 public class EntityContainerCheckResponsePacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<EntityContainerCheckResponsePacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_container_check_response_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "entity_container_check_response_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, EntityContainerCheckResponsePacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> EntityContainerCheckResponsePacket.encode(msg, buf), EntityContainerCheckResponsePacket::decode);
 

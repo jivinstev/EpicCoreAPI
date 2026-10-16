@@ -7,7 +7,7 @@ import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
 import net.eca.mv.ShaderInstance;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -23,7 +23,7 @@ final class GenericPresetShader {
     private final Profile block;
     private final Profile entity;
 
-    GenericPresetShader(ResourceLocation id) {
+    GenericPresetShader(Identifier id) {
         this.block = new Profile(suffixed(id, "block"), DefaultVertexFormat.BLOCK);
         this.entity = new Profile(suffixed(id, "entity"), DefaultVertexFormat.NEW_ENTITY);
     }
@@ -43,8 +43,8 @@ final class GenericPresetShader {
     }
 
     //逻辑预设 id → 单 profile 的 core shader id：eca:foo + "block" → eca:foo_block，对齐作者端导出命名
-    private static ResourceLocation suffixed(ResourceLocation id, String suffix) {
-        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_" + suffix);
+    private static Identifier suffixed(Identifier id, String suffix) {
+        return Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_" + suffix);
     }
 
     /* 单个 profile 的着色器持有者：持有该 profile 的 core shader id、匹配的顶点格式、当前 ShaderInstance 与一组标准
@@ -52,7 +52,7 @@ final class GenericPresetShader {
        applyUniforms 按帧喂 GameTime / 相机朝向 / 抠像 / 物品图集。 */
     static final class Profile {
 
-        private final ResourceLocation location;
+        private final Identifier location;
         private final VertexFormat format;
 
         private ShaderInstance shader;
@@ -64,7 +64,7 @@ final class GenericPresetShader {
         private Uniform localUvMinUniform;
         private Uniform localUvScaleUniform;
 
-        Profile(ResourceLocation location, VertexFormat format) {
+        Profile(Identifier location, VertexFormat format) {
             this.location = location;
             this.format = format;
         }
@@ -100,8 +100,8 @@ final class GenericPresetShader {
                 if (cameraYawUniform != null || cameraPitchUniform != null) {
                     Minecraft mc = Minecraft.getInstance();
                     if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                        float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().getYRot());
-                        float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().getXRot());
+                        float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().yRot());
+                        float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().xRot());
                         if (cameraYawUniform != null) {
                             cameraYawUniform.set(yaw);
                         }

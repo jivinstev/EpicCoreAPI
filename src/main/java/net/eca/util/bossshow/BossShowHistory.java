@@ -4,7 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -32,7 +32,7 @@ public final class BossShowHistory {
     //检查 player 对 target 是否已经看过 def
     public static boolean hasPlayed(ServerPlayer player, BossShowDefinition def, LivingEntity target) {
         if (player == null || def == null) return false;
-        ResourceLocation cutsceneId = def.id();
+        Identifier cutsceneId = def.id();
         if (cutsceneId == null) return false;
 
         if (def.allowRepeat()) {
@@ -61,7 +61,7 @@ public final class BossShowHistory {
     //标记 player 对 target 已播放过 def
     public static void markPlayed(ServerPlayer player, BossShowDefinition def, LivingEntity target) {
         if (player == null || def == null) return;
-        ResourceLocation cutsceneId = def.id();
+        Identifier cutsceneId = def.id();
         if (cutsceneId == null) return;
 
         if (def.allowRepeat()) {
@@ -106,7 +106,7 @@ public final class BossShowHistory {
     }
 
     //清除指定 target 实体上的 cutscene 历史（ON 模式）
-    public static void clearEntityHistory(LivingEntity target, ResourceLocation cutsceneId) {
+    public static void clearEntityHistory(LivingEntity target, Identifier cutsceneId) {
         if (target == null || cutsceneId == null) return;
         CompoundTag persistent = target.getPersistentData();
         CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);

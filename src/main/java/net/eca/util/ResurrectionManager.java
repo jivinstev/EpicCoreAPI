@@ -9,7 +9,7 @@ import net.eca.util.health.health_lock.HealthLockManager;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -278,7 +278,7 @@ public final class ResurrectionManager {
                 ServerPlayer nearest = unpaired.get(0);
                 EcaLogger.info("[ResurrectionManager] viewer pairing unresolved uuid={} refused={} nearestDistSq={} entityPos={} snapshotPos={} playerPos={} dim={}",
                         record.uuid, refused, nearestDistSq, entity.position(), record.position,
-                        nearest.position(), level.dimension().location());
+                        nearest.position(), level.dimension().identifier());
             }
         });
     }
@@ -431,7 +431,7 @@ public final class ResurrectionManager {
             TagValueOutput out = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
             entity.saveWithoutId(out);
             CompoundTag tag = out.buildResult();
-            ResourceLocation typeId = EntityType.getKey(entity.getType());
+            Identifier typeId = EntityType.getKey(entity.getType());
             if (typeId == null) return;
             tag.putString("id", typeId.toString());
 

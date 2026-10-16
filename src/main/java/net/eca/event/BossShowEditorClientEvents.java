@@ -20,9 +20,9 @@ import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -121,8 +121,8 @@ public final class BossShowEditorClientEvents {
             && mc.gameRenderer != null) {
             Camera cam = mc.gameRenderer.getMainCamera();
             BossShowEditorState.captureFrameFromCamera(
-                cam.getPosition().x, cam.getPosition().y, cam.getPosition().z,
-                cam.getYRot(), cam.getXRot()
+                cam.position().x, cam.position().y, cam.position().z,
+                cam.yRot(), cam.xRot()
             );
         }
 
@@ -190,8 +190,8 @@ public final class BossShowEditorClientEvents {
                 if (mc.gameRenderer != null) {
                     Camera cam = mc.gameRenderer.getMainCamera();
                     BossShowEditorState.commitPoseCapture(
-                        cam.getPosition().x, cam.getPosition().y, cam.getPosition().z,
-                        cam.getYRot(), cam.getXRot());
+                        cam.position().x, cam.position().y, cam.position().z,
+                        cam.yRot(), cam.xRot());
                 }
                 mc.setScreen(new BossShowEditorScreen());
             }
@@ -223,17 +223,18 @@ public final class BossShowEditorClientEvents {
 
         Minecraft mc = Minecraft.getInstance();
         Camera cam = mc.gameRenderer.getMainCamera();
-        Vec3 camPos = cam.getPosition();
+        Vec3 camPos = cam.position();
 
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
 
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
-        VertexConsumer vc = buffer.getBuffer(RenderType.lines());
+        VertexConsumer vc = buffer.getBuffer(RenderTypes.lines());
         AABB box = target.getBoundingBox().inflate(0.02);
-        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose.last(), vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
-        buffer.endBatch(RenderType.lines());
+        net.minecraft.client.renderer.ShapeRenderer.renderShape(pose, vc, net.minecraft.world.phys.shapes.Shapes.create(box), 0.0, 0.0, 0.0,
+            net.minecraft.util.ARGB.colorFromFloat(1.0f, 0.2f, 1.0f, 0.2f), 1.0f);
+        buffer.endBatch(RenderTypes.lines());
 
         pose.popPose();
     }
@@ -253,7 +254,7 @@ public final class BossShowEditorClientEvents {
         if (BossShowEditorState.isPlaySelectionMode()) {
             UUID uuid = BossShowEditorState.getHoveredEntityUuid();
             if (uuid == null || cachedHovered == null || cachedHovered.isRemoved()) return;
-            ResourceLocation defId = BossShowEditorState.getPendingPlayDefId();
+            Identifier defId = BossShowEditorState.getPendingPlayDefId();
             if (defId == null) {
                 BossShowEditorState.exitSelectionMode();
                 cachedHovered = null;
@@ -292,7 +293,7 @@ public final class BossShowEditorClientEvents {
         double az = target.getZ();
         float anchorYaw = target.getYRot();
 
-        ResourceLocation id = BossShowEditorState.generateAutoId(type);
+        Identifier id = BossShowEditorState.generateAutoId(type);
         BossShowDefinition blank = BossShowEditorState.createBlank(id, type);
         BossShowEditorState.exitSelectionMode();
         cachedHovered = null;
@@ -365,7 +366,7 @@ public final class BossShowEditorClientEvents {
 
         Component line1;
         if (isPlay) {
-            ResourceLocation defId = BossShowEditorState.getPendingPlayDefId();
+            Identifier defId = BossShowEditorState.getPendingPlayDefId();
             String defStr = defId != null ? defId.toString() : "?";
             line1 = Component.translatable(targeted
                 ? "gui.eca.bossshow.play_selection.targeted"
@@ -399,17 +400,13 @@ public final class BossShowEditorClientEvents {
         Vec3 look = player.getViewVector(1.0f);
         Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
         AABB scanBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0, 1.0, 1.0);
-        // 1.21.10 (as 1.21.8): the (Level, Entity, from, to, box, filter, float margin) overload is 1.21.1's 6-argument one
-        // (margin 0.3, no distance limit); the (Entity, ..., double) overload takes the maximum distance SQUARED and
-        // getPickRadius margins
         return ProjectileUtil.getEntityHitResult(
-            player.level(),
             player,
             eye,
             end,
             scanBox,
             e -> e instanceof LivingEntity && e.isAlive() && e != player,
-            0.3F
+            reach
         );
     }
 }

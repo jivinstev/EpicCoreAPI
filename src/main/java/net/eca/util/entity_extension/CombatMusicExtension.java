@@ -1,6 +1,6 @@
 package net.eca.util.entity_extension;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 
 public interface CombatMusicExtension {
@@ -9,7 +9,7 @@ public interface CombatMusicExtension {
         return false;
     }
 
-    default ResourceLocation soundEventId() {
+    default Identifier soundEventId() {
         return null;
     }
 

@@ -37,7 +37,7 @@ import java.util.List;
  *     @Override public String getRaiderFactionId() { return "undead_legion"; }
  *
  *     @Override public ResourceKey<Structure> getTargetStructure() {
- *         return ResourceKey.create(Registries.STRUCTURE, ResourceLocation.fromNamespaceAndPath("minecraft", "village_plains"));
+ *         return ResourceKey.create(Registries.STRUCTURE, Identifier.fromNamespaceAndPath("minecraft", "village_plains"));
  *     }
  *
  *     @Override public List<RaidWave> getWaves() {

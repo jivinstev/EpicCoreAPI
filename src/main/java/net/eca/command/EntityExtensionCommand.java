@@ -10,7 +10,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 
@@ -62,7 +62,7 @@ public class EntityExtensionCommand {
 
             source.sendSuccess(() -> Component.literal("§aEntity extension registry:"), false);
             registry.forEach((type, extension) -> {
-                ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+                Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
                 int priority = extension != null ? extension.getPriority() : 0;
                 String line = String.format("§7- %s : priority=%d", typeId, priority);
                 source.sendSuccess(() -> Component.literal(line), false);
@@ -87,11 +87,11 @@ public class EntityExtensionCommand {
             }
 
             source.sendSuccess(() -> Component.literal(
-                String.format("§aActive entity extension types in %s:", level.dimension().location())
+                String.format("§aActive entity extension types in %s:", level.dimension().identifier())
             ), false);
 
             active.forEach((type, count) -> {
-                ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+                Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
                 String line = String.format("§7- %s : count=%d", typeId, count);
                 source.sendSuccess(() -> Component.literal(line), false);
             });
@@ -115,7 +115,7 @@ public class EntityExtensionCommand {
             }
 
             EntityType<?> type = extension.getEntityType();
-            ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+            Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(type);
             String line = String.format("§aActive extension: %s (priority=%d, class=%s)",
                 typeId, extension.getPriority(), extension.getClass().getName());
             source.sendSuccess(() -> Component.literal(line), false);
@@ -135,7 +135,7 @@ public class EntityExtensionCommand {
             EcaAPI.clearActiveEntityExtensionTable(level);
             EcaAPI.clearAllGlobalEffects(level);
             source.sendSuccess(() -> Component.literal(
-                String.format("§aCleared entity extensions and global effects in %s", level.dimension().location())
+                String.format("§aCleared entity extensions and global effects in %s", level.dimension().identifier())
             ), true);
             return 1;
         } catch (Exception e) {
@@ -150,7 +150,7 @@ public class EntityExtensionCommand {
 
         try {
             ServerLevel level = source.getLevel();
-            ResourceLocation presetId = ResourceLocation.fromNamespaceAndPath("eca", preset);
+            Identifier presetId = Identifier.fromNamespaceAndPath("eca", preset);
 
             SkyboxData data = new SkyboxData(
                 false, null,
@@ -160,7 +160,7 @@ public class EntityExtensionCommand {
             );
             EcaAPI.setGlobalSkybox(level, data);
             source.sendSuccess(() -> Component.literal(
-                String.format("§aSet global skybox to %s in %s", preset, level.dimension().location())
+                String.format("§aSet global skybox to %s in %s", preset, level.dimension().identifier())
             ), true);
             return 1;
         } catch (Exception e) {

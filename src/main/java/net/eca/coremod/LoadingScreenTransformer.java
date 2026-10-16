@@ -1,38 +1,17 @@
-// Fork multi-version layer, 1.21.8 copy of the authors' transformer. FML 9 (9.0.18) moved the early loading screen's frame
-// paint from DisplayWindow.paintFramebuffer() (FML 4/7, reading DisplayWindow.context) to
-// earlydisplay/render/LoadingScreenRenderer.renderToFramebuffer()V (javap 9.0.18): GlState snapshot, framebuffer.activate(),
-// letterboxed viewport, GlState.clearColor(theme background), glClear(16640), the theme's elements,
-// framebuffer.deactivate(), GlState.applySnapshot. The same two edits are made there, at the clear:
-//  * the Pro intro callback (System property net.eca.pro.intro.callback, a Predicate) runs first, drawing into the
-//    activated early framebuffer; when it drew a frame, GlState is re-read from OpenGL (the intro binds its own program,
-//    VAO, texture and blend) and the method jumps to its framebuffer.deactivate() tail, skipping the theme's elements, as
-//    1.21.1 returned from paintFramebuffer; the callback is handed the LoadingScreenRenderer (the intro does not read it);
-//  * glClear(16640) becomes the 32-band vertical gradient (Enable Custom Loading Background), over the early framebuffer's
-//    width()/height() (FML 4's DisplayContext.scaledWidth/scaledHeight was that framebuffer's size), through GlState's
-//    scissorTest/scissorBox/clearColor so FML's cached GL state stays true.
-// The nested class names are the authors' (EcaTransformationService preloads them by name).
+// MV-STAND-IN: 1.21.11's prepared copy of the authors' LoadingScreenTransformer as it was before 1.21.10 took 1.21.8's overlay
+// MV-STAND-IN: for FML's LoadingScreenRenderer.renderToFramebuffer, unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
+// MV-STAND-IN: 1.21.10's prepared copy of the authors' LoadingScreenTransformer, unchanged, as it was before the 1.21.8 overlay for
+// MV-STAND-IN: FML 9's LoadingScreenRenderer, unchanged; only so that 1.21.8 fix does not reach 1.21.10 (FML 10, its own GUI code) unported and ungated.
 package net.eca.coremod;
 
 import net.eca.coremod.EarlyLogWriter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.IntInsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.LdcInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.TryCatchBlockNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
-import org.objectweb.asm.tree.IincInsnNode;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.nio.file.Files;
@@ -45,25 +24,22 @@ import java.security.ProtectionDomain;
  */
 public final class LoadingScreenTransformer implements ClassFileTransformer {
 
-    public static final String TARGET_CLASS = "net/neoforged/fml/earlydisplay/render/LoadingScreenRenderer";
+    public static final String TARGET_CLASS = "net/neoforged/fml/earlydisplay/DisplayWindow";
     public static final boolean ENABLED = true;
 
-    private static final String PAINT_METHOD  = "renderToFramebuffer";
+    private static final String PAINT_METHOD  = "paintFramebuffer";
     private static final String PAINT_DESC    = "()V";
-    private static final String FRAMEBUFFER_FIELD = "framebuffer";
-    private static final String FRAMEBUFFER_TYPE  = "net/neoforged/fml/earlydisplay/render/EarlyFramebuffer";
-    private static final String FRAMEBUFFER_DESC  = "L" + FRAMEBUFFER_TYPE + ";";
-    private static final String GL_STATE      = "net/neoforged/fml/earlydisplay/render/GlState";
+    private static final String CONTEXT_FIELD = "context";
+    private static final String CONTEXT_TYPE  = "net/neoforged/fml/earlydisplay/RenderElement$DisplayContext";
+    private static final String CONTEXT_DESC  = "L" + CONTEXT_TYPE + ";";
     private static final String GL            = "org/lwjgl/opengl/GL11C";
     private static final String INTRO_CALLBACK_KEY = "net.eca.pro.intro.callback";
     private static final String PREDICATE = "java/util/function/Predicate";
     private static final boolean BACKGROUND_ENABLED = readConfig();
 
+    private static final int GL_SCISSOR_TEST = 0x0C11;
     private static final int CLEAR_BITS      = 16640;
     private static final int BANDS           = 32;
-
-    // locals past renderToFramebuffer's own (0..7 in 9.0.18)
-    private static final int L_CALLBACK = 8, L_HEIGHT = 9, L_WIDTH = 10, L_BAND = 11, L_Y0 = 12, L_Y1 = 13, L_T = 14;
 
     private static final float CR = 239f/255f, CG = 50f/255f, CB = 61f/255f;
     private static final float DR = 128f/255f - CR, DG = -CG, DB = 128f/255f - CB;
@@ -90,7 +66,7 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {
             }
             return null;
         } catch (Throwable t) {
-            EarlyLogWriter.error("[LoadingScreenTransformer] Failed to transform LoadingScreenRenderer", t);
+            EarlyLogWriter.error("[LoadingScreenTransformer] Failed to transform DisplayWindow", t);
             return null;
         }
     }
@@ -106,209 +82,201 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {
         public MethodVisitor visitMethod(int access, String name, String desc, String sig, String[] ex) {
             MethodVisitor mv = super.visitMethod(access, name, desc, sig, ex);
             if (PAINT_METHOD.equals(name) && PAINT_DESC.equals(desc)) {
-                return new PaintMethodVisitor(this, mv, access, name, desc, sig, ex);
+                transformed = true;
+                return new PaintMethodVisitor(mv);
             }
             return mv;
         }
     }
 
-    private static class PaintMethodVisitor extends MethodNode {
-        private final DisplayWindowVisitor owner;
-        private final MethodVisitor next;
+    private static class PaintMethodVisitor extends MethodVisitor {
+        private boolean replaced;
+        private boolean holdingSipush;
 
-        PaintMethodVisitor(DisplayWindowVisitor owner, MethodVisitor next, int access, String name, String desc,
-                           String sig, String[] ex) {
-            super(Opcodes.ASM9, access, name, desc, sig, ex);
-            this.owner = owner;
-            this.next = next;
+        PaintMethodVisitor(MethodVisitor mv) {
+            super(Opcodes.ASM9, mv);
         }
 
         @Override
-        public void visitEnd() {
-            super.visitEnd();
-            AbstractInsnNode clearPush = null;
-            AbstractInsnNode clearCall = null;
-            LabelNode tail = null;
-            for (AbstractInsnNode insn = instructions.getFirst(); insn != null; insn = insn.getNext()) {
-                if (clearPush == null && insn.getOpcode() == Opcodes.SIPUSH && ((IntInsnNode) insn).operand == CLEAR_BITS) {
-                    AbstractInsnNode call = nextReal(insn);
-                    if (call instanceof MethodInsnNode m && m.getOpcode() == Opcodes.INVOKESTATIC
-                            && "glClear".equals(m.name) && "(I)V".equals(m.desc)) {
-                        clearPush = insn;
-                        clearCall = call;
-                    }
-                } else if (tail == null && insn instanceof MethodInsnNode m && m.getOpcode() == Opcodes.INVOKEVIRTUAL
-                        && FRAMEBUFFER_TYPE.equals(m.owner) && "deactivate".equals(m.name) && "()V".equals(m.desc)) {
-                    AbstractInsnNode field = prevReal(insn);
-                    AbstractInsnNode self = field == null ? null : prevReal(field);
-                    if (field instanceof FieldInsnNode f && FRAMEBUFFER_FIELD.equals(f.name)
-                            && self instanceof VarInsnNode v && v.getOpcode() == Opcodes.ALOAD && v.var == 0) {
-                        tail = new LabelNode();
-                        instructions.insertBefore(self, tail);
-                    }
-                }
+        public void visitCode() {
+            super.visitCode();
+            Label callbackStart = new Label();
+            Label callbackEnd = new Label();
+            Label callbackFailure = new Label();
+            Label continueRendering = new Label();
+
+            mv.visitTryCatchBlock(callbackStart, callbackEnd, callbackFailure, "java/lang/Throwable");
+            mv.visitLabel(callbackStart);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "getProperties",
+                    "()Ljava/util/Properties;", false);
+            mv.visitLdcInsn(INTRO_CALLBACK_KEY);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/Properties", "get",
+                    "(Ljava/lang/Object;)Ljava/lang/Object;", false);
+            mv.visitVarInsn(Opcodes.ASTORE, 1);
+            mv.visitVarInsn(Opcodes.ALOAD, 1);
+            mv.visitTypeInsn(Opcodes.INSTANCEOF, PREDICATE);
+            mv.visitJumpInsn(Opcodes.IFEQ, callbackEnd);
+            mv.visitVarInsn(Opcodes.ALOAD, 1);
+            mv.visitTypeInsn(Opcodes.CHECKCAST, PREDICATE);
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitFieldInsn(Opcodes.GETFIELD, TARGET_CLASS, CONTEXT_FIELD, CONTEXT_DESC);
+            mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, PREDICATE, "test", "(Ljava/lang/Object;)Z", true);
+            mv.visitJumpInsn(Opcodes.IFEQ, callbackEnd);
+            mv.visitInsn(Opcodes.RETURN);
+
+            mv.visitLabel(callbackEnd);
+            mv.visitJumpInsn(Opcodes.GOTO, continueRendering);
+            mv.visitLabel(callbackFailure);
+            mv.visitInsn(Opcodes.POP);
+            mv.visitLabel(continueRendering);
+        }
+
+        private void flush() {
+            if (holdingSipush) {
+                holdingSipush = false;
+                super.visitIntInsn(Opcodes.SIPUSH, CLEAR_BITS);
             }
-            if (clearPush != null) {
-                InsnList replacement = new InsnList();
-                if (tail != null) {
-                    emitIntroCallback(replacement, tail);
-                }
-                if (BACKGROUND_ENABLED) {
-                    emitGradient(replacement);
-                } else {
-                    replacement.add(new IntInsnNode(Opcodes.SIPUSH, CLEAR_BITS));
-                    replacement.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL, "glClear", "(I)V", false));
-                }
-                instructions.insertBefore(clearPush, replacement);
-                instructions.remove(clearPush);
-                instructions.remove(clearCall);
-                owner.transformed = true;
+        }
+
+        @Override
+        public void visitIntInsn(int opcode, int operand) {
+            flush();
+            if (BACKGROUND_ENABLED && !replaced && opcode == Opcodes.SIPUSH && operand == CLEAR_BITS) {
+                holdingSipush = true;
+                return;
             }
-            accept(next);
+            super.visitIntInsn(opcode, operand);
         }
 
-        private static AbstractInsnNode nextReal(AbstractInsnNode insn) {
-            AbstractInsnNode n = insn.getNext();
-            while (n != null && n.getOpcode() < 0) n = n.getNext();
-            return n;
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+            if (holdingSipush && opcode == Opcodes.INVOKESTATIC
+                    && "glClear".equals(name) && "(I)V".equals(desc)) {
+                holdingSipush = false;
+                replaced = true;
+                emitGradient();
+                return;
+            }
+            flush();
+            super.visitMethodInsn(opcode, owner, name, desc, itf);
         }
 
-        private static AbstractInsnNode prevReal(AbstractInsnNode insn) {
-            AbstractInsnNode p = insn.getPrevious();
-            while (p != null && p.getOpcode() < 0) p = p.getPrevious();
-            return p;
-        }
+        @Override public void visitInsn(int op) { flush(); super.visitInsn(op); }
+        @Override public void visitVarInsn(int op, int v) { flush(); super.visitVarInsn(op, v); }
+        @Override public void visitTypeInsn(int op, String t) { flush(); super.visitTypeInsn(op, t); }
+        @Override public void visitFieldInsn(int op, String o, String n, String d) { flush(); super.visitFieldInsn(op, o, n, d); }
+        @Override public void visitJumpInsn(int op, Label l) { flush(); super.visitJumpInsn(op, l); }
+        @Override public void visitLdcInsn(Object v) { flush(); super.visitLdcInsn(v); }
+        @Override public void visitIincInsn(int v, int i) { flush(); super.visitIincInsn(v, i); }
+        @Override public void visitInvokeDynamicInsn(String n, String d, Handle b, Object... a) { flush(); super.visitInvokeDynamicInsn(n, d, b, a); }
+        @Override public void visitTableSwitchInsn(int min, int max, Label d, Label... l) { flush(); super.visitTableSwitchInsn(min, max, d, l); }
+        @Override public void visitLookupSwitchInsn(Label d, int[] k, Label[] l) { flush(); super.visitLookupSwitchInsn(d, k, l); }
+        @Override public void visitMultiANewArrayInsn(String d, int n) { flush(); super.visitMultiANewArrayInsn(d, n); }
 
-        private void emitIntroCallback(InsnList out, LabelNode tail) {
-            LabelNode callbackStart = new LabelNode();
-            LabelNode callbackEnd = new LabelNode();
-            LabelNode callbackFailure = new LabelNode();
-            LabelNode continueRendering = new LabelNode();
-            tryCatchBlocks.add(new TryCatchBlockNode(callbackStart, callbackEnd, callbackFailure, "java/lang/Throwable"));
+        private void emitGradient() {
+            MethodVisitor mv = this.mv;
 
-            out.add(callbackStart);
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/System", "getProperties",
-                    "()Ljava/util/Properties;", false));
-            out.add(new LdcInsnNode(INTRO_CALLBACK_KEY));
-            out.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/util/Properties", "get",
-                    "(Ljava/lang/Object;)Ljava/lang/Object;", false));
-            out.add(new VarInsnNode(Opcodes.ASTORE, L_CALLBACK));
-            out.add(new VarInsnNode(Opcodes.ALOAD, L_CALLBACK));
-            out.add(new TypeInsnNode(Opcodes.INSTANCEOF, PREDICATE));
-            out.add(new JumpInsnNode(Opcodes.IFEQ, callbackEnd));
-            out.add(new VarInsnNode(Opcodes.ALOAD, L_CALLBACK));
-            out.add(new TypeInsnNode(Opcodes.CHECKCAST, PREDICATE));
-            out.add(new VarInsnNode(Opcodes.ALOAD, 0));
-            out.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, PREDICATE, "test", "(Ljava/lang/Object;)Z", true));
-            out.add(new JumpInsnNode(Opcodes.IFEQ, callbackEnd));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL_STATE, "readFromOpenGL", "()V", false));
-            out.add(new JumpInsnNode(Opcodes.GOTO, tail));
+            Label lblContextOk = new Label();
+            Label lblGradient = new Label();
+            Label lblDone = new Label();
+            Label lblLoopStart = new Label();
+            Label lblLoopEnd = new Label();
 
-            out.add(callbackEnd);
-            out.add(new JumpInsnNode(Opcodes.GOTO, continueRendering));
-            out.add(callbackFailure);
-            out.add(new InsnNode(Opcodes.POP));
-            out.add(continueRendering);
-        }
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitFieldInsn(Opcodes.GETFIELD, TARGET_CLASS, CONTEXT_FIELD, CONTEXT_DESC);
+            mv.visitJumpInsn(Opcodes.IFNONNULL, lblContextOk);
+            mv.visitIntInsn(Opcodes.SIPUSH, CLEAR_BITS);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, GL, "glClear", "(I)V", false);
+            mv.visitJumpInsn(Opcodes.GOTO, lblDone);
 
-        private static void framebufferSize(InsnList out, String getter) {
-            out.add(new VarInsnNode(Opcodes.ALOAD, 0));
-            out.add(new FieldInsnNode(Opcodes.GETFIELD, TARGET_CLASS, FRAMEBUFFER_FIELD, FRAMEBUFFER_DESC));
-            out.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, FRAMEBUFFER_TYPE, getter, "()I", false));
-        }
+            mv.visitLabel(lblContextOk);
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitFieldInsn(Opcodes.GETFIELD, TARGET_CLASS, CONTEXT_FIELD, CONTEXT_DESC);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, CONTEXT_TYPE, "scaledHeight", "()I", false);
+            mv.visitVarInsn(Opcodes.ISTORE, 1);
 
-        private static void emitGradient(InsnList out) {
-            LabelNode lblGradient = new LabelNode();
-            LabelNode lblDone = new LabelNode();
-            LabelNode lblLoopStart = new LabelNode();
-            LabelNode lblLoopEnd = new LabelNode();
+            mv.visitVarInsn(Opcodes.ILOAD, 1);
+            mv.visitJumpInsn(Opcodes.IFGT, lblGradient);
+            mv.visitIntInsn(Opcodes.SIPUSH, CLEAR_BITS);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, GL, "glClear", "(I)V", false);
+            mv.visitJumpInsn(Opcodes.GOTO, lblDone);
 
-            framebufferSize(out, "height");
-            out.add(new VarInsnNode(Opcodes.ISTORE, L_HEIGHT));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_HEIGHT));
-            out.add(new JumpInsnNode(Opcodes.IFGT, lblGradient));
-            out.add(new IntInsnNode(Opcodes.SIPUSH, CLEAR_BITS));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL, "glClear", "(I)V", false));
-            out.add(new JumpInsnNode(Opcodes.GOTO, lblDone));
+            mv.visitLabel(lblGradient);
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitFieldInsn(Opcodes.GETFIELD, TARGET_CLASS, CONTEXT_FIELD, CONTEXT_DESC);
+            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, CONTEXT_TYPE, "scaledWidth", "()I", false);
+            mv.visitVarInsn(Opcodes.ISTORE, 2);
 
-            out.add(lblGradient);
-            framebufferSize(out, "width");
-            out.add(new VarInsnNode(Opcodes.ISTORE, L_WIDTH));
-            out.add(new InsnNode(Opcodes.ICONST_1));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL_STATE, "scissorTest", "(Z)V", false));
+            mv.visitIntInsn(Opcodes.SIPUSH, GL_SCISSOR_TEST);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, GL, "glEnable", "(I)V", false);
 
-            out.add(new InsnNode(Opcodes.ICONST_0));
-            out.add(new VarInsnNode(Opcodes.ISTORE, L_BAND));
-            out.add(lblLoopStart);
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_BAND));
-            out.add(new IntInsnNode(Opcodes.BIPUSH, BANDS));
-            out.add(new JumpInsnNode(Opcodes.IF_ICMPGE, lblLoopEnd));
+            mv.visitInsn(Opcodes.ICONST_0);
+            mv.visitVarInsn(Opcodes.ISTORE, 3);
+            mv.visitLabel(lblLoopStart);
+            mv.visitVarInsn(Opcodes.ILOAD, 3);
+            mv.visitIntInsn(Opcodes.BIPUSH, BANDS);
+            mv.visitJumpInsn(Opcodes.IF_ICMPGE, lblLoopEnd);
 
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_HEIGHT));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_BAND));
-            out.add(new InsnNode(Opcodes.IMUL));
-            out.add(new IntInsnNode(Opcodes.BIPUSH, BANDS));
-            out.add(new InsnNode(Opcodes.IDIV));
-            out.add(new VarInsnNode(Opcodes.ISTORE, L_Y0));
+            mv.visitVarInsn(Opcodes.ILOAD, 1);
+            mv.visitVarInsn(Opcodes.ILOAD, 3);
+            mv.visitInsn(Opcodes.IMUL);
+            mv.visitIntInsn(Opcodes.BIPUSH, BANDS);
+            mv.visitInsn(Opcodes.IDIV);
+            mv.visitVarInsn(Opcodes.ISTORE, 4);
 
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_HEIGHT));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_BAND));
-            out.add(new InsnNode(Opcodes.ICONST_1));
-            out.add(new InsnNode(Opcodes.IADD));
-            out.add(new InsnNode(Opcodes.IMUL));
-            out.add(new IntInsnNode(Opcodes.BIPUSH, BANDS));
-            out.add(new InsnNode(Opcodes.IDIV));
-            out.add(new VarInsnNode(Opcodes.ISTORE, L_Y1));
+            mv.visitVarInsn(Opcodes.ILOAD, 1);
+            mv.visitVarInsn(Opcodes.ILOAD, 3);
+            mv.visitInsn(Opcodes.ICONST_1);
+            mv.visitInsn(Opcodes.IADD);
+            mv.visitInsn(Opcodes.IMUL);
+            mv.visitIntInsn(Opcodes.BIPUSH, BANDS);
+            mv.visitInsn(Opcodes.IDIV);
+            mv.visitVarInsn(Opcodes.ISTORE, 5);
 
-            out.add(new LdcInsnNode(2.0f));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_Y0));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_Y1));
-            out.add(new InsnNode(Opcodes.IADD));
-            out.add(new InsnNode(Opcodes.I2F));
-            out.add(new LdcInsnNode(2.0f));
-            out.add(new InsnNode(Opcodes.FDIV));
-            out.add(new InsnNode(Opcodes.FMUL));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_HEIGHT));
-            out.add(new InsnNode(Opcodes.I2F));
-            out.add(new InsnNode(Opcodes.FDIV));
-            out.add(new InsnNode(Opcodes.FCONST_1));
-            out.add(new InsnNode(Opcodes.FSUB));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Math", "abs", "(F)F", false));
-            out.add(new VarInsnNode(Opcodes.FSTORE, L_T));
+            mv.visitLdcInsn(2.0f);
+            mv.visitVarInsn(Opcodes.ILOAD, 4);
+            mv.visitVarInsn(Opcodes.ILOAD, 5);
+            mv.visitInsn(Opcodes.IADD);
+            mv.visitInsn(Opcodes.I2F);
+            mv.visitLdcInsn(2.0f);
+            mv.visitInsn(Opcodes.FDIV);
+            mv.visitInsn(Opcodes.FMUL);
+            mv.visitVarInsn(Opcodes.ILOAD, 1);
+            mv.visitInsn(Opcodes.I2F);
+            mv.visitInsn(Opcodes.FDIV);
+            mv.visitInsn(Opcodes.FCONST_1);
+            mv.visitInsn(Opcodes.FSUB);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Math", "abs", "(F)F", false);
+            mv.visitVarInsn(Opcodes.FSTORE, 6);
 
-            colorChannel(out, CR, DR);
-            colorChannel(out, CG, DG);
-            colorChannel(out, CB, DB);
-            out.add(new InsnNode(Opcodes.FCONST_1));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL_STATE, "clearColor", "(FFFF)V", false));
+            mv.visitLdcInsn(CR); mv.visitLdcInsn(DR); mv.visitVarInsn(Opcodes.FLOAD, 6);
+            mv.visitInsn(Opcodes.FMUL); mv.visitInsn(Opcodes.FADD);
+            mv.visitLdcInsn(CG); mv.visitLdcInsn(DG); mv.visitVarInsn(Opcodes.FLOAD, 6);
+            mv.visitInsn(Opcodes.FMUL); mv.visitInsn(Opcodes.FADD);
+            mv.visitLdcInsn(CB); mv.visitLdcInsn(DB); mv.visitVarInsn(Opcodes.FLOAD, 6);
+            mv.visitInsn(Opcodes.FMUL); mv.visitInsn(Opcodes.FADD);
+            mv.visitInsn(Opcodes.FCONST_1);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, GL, "glClearColor", "(FFFF)V", false);
 
-            out.add(new InsnNode(Opcodes.ICONST_0));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_Y0));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_WIDTH));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_Y1));
-            out.add(new VarInsnNode(Opcodes.ILOAD, L_Y0));
-            out.add(new InsnNode(Opcodes.ISUB));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL_STATE, "scissorBox", "(IIII)V", false));
+            mv.visitInsn(Opcodes.ICONST_0);
+            mv.visitVarInsn(Opcodes.ILOAD, 4);
+            mv.visitVarInsn(Opcodes.ILOAD, 2);
+            mv.visitVarInsn(Opcodes.ILOAD, 5);
+            mv.visitVarInsn(Opcodes.ILOAD, 4);
+            mv.visitInsn(Opcodes.ISUB);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, GL, "glScissor", "(IIII)V", false);
 
-            out.add(new IntInsnNode(Opcodes.SIPUSH, CLEAR_BITS));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL, "glClear", "(I)V", false));
+            mv.visitIntInsn(Opcodes.SIPUSH, CLEAR_BITS);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, GL, "glClear", "(I)V", false);
 
-            out.add(new IincInsnNode(L_BAND, 1));
-            out.add(new JumpInsnNode(Opcodes.GOTO, lblLoopStart));
+            mv.visitIincInsn(3, 1);
+            mv.visitJumpInsn(Opcodes.GOTO, lblLoopStart);
 
-            out.add(lblLoopEnd);
-            out.add(new InsnNode(Opcodes.ICONST_0));
-            out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL_STATE, "scissorTest", "(Z)V", false));
+            mv.visitLabel(lblLoopEnd);
+            mv.visitIntInsn(Opcodes.SIPUSH, GL_SCISSOR_TEST);
+            mv.visitMethodInsn(Opcodes.INVOKESTATIC, GL, "glDisable", "(I)V", false);
 
-            out.add(lblDone);
-        }
-
-        private static void colorChannel(InsnList out, float base, float delta) {
-            out.add(new LdcInsnNode(base));
-            out.add(new LdcInsnNode(delta));
-            out.add(new VarInsnNode(Opcodes.FLOAD, L_T));
-            out.add(new InsnNode(Opcodes.FMUL));
-            out.add(new InsnNode(Opcodes.FADD));
+            mv.visitLabel(lblDone);
         }
     }
 

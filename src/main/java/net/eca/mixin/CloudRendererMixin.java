@@ -1,3 +1,5 @@
+// 1.21.11: kept as a second gate; the clouds-pass cancel itself is LevelRendererMixin's HEAD injection on lambda$addCloudsPass$3.
+// 1.21.11: render() gained the game time (a long, before the partial tick), so the callback does too.
 // 1.21.5: render() dropped the (unused here) modelView/projection Matrix4f params.
 // OVERLAY-ONLY: community fork multi-version layer. 1.21.1's LevelRendererMixin cancelled renderClouds; in 1.21.2
 // clouds are drawn by CloudRenderer.render inside a frame-graph pass that runs after the entities, so the skip
@@ -17,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class CloudRendererMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void eca$skipOccludingClouds(int color, net.minecraft.client.CloudStatus status, float height,
-                                        net.minecraft.world.phys.Vec3 cameraPosition, float ticks, CallbackInfo ci) {
+                                        net.minecraft.world.phys.Vec3 cameraPosition, long gameTime, float ticks, CallbackInfo ci) {
         if (CloudGate.occlude) {
             ci.cancel();
         }

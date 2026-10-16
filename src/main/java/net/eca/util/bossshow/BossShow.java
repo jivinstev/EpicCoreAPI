@@ -1,6 +1,6 @@
 package net.eca.util.bossshow;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 
 /**
@@ -15,17 +15,17 @@ import net.minecraft.world.entity.EntityType;
  */
 public abstract class BossShow {
 
-    private final ResourceLocation id;
+    private final Identifier id;
     private final EntityType<?> targetType;
 
-    protected BossShow(ResourceLocation id, EntityType<?> targetType) {
+    protected BossShow(Identifier id, EntityType<?> targetType) {
         if (id == null) throw new IllegalArgumentException("BossShow id must not be null");
         if (targetType == null) throw new IllegalArgumentException("BossShow targetType must not be null");
         this.id = id;
         this.targetType = targetType;
     }
 
-    public final ResourceLocation id() { return id; }
+    public final Identifier id() { return id; }
 
     public final EntityType<?> targetType() { return targetType; }
 

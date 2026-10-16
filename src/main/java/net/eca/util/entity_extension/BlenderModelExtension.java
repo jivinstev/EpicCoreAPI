@@ -3,7 +3,7 @@ package net.eca.util.entity_extension;
 import net.eca.blender.animation.BlenderNodeClock;
 import net.eca.blender.entity.BlenderEntityBinding;
 import net.eca.blender.entity.BlenderRenderPolicy;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -29,7 +29,7 @@ public abstract class BlenderModelExtension implements BlenderEntityBinding {
         return true;
     }
 
-    public abstract ResourceLocation modelId();
+    public abstract Identifier modelId();
 
     public BlenderRenderMode renderMode() {
         return BlenderRenderMode.ADDITIVE;

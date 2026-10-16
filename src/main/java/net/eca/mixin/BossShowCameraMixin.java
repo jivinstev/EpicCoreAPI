@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class BossShowCameraMixin {
 
     @Inject(method = "setup", at = @At("TAIL"))
-    private void eca$overrideCameraForBossShow(BlockGetter level, Entity focusedEntity, boolean thirdPerson,
+    private void eca$overrideCameraForBossShow(net.minecraft.world.level.Level level, Entity focusedEntity, boolean thirdPerson,
                                                 boolean thirdPersonReverse, float partialTicks, CallbackInfo ci) {
         //播放优先；播放未激活时才考虑编辑器预览（二者互斥）
         BossShowPose pose;

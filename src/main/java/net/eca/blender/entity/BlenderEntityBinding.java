@@ -1,14 +1,14 @@
 package net.eca.blender.entity;
 
 import net.eca.blender.animation.BlenderNodeClock;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Map;
 
 /** Describes entity visuals without owning rendering resources or playback state. */
 public interface BlenderEntityBinding {
-    ResourceLocation modelId();
+    Identifier modelId();
     default boolean enabled() { return true; }
     default boolean shouldRender(LivingEntity entity) { return entity != null && !entity.isInvisible(); }
     default BlenderRenderPolicy renderPolicy() { return BlenderRenderPolicy.OVERLAY; }

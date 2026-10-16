@@ -15,8 +15,8 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.material.FogType;
 import net.neoforged.api.distmarker.Dist;
@@ -84,7 +84,7 @@ public class GameRendererPostLevelMixin {
     }
 
     private void renderPostSkybox(PoseStack poseStack) {
-        GlobalSkyboxExtension skybox = getGlobalSkyboxExtension(minecraft.level.dimension().location());
+        GlobalSkyboxExtension skybox = getGlobalSkyboxExtension(minecraft.level.dimension().identifier());
         if (skybox == null || !skybox.enabled()) {
             return;
         }
@@ -102,7 +102,7 @@ public class GameRendererPostLevelMixin {
         drawPostLevelSkybox(poseStack, skybox.shaderRenderType(), size, alpha);
     }
 
-    private GlobalSkyboxExtension getGlobalSkyboxExtension(ResourceLocation dimensionId) {
+    private GlobalSkyboxExtension getGlobalSkyboxExtension(Identifier dimensionId) {
         return EntityExtensionClientState.getActiveSkybox(dimensionId);
     }
 
@@ -112,7 +112,7 @@ public class GameRendererPostLevelMixin {
 
         Tesselator tesselator = Tesselator.getInstance();
 
-        renderType.setupRenderState();
+        net.eca.mv.LegacyGl.setupRenderState(renderType);
 
         for (int i = 0; i < 6; ++i) {
             poseStack.pushPose();
@@ -127,7 +127,7 @@ public class GameRendererPostLevelMixin {
             poseStack.popPose();
         }
 
-        renderType.clearRenderState();
+        net.eca.mv.LegacyGl.clearRenderState(renderType);
     }
 
     private static void rotateToFace(PoseStack poseStack, int face) {

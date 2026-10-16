@@ -4,7 +4,7 @@ import net.eca.blender.model.BlenderModelDefinition;
 import net.eca.blender.client.runtime.BlendMaterialProgram;
 import net.eca.blender.client.runtime.BlendRuntime;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class BlenderModelAsset {
-    public final ResourceLocation id;
+    public final Identifier id;
     public final BlenderModelDefinition definition;
     public final List<Node> nodes;
     public final List<Mesh> meshes;
@@ -25,20 +25,20 @@ public final class BlenderModelAsset {
     public final BlendRuntime blendRuntime;
     public final float nodeFrame;
 
-    public BlenderModelAsset(ResourceLocation id, BlenderModelDefinition definition, List<Node> nodes,
+    public BlenderModelAsset(Identifier id, BlenderModelDefinition definition, List<Node> nodes,
                       List<Mesh> meshes, List<Skin> skins, List<Material> materials,
                       Map<String, Animation> animations, int[] sceneRoots, List<TextureData> textures) {
         this(id, definition, nodes, meshes, skins, materials, animations, sceneRoots, textures, null);
     }
 
-    public BlenderModelAsset(ResourceLocation id, BlenderModelDefinition definition, List<Node> nodes,
+    public BlenderModelAsset(Identifier id, BlenderModelDefinition definition, List<Node> nodes,
                       List<Mesh> meshes, List<Skin> skins, List<Material> materials,
                       Map<String, Animation> animations, int[] sceneRoots, List<TextureData> textures,
                       BlendRuntime blendRuntime) {
         this(id, definition, nodes, meshes, skins, materials, animations, sceneRoots, textures, blendRuntime, 0);
     }
 
-    public BlenderModelAsset(ResourceLocation id, BlenderModelDefinition definition, List<Node> nodes,
+    public BlenderModelAsset(Identifier id, BlenderModelDefinition definition, List<Node> nodes,
                       List<Mesh> meshes, List<Skin> skins, List<Material> materials,
                       Map<String, Animation> animations, int[] sceneRoots, List<TextureData> textures,
                       BlendRuntime blendRuntime, float nodeFrame) {
@@ -70,8 +70,8 @@ public final class BlenderModelAsset {
     }
 
     public record Material(float red, float green, float blue, float alpha,
-                    ResourceLocation texture, boolean translucent, BlendMaterialProgram program) {
-        public Material(float red, float green, float blue, float alpha, ResourceLocation texture, boolean translucent) {
+                    Identifier texture, boolean translucent, BlendMaterialProgram program) {
+        public Material(float red, float green, float blue, float alpha, Identifier texture, boolean translucent) {
             this(red, green, blue, alpha, texture, translucent, null);
         }
     }
@@ -93,6 +93,6 @@ public final class BlenderModelAsset {
         LINEAR
     }
 
-    public record TextureData(ResourceLocation location, byte[] bytes) {
+    public record TextureData(Identifier location, byte[] bytes) {
     }
 }

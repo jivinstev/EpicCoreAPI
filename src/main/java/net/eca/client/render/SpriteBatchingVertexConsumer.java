@@ -51,9 +51,9 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     @Override
     public void putBulkData(PoseStack.Pose pose, BakedQuad quad, float[] brightness,
                             float red, float green, float blue, float alpha,
-                            int[] lights, int overlay, boolean readExistingColor) {
+                            int[] lights, int overlay) {
         builder(quad.sprite()).putBulkData(pose, quad, brightness, red, green, blue,
-            alpha, fullBright ? FULL_BRIGHT_LIGHTMAP : lights, overlay, readExistingColor);
+            alpha, fullBright ? FULL_BRIGHT_LIGHTMAP : lights, overlay);
     }
 
     private BufferBuilder builder(TextureAtlasSprite sprite) {
@@ -88,6 +88,12 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     }
 
     @Override
+    public VertexConsumer setColor(int argb) {
+        direct().setColor(argb);
+        return this;
+    }
+
+    @Override
     public VertexConsumer setUv(float u, float v) {
         direct().setUv(u, v);
         return this;
@@ -108,6 +114,12 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     @Override
     public VertexConsumer setNormal(float x, float y, float z) {
         direct().setNormal(x, y, z);
+        return this;
+    }
+
+    @Override
+    public VertexConsumer setLineWidth(float width) {
+        // Line width is not part of batched quad vertex data, so it is accepted and has no effect.
         return this;
     }
 

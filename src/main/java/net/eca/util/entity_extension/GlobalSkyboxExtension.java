@@ -1,7 +1,7 @@
 package net.eca.util.entity_extension;
 
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 
 public interface GlobalSkyboxExtension {
 
@@ -13,7 +13,7 @@ public interface GlobalSkyboxExtension {
         return false;
     }
 
-    default ResourceLocation texture() {
+    default Identifier texture() {
         return null;
     }
 

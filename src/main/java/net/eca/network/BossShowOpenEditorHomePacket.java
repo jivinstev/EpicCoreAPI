@@ -14,7 +14,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -28,7 +28,7 @@ import java.util.List;
 //S→C：打开 BossShow 编辑器 Home 界面，携带服务端当前所有定义的完整数据
 public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<BossShowOpenEditorHomePacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_open_editor_home_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "boss_show_open_editor_home_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BossShowOpenEditorHomePacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> BossShowOpenEditorHomePacket.encode(msg, buf), BossShowOpenEditorHomePacket::decode);
 
@@ -47,8 +47,8 @@ public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
     public static void encode(BossShowOpenEditorHomePacket msg, FriendlyByteBuf buf) {
         buf.writeVarInt(msg.definitions.size());
         for (BossShowDefinition def : msg.definitions) {
-            buf.writeResourceLocation(def.id());
-            ResourceLocation typeId = def.targetType() != null
+            buf.writeIdentifier(def.id());
+            Identifier typeId = def.targetType() != null
                 ? BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType())
                 : null;
             BossShowNetCodec.writeNullableRL(buf, typeId);
@@ -67,8 +67,8 @@ public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
         int n = buf.readVarInt();
         List<BossShowDefinition> defs = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
-            ResourceLocation id = buf.readResourceLocation();
-            ResourceLocation typeId = BossShowNetCodec.readNullableRL(buf);
+            Identifier id = buf.readIdentifier();
+            Identifier typeId = BossShowNetCodec.readNullableRL(buf);
             Trigger trig = BossShowNetCodec.readTrigger(buf);
             boolean cine = buf.readBoolean();
             boolean allowRepeat = buf.readBoolean();

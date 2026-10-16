@@ -1,7 +1,7 @@
 package net.eca.util.entity_extension;
 
 import net.eca.blender.animation.controller.BlenderControllerSet;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
@@ -141,19 +141,19 @@ public abstract class EntityExtension {
 
     protected abstract String getModId();
 
-    protected ResourceLocation texture(String path) {
+    protected Identifier texture(String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
         String normalized = path.startsWith("textures/") ? path : "textures/" + path;
-        return ResourceLocation.fromNamespaceAndPath(getModId(), normalized);
+        return Identifier.fromNamespaceAndPath(getModId(), normalized);
     }
 
-    protected ResourceLocation sound(String path) {
+    protected Identifier sound(String path) {
         if (path == null || path.isBlank()) {
             return null;
         }
-        return ResourceLocation.fromNamespaceAndPath(getModId(), path);
+        return Identifier.fromNamespaceAndPath(getModId(), path);
     }
 
     @Override

@@ -13,13 +13,13 @@ import net.eca.util.shader_generator.ShaderSourceAssembler;
 import net.eca.util.shader_generator.ShaderSourceWorkspace;
 import net.eca.util.shader_generator.ShaderTargetProfile;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
+
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.eca.mv.ShaderInstance;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.InventoryMenu;
 
 import java.io.IOException;
@@ -44,22 +44,22 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     private final RenderType bossBar;
     private final RenderType skybox;
     private final RenderType item;
-    private final Map<ResourceLocation, RenderType> entityTypes = new ConcurrentHashMap<>();
-    private final List<ResourceLocation> importedTextures;
+    private final Map<Identifier, RenderType> entityTypes = new ConcurrentHashMap<>();
+    private final List<Identifier> importedTextures;
     private final List<PreviewAnimation> previewAnimations;
-    private final ResourceLocation blockPreviewTexture;
-    private final ResourceLocation whitePreviewTexture;
+    private final Identifier blockPreviewTexture;
+    private final Identifier whitePreviewTexture;
     private final String maskSamplerName;
 
     private GeneratedShaderPreview(
         Component displayName,
         ShaderInstance blockShader,
         ShaderInstance entityShader,
-        List<ResourceLocation> importedTextures,
-        ResourceLocation blockPreviewTexture,
+        List<Identifier> importedTextures,
+        Identifier blockPreviewTexture,
         Map<String, float[]> uniformArrays,
         List<PreviewAnimation> previewAnimations,
-        ResourceLocation whitePreviewTexture,
+        Identifier whitePreviewTexture,
         String maskSamplerName
     ) {
         this.displayName = displayName;
@@ -136,17 +136,17 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         );
         ShaderInstance blockShader = null;
         ShaderInstance entityShader = null;
-        List<ResourceLocation> textures = new ArrayList<>();
+        List<Identifier> textures = new ArrayList<>();
         List<PreviewAnimation> animations = new ArrayList<>();
         try {
             blockShader = EcaShaderInstance.create(
                 provider,
-                ResourceLocation.fromNamespaceAndPath(namespace, path + "_block"),
+                Identifier.fromNamespaceAndPath(namespace, path + "_block"),
                 DefaultVertexFormat.BLOCK
             );
             entityShader = EcaShaderInstance.create(
                 provider,
-                ResourceLocation.fromNamespaceAndPath(namespace, path + "_entity"),
+                Identifier.fromNamespaceAndPath(namespace, path + "_entity"),
                 DefaultVertexFormat.NEW_ENTITY
             );
             ImportedTextureBindings importedBindings = bindImportedTextures(
@@ -178,7 +178,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             if (entityShader != null) entityShader.close();
             animations.forEach(PreviewAnimation::close);
             TextureManager textureManager = Minecraft.getInstance().getTextureManager();
-            for (ResourceLocation texture : textures) textureManager.release(texture);
+            for (Identifier texture : textures) textureManager.release(texture);
             throw exception;
         }
     }
@@ -204,7 +204,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     }
 
     @Override
-    public RenderType entity(ResourceLocation texture) {
+    public RenderType entity(Identifier texture) {
         return entityTypes.computeIfAbsent(texture, value -> createEntity(
             "eca_shader_generator_" + Integer.toHexString(System.identityHashCode(this)),
             shaderState(
@@ -222,7 +222,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         entityShader.close();
         previewAnimations.forEach(PreviewAnimation::close);
         TextureManager textureManager = Minecraft.getInstance().getTextureManager();
-        for (ResourceLocation texture : importedTextures) {
+        for (Identifier texture : importedTextures) {
             textureManager.release(texture);
         }
     }
@@ -232,7 +232,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         ShaderInstance entityShader,
         Map<String, Path> texturePaths
     ) throws IOException {
-        List<ResourceLocation> registered = new ArrayList<>();
+        List<Identifier> registered = new ArrayList<>();
         List<AnimatedPreviewTexture> animations = new ArrayList<>();
         if (texturePaths == null || texturePaths.isEmpty()) {
             return new ImportedTextureBindings(registered, animations);
@@ -244,7 +244,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
                 AnimatedPreviewTexture animation = AnimatedPreviewTexture.create(entry.getValue());
                 animations.add(animation);
                 DynamicTexture texture = animation.texture();
-                ResourceLocation location = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/" + entry.getKey().toLowerCase(), texture);
+                Identifier location = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/" + entry.getKey().toLowerCase(), texture);
                 registered.add(location);
                 blockShader.setSampler(entry.getKey(), texture);
                 entityShader.setSampler(entry.getKey(), texture);
@@ -252,7 +252,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             return new ImportedTextureBindings(registered, animations);
         } catch (IOException | RuntimeException exception) {
             animations.forEach(AnimatedPreviewTexture::close);
-            for (ResourceLocation location : registered) {
+            for (Identifier location : registered) {
                 textureManager.release(location);
             }
             throw exception;
@@ -277,7 +277,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     private static Runnable maskBinding(
         ShaderInstance shader,
         String samplerName,
-        ResourceLocation texture
+        Identifier texture
     ) {
         if (samplerName == null) return () -> {};
         return () -> shader.setSampler(
@@ -288,7 +288,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     private static RenderType createBossBar(
         String name,
         net.eca.mv.ShaderShard shader,
-        ResourceLocation texture
+        Identifier texture
     ) {
         return net.eca.mv.LegacyRenderType.create(
             name + "_boss_bar",
@@ -299,7 +299,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
+                .setTextureState(new net.eca.mv.LegacyRenderType.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
@@ -310,7 +310,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     private static RenderType createSkybox(
         String name,
         net.eca.mv.ShaderShard shader,
-        ResourceLocation texture
+        Identifier texture
     ) {
         return net.eca.mv.LegacyRenderType.create(
             name + "_skybox",
@@ -321,7 +321,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             false,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
+                .setTextureState(new net.eca.mv.LegacyRenderType.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
@@ -342,11 +342,11 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             false,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
-                .setTextureState(RenderType.BLOCK_SHEET_MIPPED)
+                .setTextureState(net.eca.mv.LegacyRenderType.BLOCK_SHEET_MIPPED)
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
-                .setOverlayState(RenderType.OVERLAY)
+                .setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
                 .createCompositeState(true)
         );
@@ -355,7 +355,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     private static RenderType createEntity(
         String name,
         net.eca.mv.ShaderShard shader,
-        ResourceLocation texture
+        Identifier texture
     ) {
         return net.eca.mv.LegacyRenderType.create(
             name + "_entity",
@@ -366,11 +366,11 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
+                .setTextureState(new net.eca.mv.LegacyRenderType.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
-                .setLightmapState(RenderType.LIGHTMAP)
-                .setOverlayState(RenderType.OVERLAY)
+                .setLightmapState(net.eca.mv.LegacyRenderType.LIGHTMAP)
+                .setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)
                 .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true)
@@ -428,12 +428,12 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             if (minecraft.gameRenderer != null && minecraft.gameRenderer.getMainCamera() != null) {
                 if (cameraYaw != null) {
                     cameraYaw.set((float) Math.toRadians(
-                        minecraft.gameRenderer.getMainCamera().getYRot()
+                        minecraft.gameRenderer.getMainCamera().yRot()
                     ));
                 }
                 if (cameraPitch != null) {
                     cameraPitch.set((float) Math.toRadians(
-                        minecraft.gameRenderer.getMainCamera().getXRot()
+                        minecraft.gameRenderer.getMainCamera().xRot()
                     ));
                 }
             }
@@ -458,14 +458,14 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         ShaderInstance blockShader,
         ShaderInstance entityShader,
         Dependencies dependencies,
-        List<ResourceLocation> registered
+        List<Identifier> registered
     ) throws IOException {
         TextureManager textureManager = Minecraft.getInstance().getTextureManager();
         long revision = TEXTURE_REVISION.incrementAndGet();
         NativeImage whiteImage = new NativeImage(1, 1, false);
         whiteImage.setPixel(0, 0, net.minecraft.util.ARGB.fromABGR(0xFFFFFFFF));
         DynamicTexture whiteTexture = new DynamicTexture(() -> "net.eca.mv", whiteImage);
-        ResourceLocation whiteLocation = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/preview_white", whiteTexture);
+        Identifier whiteLocation = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/preview_white", whiteTexture);
         registered.add(whiteLocation);
         for (String sampler : dependencies.samplers()) {
             if ("Sampler0".equals(sampler)) continue;
@@ -473,7 +473,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             entityShader.setSampler(sampler, whiteTexture);
         }
 
-        ResourceLocation blockTexture = whiteLocation;
+        Identifier blockTexture = whiteLocation;
         Map<String, float[]> uniformArrays = new LinkedHashMap<>();
         List<AnimatedPreviewAtlas> animatedAtlases = new ArrayList<>();
         try {
@@ -481,7 +481,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
                 AnimatedPreviewAtlas atlas = AnimatedPreviewAtlas.create(binding.spritePaths());
                 animatedAtlases.add(atlas);
                 DynamicTexture texture = atlas.texture();
-                ResourceLocation location = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/atlas_" + registered.size(), texture);
+                Identifier location = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/atlas_" + registered.size(), texture);
                 registered.add(location);
                 blockShader.setSampler(binding.samplerName(), texture);
                 entityShader.setSampler(binding.samplerName(), texture);
@@ -500,7 +500,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     }
 
     public record Dependencies(
-        Map<ResourceLocation, Path> resources,
+        Map<Identifier, Path> resources,
         Set<String> samplers,
         List<ResolvedAtlasBinding> atlases
     ) {
@@ -524,14 +524,14 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     }
 
     private record PreviewTextureBindings(
-        ResourceLocation blockTexture,
+        Identifier blockTexture,
         Map<String, float[]> uniformArrays,
         List<AnimatedPreviewAtlas> animatedAtlases,
-        ResourceLocation whiteTexture
+        Identifier whiteTexture
     ) {}
 
     private record ImportedTextureBindings(
-        List<ResourceLocation> locations,
+        List<Identifier> locations,
         List<AnimatedPreviewTexture> animations
     ) {}
 }

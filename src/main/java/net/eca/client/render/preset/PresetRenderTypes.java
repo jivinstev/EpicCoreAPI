@@ -2,9 +2,8 @@ package net.eca.client.render.preset;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -71,11 +70,11 @@ public final class PresetRenderTypes {
             false,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shaderState)
-                .setTextureState(RenderType.BLOCK_SHEET_MIPPED)
+                .setTextureState(net.eca.mv.LegacyRenderType.BLOCK_SHEET_MIPPED)
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
-                .setOverlayState(RenderType.OVERLAY)
+                .setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
                 .createCompositeState(true)
         );
@@ -83,7 +82,7 @@ public final class PresetRenderTypes {
 
     //Sampler0 绑方块图集，适用于只在 Color-Key 分支采样基础贴图的着色器
     public static RenderType block(String name, net.eca.mv.ShaderShard shaderState) {
-        return block(name, shaderState, RenderType.BLOCK_SHEET_MIPPED);
+        return block(name, shaderState, net.eca.mv.LegacyRenderType.BLOCK_SHEET_MIPPED);
     }
 
     /* 叠加层顶点由「世界坐标 − 摄像机」直接烘出，原方块则经区块相对坐标 + per-chunk 平移得到；
@@ -94,7 +93,7 @@ public final class PresetRenderTypes {
        textureState 由调用方给出——有的着色器 Sampler0 绑的是自己的单图贴图，整张即一片花瓣或
        叶片，按 UV 全域取用后程序化撒布，绑成方块图集会取错像素。 */
     public static RenderType block(String name, net.eca.mv.ShaderShard shaderState,
-                                   RenderStateShard.EmptyTextureStateShard textureState) {
+                                   net.eca.mv.LegacyRenderType.Shard textureState) {
         return net.eca.mv.LegacyRenderType.create(name + "_block_overlay",
             DefaultVertexFormat.BLOCK,
             VertexFormat.Mode.QUADS,
@@ -107,14 +106,14 @@ public final class PresetRenderTypes {
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLayeringState(net.eca.mv.LegacyRenderType.POLYGON_OFFSET_LAYERING)
-                .setLightmapState(RenderType.LIGHTMAP)
+                .setLightmapState(net.eca.mv.LegacyRenderType.LIGHTMAP)
                 .setCullState(net.eca.mv.LegacyRenderType.CULL)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
                 .createCompositeState(true)
         );
     }
 
-    static RenderType entityEffect(String name, net.eca.mv.ShaderShard shaderState, ResourceLocation texture) {
+    static RenderType entityEffect(String name, net.eca.mv.ShaderShard shaderState, Identifier texture) {
         return net.eca.mv.LegacyRenderType.create(name + "_entity_effect",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,
@@ -123,11 +122,11 @@ public final class PresetRenderTypes {
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shaderState)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
+                .setTextureState(new net.eca.mv.LegacyRenderType.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
-                .setLightmapState(RenderType.LIGHTMAP)
-                .setOverlayState(RenderType.OVERLAY)
+                .setLightmapState(net.eca.mv.LegacyRenderType.LIGHTMAP)
+                .setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)
                 .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true)

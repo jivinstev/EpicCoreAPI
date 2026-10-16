@@ -5,13 +5,13 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 
 public class EntityExtensionActiveTypePacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<EntityExtensionActiveTypePacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "entity_extension_active_type_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "entity_extension_active_type_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, EntityExtensionActiveTypePacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> EntityExtensionActiveTypePacket.encode(msg, buf), EntityExtensionActiveTypePacket::decode);
 
@@ -21,26 +21,26 @@ public class EntityExtensionActiveTypePacket implements CustomPacketPayload {
     }
 
 
-    private final ResourceLocation dimensionId;
-    private final ResourceLocation typeId;
+    private final Identifier dimensionId;
+    private final Identifier typeId;
 
-    public EntityExtensionActiveTypePacket(ResourceLocation dimensionId, ResourceLocation typeId) {
+    public EntityExtensionActiveTypePacket(Identifier dimensionId, Identifier typeId) {
         this.dimensionId = dimensionId;
         this.typeId = typeId;
     }
 
     public static void encode(EntityExtensionActiveTypePacket message, FriendlyByteBuf buffer) {
-        buffer.writeResourceLocation(message.dimensionId);
+        buffer.writeIdentifier(message.dimensionId);
         buffer.writeBoolean(message.typeId != null);
         if (message.typeId != null) {
-            buffer.writeResourceLocation(message.typeId);
+            buffer.writeIdentifier(message.typeId);
         }
     }
 
     public static EntityExtensionActiveTypePacket decode(FriendlyByteBuf buffer) {
-        ResourceLocation dimensionId = buffer.readResourceLocation();
+        Identifier dimensionId = buffer.readIdentifier();
         boolean hasType = buffer.readBoolean();
-        ResourceLocation typeId = hasType ? buffer.readResourceLocation() : null;
+        Identifier typeId = hasType ? buffer.readIdentifier() : null;
         return new EntityExtensionActiveTypePacket(dimensionId, typeId);
     }
 

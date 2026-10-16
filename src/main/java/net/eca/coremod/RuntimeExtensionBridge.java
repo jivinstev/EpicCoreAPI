@@ -1,4 +1,7 @@
-// Fork multi-version layer, 1.21.8 copy of the authors' file: EARLY_DISPLAY_TARGET names FML 9's LoadingScreenRenderer.
+// MV-STAND-IN: 1.21.11's prepared copy of the authors' RuntimeExtensionBridge as it was before 1.21.10 took 1.21.8's overlay
+// MV-STAND-IN: (EARLY_DISPLAY_TARGET = LoadingScreenRenderer), unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
+// MV-STAND-IN: 1.21.10's prepared copy of the authors' RuntimeExtensionBridge, unchanged, as it was before the 1.21.8 overlay for
+// MV-STAND-IN: FML 9's LoadingScreenRenderer, unchanged; only so that 1.21.8 fix does not reach 1.21.10 (FML 10, its own GUI code) unported and ungated.
 package net.eca.coremod;
 
 import net.eca.coremod.EarlyLogWriter;
@@ -11,9 +14,7 @@ import java.lang.reflect.Method;
  * Optional runtime-extension bridge. Platform artifacts contain only this inert boundary.
  */
 public final class RuntimeExtensionBridge {
-    // 1.21.8 (FML 9.0.18): the early loading screen paints in render/LoadingScreenRenderer, not DisplayWindow (see the
-    // 1.21.8 LoadingScreenTransformer); the agent retransforms it when it is already loaded, the coremod targets it
-    public static final String EARLY_DISPLAY_TARGET = "net/neoforged/fml/earlydisplay/render/LoadingScreenRenderer";
+    public static final String EARLY_DISPLAY_TARGET = "net/neoforged/fml/earlydisplay/DisplayWindow";
     private static final String PROVIDER = "net.eca.pro.EcaProRuntime";
     private static final String EARLY_DISPLAY_TRANSFORMER = "net.eca.coremod.LoadingScreenTransformer";
     private static volatile Class<?> provider;

@@ -1,8 +1,7 @@
 package net.eca.client.render.preset;
 
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
@@ -12,7 +11,7 @@ import net.neoforged.api.distmarker.OnlyIn;
    共享 <name>.fsh。实体纹理叠加通过 EntityLayerExtension.getTexture() 支持。 */
 public final class ShaderPreset {
 
-    private final ResourceLocation id;
+    private final Identifier id;
     private final String name;
     private final net.eca.mv.ShaderShard entityShaderState;
     private final RenderType bossBar;
@@ -21,7 +20,7 @@ public final class ShaderPreset {
     private final RenderType item;
     private final RenderType block;
 
-    ShaderPreset(ResourceLocation id, GenericPresetShader shader) {
+    ShaderPreset(Identifier id, GenericPresetShader shader) {
         this.id = id;
         this.name = "eca_preset_" + id.getNamespace() + "_" + id.getPath().replace('/', '_');
         net.eca.mv.ShaderShard blockShaderState = profileState(shader.block());
@@ -44,7 +43,7 @@ public final class ShaderPreset {
         };
     }
 
-    public ResourceLocation id() {
+    public Identifier id() {
         return id;
     }
 
@@ -68,12 +67,12 @@ public final class ShaderPreset {
         return block;
     }
 
-    public RenderType geoBlock(ResourceLocation texture) {
+    public RenderType geoBlock(Identifier texture) {
         return PresetRenderTypes.entityEffect(name + "_geo_block", entityShaderState, texture);
     }
 
     // 预览系统用：带纹理绑定的实体 RenderType
-    public RenderType entityForPreview(ResourceLocation texture) {
+    public RenderType entityForPreview(Identifier texture) {
         return PresetRenderTypes.entityEffect(name, entityShaderState, texture);
     }
 }

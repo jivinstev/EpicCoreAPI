@@ -1,7 +1,6 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.10 LegacyGl with its F1 fix (mc-mod-version-upgrade 3f4022c) and the
-// MV-AHEAD-OF-TEMPLATE: package filled in, plus 1.21.5's opacity rule in draw() (a COLOR_MODULATOR written inside
-// MV-AHEAD-OF-TEMPLATE: apply() is not kept, as on 1.21.1), which 3f4022c left out for 1.21.8+. Delete once sync-shared brings both.
+// MV-STAND-IN: shared/1.21.11's LegacyGl, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyGl.java (the F1/F2 fix ahead of the
+// MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
 package net.eca.mv;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -17,14 +16,18 @@ import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
@@ -70,9 +73,6 @@ public final class LegacyGl {
     private static boolean cull = true;
     private static Object shader;
     private static boolean warnedEquation;
-    // what a set-up LegacyRenderType adds (see load): its depth bias and its output target (null: the main target)
-    private static float biasScale, biasConstant;
-    private static RenderTarget target;
     private static float[] shaderColor = {1f, 1f, 1f, 1f};
 
     private LegacyGl() {}
@@ -116,26 +116,53 @@ public final class LegacyGl {
     public static void recordRenderCall(Runnable r) {
         if (RenderSystem.isOnRenderThread()) r.run(); else Minecraft.getInstance().execute(r);
     }
-    /** 1.21.8 binds a GpuTextureView; 1.21.1 code named the texture by its location... */
-    public static void setShaderTexture(int slot, ResourceLocation texture) {
+    /**
+     * A texture bound to a SamplerN slot with the sampler it is read through. 1.21.11 removed RenderSystem's twelve
+     * shader-texture slots (a RenderPass binds texture AND sampler by name), so this layer keeps them itself.
+     */
+    public record Slot(GpuTextureView view, GpuSampler sampler) {}
+
+    private static final Slot[] SLOTS = new Slot[12];
+
+    /** 1.21.11 binds a GpuTextureView with a sampler; 1.21.1 code named the texture by its location... */
+    public static void setShaderTexture(int slot, Identifier texture) {
         AbstractTexture t = Minecraft.getInstance().getTextureManager().getTexture(texture);
-        RenderSystem.setShaderTexture(slot, t.getTextureView());
+        SLOTS[slot] = new Slot(t.getTextureView(), t.getSampler());
     }
 
     /** ...or by the GL id of a texture it made itself (see {@link RawGlTexture}). */
     public static void setShaderTexture(int slot, int glId) {
-        RenderSystem.setShaderTexture(slot, glId <= 0 ? null
-                : RenderSystem.getDevice().createTextureView(RawGlTexture.of(glId)));
+        SLOTS[slot] = glId <= 0 ? null
+                : new Slot(RenderSystem.getDevice().createTextureView(RawGlTexture.of(glId)),
+                        RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+    }
+
+    public static void setShaderTexture(int slot, GpuTextureView texture, GpuSampler sampler) {
+        SLOTS[slot] = texture == null ? null : new Slot(texture, sampler);
     }
 
     public static void setShaderTexture(int slot, GpuTextureView texture) {
-        RenderSystem.setShaderTexture(slot, texture);
+        setShaderTexture(slot, texture, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
     }
 
-    /** BufferUploader.drawWithShader: the current shader and the state set above, into the main render target -- or,
-     *  while a {@link LegacyRenderType} is set up, with its shader and state into its output target (see {@link #load}). */
+    /** 1.21.4's {@code RenderSystem.getShaderTexture(slot)}: what was last bound to the slot (null when nothing was). */
+    public static GpuTextureView getShaderTexture(int slot) {
+        return SLOTS[slot] == null ? null : SLOTS[slot].view();
+    }
+
+    /** 1.21.4's {@code RenderType.setupRenderState()}: the type's texture / lightmap / overlay shards and its shader. */
+    public static void setupRenderState(RenderType type) {
+        if (type instanceof LegacyRenderType legacy) legacy.setupRenderState();
+    }
+
+    /** 1.21.4's {@code RenderType.clearRenderState()}. */
+    public static void clearRenderState(RenderType type) {
+        if (type instanceof LegacyRenderType legacy) legacy.clearRenderState();
+    }
+
+    /** BufferUploader.drawWithShader: the current shader and the state set above, into the main render target. */
     public static void drawWithShader(MeshData mesh) {
-        draw(mesh, shader, current(), target != null ? target : Minecraft.getInstance().getMainRenderTarget());
+        draw(mesh, shader, current(), Minecraft.getInstance().getMainRenderTarget());
     }
 
     // ---- state as a value -------------------------------------------------------------------------------------
@@ -156,52 +183,7 @@ public final class LegacyGl {
 
     static Key current() {
         return new Key(blend ? blendFunction : null, depthTest ? depthFunction : DepthTestFunction.NO_DEPTH_TEST,
-                depthWrite, writeColor, writeAlpha, cull, biasScale, biasConstant);
-    }
-
-    /** The state {@link #load} replaced, put back by {@link #restore}. */
-    record Saved(boolean blend, BlendFunction blendFunction, boolean depthTest, DepthTestFunction depthFunction,
-                 boolean depthWrite, boolean writeColor, boolean writeAlpha, boolean cull, float biasScale,
-                 float biasConstant, RenderTarget target) {}
-
-    /**
-     * 1.21.4's RenderType.setupRenderState() ran every shard of its CompositeState: the ShaderStateShard set the shader,
-     * and the transparency / depth-test / write-mask / cull / layering shards set GL state. 1.21.1-1.21.4 code that sets
-     * a type up and then draws with BufferUploader.drawWithShader (a mod's own render queue) drew with all of it.
-     * {@link LegacyRenderType#setupRenderState} loads the type's shader and state here so {@link #drawWithShader} does
-     * too, into the type's output target; {@link LegacyRenderType#clearRenderState} restores the state (the shader stays
-     * set, as 1.21.4's ShaderStateShard left it).
-     */
-    static Saved load(Key key, Object shaderObj, RenderTarget into) {
-        Saved s = new Saved(blend, blendFunction, depthTest, depthFunction, depthWrite, writeColor, writeAlpha, cull,
-                biasScale, biasConstant, target);
-        blend = key.blend() != null;
-        if (blend) blendFunction = key.blend();
-        depthTest = key.depth() != DepthTestFunction.NO_DEPTH_TEST;
-        if (depthTest) depthFunction = key.depth();
-        depthWrite = key.depthWrite();
-        writeColor = key.writeColor();
-        writeAlpha = key.writeAlpha();
-        cull = key.cull();
-        biasScale = key.biasScale();
-        biasConstant = key.biasConstant();
-        shader = shaderObj;
-        target = into;
-        return s;
-    }
-
-    static void restore(Saved s) {
-        blend = s.blend();
-        blendFunction = s.blendFunction();
-        depthTest = s.depthTest();
-        depthFunction = s.depthFunction();
-        depthWrite = s.depthWrite();
-        writeColor = s.writeColor();
-        writeAlpha = s.writeAlpha();
-        cull = s.cull();
-        biasScale = s.biasScale();
-        biasConstant = s.biasConstant();
-        target = s.target();
+                depthWrite, writeColor, writeAlpha, cull, 0, 0);
     }
 
     // ---- drawing ----------------------------------------------------------------------------------------------
@@ -238,30 +220,21 @@ public final class LegacyGl {
                 indexType = m.drawState().indexType();
             }
             // 1.21.1's BufferUploader/RenderType draws called shader.apply() right before drawing and shader.clear()
-            // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask's uniforms
-            // and sampler), so it has to run here too. A COLOR_MODULATOR write made inside apply() (an opacity, after
-            // super.apply()) is not kept: on 1.21.1 it came after apply()'s upload and the next draw's
-            // setDefaultUniforms overwrote it, so it never reached the GPU. A write made before the draw is kept.
+            // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask, an opacity
+            // written into COLOR_MODULATOR after super.apply()), so it has to run here too
             if (own != null) {
                 own.setDefaultUniforms();   // 1.21.1's VertexBuffer._drawWithShader ran this right before apply()
-                Uniform cm = own.COLOR_MODULATOR;
-                boolean wrote = cm != null && cm.touched();
-                float[] before = wrote && cm.floats() != null ? cm.floats().clone() : null;
                 own.apply();
-                if (cm != null) {
-                    if (before != null) cm.set(before);
-                    else if (!wrote) cm.consume();
-                }
             }
-            // a COLOR_MODULATOR the mod wrote before the draw (kept above) replaces RenderSystem's colour; 1.21.8 puts
-            // the colour in the DynamicTransforms block
+            // 1.21.1's ShaderInstance.apply() uploaded RenderSystem's colour into COLOR_MODULATOR and a mod could
+            // overwrite it afterwards; 1.21.8 puts the colour in the DynamicTransforms block, so use the mod's value
+            // when it wrote one
             boolean override = own != null && own.COLOR_MODULATOR != null && own.COLOR_MODULATOR.touched();
             float[] c = override ? own.COLOR_MODULATOR.floats() : shaderColor;
             GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(
                     own == null ? RenderSystem.getModelViewMatrix() : own.transformMatrix(own.MODEL_VIEW_MATRIX, RenderSystem.getModelViewMatrix()),
                     new Vector4f(c[0], c[1], c[2], c[3]), new Vector3f(),   // 1.21.9 dropped RenderSystem.getModelOffset(); vanilla's own draws pass a zero vector
-                    own == null ? RenderSystem.getTextureMatrix() : own.transformMatrix(own.TEXTURE_MATRIX, RenderSystem.getTextureMatrix()),
-                    own == null ? RenderSystem.getShaderLineWidth() : own.lineWidth(RenderSystem.getShaderLineWidth()));
+                    own == null ? new Matrix4f() : own.transformMatrix(own.TEXTURE_MATRIX, new Matrix4f()));   // 1.21.11: RenderSystem holds no texture matrix (vanilla's default is identity) and DynamicTransforms has no line width
             // as CompositeRenderType.draw: an output override (a post-effect pass) wins over the target's own views
             GpuTextureView colorView = RenderSystem.outputColorTextureOverride != null
                     ? RenderSystem.outputColorTextureOverride : target.getColorTextureView();
@@ -285,8 +258,8 @@ public final class LegacyGl {
                 var scissor = RenderSystem.getScissorStateForRenderTypeDraws();
                 if (scissor.enabled()) pass.enableScissor(scissor.x(), scissor.y(), scissor.width(), scissor.height());
                 for (int i = 0; i < 12; i++) {
-                    GpuTextureView t = RenderSystem.getShaderTexture(i);
-                    if (t != null) pass.bindSampler("Sampler" + i, t);
+                    Slot t = SLOTS[i];
+                    if (t != null) pass.bindTexture("Sampler" + i, t.view(), t.sampler());
                 }
                 if (own != null) {
                     own.bind(pass, compiled instanceof GlRenderPipeline g ? g.program().getProgramId() : -1, temps);
@@ -302,18 +275,19 @@ public final class LegacyGl {
         }
     }
 
-    /** The missing-texture sprite: what a declared but never-bound sampler reads (see ShaderInstance.bind). */
-    static GpuTextureView missingTexture() {
+    /** The missing-texture sprite as a sampler slot: what a declared but never-bound sampler reads (see ShaderInstance.bind). */
+    static Slot missingTextureSlot() {
         net.minecraft.client.renderer.texture.AbstractTexture t = net.minecraft.client.Minecraft.getInstance().getTextureManager()
                 .getTexture(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
-        return t == null ? null : t.getTextureView();
+        return t == null ? null : new Slot(t.getTextureView(), t.getSampler());
     }
 
     /** A sampler named SamplerN with nothing bound to it explicitly takes RenderSystem's texture slot N. */
-    static GpuTextureView slotTexture(String sampler) {
+    static Slot slotTexture(String sampler) {
         if (sampler.startsWith("Sampler")) {
             try {
-                return RenderSystem.getShaderTexture(Integer.parseInt(sampler.substring(7)));
+                int slot = Integer.parseInt(sampler.substring(7));
+                return slot >= 0 && slot < SLOTS.length ? SLOTS[slot] : null;
             } catch (NumberFormatException ignored) {
             }
         }

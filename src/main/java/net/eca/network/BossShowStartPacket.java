@@ -14,7 +14,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLLoader;
@@ -27,7 +27,7 @@ import java.util.UUID;
 //S→C：开始播放一个 BossShow 演出
 public class BossShowStartPacket implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<BossShowStartPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("eca", "boss_show_start_packet"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("eca", "boss_show_start_packet"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BossShowStartPacket> STREAM_CODEC =
             StreamCodec.of((buf, msg) -> BossShowStartPacket.encode(msg, buf), BossShowStartPacket::decode);
 
@@ -37,8 +37,8 @@ public class BossShowStartPacket implements CustomPacketPayload {
     }
 
 
-    private final ResourceLocation cutsceneId;
-    private final ResourceLocation targetTypeId;
+    private final Identifier cutsceneId;
+    private final Identifier targetTypeId;
     private final UUID targetUuid;
     private final double anchorX, anchorY, anchorZ;
     private final float anchorYaw;
@@ -69,7 +69,7 @@ public class BossShowStartPacket implements CustomPacketPayload {
         this.effectCues = def.effectCues();
     }
 
-    private BossShowStartPacket(ResourceLocation cutsceneId, ResourceLocation targetTypeId, UUID targetUuid,
+    private BossShowStartPacket(Identifier cutsceneId, Identifier targetTypeId, UUID targetUuid,
                                 double anchorX, double anchorY, double anchorZ, float anchorYaw,
                                 String triggerType, double triggerRadius, boolean cinematic,
                                 List<Frame> frames, List<EventCue> eventCues, List<SubtitleCue> subtitleCues,
@@ -91,7 +91,7 @@ public class BossShowStartPacket implements CustomPacketPayload {
     }
 
     public static void encode(BossShowStartPacket msg, FriendlyByteBuf buf) {
-        buf.writeResourceLocation(msg.cutsceneId);
+        buf.writeIdentifier(msg.cutsceneId);
         BossShowNetCodec.writeNullableRL(buf, msg.targetTypeId);
         buf.writeUUID(msg.targetUuid);
         buf.writeDouble(msg.anchorX);
@@ -108,8 +108,8 @@ public class BossShowStartPacket implements CustomPacketPayload {
     }
 
     public static BossShowStartPacket decode(FriendlyByteBuf buf) {
-        ResourceLocation cutsceneId = buf.readResourceLocation();
-        ResourceLocation typeId = BossShowNetCodec.readNullableRL(buf);
+        Identifier cutsceneId = buf.readIdentifier();
+        Identifier typeId = BossShowNetCodec.readNullableRL(buf);
         UUID uuid = buf.readUUID();
         double ax = buf.readDouble();
         double ay = buf.readDouble();
@@ -130,8 +130,8 @@ public class BossShowStartPacket implements CustomPacketPayload {
         ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onStart(msg); });
     }
 
-    public ResourceLocation cutsceneId() { return cutsceneId; }
-    public ResourceLocation targetTypeId() { return targetTypeId; }
+    public Identifier cutsceneId() { return cutsceneId; }
+    public Identifier targetTypeId() { return targetTypeId; }
     public UUID targetUuid() { return targetUuid; }
     public double anchorX() { return anchorX; }
     public double anchorY() { return anchorY; }

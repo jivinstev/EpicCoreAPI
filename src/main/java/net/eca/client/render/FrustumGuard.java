@@ -127,13 +127,13 @@ public final class FrustumGuard {
         if (camera == null) {
             return;
         }
-        Vec3 pos = camera.getPosition();
-        Entity cameraEntity = camera.getEntity();
+        Vec3 pos = camera.position();
+        Entity cameraEntity = minecraft.getCameraEntity();
         EcaLogger.info("[FrustumGuard] camera pos=({}, {}, {}) xRot={} yRot={} entity={}",
                 pos == null ? "null" : pos.x,
                 pos == null ? "null" : pos.y,
                 pos == null ? "null" : pos.z,
-                camera.getXRot(), camera.getYRot(),
+                camera.xRot(), camera.yRot(),
                 cameraEntity == null ? "null" : cameraEntity.getClass().getName());
     }
 

@@ -17,7 +17,7 @@ import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.neoforged.api.distmarker.Dist;
@@ -37,14 +37,14 @@ import java.util.UUID;
 public final class CombatMusicManager {
 
     private static final int CHECK_INTERVAL = 20;
-    private static final Map<String, Set<ResourceLocation>> COMPLETED_TRACKS = new HashMap<>();
+    private static final Map<String, Set<Identifier>> COMPLETED_TRACKS = new HashMap<>();
     private static final Set<Class<?>> LOGGED_FAILURES = new HashSet<>();
     private static SoundInstance currentMusic;
     private static Candidate currentCandidate;
     private static WeighedSoundEvents currentEvent;
-    private static ResourceLocation currentDimension;
+    private static Identifier currentDimension;
     private static boolean strictLockEnabled;
-    private static ResourceLocation strictAllowedSoundId;
+    private static Identifier strictAllowedSoundId;
     private static int tickCounter;
     private static int playbackTicks;
 
@@ -59,7 +59,7 @@ public final class CombatMusicManager {
         if (minecraft.isPaused()) {
             return;
         }
-        ResourceLocation dimensionId = minecraft.level.dimension().location();
+        Identifier dimensionId = minecraft.level.dimension().identifier();
         if (!dimensionId.equals(currentDimension)) {
             reset();
             currentDimension = dimensionId;
@@ -107,7 +107,7 @@ public final class CombatMusicManager {
         minecraft.getSoundManager().play(currentMusic);
     }
 
-    private static List<Candidate> collectCandidates(Minecraft minecraft, ResourceLocation dimensionId,
+    private static List<Candidate> collectCandidates(Minecraft minecraft, Identifier dimensionId,
                                                      Set<String> activeSources) {
         List<Candidate> candidates = new ArrayList<>();
         CombatMusicExtension entityMusic = EntityExtensionClientState.getActiveMusic(dimensionId);
@@ -148,7 +148,7 @@ public final class CombatMusicManager {
             if (!music.enabled()) {
                 return null;
             }
-            ResourceLocation soundId = music.soundEventId();
+            Identifier soundId = music.soundEventId();
             if (soundId == null || !BuiltInRegistries.SOUND_EVENT.containsKey(soundId)) {
                 return null;
             }
@@ -221,12 +221,12 @@ public final class CombatMusicManager {
         playbackTicks = 0;
     }
 
-    public static boolean shouldBlockMusic(ResourceLocation soundId, SoundSource source) {
+    public static boolean shouldBlockMusic(Identifier soundId, SoundSource source) {
         return strictLockEnabled && source == SoundSource.MUSIC
                 && (strictAllowedSoundId == null || !strictAllowedSoundId.equals(soundId));
     }
 
-    private static void updateStrictLock(Minecraft minecraft, boolean strict, ResourceLocation allowedSoundId) {
+    private static void updateStrictLock(Minecraft minecraft, boolean strict, Identifier allowedSoundId) {
         boolean enteringLock = strict && !strictLockEnabled;
         strictLockEnabled = strict;
         strictAllowedSoundId = strict ? allowedSoundId : null;
@@ -250,7 +250,7 @@ public final class CombatMusicManager {
         tickCounter = 0;
     }
 
-    private record Settings(ResourceLocation soundId, SoundSource source, float volume,
+    private record Settings(Identifier soundId, SoundSource source, float volume,
                             float pitch, boolean loop, boolean strict) {}
 
     private record Candidate(String key, int group, int priority, Settings settings) {}

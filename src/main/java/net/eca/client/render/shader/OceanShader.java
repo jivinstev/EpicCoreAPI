@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.eca.mv.ShaderInstance;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.eca.mv.RegisterShadersEvent;
 
 import java.io.IOException;
@@ -25,7 +25,7 @@ public class OceanShader {
     public static void register(RegisterShadersEvent event) throws IOException {
         ShaderInstance oceanShader = EcaShaderInstance.create(
             ShaderPresetResourceProvider.wrap(event.getResourceProvider()),
-            ResourceLocation.fromNamespaceAndPath("eca", "ocean"),
+            Identifier.fromNamespaceAndPath("eca", "ocean"),
             DefaultVertexFormat.BLOCK
         );
         event.registerShader(oceanShader, instance -> {
@@ -53,8 +53,8 @@ public class OceanShader {
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc.gameRenderer != null && mc.gameRenderer.getMainCamera() != null) {
-                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().getYRot());
-                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().getXRot());
+                    float yaw = (float) Math.toRadians(mc.gameRenderer.getMainCamera().yRot());
+                    float pitch = (float) Math.toRadians(mc.gameRenderer.getMainCamera().xRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

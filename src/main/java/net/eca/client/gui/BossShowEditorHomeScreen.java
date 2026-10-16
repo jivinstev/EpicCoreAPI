@@ -21,7 +21,7 @@ import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 //BossShow 编辑器 Home 界面：选择已有定义或进入实体选择模式新建
 public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSessionScreen {
@@ -219,7 +219,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                 int left = getContentX();
                 int top = getContentY();
                 int width = getContentWidth();
-                ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType());
+                Identifier typeId = BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType());
                 String idLine = def.id().toString();
                 int contentCount = 0;
                 for (BossShowDefinition.Frame f : def.frames()) { if (f.keyframe() != null) contentCount++; }

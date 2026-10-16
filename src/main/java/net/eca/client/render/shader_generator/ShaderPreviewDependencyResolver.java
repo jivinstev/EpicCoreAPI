@@ -7,7 +7,7 @@ import net.eca.util.shader_generator.ShaderProjectCodec;
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
 import net.eca.util.shader_generator.ShaderSourceFile;
 import net.eca.util.shader_generator.ShaderSourceWorkspace;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,11 +24,11 @@ public final class ShaderPreviewDependencyResolver {
         ProjectRef reference,
         ShaderSourceWorkspace workspace
     ) {
-        Map<ResourceLocation, Path> resources = new LinkedHashMap<>();
+        Map<Identifier, Path> resources = new LinkedHashMap<>();
         workspace.previewBindings().resources().forEach((resourceId, projectPath) -> {
             Path path = ShaderProjectCodec.resolveProjectAsset(reference, projectPath);
             if (path == null || !Files.isRegularFile(path)) return;
-            ResourceLocation location = ResourceLocation.tryParse(resourceId);
+            Identifier location = Identifier.tryParse(resourceId);
             if (location != null) resources.put(location, path);
         });
 
