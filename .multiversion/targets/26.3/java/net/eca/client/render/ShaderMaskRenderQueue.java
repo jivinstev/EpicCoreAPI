@@ -69,6 +69,30 @@ public final class ShaderMaskRenderQueue {
         }
     }
 
+    /** 26.3 (#33): drawn INTO {@code into}, a render pass vanilla already opened (an offscreen GUI texture's), which
+     *  stays open; see GuiTexturePasses. */
+    public static void drawInto(ShaderMaskPass pass, BufferBuilder builder,
+                                MeshData renderedBuffer,
+                                MaskUvTransform uvTransform,
+                                com.mojang.renderpearl.api.commands.RenderPass into) {
+        try {
+            draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform, into);
+        } finally {
+            recycle(builder);
+        }
+    }
+
+    /** 26.3 (#33): a collected pass that is not drawn after all: its mesh is closed and its builder recycled. */
+    public static void release(BufferBuilder builder, MeshData renderedBuffer) {
+        try {
+            if (renderedBuffer != null) {
+                renderedBuffer.close();
+            }
+        } finally {
+            recycle(builder);
+        }
+    }
+
     public static void flush() {
         if (QUEUE.isEmpty()) {
             return;
@@ -105,6 +129,13 @@ public final class ShaderMaskRenderQueue {
 
     private static void draw(ShaderMaskPass pass, MeshData renderedBuffer,
                              MaskUvTransform uvTransform) {
+        draw(pass, renderedBuffer, uvTransform, null);
+    }
+
+    // 26.3 (#33): into an open pass when one is given (net.eca.mv.LegacyGl.draw(mesh, pass)), else a pass of its own
+    private static void draw(ShaderMaskPass pass, MeshData renderedBuffer,
+                             MaskUvTransform uvTransform,
+                             com.mojang.renderpearl.api.commands.RenderPass into) {
         applyMask(pass);
         EcaShaderInstance.setLocalUvBounds(uvTransform.minU(), uvTransform.minV(),
             uvTransform.scaleU(), uvTransform.scaleV());
@@ -113,7 +144,11 @@ public final class ShaderMaskRenderQueue {
         try {
             net.eca.mv.LegacyGl.setupRenderState(pass.renderType());
             stateActive = true;
-            net.eca.mv.LegacyGl.drawWithShader(renderedBuffer);
+            if (into == null) {
+                net.eca.mv.LegacyGl.drawWithShader(renderedBuffer);
+            } else {
+                net.eca.mv.LegacyGl.draw(renderedBuffer, into);
+            }
         } finally {
             if (stateActive) {
                 net.eca.mv.LegacyGl.clearRenderState(pass.renderType());

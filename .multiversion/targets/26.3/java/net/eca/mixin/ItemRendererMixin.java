@@ -7,7 +7,8 @@
 // with the layer's resolved tints.
 // 26.3 (#33): no custom-geometry task any more. 26.3 runs a task's callback while the frame is PREPARED (prepareFrame), before
 // anything is drawn, and the carrier put the pass's LegacyRenderType on vanilla's feature path. A pass submitted with the
-// level is queued after the level (net.eca.mv.SubmitPhase); a GUI / tooltip pass is not drawn (see eca$renderItemExtension).
+// level is queued after the level (net.eca.mv.SubmitPhase); a GUI / tooltip pass is drawn into the offscreen texture's own
+// pass (net.eca.client.render.GuiTexturePasses, see eca$renderItemExtension).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -71,9 +72,21 @@ public abstract class ItemRendererMixin {
             // slot (redrawn only when the item changes), an oversized item's or a picture-in-picture texture -- in a render
             // pass the dispatcher opens on that texture. The fork layer's helpers have no output override on 26.3 and draw
             // into the main target, so drawing the pass at submit (or from the old order-1 task, whose callback ran inside
-            // prepareFrame) put it on the main framebuffer at the atlas' coordinates and projection. Until the shared
-            // helpers can draw into a given texture or an open pass, the pass is not drawn (logged once). Open on #33.
-            eca$warnGuiPassSkipped();
+            // prepareFrame) put it on the main framebuffer at the atlas' coordinates and projection. So the pass is
+            // collected and drawn INTO the pass vanilla opens on that texture, right after its features
+            // (GuiTexturePasses; the shared helper's LegacyGl.draw(mesh, pass)). A GUI submit outside those textures
+            // (none is known on 26.3) is still not drawn (logged once).
+            if (!net.eca.client.render.GuiTexturePasses.collecting()) {
+                eca$warnGuiPassSkipped();
+                return;
+            }
+            for (ShaderMaskPass pass : passes) {
+                if (pass == null || pass.alpha() <= 0.0f) continue;
+                SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
+                ItemStacks.renderModelLists(quads.all(), tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
+                consumer.finish(batch -> net.eca.client.render.GuiTexturePasses.add(pass, batch.builder(),
+                    batch.builder().buildOrThrow(), batch.uvTransform()));
+            }
             return;
         }
         for (ShaderMaskPass pass : passes) {
@@ -94,8 +107,8 @@ public abstract class ItemRendererMixin {
     private static void eca$warnGuiPassSkipped() {
         if (!eca$guiPassWarned) {
             eca$guiPassWarned = true;
-            com.mojang.logging.LogUtils.getLogger().warn("[mv 26.3] item extension shader passes are not drawn on GUI items "
-                + "(26.3 draws GUI items into an offscreen atlas the fork layer's helpers cannot target yet)");
+            com.mojang.logging.LogUtils.getLogger().warn("[mv 26.3] item extension shader passes are not drawn on a GUI item "
+                + "submitted outside an offscreen GUI texture (GuiItemAtlas / picture-in-picture)");
         }
     }
 
