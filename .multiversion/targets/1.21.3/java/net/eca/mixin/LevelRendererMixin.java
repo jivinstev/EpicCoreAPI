@@ -1,11 +1,13 @@
 // Fork multi-version layer: 1.21.2 version of the authors' mixin. renderLevel gained a GraphicsResourceAllocator;
 // renderClouds/renderSky became frame-graph passes. The cloud skip cancels the clouds pass at the point 1.21.1's
 // renderClouds began (before the custom DimensionSpecialEffects.renderClouds, as HEAD did); CloudRendererMixin also
-// gates CloudRenderer.render. The global skybox is drawn from a pass of its own before the main pass
-// (net.eca.mv.GlobalSkyboxHook.render), because 1.21.2 adds no sky pass in a foggy or sky-less dimension where 1.21.1's
-// renderSky still reached its TAIL; it is skipped where a custom DimensionSpecialEffects.renderSky drew the sky, and,
-// on a frame with no sky pass, where the dimension's effects override renderSky at all (1.21.1 asked that override
-// first and returned before the TAIL when it drew).
+// gates CloudRenderer.render. The global skybox (net.eca.mv.GlobalSkyboxHook.render) is drawn where 1.21.1's renderSky
+// TAIL was, before RenderLevelStageEvent AFTER_SKY: on a frame with a sky pass, inside that pass just before NeoForge
+// dispatches AFTER_SKY (so other mods' AFTER_SKY content lies over it, as in 1.21.1), skipped where a custom
+// DimensionSpecialEffects.renderSky drew the sky; on a frame with no sky pass (1.21.2 adds none in a foggy or sky-less
+// dimension, where 1.21.1's renderSky still reached its TAIL), from a pass of its own before the main pass, skipped
+// where the dimension's effects override renderSky at all (1.21.1 asked that override first and returned before the
+// TAIL when it drew).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -119,9 +121,10 @@ public abstract class LevelRendererMixin {
     @Unique
     private boolean eca$customSkyDrawn;
 
-    /* true when this frame's sky pass ran and so asked the custom renderSky (eca$customSkyDrawn is its answer). */
+    /* true when this frame's addSkyPass added the vanilla sky pass (set while the frame graph is built): the skybox is
+       then drawn inside that pass, before AFTER_SKY, and no pass of its own is added. */
     @Unique
-    private boolean eca$skyPassAsked;
+    private boolean eca$skyPassAdded;
 
     /* Per DimensionSpecialEffects class: does it override renderSky (NeoForge's default lives on
        IDimensionSpecialEffectsExtension and returns false)? Read reflectively once per class. */
@@ -131,7 +134,7 @@ public abstract class LevelRendererMixin {
     @Inject(method = "renderLevel", at = @At("HEAD"))
     private void eca$resetCustomSky(CallbackInfo ci) {
         eca$customSkyDrawn = false;
-        eca$skyPassAsked = false;
+        eca$skyPassAdded = false;
     }
 
     /* No sky pass this frame (foggy or boss-fog dimension, SkyType NONE, blindness/darkness, under fluid): 1.21.3 never
@@ -153,17 +156,40 @@ public abstract class LevelRendererMixin {
         });
     }
 
+    /* Build time: addSkyPass adds the "sky" pass only outside lava/powder snow, without a sky-blocking effect and for a
+       sky type other than NONE (its only FrameGraphBuilder.addPass call). */
+    @Inject(method = "addSkyPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/FogParameters;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V",
+            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;addPass(Ljava/lang/String;)Lcom/mojang/blaze3d/framegraph/FramePass;"),
+            require = 1)
+    private void eca$recordSkyPass(CallbackInfo ci) {
+        eca$skyPassAdded = true;
+    }
+
     @ModifyExpressionValue(method = "lambda$addSkyPass$12",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/DimensionSpecialEffects;renderSky(Lnet/minecraft/client/multiplayer/ClientLevel;IFLorg/joml/Matrix4f;Lnet/minecraft/client/Camera;Lorg/joml/Matrix4f;Ljava/lang/Runnable;)Z"),
             require = 1)
     private boolean eca$recordCustomSky(boolean handled) {
-        eca$skyPassAsked = true;
         eca$customSkyDrawn = handled;
         return handled;
     }
 
-    /* The authors' renderSky TAIL: a pass of its own on the main target, ordered after the sky pass (when there is
-       one) and before the main pass, with the sky fog renderSky had set up. frustumMatrix is unused: see below. */
+    /* The authors' renderSky TAIL on a frame with a sky pass: inside the sky pass, after the vanilla (or custom) sky and
+       just before NeoForge dispatches RenderLevelStageEvent AFTER_SKY, the order 1.21.1 had (renderSky TAIL, then the
+       AFTER_SKY dispatch). Skipped where a custom renderSky drew the sky (1.21.1 returned before its TAIL then). The
+       lambda's FogParameters is the FOG_SKY fog addSkyPass was given. */
+    @Inject(method = "lambda$addSkyPass$12",
+            at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/client/ClientHooks;dispatchRenderStage(Lnet/neoforged/neoforge/client/event/RenderLevelStageEvent$Stage;Lnet/minecraft/client/renderer/LevelRenderer;Lcom/mojang/blaze3d/vertex/PoseStack;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;ILnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/culling/Frustum;)V"),
+            require = 1)
+    private void eca$drawGlobalSkyboxBeforeAfterSky(CallbackInfo ci, @Local(argsOnly = true) Camera camera,
+                                                    @Local(argsOnly = true) FogParameters skyFog) {
+        if (eca$customSkyDrawn) {
+            return;
+        }
+        eca$drawGlobalSkybox(camera, skyFog);
+    }
+
+    /* The authors' renderSky TAIL on a frame with no sky pass: a pass of its own on the main target, before the main
+       pass, with the sky fog renderSky would have set up. frustumMatrix is unused: see eca$drawGlobalSkybox. */
     @Inject(method = "renderLevel",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/LevelRenderer;addMainPass(Lcom/mojang/blaze3d/framegraph/FrameGraphBuilder;Lnet/minecraft/client/renderer/culling/Frustum;Lnet/minecraft/client/Camera;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lnet/minecraft/client/renderer/FogParameters;ZZLnet/minecraft/client/DeltaTracker;Lnet/minecraft/util/profiling/ProfilerFiller;)V"),
             require = 1)
@@ -172,20 +198,27 @@ public abstract class LevelRendererMixin {
                                          Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci,
                                          @Local FrameGraphBuilder frameGraph, @Local(ordinal = 1) FogParameters skyFog) {
         net.eca.mv.GlobalSkyboxHook.passOwned = true;
+        if (eca$skyPassAdded) {
+            return;
+        }
         FramePass pass = frameGraph.addPass("eca_global_skybox");
         this.targets.main = pass.readsAndWrites(this.targets.main);
         pass.executes(() -> {
-            if (eca$skyPassAsked ? eca$customSkyDrawn
-                    : Minecraft.getInstance().level != null && eca$hasCustomSkyRenderer(Minecraft.getInstance().level.effects())) {
+            if (Minecraft.getInstance().level != null && eca$hasCustomSkyRenderer(Minecraft.getInstance().level.effects())) {
                 return;
             }
-            RenderSystem.setShaderFog(skyFog);
-            RenderStateShard.MAIN_TARGET.setupRenderState();
-            // 1.21.1's renderSky ran before renderLevel pushed frustumMatrix onto the model-view stack, so the authors'
-            // PoseStack carried it; inside a 1.21.2 pass the stack already has it (the vanilla sky pass draws with a
-            // bare PoseStack), so the PoseStack starts from identity here -- the same net transform, applied once.
-            net.eca.mv.GlobalSkyboxHook.render(new Matrix4f(), camera);
+            eca$drawGlobalSkybox(camera, skyFog);
         });
+    }
+
+    @Unique
+    private static void eca$drawGlobalSkybox(Camera camera, FogParameters skyFog) {
+        RenderSystem.setShaderFog(skyFog);
+        RenderStateShard.MAIN_TARGET.setupRenderState();
+        // 1.21.1's renderSky ran before renderLevel pushed frustumMatrix onto the model-view stack, so the authors'
+        // PoseStack carried it; inside a 1.21.2 pass the stack already has it (the vanilla sky pass draws with a
+        // bare PoseStack), so the PoseStack starts from identity here -- the same net transform, applied once.
+        net.eca.mv.GlobalSkyboxHook.render(new Matrix4f(), camera);
     }
 
     @Inject(method = "isSectionCompiled", at = @At("HEAD"), cancellable = true)
