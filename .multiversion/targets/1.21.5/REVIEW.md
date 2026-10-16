@@ -136,3 +136,4 @@ calls `own.setDefaultUniforms(); own.apply()`. Fix: call `own.apply()` in 1.21.5
 COLOR_MODULATOR check. Note when fixing: EcaShaderInstance.apply writes COLOR_MODULATOR (opacity) after super.apply();
 on 1.21.1 that write came after the upload (ShaderInstance.apply :286-288) and was overwritten by the next draw's
 setDefaultUniforms (:446), so it never reached GL; decide deliberately whether 1.21.5 should honour it.
+| overlay | .multiversion/targets/1.21.5/java/net/eca/client/render/ShaderMaskRenderQueue.java | ? | ? |
