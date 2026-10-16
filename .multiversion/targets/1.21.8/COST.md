@@ -71,3 +71,14 @@ fork-port.py's own block, for its last run only:
 - tokens: output 500 (thinking 0), input 44, cache read 3,474,320, cache write 11,380 (5m 7,449 / 1h 3,931)
 - size: 42 Java files, 6 mixin classes; target Minecraft 1.21.8
 - ⚠ these sessions also touched other mods: {'c677f97b': {'309927': 1, '333': 1, '111': 1}} -- the cost includes that work
+
+## fork-port.py run since 2026-10-16T12:34:15+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $4.88** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 1.06 h active, 2.03 h wall (2026-10-16T10:44Z to 2026-10-16T12:46Z)
+- model: claude-opus-5-5 (73 req); effort: medium 73
+- tokens: output 4,179 (thinking 695), input 158, cache read 16,469,972, cache write 285,577 (5m 262,103 / 1h 23,474)
+- size: 42 Java files, 6 mixin classes; target Minecraft 1.21.8
+- ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '333': 1, '111': 1}} -- the cost includes that work
+- attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 73 (≈ $6.27), other targets' 701, outside this checkout 3942. Records of concurrent targets add up.
+- window: requests from 2026-10-15T18:52:00.000Z to 2026-10-16T12:46:18.298Z (requests before it are not in this record)
