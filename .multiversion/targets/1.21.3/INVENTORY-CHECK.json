@@ -3357,10 +3357,10 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=setupColor @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=computeFogColor @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value=\"TAIL\")",
@@ -3368,10 +3368,10 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=setupFog @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=setupFog @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart",
@@ -3379,9 +3379,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogStart",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd",
@@ -3389,9 +3389,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogEnd",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape",
@@ -3399,9 +3399,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogShape",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FrustumMixin.java#injection:@Inject method=offsetToFullyIncludeCameraCube @At(value=\"HEAD\")",
@@ -3873,9 +3873,9 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=render @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
@@ -3883,10 +3883,10 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Redirect method=render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
@@ -3894,10 +3894,10 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LocalPlayerMixin.java#injection:@Inject method=shouldShowDeathScreen @At(value=\"HEAD\")",
@@ -4292,10 +4292,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer; @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
@@ -4303,10 +4303,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer; @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
@@ -4314,10 +4314,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")",
@@ -4325,10 +4325,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/SoundManagerMixin.java#injection:@Inject method=play @At(value=\"HEAD\")",
@@ -11306,25 +11306,11 @@
    "detail": "unchanged"
   }
  ],
- "unaccounted": [
-  "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupColor @At(value=\"TAIL\")",
-  "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value=\"TAIL\")",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Inject method=render @At(value=\"HEAD\")",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")"
- ],
+ "unaccounted": [],
  "counts": {
   "same": 1232,
-  "unaccounted": 12,
-  "moved": 6,
-  "changed": 2
+  "changed": 10,
+  "moved": 10
  },
  "notes": []
 }
