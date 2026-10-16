@@ -2,6 +2,7 @@ package net.eca.blender.client.runtime;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -47,6 +48,8 @@ public final class BlendMaterialProgram implements AutoCloseable {
     private RenderType type;
     private MultiBufferSource.BufferSource buffers;
     private ByteBufferBuilder byteBuffer;
+    private Uniforms deferred;
+    private BufferBuilder deferredBuilder;
 
     private BlendMaterialProgram(Identifier id, ResourceProvider provider, List<Identifier> textures,
                                  List<BlendTimeDriver> drivers) {
@@ -180,21 +183,61 @@ public final class BlendMaterialProgram implements AutoCloseable {
 
     public VertexConsumer begin(Matrix4f pose, float[] positions, float frame) throws IOException {
         require(shader != null, "Blend material is not loaded");
-        for (int i = 0; i < drivers.size(); i++) shader.safeGetUniform("EcaDriver" + i).set(drivers.get(i).evaluate(frame));
+        float[] driverValues = new float[drivers.size()];
+        for (int i = 0; i < drivers.size(); i++) driverValues[i] = drivers.get(i).evaluate(frame);
         Matrix4f inverse = new Matrix4f(pose).invert();
         require(inverse.isFinite(), "Singular material transform");
-        shader.safeGetUniform("EcaNodeInverse").set(inverse);
         float[] min = {Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY};
         float[] max = {Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY};
         for (int i = 0; i < positions.length; i++) { min[i % 3] = Math.min(min[i % 3], positions[i]); max[i % 3] = Math.max(max[i % 3], positions[i]); }
         if (positions.length == 0) { min = new float[3]; max = new float[3]; }
-        shader.safeGetUniform("EcaBoundsMin").set(min[0], min[1], min[2]);
-        shader.safeGetUniform("EcaBoundsSize").set(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
-        for (int i = 0; i < textures.size(); i++) shader.setSampler("Image" + i, Minecraft.getInstance().getTextureManager().getTexture(textures.get(i)));
+        Uniforms uniforms = new Uniforms(driverValues, inverse, min, new float[] {max[0] - min[0], max[1] - min[1], max[2] - min[2]});
+        if (net.eca.mv.SubmitPhase.levelSubmit) {
+            // 26.2 (#37): submitted with the level, which 26.2 does before the frame graph's clear pass: drawn now, the
+            // material would be erased. Its geometry goes into a builder of its own and is drawn with these uniforms
+            // in the level's main pass (ShaderMaskRenderQueue, AfterTranslucentFeatures), see end().
+            deferred = uniforms;
+            deferredBuilder = net.eca.client.render.ShaderMaskRenderQueue.acquireBuilder(type.primitiveTopology(), type.format());
+            return deferredBuilder;
+        }
+        apply(uniforms);
         return buffers.getBuffer(type);
     }
 
-    public void end() { buffers.endBatch(type); }
+    public void end() {
+        if (deferredBuilder == null) {
+            buffers.endBatch(type);
+            return;
+        }
+        BufferBuilder builder = deferredBuilder;
+        Uniforms uniforms = deferred;
+        deferredBuilder = null;
+        deferred = null;
+        com.mojang.blaze3d.vertex.MeshData mesh = builder.build();   // null when nothing was written
+        if (mesh == null) {
+            net.eca.client.render.ShaderMaskRenderQueue.release(builder, null);
+            return;
+        }
+        if (type.sortOnUpload()) net.eca.client.render.ShaderMaskRenderQueue.sortQuads(builder, mesh);
+        RenderType drawType = type;
+        net.eca.client.render.ShaderMaskRenderQueue.enqueueDraw(builder, mesh, m -> {
+            if (shader == null || type != drawType) { m.close(); return; }   // reloaded or closed since the submit
+            apply(uniforms);
+            ((net.eca.mv.LegacyRenderType) drawType).draw(m);   // closes the mesh
+        });
+    }
+
+    private void apply(Uniforms u) {
+        for (int i = 0; i < u.drivers().length; i++) shader.safeGetUniform("EcaDriver" + i).set(u.drivers()[i]);
+        shader.safeGetUniform("EcaNodeInverse").set(u.nodeInverse());
+        shader.safeGetUniform("EcaBoundsMin").set(u.boundsMin()[0], u.boundsMin()[1], u.boundsMin()[2]);
+        shader.safeGetUniform("EcaBoundsSize").set(u.boundsSize()[0], u.boundsSize()[1], u.boundsSize()[2]);
+        for (int i = 0; i < textures.size(); i++) shader.setSampler("Image" + i, Minecraft.getInstance().getTextureManager().getTexture(textures.get(i)));
+    }
+
+    /** 26.2 (#37): the per-draw uniforms begin() computes, kept for a draw deferred past the clear pass. */
+    private record Uniforms(float[] drivers, Matrix4f nodeInverse, float[] boundsMin, float[] boundsSize) {
+    }
 
     @Override
     public void close() {

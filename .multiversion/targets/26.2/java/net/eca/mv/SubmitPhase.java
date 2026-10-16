@@ -6,8 +6,8 @@ package net.eca.mv;
  * the clear and the terrain); 26.2's LevelRenderer.render submits every feature (submitFeatures) BEFORE it builds the
  * frame graph, so a draw an extension pass makes at once from a level submit lands before the clear pass and is erased.
  * While {@link #levelSubmit} is up, those passes go to the authors' after-level queue instead
- * (ShaderMaskRenderQueue.enqueue: the model-view and projection captured now, drawn through LegacyGl after
- * LevelRenderer.render returns).
+ * (ShaderMaskRenderQueue.enqueue: the model-view and projection captured now, drawn through LegacyGl inside the level's
+ * main pass at AfterTranslucentFeatures (#37), or after LevelRenderer.render returns with Oculus shaders).
  */
 public final class SubmitPhase {
     private SubmitPhase() {
