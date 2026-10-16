@@ -1,4 +1,4 @@
-Gates for `eca` at `625f66b` for Minecraft 26.3 (full environment) -- run by CI with no model and no fixes applied:
+Gates for `eca` at `b5aeea7 + uncommitted: .multiversion/layer.gradle, .multiversion/tools/layer.py, .multiversion/tools/prepare-sources.py` for Minecraft 26.3 (full environment) -- run by CI with no model and no fixes applied:
 
 | check | result | detail |
 |---|---|---|
