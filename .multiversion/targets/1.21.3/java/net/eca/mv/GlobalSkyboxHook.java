@@ -2,9 +2,10 @@
 // 1.21.2 the sky is a frame-graph pass, and NeoForge fires AFTER_SKY at the end of it -- but that pass is not added at
 // all in a foggy dimension (the Nether) or one with no sky type, where 1.21.1's renderSky still reached its TAIL, and it
 // fires even where a custom DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So the 1.21.3
-// LevelRendererMixin overlay adds its own pass before the main pass, calls render() from it and sets passOwned, and
-// the AFTER_SKY handler stands down; a target whose LevelRendererMixin does not set passOwned keeps the AFTER_SKY
-// path. The drawing code is the authors', unchanged.
+// LevelRendererMixin overlay calls render() itself -- inside the sky pass just before the AFTER_SKY dispatch, or from a
+// pass of its own before the main pass on a frame with no sky pass -- and sets passOwned, and the AFTER_SKY handler
+// stands down; a target whose LevelRendererMixin does not set passOwned keeps the AFTER_SKY path. The drawing code is
+// the authors', unchanged.
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
