@@ -1,3 +1,7 @@
+// Fork multi-version layer, 26.2 (#37): the queue the level's extension passes go to (submitted before the clear pass, see
+// net.eca.mv.SubmitPhase) is drawn INSIDE the level's main pass, at AfterTranslucentFeatures (InLevelPass below): after
+// the entities, before translucent terrain, particles and weather, as 26.1.2's entity pass drew them. The after-level flushes
+// (GameRendererPostLevelMixin) still draw what is queued later (a first-person item) and, with Oculus shaders, everything.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.PrimitiveTopology;
@@ -175,5 +179,28 @@ public final class ShaderMaskRenderQueue {
         GpuBufferSlice projection,
         MaskUvTransform uvTransform
     ) {
+    }
+
+    /**
+     * 26.2 (#37): draw the level's queued passes inside its main frame pass. 26.2 posts AfterTranslucentFeatures from
+     * LevelRenderer's main-pass lambda, after the clear and PreparedFrame.executeTranslucent, before translucent terrain,
+     * executeTranslucentAfterTerrain (particles) and the separate weather pass (javap of the 26.2 client). LegacyGl may
+     * draw there on 26.2 (no GPU render pass is held open between those calls): the shared helper's
+     * MultiBufferSource.Flush already ends the main batch through LegacyGl at this same event. It is ended here first
+     * (this listener runs at LOW priority after it anyway), so a layer's textured part is under its shader passes.
+     */
+    @net.neoforged.fml.common.EventBusSubscriber(modid = net.eca.EcaMod.MOD_ID, value = Dist.CLIENT)
+    public static final class InLevelPass {
+        private InLevelPass() {
+        }
+
+        @net.neoforged.bus.api.SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOW)
+        public static void afterTranslucentFeatures(net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentFeatures event) {
+            if (QUEUE.isEmpty() || EcaShaderInstance.isOculusShadersActive()) {
+                return;
+            }
+            net.eca.mv.MultiBufferSource.main().endBatch();
+            flush();
+        }
     }
 }
