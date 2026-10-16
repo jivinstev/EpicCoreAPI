@@ -3537,9 +3537,9 @@
    "file": "net/eca/mixin/ItemRendererMixin.java",
    "kind": "mixin",
    "key": "@Mixin ItemRenderer",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ItemStackClientMixin.java#injection:@Inject method=getHoverName @At(value=\"RETURN\")",
@@ -11307,14 +11307,11 @@
    "detail": "unchanged"
   }
  ],
- "unaccounted": [
-  "main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer"
- ],
+ "unaccounted": [],
  "counts": {
   "same": 1231,
   "changed": 10,
-  "moved": 10,
-  "unaccounted": 1
+  "moved": 11
  },
  "notes": []
 }
