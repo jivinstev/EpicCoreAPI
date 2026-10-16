@@ -1,6 +1,9 @@
 // Fork multi-version layer: 1.21.4 version of the authors' mixin. 1.21.4 renders an item layer by layer from an
 // ItemStackRenderState (no stack on it): the extension pass runs at the end of LayerRenderState.render, once per
-// item (net.eca.mv.ItemStacks, filled by ItemModelResolverMixin), with the layer's resolved tints.
+// item, with the layer's resolved tints. Once per RENDER of the state, not per fill: an item entity fills one state and
+// renders it up to five times (ItemEntityRenderer.renderMultipleFromCount), where 1.21.1 called ItemRenderer.render per
+// copy, so the pass runs for the state's first layer on every render. The stack comes from net.eca.mv.ItemStacks
+// (filled by ItemModelResolverMixin): claimed once per fill and kept on the first layer until that layer is cleared.
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -14,6 +17,7 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.eca.mv.ItemStacks;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Unique;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -40,13 +44,27 @@ public abstract class ItemRendererMixin {
     @Final
     ItemStackRenderState this$0;
 
+    /* The stack this state was filled from, kept on its first layer: ItemStacks.claim hands it out once per fill, and
+       the same fill is rendered once per copy of a dropped stack. Reset whenever the layer is cleared (the state's
+       clear() clears every active layer before a refill), so a state refilled without a recorded stack draws no pass. */
+    @Unique
+    private ItemStack eca$stack;
+
+    @Inject(method = "clear", at = @At("HEAD"))
+    private void eca$forgetStack(CallbackInfo ci) {
+        eca$stack = null;
+    }
+
     @Inject(method = "render",
             at = @At(value = "INVOKE",
                      target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V",
                      shift = At.Shift.BEFORE))
     private void eca$renderItemExtension(PoseStack poseStack, MultiBufferSource bufferSource,
                                          int combinedLight, int combinedOverlay, CallbackInfo ci) {
-        ItemStack stack = ItemStacks.claim(this$0);
+        if (((ItemStackRenderStateLayersAccessor) this$0).eca$layers()[0] != (Object) this) return;
+        ItemStack claimed = ItemStacks.claim(this$0);
+        if (claimed != null) eca$stack = claimed;
+        ItemStack stack = eca$stack;
         if (stack == null || model == null) return;
         ItemDisplayContext displayContext = ((ItemStackRenderStateAccessor) this$0).eca$displayContext();
         if (stack.isEmpty()) return;
