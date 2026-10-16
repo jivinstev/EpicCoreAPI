@@ -3,8 +3,8 @@ package net.eca.mixin;
 import net.eca.util.EntityUtil;
 import net.eca.util.health.health_lock.HealthLockPresence;
 import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.SyncedDataHolder;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,9 +19,8 @@ import java.util.List;
 /** Presence hints remain conservative while synchronized values are changing. */
 @Mixin(SynchedEntityData.class)
 public abstract class SynchedHealthLockPresenceMixin implements HealthLockPresence {
-    @Shadow @Final private Entity entity;
+    @Shadow @Final private SyncedDataHolder entity;
     @Shadow public abstract <T> T get(EntityDataAccessor<T> accessor);
-    @Shadow public abstract <T> boolean hasItem(EntityDataAccessor<T> accessor);
 
     @Unique private volatile boolean eca$healthMayBePresent = true;
     @Unique private volatile boolean eca$maxHealthMayBePresent = true;
@@ -45,9 +44,17 @@ public abstract class SynchedHealthLockPresenceMixin implements HealthLockPresen
 
     @Unique
     private boolean eca$mayContainValue(EntityDataAccessor<String> accessor) {
-        if (accessor == null || !hasItem(accessor)) return true;
+        if (accessor == null || !eca$hasItem(accessor)) return true;
         String value = get(accessor);
         return value != null && !value.isEmpty();
+    }
+
+    // 1.21.1 has no hasItem: items are fixed at construction, indexed by accessor id
+    @Unique
+    private boolean eca$hasItem(EntityDataAccessor<?> accessor) {
+        SynchedEntityData.DataItem<?>[] items = ((SynchedEntityData) (Object) this).itemsById;
+        int id = accessor.id();
+        return id >= 0 && id < items.length && items[id] != null && items[id].getAccessor() == accessor;
     }
 
     @Unique
@@ -57,9 +64,11 @@ public abstract class SynchedHealthLockPresenceMixin implements HealthLockPresen
         eca$maxHealthMayBePresent = eca$mayContainValue(EntityUtil.MAX_HEALTH_LOCK_VALUE);
     }
 
-    @Inject(method = "define", at = @At("RETURN"))
-    private <T> void eca$afterDefine(EntityDataAccessor<T> accessor, T value, CallbackInfo ci) {
-        if (eca$isLockValue(accessor)) eca$refreshLockPresence();
+    // 1.21.1: define moved to SynchedEntityData.Builder, so every value (the lock fields included) is in place when
+    // the constructor returns
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void eca$afterInit(SyncedDataHolder holder, SynchedEntityData.DataItem<?>[] items, CallbackInfo ci) {
+        eca$refreshLockPresence();
     }
 
     @Inject(method = "set(Lnet/minecraft/network/syncher/EntityDataAccessor;Ljava/lang/Object;Z)V", at = @At("HEAD"))

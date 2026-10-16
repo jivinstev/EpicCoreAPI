@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -371,7 +371,9 @@ public class RaidInstance {
             // 路径类型查询会读取邻格，碰撞检查也会读取包围盒边缘，先验证整个范围已加载。
             if (!level.hasChunksAt(BlockPos.containing(box.minX, box.minY, box.minZ).offset(-1, -1, -1),
                     BlockPos.containing(box.maxX, box.maxY, box.maxZ).offset(1, 1, 1))) continue;
-            if (WalkNodeEvaluator.getBlockPathTypeStatic(level, pos.mutable()) != BlockPathTypes.WALKABLE) continue;
+            // 1.21.1: the static path-type query takes a PathfindingContext, built from a Mob; a non-Mob raider keeps the
+            // floor, collision and fluid checks below.
+            if (entity instanceof Mob mob && WalkNodeEvaluator.getPathTypeStatic(mob, pos) != PathType.WALKABLE) continue;
             if (!level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP)) continue;
             if (!level.noCollision(entity, box)) continue;
             if (level.getBlockStates(box).anyMatch(state -> !state.getFluidState().isEmpty())) continue;
