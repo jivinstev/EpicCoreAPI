@@ -69,6 +69,17 @@ public final class ShaderMaskRenderQueue {
         }
     }
 
+    /** A collected pass that will not be drawn (GuiTexturePasses): free its mesh and builder. */
+    public static void release(BufferBuilder builder, MeshData renderedBuffer) {
+        try {
+            if (renderedBuffer != null) {
+                renderedBuffer.close();
+            }
+        } finally {
+            recycle(builder);
+        }
+    }
+
     public static void flush() {
         if (QUEUE.isEmpty()) {
             return;
