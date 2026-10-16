@@ -3358,10 +3358,10 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=setupColor @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=computeFogColor @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value=\"TAIL\")",
@@ -3369,10 +3369,10 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=setupFog @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=setupFog @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart",
@@ -3380,9 +3380,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogStart",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd",
@@ -3390,9 +3390,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogEnd",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape",
@@ -3400,9 +3400,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogShape",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FrustumMixin.java#injection:@Inject method=offsetToFullyIncludeCameraCube @At(value=\"HEAD\")",
@@ -3647,7 +3647,7 @@
    "kind": "injection",
    "key": "@Inject method=renderClouds @At(value=\"HEAD\")",
    "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "accounted": true
   },
   {
@@ -3657,7 +3657,7 @@
    "kind": "injection",
    "key": "@Inject method=renderSky @At(value=\"TAIL\")",
    "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "accounted": true
   },
   {
@@ -3667,7 +3667,7 @@
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogStart",
    "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "accounted": true
   },
   {
@@ -3677,7 +3677,7 @@
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogEnd",
    "status": "changed",
-   "detail": "the target's overlay has a different render-use; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "the target's overlay has a different render-use; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "now": "RenderSystem.setShaderFog",
    "accounted": true
   },
@@ -3688,7 +3688,7 @@
    "kind": "render-use",
    "key": "RenderSystem.setShader",
    "status": "changed",
-   "detail": "the target's overlay has a different render-use; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "the target's overlay has a different render-use; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "now": "RenderStateShard.MAIN_TARGET",
    "accounted": true
   },
@@ -3699,7 +3699,7 @@
    "kind": "render-use",
    "key": "GameRenderer.getPositionTexColorShader",
    "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "accounted": true
   },
   {
@@ -3709,7 +3709,7 @@
    "kind": "render-use",
    "key": "RenderSystem.setShaderTexture",
    "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "accounted": true
   },
   {
@@ -3719,7 +3719,7 @@
    "kind": "render-use",
    "key": "RenderSystem.setShaderColor",
    "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$addCloudsPass$6 calls DimensionSpecialE",
+   "detail": "not in the target's file; reviewed in STUBS.json: (1.21.4, re-reviewed for EpicCoreAPI#32; text brought up to the dd4b557 design) The old inherited verdict (moved to CloudRendererMixin and the AFTER_SKY GlobalSkyboxHook, same effect) was only partly true on 1.21.4, so both handlers are restored here as on 1.21.3. renderClouds HEAD: 1.21.4's lambda$",
    "accounted": true
   },
   {
@@ -3874,9 +3874,9 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=render @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
@@ -3884,10 +3884,10 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Redirect method=render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
@@ -3895,10 +3895,10 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LocalPlayerMixin.java#injection:@Inject method=shouldShowDeathScreen @At(value=\"HEAD\")",
@@ -4293,10 +4293,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer; @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
@@ -4304,10 +4304,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer; @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
@@ -4315,10 +4315,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")",
@@ -4326,10 +4326,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/SoundManagerMixin.java#injection:@Inject method=play @At(value=\"HEAD\")",
@@ -11308,25 +11308,13 @@
   }
  ],
  "unaccounted": [
-  "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupColor @At(value=\"TAIL\")",
-  "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value=\"TAIL\")",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape",
-  "main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Inject method=render @At(value=\"HEAD\")",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")"
+  "main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer"
  ],
  "counts": {
   "same": 1231,
-  "unaccounted": 13,
-  "moved": 6,
-  "changed": 2
+  "changed": 10,
+  "moved": 10,
+  "unaccounted": 1
  },
  "notes": []
 }

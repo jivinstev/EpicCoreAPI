@@ -45,3 +45,14 @@ Models: Opus for the main work, Sonnet subagents for the GUI and texture overlay
 - ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '333': 1, '111': 1}} -- the cost includes that work
 - attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 1 (≈ $0.19), other targets' 142, outside this checkout 3234. Records of concurrent targets add up.
 - window: requests from 2026-10-15T18:24:00.000Z to 2026-10-16T07:45:55.412Z (requests before it are not in this record)
+
+## fork-port.py run since 2026-10-16T08:26:19+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $4.28** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.76 h active, 0.83 h wall (2026-10-16T07:47Z to 2026-10-16T08:36Z)
+- model: claude-opus-5-5 (100 req); effort: medium 100
+- tokens: output 6,831 (thinking 1,317), input 208, cache read 13,130,633, cache write 296,891 (5m 286,143 / 1h 10,748)
+- size: 13 Java files, 5 mixin classes; target Minecraft 1.21.4
+- ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '111': 1, '333': 1}} -- the cost includes that work
+- attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 11 (≈ $0.33), other targets' 70, outside this checkout 102. Records of concurrent targets add up.
+- window: requests from 2026-10-16T07:45:55.413Z to 2026-10-16T08:36:55.714Z (requests before it are not in this record)

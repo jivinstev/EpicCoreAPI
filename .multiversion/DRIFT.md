@@ -1,0 +1,1 @@
+- 2026-10-16 1.21.4: accepted with --accept-upstream-drift: the authors' authors/master has 1 commit(s) since the freeze that this checkout does not carry (buildout frozen at 95a740be6e91, authors/master now at 483c78e2ac75)
