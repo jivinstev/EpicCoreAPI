@@ -476,20 +476,49 @@ public class FilterRenderer {
         }
     }
 
+    // 26.3 (#37): runs at AfterOpaqueBlocks, inside the main render pass (raw GL only; see inPassBlit)
     private static void captureCosmosTerrainDepth() {
         Minecraft mc = Minecraft.getInstance();
         RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         int width = mainTarget.width;
         int height = mainTarget.height;
 
+        int boundTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         ensureCosmosTerrainTarget(width, height);
+        GlStateManager._bindTexture(boundTexture);   // an allocation above binds the new texture; see inPassBlit
 
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(mainTarget));
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, cosmosTerrainFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+        inPassBlit(mainTarget, cosmosTerrainFbo, width, height, GL11.GL_DEPTH_BUFFER_BIT);
+    }
 
-        net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
+    /**
+     * 26.3 (#37): a depth copy of the main target taken from a stage that is inside the main render pass, with the GL
+     * state that pass relies on put back (read from the 26.3.0.76 OpenGL backend):
+     * <ul>
+     * <li><b>Framebuffer.</b> GlCommandEncoder.createRenderPass binds the pass's FBO once (GlStateManager._glBindFramebuffer,
+     * which caches the read and draw ids) and draws into whatever is bound. FrameBufferCache keys an FBO by each
+     * attachment's GL id and mip level (a GlTextureView gives its texture's id and base level 0, a GlTexture id and 0),
+     * so LegacyTargets.fbo(mainTarget) is the very FBO the main pass was opened on, and bindWrite rebinds it for read and
+     * draw through the same cache.</li>
+     * <li><b>Scissor.</b> createRenderPass enables the scissor test at the pass's render area, and glBlitFramebuffer is
+     * clipped by it: it is switched off around the blit and back on after (raw GL, so GlStateManager's cached flag stays
+     * true to the GL state).</li>
+     * <li><b>Viewport, program, vertex array, active texture unit:</b> a blit touches none of them.</li>
+     * <li><b>Texture bindings.</b> The backend rebinds a sampler only when the pass marks it dirty, so a texture an
+     * allocation left bound on the active unit would be sampled by the pass's next draw that keeps its sampler: the
+     * callers put the previous GL_TEXTURE_BINDING_2D back (through GlStateManager, which caches it).</li>
+     * </ul>
+     */
+    private static void inPassBlit(RenderTarget mainTarget, int destFbo, int width, int height, int mask) {
+        boolean scissor = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+        if (scissor) GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        try {
+            GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(mainTarget));
+            GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, destFbo);
+            GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, mask, GL11.GL_NEAREST);
+        } finally {
+            net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
+            if (scissor) GL11.glEnable(GL11.GL_SCISSOR_TEST);
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -646,13 +675,13 @@ public class FilterRenderer {
         RenderTarget mainTarget = mc.gameRenderer.mainRenderTarget();
         int width = mainTarget.width;
         int height = mainTarget.height;
+        // 26.3 (#37): from AfterTranslucentFeatures this is inside the main pass; a (re)allocation here goes through
+        // GlDevice.createTexture, which leaves the new texture bound on the active unit (see inPassBlit)
+        int boundTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         ensureSpotlightTargets(width, height);
+        GlStateManager._bindTexture(boundTexture);
 
-        GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, net.eca.mv.LegacyTargets.fbo(mainTarget));
-        GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, spotlightFbo);
-        GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-        net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
+        inPassBlit(mainTarget, spotlightFbo, width, height, GL11.GL_DEPTH_BUFFER_BIT);
         spotlightDepthCaptured = true;
     }
 

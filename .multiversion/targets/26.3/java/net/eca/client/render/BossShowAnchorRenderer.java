@@ -60,6 +60,18 @@ public final class BossShowAnchorRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
+        MultiBufferSource.BufferSource buffer = net.eca.mv.MultiBufferSource.main();
+
+        // 26.3 (#37): AfterTranslucentBlocks is posted inside the level's main render pass. Every batch this handler ends
+        // -- its own endBatch calls and each switch between the lines, head and label types -- is drawn INTO that pass
+        // (with the view rotation still on the model-view stack) instead of being deferred to AfterLevel.
+        try (MultiBufferSource.BufferSource.Scope inPass = buffer.drawingInto(event.getRenderPass())) {
+            render(event, mc, buffer);
+        }
+    }
+
+    private static void render(RenderLevelStageEvent.AfterTranslucentBlocks event, Minecraft mc,
+                               MultiBufferSource.BufferSource buffer) {
         double ax = BossShowEditorState.getAnchorX();
         double ay = BossShowEditorState.getAnchorY();
         double az = BossShowEditorState.getAnchorZ();
@@ -68,7 +80,6 @@ public final class BossShowAnchorRenderer {
         Camera cam = mc.gameRenderer.mainCamera();
         Vec3 camPos = cam.position();
         PoseStack pose = event.getPoseStack();
-        MultiBufferSource.BufferSource buffer = net.eca.mv.MultiBufferSource.main();
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);
