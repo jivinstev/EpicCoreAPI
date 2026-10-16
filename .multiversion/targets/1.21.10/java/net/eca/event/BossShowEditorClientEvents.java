@@ -399,13 +399,17 @@ public final class BossShowEditorClientEvents {
         Vec3 look = player.getViewVector(1.0f);
         Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
         AABB scanBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0, 1.0, 1.0);
+        // 1.21.10 (as 1.21.8): the (Level, Entity, from, to, box, filter, float margin) overload is 1.21.1's 6-argument one
+        // (margin 0.3, no distance limit); the (Entity, ..., double) overload takes the maximum distance SQUARED and
+        // getPickRadius margins
         return ProjectileUtil.getEntityHitResult(
+            player.level(),
             player,
             eye,
             end,
             scanBox,
             e -> e instanceof LivingEntity && e.isAlive() && e != player,
-            reach
+            0.3F
         );
     }
 }

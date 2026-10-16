@@ -4,6 +4,12 @@
 // one), the drawing is a custom-geometry task in the collector's order 1 -- after every order-0 task, the item's own among them.
 // The 1.21.4 notes still hold: the extension pass runs once per item (net.eca.mv.ItemStacks, filled by ItemModelResolverMixin),
 // with the layer's resolved tints.
+// Once per SUBMIT of the state, not per fill (port of 1.21.5's 14fe0c4 / 1.21.4's 22fcf95): javap 1.21.10 --
+// ItemEntityRenderer.submitMultipleFromCount fills one ItemStackRenderState and calls its submit once per copy (up to five),
+// ItemStackRenderState keeps private LayerRenderState[] layers, clear() clears each active layer, LayerRenderState.submit
+// ends with popPose -- the 1.21.5 shapes with render renamed submit. So the pass runs for the state's first layer on every
+// submit; the stack is claimed once per fill and kept on that layer, reset at LayerRenderState.clear HEAD. The layers
+// accessor (ItemStackRenderStateLayersAccessor) reaches this target from 1.21.5's mixin_add.
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -18,6 +24,7 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.eca.mv.ItemStacks;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Unique;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -44,13 +51,27 @@ public abstract class ItemRendererMixin {
     @Final
     ItemStackRenderState this$0;
 
+    /* The stack this state was filled from, kept on its first layer: ItemStacks.claim hands it out once per fill, and
+       the same fill is submitted once per copy of a dropped stack. Reset whenever the layer is cleared (the state's
+       clear() clears every active layer before a refill), so a state refilled without a recorded stack draws no pass. */
+    @Unique
+    private ItemStack eca$stack;
+
+    @Inject(method = "clear", at = @At("HEAD"))
+    private void eca$forgetStack(CallbackInfo ci) {
+        eca$stack = null;
+    }
+
     @Inject(method = "submit",
             at = @At(value = "INVOKE",
                      target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V",
                      shift = At.Shift.BEFORE))
     private void eca$renderItemExtension(PoseStack poseStack, SubmitNodeCollector collector,
                                          int combinedLight, int combinedOverlay, int outlineColor, CallbackInfo ci) {
-        ItemStack stack = ItemStacks.claim(this$0);
+        if (((ItemStackRenderStateLayersAccessor) this$0).eca$layers()[0] != (Object) this) return;
+        ItemStack claimed = ItemStacks.claim(this$0);
+        if (claimed != null) eca$stack = claimed;
+        ItemStack stack = eca$stack;
         if (stack == null || quads.isEmpty()) return;
         ItemDisplayContext displayContext = ((ItemStackRenderStateAccessor) this$0).eca$displayContext();
         if (stack.isEmpty()) return;

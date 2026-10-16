@@ -113,8 +113,6 @@ public final class ShaderSourceEditorScreen extends Screen {
             .setPlaceholder(Component.translatable("gui.eca.shader_generator.source_editor.placeholder"))
             .setTextColor(0xFFE0E0E0)
             .setTextShadow(true)
-            .setCursorColor(0)
-            .setShowBackground(false)
             .setShowDecorations(true)
             .build(
                 font, editorRight - 12, contentBottom - CONTENT_TOP,
@@ -624,7 +622,6 @@ public final class ShaderSourceEditorScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, CONTENT_TOP - 2, 0xFF202225);
         graphics.fill(6, CONTENT_TOP - 2, editorRight, height - 6, 0xFF08090B);
         graphics.fill(previewLeft, CONTENT_TOP, width - 8, previewBottom, 0xFF08090B);

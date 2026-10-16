@@ -1,3 +1,5 @@
+// MV-STAND-IN: 1.21.11's prepared copy of the 1.21.10 HealthDataflowAnalyzer overlay as it was before 1.21.10's hurtServer/actuallyHurt
+// MV-STAND-IN: descriptors and getXxxOr(String, prim) identity keys, unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
 package net.eca.util.health;
 
 import net.eca.util.health.report.HealthReportText;

@@ -1,3 +1,5 @@
+// MV-STAND-IN: 1.21.11's prepared copy of the authors' LoadingScreenTransformer as it was before 1.21.10 took 1.21.8's overlay
+// MV-STAND-IN: for FML's LoadingScreenRenderer.renderToFramebuffer, unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
 // MV-STAND-IN: 1.21.10's prepared copy of the authors' LoadingScreenTransformer, unchanged, as it was before the 1.21.8 overlay for
 // MV-STAND-IN: FML 9's LoadingScreenRenderer, unchanged; only so that 1.21.8 fix does not reach 1.21.10 (FML 10, its own GUI code) unported and ungated.
 package net.eca.coremod;
