@@ -170,3 +170,4 @@ and ShaderMaskRenderQueue.java).
   prepared trees of all six at 148f443 against e568b80 differ only in those two files and only by header lines (checked by
   preparing each; ShaderMaskRenderQueue's 1.21.5 overlay does not reach them). Those targets therefore still carry F1/F2's
   pattern (their own LegacyRenderType/LegacyGl; 1.21.8+ already call apply()) -- for their own reviews.
+| renames | .multiversion/targets/1.21.5/renames.tsv @5cc3f453af66 | ? | ? |
