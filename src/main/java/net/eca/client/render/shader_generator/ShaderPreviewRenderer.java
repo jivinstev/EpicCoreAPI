@@ -108,7 +108,6 @@ public final class ShaderPreviewRenderer {
         modelView.pushMatrix();
         try {
             modelView.identity();
-            RenderSystem.applyModelViewMatrix();
 
             float centerX = ((left + right) / (float) minecraft.getWindow().getGuiScaledWidth()) - 1.0F;
             float centerY = 1.0F - ((top + bottom) / (float) minecraft.getWindow().getGuiScaledHeight());
@@ -117,7 +116,7 @@ public final class ShaderPreviewRenderer {
             Matrix4f projection = new Matrix4f()
                 .translation(centerX, centerY, 0.0F)
                 .scale(scaleX, scaleY, 1.0F);
-            RenderSystem.setProjectionMatrix(projection, VertexSorting.ORTHOGRAPHIC_Z);
+            RenderSystem.setProjectionMatrix(projection, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
 
             BufferBuilder builder = Tesselator.getInstance().begin(renderType.mode(), DefaultVertexFormat.BLOCK);
             blockVertex(builder, -1.0F, -1.0F, 0.0F, 1.0F);
@@ -130,9 +129,8 @@ public final class ShaderPreviewRenderer {
             blockVertex(builder, -1.0F, -1.0F, 0.0F, 1.0F);
             renderType.draw(builder.buildOrThrow());
         } finally {
-            RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.ORTHOGRAPHIC_Z);
+            RenderSystem.setProjectionMatrix(savedProjection, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
             modelView.popMatrix();
-            RenderSystem.applyModelViewMatrix();
         }
     }
 
@@ -231,12 +229,11 @@ public final class ShaderPreviewRenderer {
             Lighting.setupForEntityInInventory();
             dispatcher.overrideCameraOrientation(new Quaternionf().rotateX(vertical * 0.35F));
             dispatcher.setRenderShadow(false);
-            RenderSystem.runAsFancy(() -> dispatcher.render(
+            net.eca.mv.Mv.run(() -> dispatcher.render(
                 minecraft.player,
                 0.0,
                 0.0,
                 0.0,
-                0.0F,
                 partialTick,
                 graphics.pose(),
                 forced,

@@ -36,7 +36,7 @@ public final class ShaderPreset {
 
     //用一个 profile 的当前 ShaderInstance 构造 ShaderState，并在渲染前喂入该 profile 的标准 uniform
     private static RenderStateShard.ShaderStateShard profileState(GenericPresetShader.Profile profile) {
-        return new RenderStateShard.ShaderStateShard(profile::getShader) {
+        return new net.eca.mv.ShaderShard(profile::getShader) {
             @Override
             public void setupRenderState() {
                 super.setupRenderState();

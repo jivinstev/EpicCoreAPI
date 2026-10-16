@@ -104,7 +104,7 @@ public class BossShowSaveEditorPacket implements CustomPacketPayload {
             ServerPlayer player = ((ServerPlayer) ctx.player());
             if (player == null) return;
             EntityType<?> type = (msg.targetTypeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(msg.targetTypeId))
-                ? BuiltInRegistries.ENTITY_TYPE.get(msg.targetTypeId)
+                ? BuiltInRegistries.ENTITY_TYPE.getValue(msg.targetTypeId)
                 : null;
             BossShowDefinition def = new BossShowDefinition(
                 msg.cutsceneId, type, msg.trigger, msg.cinematic, msg.allowRepeat,

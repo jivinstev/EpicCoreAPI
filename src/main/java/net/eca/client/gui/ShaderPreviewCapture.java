@@ -35,14 +35,11 @@ final class ShaderPreviewCapture {
             )) {
                 for (int y = 0; y < crop.getHeight(); y++) {
                     for (int x = 0; x < crop.getWidth(); x++) {
-                        crop.setPixelRGBA(
-                            x,
-                            y,
-                            screenshot.getPixelRGBA(pixelLeft + x, pixelTop + y)
-                        );
+                        crop.setPixel(x, y, net.minecraft.util.ARGB.fromABGR(net.minecraft.util.ARGB.toABGR(screenshot.getPixel(pixelLeft + x, pixelTop + y))
+                        ));
                     }
                 }
-                String image = Base64.getEncoder().encodeToString(crop.asByteArray());
+                String image = Base64.getEncoder().encodeToString(net.eca.mv.Mv.pngBytes(crop));
                 return new ShaderAiToolResult(
                     "Captured the current ECA preview",
                     List.of(image)

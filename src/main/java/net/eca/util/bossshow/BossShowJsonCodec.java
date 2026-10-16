@@ -55,7 +55,7 @@ public final class BossShowJsonCodec {
                     } else if (!BuiltInRegistries.ENTITY_TYPE.containsKey(typeId)) {
                         EcaLogger.warn("BossShow {} target_type {} not registered (mod missing?); treating as null", id, typeId);
                     } else {
-                        targetType = BuiltInRegistries.ENTITY_TYPE.get(typeId);
+                        targetType = BuiltInRegistries.ENTITY_TYPE.getValue(typeId);
                     }
                 }
             }

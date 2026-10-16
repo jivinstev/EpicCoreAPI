@@ -94,7 +94,7 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
         String type = targetTypeBox.getValue().trim();
         ResourceLocation typeId = type.isEmpty() ? null : ResourceLocation.tryParse(type);
         if (typeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(typeId)) {
-            BossShowEditorState.setTargetType(BuiltInRegistries.ENTITY_TYPE.get(typeId));
+            BossShowEditorState.setTargetType(BuiltInRegistries.ENTITY_TYPE.getValue(typeId));
         } else if (type.isEmpty()) {
             BossShowEditorState.setTargetType(null);
         }

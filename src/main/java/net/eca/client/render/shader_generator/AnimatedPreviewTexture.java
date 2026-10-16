@@ -124,15 +124,15 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
         int nextY = next.index() / columns * frameHeight;
         for (int y = 0; y < frameHeight; y++) {
             for (int x = 0; x < frameWidth; x++) {
-                int currentColor = sheet.getPixelRGBA(currentX + x, currentY + y);
+                int currentColor = net.minecraft.util.ARGB.toABGR(sheet.getPixel(currentX + x, currentY + y));
                 int color = interpolate && current.index() != next.index()
                     ? interpolateColor(
                         currentColor,
-                        sheet.getPixelRGBA(nextX + x, nextY + y),
+                        net.minecraft.util.ARGB.toABGR(sheet.getPixel(nextX + x, nextY + y)),
                         progress
                     )
                     : currentColor;
-                currentImage.setPixelRGBA(x, y, color);
+                currentImage.setPixel(x, y, net.minecraft.util.ARGB.fromABGR(color));
             }
         }
     }

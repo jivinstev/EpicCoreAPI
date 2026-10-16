@@ -39,7 +39,7 @@ public class SpawnBanData extends SavedData {
                     int seconds = bansTag.getInt(key);
                     if (seconds > 0) {
                         data.bans.put(typeId, seconds);
-                        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(typeId);
+                        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(typeId);
                         if (type != null) {
                             data.bannedTypes.add(type);
                         }
@@ -123,7 +123,7 @@ public class SpawnBanData extends SavedData {
             int newTime = entry.getValue() - 1;
 
             if (newTime <= 0) {
-                EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(entry.getKey());
+                EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(entry.getKey());
                 if (type != null) {
                     bannedTypes.remove(type);
                 }

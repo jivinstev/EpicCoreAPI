@@ -228,8 +228,8 @@ LivingEntityMixin {
         }
     }
 
-    @Inject(method = "hurt", at = @At("HEAD"), cancellable = true)
-    private void onHurt(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "hurtServer", at = @At("HEAD"), cancellable = true)
+    private void onHurt(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
         LivingEntity self = (LivingEntity) (Object) this;
         // ECA 无敌保护
         if (EcaAPI.isInvulnerable(self)) {
@@ -250,8 +250,8 @@ LivingEntityMixin {
     }
 
     // 阵营仇恨传导：伤害实际生效后，先做首领传导，再做附近成员求援
-    @Inject(method = "hurt", at = @At("RETURN"))
-    private void eca$factionAlertOnHurt(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "hurtServer", at = @At("RETURN"))
+    private void eca$factionAlertOnHurt(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
         if (!cir.getReturnValue()) return; // 伤害被取消则不触发
         LivingEntity self = (LivingEntity) (Object) this;
         if (!(self.level() instanceof ServerLevel serverLevel)) return;
@@ -277,7 +277,7 @@ LivingEntityMixin {
     }
 
     @Inject(method = "actuallyHurt", at = @At("HEAD"), cancellable = true)
-    private void onActuallyHurt(DamageSource source, float amount, CallbackInfo ci) {
+    private void onActuallyHurt(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource source, float amount, CallbackInfo ci) {
         LivingEntity self = (LivingEntity) (Object) this;
         // ECA 无敌保护
         if (EcaAPI.isInvulnerable(self)) {

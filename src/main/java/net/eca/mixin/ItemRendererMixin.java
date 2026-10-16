@@ -24,13 +24,13 @@ import java.util.List;
 @Mixin(ItemRenderer.class)
 public abstract class ItemRendererMixin {
 
-    @Inject(method = "render",
+    @Inject(method = "renderItemModelRaw",
             at = @At(value = "INVOKE",
                      target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V",
                      shift = At.Shift.BEFORE))
     private void eca$renderItemExtension(ItemStack stack, ItemDisplayContext displayContext, boolean leftHand,
                                          PoseStack poseStack, MultiBufferSource bufferSource,
-                                         int combinedLight, int combinedOverlay, BakedModel model,
+                                         int combinedLight, int combinedOverlay, BakedModel model, boolean mv$flat, float mv$depth,
                                          CallbackInfo ci) {
         if (stack.isEmpty()) return;
         ItemExtension extension = ItemExtensionManager.getExtension(stack.getItem());

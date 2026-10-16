@@ -88,7 +88,7 @@ public class SpawnBanManager {
 
         Map<EntityType<?>, Integer> result = new HashMap<>();
         for (Map.Entry<ResourceLocation, Integer> entry : rawBans.entrySet()) {
-            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(entry.getKey());
+            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(entry.getKey());
             if (type != null) {
                 result.put(type, entry.getValue());
             }

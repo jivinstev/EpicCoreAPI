@@ -74,8 +74,8 @@ public final class BossShowEditorClientEvents {
         }
         boolean noMovementInput = localPlayer.input.forwardImpulse == 0.0F
             && localPlayer.input.leftImpulse == 0.0F
-            && !localPlayer.input.jumping
-            && !localPlayer.input.shiftKeyDown;
+            && !localPlayer.input.keyPresses.jump()
+            && !localPlayer.input.keyPresses.shift();
         //只清除松键后的残余速度，避免压低正常飞行速度。
         if (noMovementInput) {
             localPlayer.setDeltaMovement(Vec3.ZERO);
@@ -233,7 +233,7 @@ public final class BossShowEditorClientEvents {
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
         VertexConsumer vc = buffer.getBuffer(RenderType.lines());
         AABB box = target.getBoundingBox().inflate(0.02);
-        LevelRenderer.renderLineBox(pose, vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose, vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
         buffer.endBatch(RenderType.lines());
 
         pose.popPose();

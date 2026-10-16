@@ -1,3 +1,11 @@
+// Fork multi-version layer: 1.21.3 overlay of the authors' FilterRenderer, taken from the 1.21.3 prepared source (the
+// authors' file after this target's rename rows) and changed only in captureSpotlightEntity. From 1.21.2 the
+// RenderStateShard.MAIN_TARGET output state binds the main render target when a RenderType draws (in 1.21.1 it did
+// nothing), and entity RenderTypes default to that output state; so the entity drawn for the spotlight mask went to the
+// main target instead of spotlightFbo. While it is drawn, the main target's frameBufferId names spotlightFbo, so
+// MAIN_TARGET's bind lands where the authors' raw bind pointed (restored in a finally).
+// An overlay passes down the `inherits` chain WITHOUT rename rows: 1.21.4 and 1.21.5 must each carry their own
+// FilterRenderer overlay (1.21.8 and later already do).
 package net.eca.client.render.shader;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -15,7 +23,7 @@ import net.eca.client.BossShowScreenEffectState;
 import net.eca.util.filter.FilterType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.ShaderInstance;
+import net.eca.mv.ShaderInstance;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -23,7 +31,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.eca.mv.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.bus.api.EventPriority;
@@ -565,14 +573,13 @@ public class FilterRenderer {
 
         Matrix4f savedProj = RenderSystem.getProjectionMatrix();
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
+        RenderSystem.setProjectionMatrix(ortho, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
 
         RenderSystem.getModelViewStack().pushMatrix();
         try {
             RenderSystem.getModelViewStack().identity();
-            RenderSystem.applyModelViewMatrix();
 
-            RenderSystem.setShader(() -> spotlightShader);
+            RenderSystem.setShader(spotlightShader);
             RenderSystem.setShaderTexture(0, depthCopyTexture);
             RenderSystem.setShaderTexture(1, colorCopyTexture);
             RenderSystem.setShaderTexture(2, spotlightColorTexture);
@@ -587,8 +594,7 @@ public class FilterRenderer {
             drawFullscreenQuad(width, height);
         } finally {
             RenderSystem.getModelViewStack().popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
+            RenderSystem.setProjectionMatrix(savedProj, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
             RenderSystem.enableCull();
             RenderSystem.depthMask(true);
             RenderSystem.enableDepthTest();
@@ -608,7 +614,7 @@ public class FilterRenderer {
             ensureSpotlightTargets(width, height);
             GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
             GlStateManager._clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-            GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, false);
+            GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             mainTarget.bindWrite(false);
             return;
         }
@@ -619,7 +625,7 @@ public class FilterRenderer {
 
         GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, spotlightFbo);
         GlStateManager._clearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, false);
+        GlStateManager._clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 
         GlStateManager._glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainTarget.frameBufferId);
         GlStateManager._glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, spotlightFbo);
@@ -641,9 +647,15 @@ public class FilterRenderer {
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
-        dispatcher.render(target, x, y, z, yRot, partialTick, poseStack, buffer,
-                dispatcher.getPackedLightCoords(target, partialTick));
-        buffer.endBatch();
+        int mainFbo = mainTarget.frameBufferId;
+        mainTarget.frameBufferId = spotlightFbo;
+        try {
+            dispatcher.render(target, x, y, z, partialTick, poseStack, buffer,
+                    dispatcher.getPackedLightCoords(target, partialTick));
+            buffer.endBatch();
+        } finally {
+            mainTarget.frameBufferId = mainFbo;
+        }
 
         mainTarget.bindWrite(false);
     }
@@ -683,14 +695,13 @@ public class FilterRenderer {
 
         Matrix4f savedProj = RenderSystem.getProjectionMatrix();
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
+        RenderSystem.setProjectionMatrix(ortho, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
 
         RenderSystem.getModelViewStack().pushMatrix();
         try {
             RenderSystem.getModelViewStack().identity();
-            RenderSystem.applyModelViewMatrix();
 
-            RenderSystem.setShader(() -> shader);
+            RenderSystem.setShader(shader);
             RenderSystem.setShaderTexture(0, depthCopyTexture);
             RenderSystem.setShaderTexture(1, colorCopyTexture);
             uniformApplier.accept(shader);
@@ -701,8 +712,7 @@ public class FilterRenderer {
             drawFullscreenQuad(width, height);
         } finally {
             RenderSystem.getModelViewStack().popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
+            RenderSystem.setProjectionMatrix(savedProj, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
             RenderSystem.enableCull();
             RenderSystem.depthMask(true);
             RenderSystem.enableDepthTest();
@@ -774,14 +784,13 @@ public class FilterRenderer {
 
         Matrix4f savedProj = RenderSystem.getProjectionMatrix();
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z);
+        RenderSystem.setProjectionMatrix(ortho, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
 
         RenderSystem.getModelViewStack().pushMatrix();
         try {
             RenderSystem.getModelViewStack().identity();
-            RenderSystem.applyModelViewMatrix();
 
-            RenderSystem.setShader(() -> shader);
+            RenderSystem.setShader(shader);
             RenderSystem.setShaderTexture(0, depthCopyTexture);
             RenderSystem.setShaderTexture(1, colorCopyTexture);
             if (shader.getUniform("InvViewProjMat") != null) {
@@ -798,8 +807,7 @@ public class FilterRenderer {
             drawFullscreenQuad(width, height);
         } finally {
             RenderSystem.getModelViewStack().popMatrix();
-            RenderSystem.applyModelViewMatrix();
-            RenderSystem.setProjectionMatrix(savedProj, VertexSorting.DISTANCE_TO_ORIGIN);
+            RenderSystem.setProjectionMatrix(savedProj, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
             RenderSystem.enableCull();
             RenderSystem.depthMask(true);
             RenderSystem.enableDepthTest();

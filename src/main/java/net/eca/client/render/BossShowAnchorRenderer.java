@@ -16,7 +16,7 @@ import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -81,13 +81,13 @@ public final class BossShowAnchorRenderer {
             ax - BEAM_HALF, ay, az - BEAM_HALF,
             ax + BEAM_HALF, ay + BEAM_HEIGHT, az + BEAM_HALF
         );
-        LevelRenderer.renderLineBox(pose, vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose, vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
 
         AABB base = new AABB(
             ax - BASE_HALF, ay, az - BASE_HALF,
             ax + BASE_HALF, ay + 0.02, az + BASE_HALF
         );
-        LevelRenderer.renderLineBox(pose, vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose, vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
 
         //摄像机路径折线
         List<Frame> frames = BossShowEditorState.getFrames();
@@ -167,7 +167,7 @@ public final class BossShowAnchorRenderer {
         playerHeadModel.setupAnim(0f, worldYaw, 0f);
         playerHeadModel.renderToBuffer(pose, buffer.getBuffer(playerHeadRenderType),
             LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
-            FastColor.ARGB32.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
+            ARGB.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
         pose.popPose();
 
         renderHeadLabel(pose, buffer, wp, ordinal, camRot, font);

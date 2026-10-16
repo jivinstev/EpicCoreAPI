@@ -1,0 +1,7 @@
+# shared-library helpers as installed (path blob): tools/fork-branches.py
+src/main/java/net/eca/mv/EntityOf.java 291cde938681f2b6a0f75fb70295f5d1e24b1029
+src/main/java/net/eca/mv/Mv.java 758a8f9ea1be62ba3e607837e238300b1cd06133
+src/main/java/net/eca/mv/RegisterShadersEvent.java 7e8af9e9142b20ae5a658051c00ec88168521f3f
+src/main/java/net/eca/mv/ShaderInstance.java 0115a81e0629673bc3f45e0b7e88e741dc9dc174
+src/main/java/net/eca/mv/ShaderReloader.java a99dc0ed73c7c4b114701223533fa6a618851c4c
+src/main/java/net/eca/mv/ShaderShard.java e218bf083f364179b09aaacb238cea9bbd190118

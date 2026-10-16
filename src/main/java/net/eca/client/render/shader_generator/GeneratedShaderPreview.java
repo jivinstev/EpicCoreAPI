@@ -15,7 +15,7 @@ import net.eca.util.shader_generator.ShaderTargetProfile;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.ShaderInstance;
+import net.eca.mv.ShaderInstance;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.network.chat.Component;
@@ -267,7 +267,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         UniformSet uniforms,
         Runnable beforeShaderSetup
     ) {
-        return new RenderStateShard.ShaderStateShard(() -> shader) {
+        return new net.eca.mv.ShaderShard(() -> shader) {
             @Override
             public void setupRenderState() {
                 beforeShaderSetup.run();
@@ -302,7 +302,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             true,
             RenderType.CompositeState.builder()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
                 .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(RenderType.NO_DEPTH_TEST)
                 .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -324,7 +324,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             false,
             RenderType.CompositeState.builder()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
                 .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(RenderType.NO_DEPTH_TEST)
                 .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -369,7 +369,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             true,
             RenderType.CompositeState.builder()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
                 .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)
@@ -466,7 +466,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         TextureManager textureManager = Minecraft.getInstance().getTextureManager();
         long revision = TEXTURE_REVISION.incrementAndGet();
         NativeImage whiteImage = new NativeImage(1, 1, false);
-        whiteImage.setPixelRGBA(0, 0, 0xFFFFFFFF);
+        whiteImage.setPixel(0, 0, net.minecraft.util.ARGB.fromABGR(0xFFFFFFFF));
         DynamicTexture whiteTexture = new DynamicTexture(whiteImage);
         ResourceLocation whiteLocation = textureManager.register(
             "eca_shader_generator/" + revision + "/preview_white", whiteTexture

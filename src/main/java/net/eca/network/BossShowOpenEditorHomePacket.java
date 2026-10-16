@@ -78,7 +78,7 @@ public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
             List<SubtitleCue> subtitleCues = BossShowNetCodec.readSubtitleCues(buf);
             List<BossShowEffectCue> effectCues = BossShowNetCodec.readEffectCues(buf);
             EntityType<?> type = (typeId != null && BuiltInRegistries.ENTITY_TYPE.containsKey(typeId))
-                ? BuiltInRegistries.ENTITY_TYPE.get(typeId)
+                ? BuiltInRegistries.ENTITY_TYPE.getValue(typeId)
                 : null;
             defs.add(new BossShowDefinition(id, type, trig, cine, allowRepeat, frames,
                 BossShowDefinition.Source.CONFIG, yaw, eventCues, subtitleCues, effectCues));

@@ -336,7 +336,7 @@ public final class BossShowManager {
 
     //通过 entity-type ResourceLocation 查类型
     public static EntityType<?> entityTypeFromId(ResourceLocation id) {
-        return id != null ? BuiltInRegistries.ENTITY_TYPE.get(id) : null;
+        return id != null ? BuiltInRegistries.ENTITY_TYPE.getValue(id) : null;
     }
 
     //HashMap 副本供迭代安全

@@ -108,7 +108,7 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
     private static void fill(NativeImage image, int x, int y, int width, int height, int color) {
         for (int row = 0; row < height; row++) {
             for (int column = 0; column < width; column++) {
-                image.setPixelRGBA(x + column, y + row, color);
+                image.setPixel(x + column, y + row, net.minecraft.util.ARGB.fromABGR(color));
             }
         }
     }
@@ -208,11 +208,8 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
             int sourceY = selectedFrame / columns * frameHeight;
             for (int y = 0; y < frameHeight; y++) {
                 for (int x = 0; x < frameWidth; x++) {
-                    target.setPixelRGBA(
-                        targetX + x,
-                        targetY + y,
-                        sheet.getPixelRGBA(sourceX + x, sourceY + y)
-                    );
+                    target.setPixel(targetX + x, targetY + y, net.minecraft.util.ARGB.fromABGR(net.minecraft.util.ARGB.toABGR(sheet.getPixel(sourceX + x, sourceY + y))
+                    ));
                 }
             }
         }

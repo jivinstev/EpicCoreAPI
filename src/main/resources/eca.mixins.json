@@ -22,7 +22,8 @@
     "SoundManagerMixin",
     "ItemStackClientMixin",
     "ItemRendererMixin",
-    "FallingBlockRendererMixin"
+    "FallingBlockRendererMixin",
+    "CloudRendererMixin"
   ],
   "mixins": [
     "NetworkCodecMixin",

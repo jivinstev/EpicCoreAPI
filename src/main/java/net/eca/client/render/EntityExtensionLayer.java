@@ -1,3 +1,4 @@
+// Fork multi-version layer: 1.21.2 version of the authors' file (render state instead of entity).
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -17,7 +18,9 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.eca.mv.EntityOf;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -25,17 +28,20 @@ import net.neoforged.api.distmarker.OnlyIn;
 import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
-public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraft.client.model.EntityModel<T>>
-    extends RenderLayer<T, M> {
+public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends net.minecraft.client.model.EntityModel<? super S>>
+    extends RenderLayer<S, M> {
 
-    public EntityExtensionLayer(RenderLayerParent<T, M> renderer) {
+    public EntityExtensionLayer(RenderLayerParent<S, M> renderer) {
         super(renderer);
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, T entity,
-                       float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
+    public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, S state,
                        float netHeadYaw, float headPitch) {
+        // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
+        if (!(EntityOf.get(state) instanceof LivingEntity entity)) {
+            return;
+        }
 
         EntityExtension extension = EntityExtensionManager.getExtension(entity.getType());
         if (extension == null) {
@@ -62,7 +68,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
 
         int light = layerExtension.isGlow() ? 15728880 : packedLight;
         int overlay = layerExtension.isHurtOverlay()
-            ? LivingEntityRenderer.getOverlayCoords(entity, 0.0f)
+            ? LivingEntityRenderer.getOverlayCoords(state, 0.0f)
             : OverlayTexture.NO_OVERLAY;
         float alpha = layerExtension.getAlpha();
 
@@ -75,7 +81,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
                 BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
                 this.getParentModel().renderToBuffer(
                     poseStack, builder, light, overlay,
-                    FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
+                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
                 ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
                     builder, builder.buildOrThrow());
@@ -83,7 +89,7 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
                 VertexConsumer texConsumer = bufferSource.getBuffer(texturedLayer);
                 this.getParentModel().renderToBuffer(
                     poseStack, texConsumer, light, overlay,
-                    FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
+                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
                 );
             }
         }

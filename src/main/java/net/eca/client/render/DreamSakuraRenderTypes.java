@@ -16,7 +16,7 @@ public class DreamSakuraRenderTypes {
 
     private static final ResourceLocation DREAM_SAKURA_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/dream_sakura.png");
 
-    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(DreamSakuraShader::getShader) {
+    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new net.eca.mv.ShaderShard(DreamSakuraShader::getShader) {
         @Override
         public void setupRenderState() {
             super.setupRenderState();
@@ -32,7 +32,7 @@ public class DreamSakuraRenderTypes {
         true,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(RenderType.NO_DEPTH_TEST)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -47,7 +47,7 @@ public class DreamSakuraRenderTypes {
         true,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setCullState(RenderType.NO_CULL)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -62,7 +62,7 @@ public class DreamSakuraRenderTypes {
         false,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(RenderType.NO_DEPTH_TEST)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -95,7 +95,7 @@ public class DreamSakuraRenderTypes {
             true,
             RenderType.CompositeState.builder()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
                 .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)
@@ -108,7 +108,7 @@ public class DreamSakuraRenderTypes {
 
     //方块扩展覆盖层：Sampler0 绑的整张贴图即一片花瓣，着色器按 UV 全域取它再旋转撒布
     public static final RenderType BLOCK = PresetRenderTypes.block("dream_sakura", SHADER_STATE,
-        new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, false, false));
+        new RenderStateShard.TextureStateShard(DREAM_SAKURA_TEXTURE, net.minecraft.util.TriState.FALSE, false));
 
     private DreamSakuraRenderTypes() {}
 }

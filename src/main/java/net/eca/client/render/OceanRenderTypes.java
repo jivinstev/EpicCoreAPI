@@ -16,7 +16,7 @@ public class OceanRenderTypes {
 
     private static final ResourceLocation BUBBLE_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/ocean_bubble.png");
 
-    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(OceanShader::getShader) {
+    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new net.eca.mv.ShaderShard(OceanShader::getShader) {
         @Override
         public void setupRenderState() {
             super.setupRenderState();
@@ -32,7 +32,7 @@ public class OceanRenderTypes {
         true,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(RenderType.NO_DEPTH_TEST)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -47,7 +47,7 @@ public class OceanRenderTypes {
         true,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setCullState(RenderType.NO_CULL)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -62,7 +62,7 @@ public class OceanRenderTypes {
         false,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(RenderType.NO_DEPTH_TEST)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -95,7 +95,7 @@ public class OceanRenderTypes {
             true,
             RenderType.CompositeState.builder()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
                 .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)
@@ -108,7 +108,7 @@ public class OceanRenderTypes {
 
     //方块扩展覆盖层：Sampler0 绑的整张贴图即一个气泡，着色器按 UV 全域取它再撒布
     public static final RenderType BLOCK = PresetRenderTypes.block("ocean", SHADER_STATE,
-        new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, false, false));
+        new RenderStateShard.TextureStateShard(BUBBLE_TEXTURE, net.minecraft.util.TriState.FALSE, false));
 
     private OceanRenderTypes() {}
 }

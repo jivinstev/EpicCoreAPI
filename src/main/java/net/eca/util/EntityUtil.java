@@ -940,7 +940,7 @@ public class EntityUtil {
         if (entity.level() == null || entity.level().isClientSide) return false;
         try {
             if (EcaAPI.isInvulnerable(entity) || HealthLockManager.getLock(entity) != null) {
-                return entity.hurt(damageSource, amount);
+                return entity.hurtOrSimulate(damageSource, amount);
             }
             float before = getHealth(entity);
             entity.invulnerableTime = 0;

@@ -208,7 +208,7 @@ public final class EcaBossBarRenderer {
                 drawTextureWithShaderMask(graphics, texture, renderType,
                         x, y, drawWidth, drawHeight, fullWidth, fullHeight);
             } else if (texture != null) {
-                graphics.blit(texture, x, y, 0, 0, drawWidth, drawHeight, fullWidth, fullHeight);
+                graphics.blit(net.minecraft.client.renderer.RenderType::guiTextured, texture, x, y, 0, 0, drawWidth, drawHeight, fullWidth, fullHeight);
             } else {
                 drawRenderType(graphics, renderType, x, y, drawWidth, drawHeight, fullWidth);
             }
@@ -231,7 +231,7 @@ public final class EcaBossBarRenderer {
                 GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ZERO,
                 GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ZERO
         );
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR);
         BufferBuilder clearBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         clearBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 255);
@@ -247,7 +247,7 @@ public final class EcaBossBarRenderer {
                 GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO
         );
         RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX);
         float texU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         float texV1 = fullHeight <= 0 ? 0.0f : (float) drawHeight / (float) fullHeight;
         BufferBuilder texBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
@@ -264,7 +264,7 @@ public final class EcaBossBarRenderer {
                 GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE,
                 GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.SRC_ALPHA
         );
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR);
         BufferBuilder scaleBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         scaleBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 127);
@@ -296,7 +296,7 @@ public final class EcaBossBarRenderer {
                                        int x, int y, int width, int height, int fullWidth) {
         float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
         Matrix4f matrix = graphics.pose().last().pose();
-        VertexConsumer consumer = graphics.bufferSource().getBuffer(renderType);
+        VertexConsumer consumer = graphics.bufferSource.getBuffer(renderType);
         int light = LightTexture.FULL_BRIGHT;
         consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);

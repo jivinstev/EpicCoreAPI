@@ -91,17 +91,15 @@ public final class ShaderMaskRenderQueue {
                 try {
                     RenderSystem.getModelViewStack().identity();
                     RenderSystem.getModelViewStack().mul(entry.modelView());
-                    RenderSystem.applyModelViewMatrix();
-                    RenderSystem.setProjectionMatrix(entry.projection(), VertexSorting.DISTANCE_TO_ORIGIN);
+                    RenderSystem.setProjectionMatrix(entry.projection(), com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
                     draw(entry.pass(), entry.renderedBuffer(), entry.uvTransform());
                 } finally {
                     RenderSystem.getModelViewStack().popMatrix();
-                    RenderSystem.applyModelViewMatrix();
                     recycle(entry.builder());
                 }
             }
         } finally {
-            RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.DISTANCE_TO_ORIGIN);
+            RenderSystem.setProjectionMatrix(savedProjection, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
         }
     }
 

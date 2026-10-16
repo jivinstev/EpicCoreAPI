@@ -1,3 +1,5 @@
+// Fork multi-version layer: 1.21.2 version of the authors' mixin. LivingEntityRenderer now renders a
+// LivingEntityRenderState; the entity comes from net.eca.mv.EntityOf, the partial tick from the state.
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -7,13 +9,15 @@ import net.eca.blender.client.entity.BlenderEntityRenderer;
 import net.eca.blender.client.entity.BlenderEntityBindings;
 import net.eca.blender.entity.BlenderEntityBinding;
 import net.eca.client.render.EntityExtensionLayer;
+import net.eca.mv.EntityOf;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Entity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,14 +29,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @OnlyIn(Dist.CLIENT)
 @Mixin(LivingEntityRenderer.class)
-public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extends EntityModel<T>> {
+public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> {
 
     @Unique
     private boolean eca$blenderReplacedBody;
 
-    @Inject(method = "render", at = @At("HEAD"))
-    private void eca$resetBlenderReplacement(T entity, float entityYaw, float partialTick,
-                                             PoseStack poseStack, MultiBufferSource buffers,
+    @Inject(method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"))
+    private void eca$resetBlenderReplacement(S state, PoseStack poseStack, MultiBufferSource buffers,
                                              int packedLight, CallbackInfo ci) {
         eca$blenderReplacedBody = false;
     }
@@ -40,52 +43,48 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     @SuppressWarnings("unchecked")
     @Inject(method = "<init>", at = @At("RETURN"))
     private void eca$addExtensionLayer(EntityRendererProvider.Context context, M model, float shadowRadius, CallbackInfo ci) {
-        LivingEntityRenderer<T, M> self = (LivingEntityRenderer<T, M>) (Object) this;
+        LivingEntityRenderer<T, S, M> self = (LivingEntityRenderer<T, S, M>) (Object) this;
         self.addLayer(new EntityExtensionLayer<>(self));
         self.addLayer(new BlenderModelLayer<>(self));
     }
 
     @Redirect(
-        method = "render",
+        method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
         at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V"
         )
     )
-    private void eca$renderBlenderReplacement(EntityModel<T> model, PoseStack poseStack, VertexConsumer consumer,
-                                              int packedLight, int packedOverlay, int color, T entity, float entityYaw,
-                                              float partialTick, PoseStack methodPoseStack,
-                                              MultiBufferSource buffers, int methodPackedLight) {
-        BlenderEntityBinding blender = BlenderEntityBindings.resolve(entity);
-        if (BlenderEntityBindings.replacesBody(blender)
-            && BlenderEntityRenderer.render(entity, blender, poseStack, buffers, methodPackedLight,
-                packedOverlay, partialTick)) {
-            eca$blenderReplacedBody = true;
-            return;
+    private void eca$renderBlenderReplacement(EntityModel<?> model, PoseStack poseStack, VertexConsumer consumer,
+                                              int packedLight, int packedOverlay, int color, S state,
+                                              PoseStack methodPoseStack, MultiBufferSource buffers, int methodPackedLight) {
+        if (EntityOf.get(state) instanceof LivingEntity entity) {
+            BlenderEntityBinding blender = BlenderEntityBindings.resolve(entity);
+            if (BlenderEntityBindings.replacesBody(blender)
+                && BlenderEntityRenderer.render(entity, blender, poseStack, buffers, methodPackedLight,
+                    packedOverlay, state.partialTick)) {
+                eca$blenderReplacedBody = true;
+                return;
+            }
         }
         model.renderToBuffer(poseStack, consumer, packedLight, packedOverlay, color);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Redirect(
-        method = "render",
+        method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V"
+            target = "Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/renderer/entity/state/EntityRenderState;FF)V"
         )
     )
     private void eca$skipVanillaLayersAfterReplacement(RenderLayer layer, PoseStack poseStack,
                                                         MultiBufferSource buffers, int packedLight,
-                                                        Entity layerEntity, float limbSwing,
-                                                        float limbSwingAmount, float partialTick,
-                                                        float ageInTicks, float netHeadYaw, float headPitch,
-                                                        T entity, float entityYaw, float methodPartialTick,
-                                                        PoseStack methodPoseStack,
-                                                        MultiBufferSource methodBuffers,
-                                                        int methodPackedLight) {
+                                                        EntityRenderState layerState, float yRot, float xRot,
+                                                        S state, PoseStack methodPoseStack,
+                                                        MultiBufferSource methodBuffers, int methodPackedLight) {
         if (!eca$blenderReplacedBody) {
-            layer.render(poseStack, buffers, packedLight, layerEntity, limbSwing, limbSwingAmount,
-                partialTick, ageInTicks, netHeadYaw, headPitch);
+            layer.render(poseStack, buffers, packedLight, layerState, yRot, xRot);
         }
     }
 }

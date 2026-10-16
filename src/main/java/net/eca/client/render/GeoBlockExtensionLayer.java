@@ -35,7 +35,7 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
     @Override
     public void preRender(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
                           MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
-                          int packedLight, int packedOverlay) {
+                          int packedLight, int packedOverlay, int renderColor) {
         BlockExtension extension = BlockExtensionManager.getExtension(animatable.getBlockState().getBlock());
         activeExtension = extension != null && animatable.getLevel() != null
             && BlockExtensionSafeAccess.shouldRender(extension, animatable.getBlockState(),
@@ -48,7 +48,7 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
     @Override
     public void render(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
                        MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
-                       int packedLight, int packedOverlay) {
+                       int packedLight, int packedOverlay, int renderColor) {
         try {
             if (activeExtension == null) {
                 return;

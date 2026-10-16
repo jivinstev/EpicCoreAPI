@@ -1,0 +1,17 @@
+# Epic Core API's own rows for 1.21.3. The generic 1.21.1 -> 1.21.3 rows are inherited from the migrator's shared
+# table (.multiversion/shared/1.21.3/renames.tsv, make-fork-layer.py sync-shared); these are call shapes only
+# this mod has. Fork rows run before the shared ones, so a row here wins over a generic row for the same text.
+re:if \(!\(value instanceof SavedData data\) \|\| data == DummySavedData\.DUMMY\) continue;	if (!((value instanceof java.util.Optional<?> cached ? cached.orElse(null) : value) instanceof SavedData data)) continue;
+re:return entity\.hurt\(damageSource, amount\);	return entity.hurtOrSimulate(damageSource, amount);
+re:Entity entity = type\.create\(level\);	Entity entity = type.create(level, EntitySpawnReason.EVENT);
+#!exhaustive  # live on 1.21.3-1.21.5; dead on 1.21.8, where the files it fed are overlays
+re:graphics\.bufferSource\(\)	graphics.bufferSource
+#!strict
+# HealthDataflowAnalyzer's bytecode-scan table: since 1.21.2 LivingEntity has no hurt(DamageSource,float)Z (Entity.hurt
+# is a final void forwarder) and actuallyHurt takes the ServerLevel first, so the 1.21.1 descriptors find no method and the
+# health-storage scan of hurt/actuallyHurt (and the lifecycle-call check) sees nothing. javap 1.21.3 LivingEntity:
+# hurtServer(ServerLevel,DamageSource,F)Z, actuallyHurt(ServerLevel,DamageSource,F)V.
+#!exhaustive  # live on 1.21.3-1.21.8; dead on 1.21.10+, where HealthDataflowAnalyzer is an overlay
+re:new McMethod\("hurt", "hurt", "\(" \+ DAMAGE_SOURCE_DESC \+ "F\)Z"\)	new McMethod("hurtServer", "hurtServer", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)Z")
+re:new McMethod\("actuallyHurt", "actuallyHurt", "\(" \+ DAMAGE_SOURCE_DESC \+ "F\)V"\)	new McMethod("actuallyHurt", "actuallyHurt", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)V")
+#!strict

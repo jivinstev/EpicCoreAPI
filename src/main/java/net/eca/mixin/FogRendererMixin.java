@@ -1,3 +1,4 @@
+// Fork multi-version layer: 1.21.2 version of the authors' mixin.
 package net.eca.mixin;
 
 import com.mojang.blaze3d.shaders.FogShape;
@@ -24,38 +25,37 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import net.minecraft.client.renderer.FogParameters;
+import org.joml.Vector4f;
 
 @OnlyIn(Dist.CLIENT)
 @Mixin(FogRenderer.class)
 public class FogRendererMixin {
 
-    @Shadow
-    private static float fogRed;
-
-    @Shadow
-    private static float fogGreen;
-
-    @Shadow
-    private static float fogBlue;
-
-    @Inject(method = "setupColor", at = @At("TAIL"))
-    private static void eca$applyGlobalFogColor(Camera camera, float partialTick, ClientLevel level, int renderDistanceChunks, float darkenWorldAmount, CallbackInfo ci) {
+    // Fork multi-version layer, 1.21.2: fog colour is the Vector4f computeFogColor returns (LevelRenderer
+    // clears with it and passes it to setupFog), and fog distance is the FogParameters setupFog returns,
+    // instead of FogRenderer's static colour fields and RenderSystem's fog state.
+    @Inject(method = "computeFogColor", at = @At("RETURN"), cancellable = true)
+    private static void eca$applyGlobalFogColor(Camera camera, float partialTick, ClientLevel level, int renderDistanceChunks,
+                                               float darkenWorldAmount, CallbackInfoReturnable<Vector4f> cir) {
         float[] strengthHolder = new float[]{0.0f};
         GlobalFogExtension fog = eca$resolveFogContext(level, camera, strengthHolder);
         if (fog == null) {
             return;
         }
         float strength = strengthHolder[0];
-
-        fogRed = Mth.lerp(strength, fogRed, eca$clampColor(fog.fogRed()));
-        fogGreen = Mth.lerp(strength, fogGreen, eca$clampColor(fog.fogGreen()));
-        fogBlue = Mth.lerp(strength, fogBlue, eca$clampColor(fog.fogBlue()));
-        RenderSystem.clearColor(fogRed, fogGreen, fogBlue, 0.0f);
+        Vector4f base = cir.getReturnValue();
+        cir.setReturnValue(new Vector4f(
+                Mth.lerp(strength, base.x, eca$clampColor(fog.fogRed())),
+                Mth.lerp(strength, base.y, eca$clampColor(fog.fogGreen())),
+                Mth.lerp(strength, base.z, eca$clampColor(fog.fogBlue())),
+                base.w));
     }
 
-    @Inject(method = "setupFog", at = @At("TAIL"))
-    private static void eca$applyGlobalFogDistance(Camera camera, FogRenderer.FogMode fogMode, float renderDistance, boolean thickFog, float partialTick, CallbackInfo ci) {
+    @Inject(method = "setupFog", at = @At("RETURN"), cancellable = true)
+    private static void eca$applyGlobalFogDistance(Camera camera, FogRenderer.FogMode fogMode, Vector4f fogColor, float renderDistance,
+                                                  boolean thickFog, float partialTick, CallbackInfoReturnable<FogParameters> cir) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
             return;
@@ -82,19 +82,17 @@ public class FogRendererMixin {
             customEnd = fog.terrainFogEnd(renderDistance);
         }
 
-        float baseStart = RenderSystem.getShaderFogStart();
-        float baseEnd = RenderSystem.getShaderFogEnd();
-        float start = Mth.lerp(strength, baseStart, customStart);
-        float end = Mth.lerp(strength, baseEnd, customEnd);
+        FogParameters base = cir.getReturnValue();
+        float start = Mth.lerp(strength, base.start(), customStart);
+        float end = Mth.lerp(strength, base.end(), customEnd);
 
         if (end <= start) {
             end = start + 1.0f;
         }
 
-        RenderSystem.setShaderFogStart(start);
-        RenderSystem.setShaderFogEnd(end);
         FogShape shape = strength >= 0.999f ? fog.fogShape() : null;
-        RenderSystem.setShaderFogShape(shape == null ? FogShape.CYLINDER : shape);
+        cir.setReturnValue(new FogParameters(start, end, shape == null ? FogShape.CYLINDER : shape,
+                base.red(), base.green(), base.blue(), base.alpha()));
     }
 
     @Unique

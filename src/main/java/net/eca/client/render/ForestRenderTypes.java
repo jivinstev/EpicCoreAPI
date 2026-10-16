@@ -15,7 +15,7 @@ public class ForestRenderTypes {
 
     private static final ResourceLocation LEAVES_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/forest_leaves.png");
 
-    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(ForestShader::getShader) {
+    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new net.eca.mv.ShaderShard(ForestShader::getShader) {
         @Override
         public void setupRenderState() {
             super.setupRenderState();
@@ -31,7 +31,7 @@ public class ForestRenderTypes {
         true,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(RenderType.NO_DEPTH_TEST)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -46,7 +46,7 @@ public class ForestRenderTypes {
         true,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setCullState(RenderType.NO_CULL)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -61,7 +61,7 @@ public class ForestRenderTypes {
         false,
         RenderType.CompositeState.builder()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
             .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(RenderType.NO_DEPTH_TEST)
             .setWriteMaskState(RenderType.COLOR_WRITE)
@@ -94,7 +94,7 @@ public class ForestRenderTypes {
             true,
             RenderType.CompositeState.builder()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
                 .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)
@@ -107,7 +107,7 @@ public class ForestRenderTypes {
 
     //方块扩展覆盖层：Sampler0 绑的整张贴图即一片叶子，着色器按 UV 全域取它再平铺撒布
     public static final RenderType BLOCK = PresetRenderTypes.block("forest", SHADER_STATE,
-        new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false, false));
+        new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false));
 
     private ForestRenderTypes() {}
 }

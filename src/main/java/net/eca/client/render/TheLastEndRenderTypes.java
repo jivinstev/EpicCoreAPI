@@ -13,7 +13,7 @@ import net.eca.client.render.shader.TheLastEndShader;
 @OnlyIn(Dist.CLIENT)
 public class TheLastEndRenderTypes {
 
-    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new RenderStateShard.ShaderStateShard(TheLastEndShader::getShader) {
+    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new net.eca.mv.ShaderShard(TheLastEndShader::getShader) {
         @Override
         public void setupRenderState() {
             super.setupRenderState();
@@ -89,7 +89,7 @@ public class TheLastEndRenderTypes {
             true,
             RenderType.CompositeState.builder()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
                 .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)

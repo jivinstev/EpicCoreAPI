@@ -1,3 +1,4 @@
+// Fork multi-version layer: 1.21.2 version of the authors' mixin (FallingBlockRenderer renders a render state).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -14,6 +15,7 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.client.renderer.entity.state.FallingBlockRenderState;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.client.model.data.ModelData;
@@ -28,9 +30,13 @@ import java.util.List;
 public class FallingBlockRendererMixin {
 
     @Inject(method = "render", at = @At("TAIL"))
-    private void eca$renderBlockExtension(FallingBlockEntity entity, float yaw, float partialTick,
+    private void eca$renderBlockExtension(FallingBlockRenderState renderState,
                                           PoseStack poseStack, MultiBufferSource bufferSource,
                                           int packedLight, CallbackInfo ci) {
+        // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
+        if (!(net.eca.mv.EntityOf.get(renderState) instanceof FallingBlockEntity entity)) {
+            return;
+        }
         BlockState state = entity.getBlockState();
         BlockExtension extension = BlockExtensionManager.getExtension(state.getBlock());
         if (extension == null || state.getRenderShape() != RenderShape.MODEL

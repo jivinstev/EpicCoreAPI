@@ -22,7 +22,7 @@ import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.ChunkPos;
@@ -217,7 +217,7 @@ public class RaidInstance {
         ResourceKey<Structure> key = def.getTargetStructure();
         if (key != null) {
             Structure targetStructure = level.registryAccess()
-                    .registryOrThrow(Registries.STRUCTURE).get(key);
+                    .lookupOrThrow(Registries.STRUCTURE).getValue(key);
             if (targetStructure == null) return false;
             return level.structureManager().getStructureWithPieceAt(center, targetStructure).isValid();
         }
@@ -422,12 +422,12 @@ public class RaidInstance {
             return null;
         }
 
-        Entity entity = type.create(level);
+        Entity entity = type.create(level, EntitySpawnReason.EVENT);
         if (entity == null) return null;
 
         entity.setPos(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
         if (entity instanceof Mob mob) {
-            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null);
+            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), EntitySpawnReason.EVENT, null);
             mob.setOnGround(true);
             level.addFreshEntityWithPassengers(mob);
         } else {

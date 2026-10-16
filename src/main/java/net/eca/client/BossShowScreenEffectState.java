@@ -4,7 +4,7 @@ import net.eca.client.render.shader.FilterRenderer;
 import net.eca.util.bossshow.BossShowEffectCue;
 import net.eca.util.bossshow.Curve;
 import net.eca.util.filter.FilterType;
-import net.minecraft.client.renderer.ShaderInstance;
+import net.eca.mv.ShaderInstance;
 import net.minecraft.util.Mth;
 
 import java.util.ArrayList;

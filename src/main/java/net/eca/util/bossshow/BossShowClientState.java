@@ -55,7 +55,7 @@ public final class BossShowClientState {
     public static void onServerStart(BossShowStartPacket msg) {
         cutsceneId = msg.cutsceneId();
         targetUuid = msg.targetUuid();
-        targetType = msg.targetTypeId() != null ? BuiltInRegistries.ENTITY_TYPE.get(msg.targetTypeId()) : null;
+        targetType = msg.targetTypeId() != null ? BuiltInRegistries.ENTITY_TYPE.getValue(msg.targetTypeId()) : null;
         anchorX = msg.anchorX();
         anchorY = msg.anchorY();
         anchorZ = msg.anchorZ();

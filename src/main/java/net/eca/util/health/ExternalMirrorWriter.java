@@ -9,7 +9,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
-import net.neoforged.neoforge.common.util.DummySavedData;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -223,7 +222,7 @@ public final class ExternalMirrorWriter {
             /* 缓存里存 null 表示该名字尚未读盘，DummySavedData.DUMMY 表示读盘失败的占位——
                后者的 save 按设计返回 null，一旦被置脏就会在序列化时抛异常，绝不能纳入。 */
             for (Object value : map.values()) {
-                if (!(value instanceof SavedData data) || data == DummySavedData.DUMMY) continue;
+                if (!((value instanceof java.util.Optional<?> cached ? cached.orElse(null) : value) instanceof SavedData data)) continue;
                 if (seen.add(data)) out.add(data);
             }
         } catch (Throwable t) {

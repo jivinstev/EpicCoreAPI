@@ -76,8 +76,8 @@ public final class HealthDataflowAnalyzer {
     public static final McMethod GET_MAX_HEALTH   = new McMethod("getMaxHealth", "getMaxHealth", "()F");
     public static final McMethod IS_ALIVE         = new McMethod("isAlive", "isAlive", "()Z");
     public static final McMethod IS_DEAD_OR_DYING = new McMethod("isDeadOrDying", "isDeadOrDying", "()Z");
-    public static final McMethod HURT             = new McMethod("hurt", "hurt", "(" + DAMAGE_SOURCE_DESC + "F)Z");
-    public static final McMethod ACTUALLY_HURT    = new McMethod("actuallyHurt", "actuallyHurt", "(" + DAMAGE_SOURCE_DESC + "F)V");
+    public static final McMethod HURT             = new McMethod("hurtServer", "hurtServer", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)Z");
+    public static final McMethod ACTUALLY_HURT    = new McMethod("actuallyHurt", "actuallyHurt", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)V");
     public static final McMethod SET_HEALTH       = new McMethod("setHealth", "setHealth", "(F)V");
     public static final McMethod TICK             = new McMethod("tick", "tick", "()V");
     public static final McMethod BASE_TICK        = new McMethod("baseTick", "baseTick", "()V");

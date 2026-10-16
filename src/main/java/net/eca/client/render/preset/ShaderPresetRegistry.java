@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import net.eca.mv.RegisterShadersEvent;
 import net.neoforged.fml.ModList;
 
 import java.io.IOException;

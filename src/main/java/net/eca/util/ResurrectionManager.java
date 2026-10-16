@@ -484,7 +484,7 @@ public final class ResurrectionManager {
         if (snapshot == null) return;
 
         try {
-            Entity rebuilt = EntityType.loadEntityRecursive(snapshot.copy(), level, loaded -> loaded);
+            Entity rebuilt = EntityType.loadEntityRecursive(snapshot.copy(), level, net.minecraft.world.entity.EntitySpawnReason.LOAD, loaded -> loaded);
             if (rebuilt == null) {
                 EcaLogger.info("[ResurrectionManager] rebuild failed: type not loadable uuid={} type={}",
                         record.uuid, record.typeId);
