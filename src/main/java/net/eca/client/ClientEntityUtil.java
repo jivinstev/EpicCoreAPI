@@ -58,7 +58,7 @@ public final class ClientEntityUtil {
         if (entity != null) {
             return entity;
         }
-        entity = EcaContainers.rawGet(clientLevel.partEntities, entityId);
+        entity = net.eca.mv.PartEntities.byId(clientLevel, entityId);
         if (entity != null) {
             return entity;
         }
@@ -89,7 +89,7 @@ public final class ClientEntityUtil {
         if (entity != null) {
             return entity;
         }
-        return findByUuid(EcaContainers.rawValues(clientLevel.partEntities), uuid);
+        return findByUuid(clientLevel.dragonParts(), uuid);
     }
 
     // 客户端按条件收集实体
@@ -108,7 +108,7 @@ public final class ClientEntityUtil {
         }
         addAll(result, seen, EcaContainers.rawValues(clientLevel.tickingEntities.active), filter);
         addAll(result, seen, EcaContainers.rawValues(clientLevel.players), filter);
-        addAll(result, seen, EcaContainers.rawValues(clientLevel.partEntities), filter);
+        addAll(result, seen, clientLevel.dragonParts(), filter);
         return result;
     }
 
@@ -384,7 +384,7 @@ public final class ClientEntityUtil {
 
             if (entity.isMultipartEntity()) {
                 for (PartEntity<?> part : entity.getParts()) {
-                    clientLevel.partEntities.remove(part.getId());
+                    clientLevel.dragonParts().remove(part);
                 }
             }
 

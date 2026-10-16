@@ -1,9 +1,13 @@
+// Fork multi-version layer: 1.21.4 version of the authors' file (AnimationMetadataSection became a Codec record; EMPTY/forEachFrame/SERIALIZER are gone).
 package net.eca.client.render.shader_generator;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.resources.metadata.animation.AnimationFrame;
 import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
 
@@ -35,7 +39,9 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
         }
         try {
             AnimationMetadataSection metadata = readMetadata(path);
-            FrameSize frameSize = metadata.calculateFrameSize(sheet.getWidth(), sheet.getHeight());
+            FrameSize frameSize = metadata == null
+                ? new FrameSize(sheet.getWidth(), sheet.getHeight())
+                : metadata.calculateFrameSize(sheet.getWidth(), sheet.getHeight());
             int frameWidth = frameSize.width();
             int frameHeight = frameSize.height();
             if (frameWidth <= 0 || frameHeight <= 0
@@ -45,14 +51,19 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
             }
             int availableFrames = sheet.getWidth() / frameWidth * (sheet.getHeight() / frameHeight);
             List<Frame> frames = new ArrayList<>();
-            metadata.forEachFrame((index, duration) -> {
-                if (index >= 0 && index < availableFrames && duration > 0) {
-                    frames.add(new Frame(index, duration));
+            int defaultFrameTime = metadata == null ? 1 : metadata.defaultFrameTime();
+            if (metadata != null) {
+                for (AnimationFrame animationFrame : metadata.frames().orElse(List.of())) {
+                    int index = animationFrame.index();
+                    int duration = animationFrame.timeOr(defaultFrameTime);
+                    if (index >= 0 && index < availableFrames && duration > 0) {
+                        frames.add(new Frame(index, duration));
+                    }
                 }
-            });
+            }
             if (frames.isEmpty()) {
                 for (int index = 0; index < availableFrames; index++) {
-                    frames.add(new Frame(index, metadata.getDefaultFrameTime()));
+                    frames.add(new Frame(index, defaultFrameTime));
                 }
             }
             return new AnimatedPreviewTexture(
@@ -60,7 +71,7 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
                 frameWidth,
                 frameHeight,
                 frames,
-                metadata.isInterpolatedFrames()
+                metadata != null && metadata.interpolatedFrames()
             );
         } catch (IOException | RuntimeException exception) {
             sheet.close();
@@ -151,12 +162,15 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
 
     private static AnimationMetadataSection readMetadata(Path texturePath) throws IOException {
         Path metadataPath = Path.of(texturePath.toString() + ".mcmeta");
-        if (!Files.isRegularFile(metadataPath)) return AnimationMetadataSection.EMPTY;
+        if (!Files.isRegularFile(metadataPath)) return null;
         JsonObject root = JsonParser.parseString(Files.readString(metadataPath)).getAsJsonObject();
         if (!root.has("animation") || !root.get("animation").isJsonObject()) {
-            return AnimationMetadataSection.EMPTY;
+            return null;
         }
-        return AnimationMetadataSection.SERIALIZER.fromJson(root.getAsJsonObject("animation"));
+        // null = no metadata (old AnimationMetadataSection.EMPTY: whole image is one frame size, frametime 1, no interpolation)
+        return AnimationMetadataSection.CODEC
+            .parse(JsonOps.INSTANCE, root.getAsJsonObject("animation"))
+            .getOrThrow(message -> new JsonParseException("Invalid animation metadata: " + message));
     }
 
     @Override

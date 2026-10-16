@@ -1,3 +1,4 @@
+// Fork multi-version layer: 1.21.4 version of the authors' file (AbstractSelectionList.getScrollbarPosition was replaced by scrollBarX).
 package net.eca.client.gui;
 
 
@@ -183,7 +184,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
         }
 
         @Override
-        protected int getScrollbarPosition() {
+        protected int scrollBarX() {
             return this.getRight() - 6;
         }
 

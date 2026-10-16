@@ -1,0 +1,14 @@
+# shared-library helpers as installed (path blob): tools/fork-branches.py
+src/main/java/net/eca/mv/EntityOf.java 291cde938681f2b6a0f75fb70295f5d1e24b1029
+src/main/java/net/eca/mv/ItemModels.java c25d80455027efc05ab9ae7be69e53e209ce05f3
+src/main/java/net/eca/mv/ItemStacks.java c958cfd9809e7a04f8050f057bb2aef405d2fa80
+src/main/java/net/eca/mv/Mv.java 758a8f9ea1be62ba3e607837e238300b1cd06133
+src/main/java/net/eca/mv/PartEntities.java 45265737d47f81a88b0dc8a4174a8cc833889b4a
+src/main/java/net/eca/mv/RegisterShadersEvent.java 7e8af9e9142b20ae5a658051c00ec88168521f3f
+src/main/java/net/eca/mv/ReloadIds.java 87d14723d20029518f6e7c383ecf500ba563018c
+src/main/java/net/eca/mv/ShaderInstance.java 0115a81e0629673bc3f45e0b7e88e741dc9dc174
+src/main/java/net/eca/mv/ShaderReloader.java 31055ae4a1acc77a6a3ac89fc2bbf1abcb5db326
+src/main/java/net/eca/mv/ShaderShard.java e218bf083f364179b09aaacb238cea9bbd190118
+src/main/java/net/eca/mv/Skulls.java df00cc613f57397fe61e624c99bcf14ff4482c78
+src/main/java/net/eca/mv/Textures.java 0b871138dd412331dbe172be55f1e8f729fb066a
+src/main/java/net/eca/mv/Tickets.java 55c8030116ac3aba0656cf4216fc3e3f4357faa7

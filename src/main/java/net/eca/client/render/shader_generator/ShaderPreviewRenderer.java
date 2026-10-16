@@ -159,7 +159,7 @@ public final class ShaderPreviewRenderer {
         Minecraft minecraft = Minecraft.getInstance();
         ItemRenderer itemRenderer = minecraft.getItemRenderer();
         Level level = minecraft.level;
-        BakedModel model = itemRenderer.getModel(PREVIEW_ITEM, level, minecraft.player, 0);
+        BakedModel model = net.eca.mv.ItemModels.resolve(PREVIEW_ITEM, level, minecraft.player, 0);
         MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));
 
         int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);
@@ -176,16 +176,7 @@ public final class ShaderPreviewRenderer {
             graphics.pose().translate((left + right) / 2.0, (top + bottom) / 2.0, 180.0);
             graphics.pose().scale(size, -size, size);
             graphics.pose().mulPose(new Quaternionf().rotateY(0.65F).rotateX(-0.35F));
-            itemRenderer.render(
-                PREVIEW_ITEM,
-                ItemDisplayContext.GUI,
-                false,
-                graphics.pose(),
-                forced,
-                0xF000F0,
-                OverlayTexture.NO_OVERLAY,
-                model
-            );
+            itemRenderer.renderStatic(null, PREVIEW_ITEM, ItemDisplayContext.GUI, false, graphics.pose(), forced, level, 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
             delegate.endBatch();
         } finally {
             EcaShaderInstance.clearLocalUvBounds();

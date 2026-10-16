@@ -191,7 +191,7 @@ public final class BossShowAnchorRenderer {
     private static void ensureHeadModels(Minecraft mc) {
         if (playerHeadModel != null) return;
         Map<SkullBlock.Type, SkullModelBase> models =
-            SkullBlockRenderer.createSkullRenderers(mc.getEntityModels());
+            net.eca.mv.Skulls.createSkullRenderers(mc.getEntityModels());
         playerHeadModel = models.get(SkullBlock.Types.PLAYER);
         //translucent 渲染类型支持 alpha 混合，用 vanilla 头颅同款默认皮肤纹理
         playerHeadRenderType = RenderType.entityTranslucent(DefaultPlayerSkin.getDefaultTexture());

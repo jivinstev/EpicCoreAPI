@@ -1,10 +1,10 @@
-// Fork multi-version layer: 1.21.3 overlay of the authors' FilterRenderer, taken from the 1.21.3 prepared source (the
-// authors' file after this target's rename rows) and changed only in captureSpotlightEntity. From 1.21.2 the
-// RenderStateShard.MAIN_TARGET output state binds the main render target when a RenderType draws (in 1.21.1 it did
-// nothing), and entity RenderTypes default to that output state; so the entity drawn for the spotlight mask went to the
-// main target instead of spotlightFbo. While it is drawn, the main target's frameBufferId names spotlightFbo, so
-// MAIN_TARGET's bind lands where the authors' raw bind pointed (restored in a finally).
-// An overlay passes down the `inherits` chain WITHOUT rename rows: 1.21.4 and 1.21.5 must each carry their own
+// Fork multi-version layer: 1.21.4 overlay of the authors' FilterRenderer, taken from the 1.21.4 prepared source (the
+// authors' file after this target's rename rows) and changed only in captureSpotlightEntity. 1.21.4's
+// RenderStateShard.MAIN_TARGET setup is Minecraft.getMainRenderTarget().bindWrite(false) (binds its frameBufferId, as on
+// 1.21.3; in 1.21.1 it did nothing), and entity RenderTypes default to that output state; so the entity drawn for the
+// spotlight mask went to the main target instead of spotlightFbo. While it is drawn, the main target's frameBufferId
+// names spotlightFbo, so MAIN_TARGET's bind lands where the authors' raw bind pointed (restored in a finally).
+// An overlay passes down the `inherits` chain WITHOUT rename rows: 1.21.5 inherits this file and must carry its own
 // FilterRenderer overlay (1.21.8 and later already do).
 package net.eca.client.render.shader;
 

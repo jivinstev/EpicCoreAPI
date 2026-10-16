@@ -15,7 +15,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 
 @OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -36,8 +36,8 @@ public final class EcaClientLifecycle {
     }
 
     @SubscribeEvent
-    public static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(BlenderModelManager.INSTANCE);
+    public static void onRegisterReloadListeners(AddClientReloadListenersEvent event) {
+        event.addListener(net.eca.mv.ReloadIds.of(BlenderModelManager.INSTANCE), BlenderModelManager.INSTANCE);
     }
 
     @SubscribeEvent

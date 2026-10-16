@@ -23,7 +23,10 @@
     "ItemStackClientMixin",
     "ItemRendererMixin",
     "FallingBlockRendererMixin",
-    "CloudRendererMixin"
+    "CloudRendererMixin",
+    "ItemModelResolverMixin",
+    "ItemStackRenderStateAccessor",
+    "ItemStackRenderStateLayersAccessor"
   ],
   "mixins": [
     "NetworkCodecMixin",

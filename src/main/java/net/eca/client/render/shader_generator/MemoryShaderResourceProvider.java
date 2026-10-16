@@ -1,3 +1,4 @@
+// Fork multi-version layer: 1.21.4 version of the authors' file (MetadataSectionSerializer was replaced by MetadataSectionType).
 package net.eca.client.render.shader_generator;
 
 import net.eca.util.shader_generator.ShaderExportBundle;
@@ -6,7 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.metadata.MetadataSectionSerializer;
+import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.server.packs.resources.Resource;
@@ -105,7 +106,7 @@ final class MemoryShaderResourceProvider implements ResourceProvider {
         }
 
         @Override
-        public <T> T getMetadataSection(MetadataSectionSerializer<T> serializer) throws IOException {
+        public <T> T getMetadataSection(MetadataSectionType<T> type) throws IOException {
             return null;
         }
 

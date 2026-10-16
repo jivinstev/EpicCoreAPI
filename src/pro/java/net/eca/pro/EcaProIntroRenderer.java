@@ -125,7 +125,7 @@ final class EcaProIntroRenderer {
             textures[index] = loadTexture(encodedAtlases[index], atlasWidth, atlasHeight);
         }
         encodedAtlases = null;
-        buffer = new SimpleBufferBuilder(128);
+        buffer = new SimpleBufferBuilder("eca", 128);
         AgentLogWriter.info("[EcaProIntro] Animation textures initialized");
     }
 

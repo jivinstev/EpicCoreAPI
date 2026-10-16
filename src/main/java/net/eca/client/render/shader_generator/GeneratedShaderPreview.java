@@ -81,7 +81,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         RenderStateShard.ShaderStateShard itemState = shaderState(
             entityShader,
             entityUniforms,
-            maskBinding(entityShader, maskSamplerName, InventoryMenu.BLOCK_ATLAS)
+            maskBinding(entityShader, maskSamplerName, net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS)
         );
         String name = "eca_shader_generator_" + Integer.toHexString(System.identityHashCode(this));
         this.bossBar = createBossBar(name, blockState, blockPreviewTexture);
@@ -244,10 +244,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
                 AnimatedPreviewTexture animation = AnimatedPreviewTexture.create(entry.getValue());
                 animations.add(animation);
                 DynamicTexture texture = animation.texture();
-                ResourceLocation location = textureManager.register(
-                    "eca_shader_generator/" + revision + "/" + entry.getKey().toLowerCase(),
-                    texture
-                );
+                ResourceLocation location = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/" + entry.getKey().toLowerCase(), texture);
                 registered.add(location);
                 blockShader.setSampler(entry.getKey(), texture);
                 entityShader.setSampler(entry.getKey(), texture);
@@ -468,9 +465,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         NativeImage whiteImage = new NativeImage(1, 1, false);
         whiteImage.setPixel(0, 0, net.minecraft.util.ARGB.fromABGR(0xFFFFFFFF));
         DynamicTexture whiteTexture = new DynamicTexture(whiteImage);
-        ResourceLocation whiteLocation = textureManager.register(
-            "eca_shader_generator/" + revision + "/preview_white", whiteTexture
-        );
+        ResourceLocation whiteLocation = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/preview_white", whiteTexture);
         registered.add(whiteLocation);
         for (String sampler : dependencies.samplers()) {
             if ("Sampler0".equals(sampler)) continue;
@@ -486,9 +481,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
                 AnimatedPreviewAtlas atlas = AnimatedPreviewAtlas.create(binding.spritePaths());
                 animatedAtlases.add(atlas);
                 DynamicTexture texture = atlas.texture();
-                ResourceLocation location = textureManager.register(
-                    "eca_shader_generator/" + revision + "/atlas_" + registered.size(), texture
-                );
+                ResourceLocation location = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/atlas_" + registered.size(), texture);
                 registered.add(location);
                 blockShader.setSampler(binding.samplerName(), texture);
                 entityShader.setSampler(binding.samplerName(), texture);

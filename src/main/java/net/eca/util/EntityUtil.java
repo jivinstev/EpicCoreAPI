@@ -1377,7 +1377,7 @@ public class EntityUtil {
             ChunkPos targetChunk = new ChunkPos(BlockPos.containing(x, y, z));
             if (entity instanceof ServerPlayer) {
                 serverLevel.getChunkSource().addRegionTicket(
-                        TicketType.POST_TELEPORT, targetChunk, 1, entity.getId());
+                        net.eca.mv.Tickets.POST_TELEPORT, targetChunk, 1, entity.getId());
             }
             serverLevel.getChunk(targetChunk.x, targetChunk.z);
 

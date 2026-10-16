@@ -1,10 +1,11 @@
+// Fork multi-version layer: 1.21.4 version of the authors' file (AbstractScrollWidget was replaced by AbstractTextAreaWidget/AbstractScrollArea).
 package net.eca.client.gui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractScrollWidget;
+import net.minecraft.client.gui.components.AbstractTextAreaWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
+final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
 
     private static final Pattern TABLE_SEPARATOR = Pattern.compile(":?-{3,}:?");
     private static final int CARD_GAP = 6;
@@ -44,10 +45,10 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
         List<ShaderAiSession.Message> safe = updated == null ? List.of() : List.copyOf(updated);
         if (safe.equals(messages)) return;
         boolean followBottom = messages.isEmpty()
-            || getMaxScrollAmount() - scrollAmount() <= font.lineHeight * 2.0D;
+            || maxScrollAmount() - scrollAmount() <= font.lineHeight * 2.0D;
         messages = safe;
         rebuildLayout();
-        if (followBottom) setScrollAmount(getMaxScrollAmount());
+        if (followBottom) setScrollAmount(maxScrollAmount());
     }
 
     private void rebuildLayout() {
@@ -314,6 +315,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // 1.21.4: the superclass handles the scrollbar (updateScrolling) itself.
         boolean handled = super.mouseClicked(mouseX, mouseY, button);
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || !withinContentAreaPoint(mouseX, mouseY)) {
             return handled;
@@ -327,6 +329,12 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
         selectionCaret = caret;
         selecting = true;
         return true;
+    }
+
+    // 1.21.1 AbstractScrollWidget#withinContentAreaPoint (removed in 1.21.4)
+    private boolean withinContentAreaPoint(double x, double y) {
+        return x >= getX() && x < getX() + getWidth()
+            && y >= getY() && y < getY() + getHeight();
     }
 
     @Override
@@ -479,7 +487,7 @@ final class ShaderAiTranscriptWidget extends AbstractScrollWidget {
     }
 
     @Override
-    public void updateWidgetNarration(NarrationElementOutput output) {
+    protected void updateWidgetNarration(NarrationElementOutput output) {
         output.add(NarratedElementType.TITLE, getMessage());
     }
 

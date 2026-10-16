@@ -1,4 +1,4 @@
-// OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
+// OVERLAY-ONLY: shared fork-layer helper (1.21.4: AddClientReloadListenersEvent replaces RegisterClientReloadListenersEvent) from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
 // MV-REQUIRES: RegisterShadersEvent
 // MV-REQUIRES: ShaderInstance
 package net.eca.mv;
@@ -10,7 +10,8 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -26,8 +27,8 @@ public final class ShaderReloader implements ResourceManagerReloadListener {
     }
 
     @SubscribeEvent
-    public static void onRegisterReloadListeners(RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(new ShaderReloader());
+    public static void onRegisterReloadListeners(AddClientReloadListenersEvent event) {
+        event.addListener(ResourceLocation.fromNamespaceAndPath("eca", "mv_shaders"), new ShaderReloader());
     }
 
     @Override

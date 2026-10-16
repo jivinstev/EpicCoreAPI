@@ -1,3 +1,4 @@
+// Fork multi-version layer: 1.21.4 version of the authors' file (AbstractWidget.clicked(double,double) was removed; isMouseOver is the same bounds test).
 package net.eca.client.gui;
 
 import net.minecraft.client.Minecraft;
@@ -43,7 +44,7 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!active || !visible || button != 0 || !clicked(mouseX, mouseY)) {
+        if (!active || !visible || button != 0 || !isMouseOver(mouseX, mouseY)) {
             return false;
         }
         if (editing) {
