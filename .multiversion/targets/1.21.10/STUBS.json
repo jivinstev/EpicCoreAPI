@@ -5,6 +5,14 @@
   "reviewed": "FML 10 has no ModLauncher, and the authors' onLoad and initialize were already empty; the one ITransformationService member that did work, transformers(), is EcaClassProcessorProvider (a ClassProcessorProvider service) handing FML the same EcaCoreTransformer after touching this class's static initialiser."
  },
  {
+  "file": ".multiversion/targets/1.21.10/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java",
+  "why": "empties 1 method body",
+  "reviewed": "Not a stub: the one new empty body is the private constructor of the new nested GuiPipRegistration class (the @SubscribeEvent RegisterPictureInPictureRenderersEvent listener that registers GuiPipRenderer for GuiPip, as 1.21.8's overlay does); no method of the authors' file was emptied. render() still draws every preview target (plane, skybox, boss bar, item, entity), now through the painter that GuiPipRenderer.renderToTexture runs when GuiRenderer prepares the frame.",
+  "hooks": [
+   "@SubscribeEvent RegisterPictureInPictureRenderersEvent"
+  ]
+ },
+ {
   "file": ".multiversion/targets/1.21.10/java/net/eca/coremod/EcaCoreTransformer.java",
   "why": "deletes overriding method(s) castVote, getTargetType, labels, targets: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
   "reviewed": "On FML 10's ClassProcessor these four have direct equivalents: targets() is handlesClass over the same targetNames(), castVote YES and getTargetType CLASS are implied by handlesClass on a class Type, and labels() is name() (eca:eca_core); transform is processClass over the same transformNode."
