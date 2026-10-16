@@ -55,7 +55,19 @@ public final class ShaderMaskRenderQueue {
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
         GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
-            uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform));
+            uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform, null));
+    }
+
+    /**
+     * 26.2 (#37): queue a draw of the caller's own (a blend material's, with the uniforms it captured at submit), drawn
+     * in submit order with the extension passes, under the model-view and projection captured now. {@code draw} takes
+     * the mesh and closes it; the builder is recycled after.
+     */
+    public static void enqueueDraw(BufferBuilder builder, MeshData renderedBuffer,
+                                   java.util.function.Consumer<MeshData> draw) {
+        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
+        GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
+        QUEUE.add(new QueuedPass(null, builder, renderedBuffer, modelView, projection, MaskUvTransform.IDENTITY, draw));
     }
 
     public static void drawNow(ShaderMaskPass pass, BufferBuilder builder,
@@ -70,6 +82,14 @@ public final class ShaderMaskRenderQueue {
             draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
         } finally {
             recycle(builder);
+        }
+    }
+
+    /** Order a translucent mesh built in {@link #acquireBuilder}'s builder back to front for the current projection. */
+    public static void sortQuads(BufferBuilder builder, MeshData mesh) {
+        ByteBufferBuilder backing = BUILDER_BACKING.get(builder);
+        if (backing != null && mesh != null) {
+            mesh.sortQuads(backing, RenderSystem.getProjectionType().vertexSorting());
         }
     }
 
@@ -107,7 +127,11 @@ public final class ShaderMaskRenderQueue {
                     RenderSystem.getModelViewStack().identity();
                     RenderSystem.getModelViewStack().mul(entry.modelView());
                     RenderSystem.setProjectionMatrix(entry.projection(), com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
-                    draw(entry.pass(), entry.renderedBuffer(), entry.uvTransform());
+                    if (entry.customDraw() != null) {
+                        entry.customDraw().accept(entry.renderedBuffer());
+                    } else {
+                        draw(entry.pass(), entry.renderedBuffer(), entry.uvTransform());
+                    }
                 } finally {
                     RenderSystem.getModelViewStack().popMatrix();
                     recycle(entry.builder());
@@ -177,7 +201,8 @@ public final class ShaderMaskRenderQueue {
         MeshData renderedBuffer,
         Matrix4f modelView,
         GpuBufferSlice projection,
-        MaskUvTransform uvTransform
+        MaskUvTransform uvTransform,
+        java.util.function.Consumer<MeshData> customDraw
     ) {
     }
 
