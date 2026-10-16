@@ -38,9 +38,9 @@ public final class BossShowHistory {
         if (def.allowRepeat()) {
             //true：看 entity NBT 中 cutscene→uuids 里是否含有该玩家；无 target 等价于"没看过"
             if (target == null) return false;
-            CompoundTag root = target.getPersistentData().getCompound(ECA_ROOT);
-            CompoundTag seenMap = root.getCompound(ENTITY_SEEN_BY_CUTSCENE);
-            ListTag uuids = seenMap.getList(cutsceneId.toString(), Tag.TAG_STRING);
+            CompoundTag root = target.getPersistentData().getCompoundOrEmpty(ECA_ROOT);
+            CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
+            ListTag uuids = seenMap.getListOrEmpty(cutsceneId.toString());
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {
                 if (pidStr.equals(uuids.getString(i))) return true;
@@ -48,8 +48,8 @@ public final class BossShowHistory {
             return false;
         } else {
             //false：看 player NBT 中的 seen list
-            CompoundTag root = player.getPersistentData().getCompound(ECA_ROOT);
-            ListTag seen = root.getList(PLAYER_SEEN, Tag.TAG_STRING);
+            CompoundTag root = player.getPersistentData().getCompoundOrEmpty(ECA_ROOT);
+            ListTag seen = root.getListOrEmpty(PLAYER_SEEN);
             String cid = cutsceneId.toString();
             for (int i = 0; i < seen.size(); i++) {
                 if (cid.equals(seen.getString(i))) return true;
@@ -67,9 +67,9 @@ public final class BossShowHistory {
         if (def.allowRepeat()) {
             if (target == null) return;
             CompoundTag persistent = target.getPersistentData();
-            CompoundTag root = persistent.getCompound(ECA_ROOT);
-            CompoundTag seenMap = root.getCompound(ENTITY_SEEN_BY_CUTSCENE);
-            ListTag uuids = seenMap.getList(cutsceneId.toString(), Tag.TAG_STRING);
+            CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
+            CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
+            ListTag uuids = seenMap.getListOrEmpty(cutsceneId.toString());
 
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {
@@ -82,8 +82,8 @@ public final class BossShowHistory {
             persistent.put(ECA_ROOT, root);
         } else {
             CompoundTag persistent = player.getPersistentData();
-            CompoundTag root = persistent.getCompound(ECA_ROOT);
-            ListTag seen = root.getList(PLAYER_SEEN, Tag.TAG_STRING);
+            CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
+            ListTag seen = root.getListOrEmpty(PLAYER_SEEN);
 
             String cid = cutsceneId.toString();
             for (int i = 0; i < seen.size(); i++) {
@@ -100,7 +100,7 @@ public final class BossShowHistory {
     public static void clearPlayerHistory(ServerPlayer player) {
         if (player == null) return;
         CompoundTag persistent = player.getPersistentData();
-        CompoundTag root = persistent.getCompound(ECA_ROOT);
+        CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
         root.remove(PLAYER_SEEN);
         persistent.put(ECA_ROOT, root);
     }
@@ -109,8 +109,8 @@ public final class BossShowHistory {
     public static void clearEntityHistory(LivingEntity target, ResourceLocation cutsceneId) {
         if (target == null || cutsceneId == null) return;
         CompoundTag persistent = target.getPersistentData();
-        CompoundTag root = persistent.getCompound(ECA_ROOT);
-        CompoundTag seenMap = root.getCompound(ENTITY_SEEN_BY_CUTSCENE);
+        CompoundTag root = persistent.getCompoundOrEmpty(ECA_ROOT);
+        CompoundTag seenMap = root.getCompoundOrEmpty(ENTITY_SEEN_BY_CUTSCENE);
         seenMap.remove(cutsceneId.toString());
         root.put(ENTITY_SEEN_BY_CUTSCENE, seenMap);
         persistent.put(ECA_ROOT, root);

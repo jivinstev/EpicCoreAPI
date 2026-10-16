@@ -15,7 +15,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
@@ -159,13 +158,13 @@ public final class ShaderPreviewRenderer {
         Minecraft minecraft = Minecraft.getInstance();
         ItemRenderer itemRenderer = minecraft.getItemRenderer();
         Level level = minecraft.level;
-        BakedModel model = net.eca.mv.ItemModels.resolve(PREVIEW_ITEM, level, minecraft.player, 0);
+        List<BakedQuad> quads = net.eca.mv.ItemModels.quads(PREVIEW_ITEM, level, minecraft.player, 0);
         MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));
 
         int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);
         graphics.pose().pushPose();
         try {
-            float[] bounds = computeUvBounds(model);
+            float[] bounds = computeUvBounds(quads);
             MultiBufferSource forced = ignored -> delegate.getBuffer(source.item());
             EcaShaderInstance.setLocalUvBounds(
                 bounds[0],
@@ -176,7 +175,7 @@ public final class ShaderPreviewRenderer {
             graphics.pose().translate((left + right) / 2.0, (top + bottom) / 2.0, 180.0);
             graphics.pose().scale(size, -size, size);
             graphics.pose().mulPose(new Quaternionf().rotateY(0.65F).rotateX(-0.35F));
-            itemRenderer.renderStatic(null, PREVIEW_ITEM, ItemDisplayContext.GUI, false, graphics.pose(), forced, level, 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
+            itemRenderer.renderStatic(PREVIEW_ITEM, ItemDisplayContext.GUI, 0xF000F0, OverlayTexture.NO_OVERLAY, graphics.pose(), forced, level, 0);
             delegate.endBatch();
         } finally {
             EcaShaderInstance.clearLocalUvBounds();
@@ -241,33 +240,15 @@ public final class ShaderPreviewRenderer {
         return new ItemStack(Items.DIAMOND_SWORD);
     }
 
-    private static float[] computeUvBounds(BakedModel model) {
+    // 1.21.5: an item layer holds the model's quads directly (one list, every face), so the per-direction getQuads loop is gone
+    private static float[] computeUvBounds(List<BakedQuad> quads) {
         float uMin = Float.POSITIVE_INFINITY;
         float vMin = Float.POSITIVE_INFINITY;
         float uMax = Float.NEGATIVE_INFINITY;
         float vMax = Float.NEGATIVE_INFINITY;
-        RandomSource random = RandomSource.create(42L);
 
-        float[] bounds = includeQuads(
-            model.getQuads(null, null, random),
-            uMin,
-            vMin,
-            uMax,
-            vMax
-        );
-        uMin = bounds[0];
-        vMin = bounds[1];
-        uMax = bounds[2];
-        vMax = bounds[3];
-        for (Direction direction : Direction.values()) {
-            random.setSeed(42L);
-            bounds = includeQuads(
-                model.getQuads(null, direction, random),
-                uMin,
-                vMin,
-                uMax,
-                vMax
-            );
+        if (quads != null) {
+            float[] bounds = includeQuads(quads, uMin, vMin, uMax, vMax);
             uMin = bounds[0];
             vMin = bounds[1];
             uMax = bounds[2];
@@ -295,7 +276,7 @@ public final class ShaderPreviewRenderer {
         int stride = DefaultVertexFormat.BLOCK.getVertexSize() / 4;
         int uvOffset = 4;
         for (BakedQuad quad : quads) {
-            int[] vertices = quad.getVertices();
+            int[] vertices = quad.vertices();
             for (int vertex = 0; vertex < 4; vertex++) {
                 int base = vertex * stride + uvOffset;
                 if (base + 1 >= vertices.length) {

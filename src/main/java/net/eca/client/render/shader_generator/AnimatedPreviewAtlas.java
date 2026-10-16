@@ -69,7 +69,7 @@ final class AnimatedPreviewAtlas implements PreviewAnimation {
         float[] spriteUvs
     ) {
         this.atlasImage = atlasImage;
-        this.texture = new DynamicTexture(atlasImage);
+        this.texture = new DynamicTexture(() -> "eca_preview", atlasImage);
         this.sprites = List.copyOf(sprites);
         this.spriteUvs = spriteUvs;
     }

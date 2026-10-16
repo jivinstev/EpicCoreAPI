@@ -4,9 +4,11 @@ package net.eca.mv;
 import net.minecraft.server.level.TicketType;
 
 /** 1.21.4 removed TicketType.POST_TELEPORT (vanilla no longer holds the destination chunk after a teleport). A mod
- *  that added that ticket itself gets an identical one: Integer key (the entity id), level 1 is the caller's, 5 ticks. */
+ *  that added that ticket itself gets an identical one: 5 ticks, not saved, loads and simulates. 1.21.5 made TicketType
+ *  a plain record (no value type, registered only for vanilla's own), so this one is a fresh unregistered instance; it is
+ *  not persisted, which is the only reason a ticket type would need a registry id. */
 public final class Tickets {
-    public static final TicketType<Integer> POST_TELEPORT = TicketType.create("eca_post_teleport", Integer::compareTo, 5);
+    public static final TicketType POST_TELEPORT = new TicketType(5L, false, TicketType.TicketUse.LOADING_AND_SIMULATION);
 
     private Tickets() {
     }

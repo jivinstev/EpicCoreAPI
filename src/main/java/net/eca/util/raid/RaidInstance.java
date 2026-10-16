@@ -743,34 +743,34 @@ public class RaidInstance {
      * @return the restored raid, or null if the tag is malformed
      */
     public static RaidInstance load(CompoundTag tag) {
-        String definitionId = tag.getString(NBT_DEFINITION);
+        String definitionId = tag.getStringOr(NBT_DEFINITION, "");
         if (definitionId.isEmpty()) return null;
 
-        BlockPos center = new BlockPos(tag.getInt(NBT_CENTER_X), tag.getInt(NBT_CENTER_Y), tag.getInt(NBT_CENTER_Z));
-        RaidInstance raid = new RaidInstance(tag.getInt(NBT_ID), definitionId, center);
+        BlockPos center = new BlockPos(tag.getIntOr(NBT_CENTER_X, 0), tag.getIntOr(NBT_CENTER_Y, 0), tag.getIntOr(NBT_CENTER_Z, 0));
+        RaidInstance raid = new RaidInstance(tag.getIntOr(NBT_ID, 0), definitionId, center);
 
         try {
-            raid.status = RaidStatus.valueOf(tag.getString(NBT_STATUS));
+            raid.status = RaidStatus.valueOf(tag.getStringOr(NBT_STATUS, ""));
         } catch (IllegalArgumentException e) {
             raid.status = RaidStatus.ONGOING;
         }
-        raid.wavesSpawned = tag.getInt(NBT_WAVES_SPAWNED);
-        raid.ticksActive = tag.getLong(NBT_TICKS_ACTIVE);
-        raid.waveCooldown = tag.getInt(NBT_WAVE_COOLDOWN);
-        raid.celebrationTicks = tag.getInt(NBT_CELEBRATION);
-        raid.currentWaveTotal = Math.max(1, tag.getInt(NBT_WAVE_TOTAL));
-        raid.started = tag.getBoolean(NBT_STARTED);
+        raid.wavesSpawned = tag.getIntOr(NBT_WAVES_SPAWNED, 0);
+        raid.ticksActive = tag.getLongOr(NBT_TICKS_ACTIVE, 0L);
+        raid.waveCooldown = tag.getIntOr(NBT_WAVE_COOLDOWN, 0);
+        raid.celebrationTicks = tag.getIntOr(NBT_CELEBRATION, 0);
+        raid.currentWaveTotal = Math.max(1, tag.getIntOr(NBT_WAVE_TOTAL, 0));
+        raid.started = tag.getBooleanOr(NBT_STARTED, false);
 
-        ListTag raiders = tag.getList(NBT_RAIDERS, Tag.TAG_STRING);
+        ListTag raiders = tag.getListOrEmpty(NBT_RAIDERS);
         for (int i = 0; i < raiders.size(); i++) {
             try {
-                raid.raiderUuids.add(UUID.fromString(raiders.getString(i)));
+                raid.raiderUuids.add(UUID.fromString(raiders.getStringOr(i, "")));
             } catch (IllegalArgumentException ignored) {
                 // 非法 UUID 字符串，跳过
             }
         }
         raid.wavesCompleted = tag.contains(NBT_WAVES_COMPLETED)
-                ? Mth.clamp(tag.getInt(NBT_WAVES_COMPLETED), 0, raid.wavesSpawned)
+                ? Mth.clamp(tag.getIntOr(NBT_WAVES_COMPLETED, 0), 0, raid.wavesSpawned)
                 : Math.max(0, raid.wavesSpawned - (raid.raiderUuids.isEmpty() ? 0 : 1));
         return raid;
     }

@@ -348,27 +348,9 @@ public final class ClientEntityUtil {
 
     private static void clearTeleportInterpolation(Entity entity, double x, double y, double z,
                                                    float yRot, float xRot) {
-        if (entity instanceof LivingEntity) {
-            LivingEntity livingEntity = (LivingEntity) entity;
-            livingEntity.lerpSteps = 0;
-            livingEntity.lerpX = x;
-            livingEntity.lerpY = y;
-            livingEntity.lerpZ = z;
-            livingEntity.lerpYRot = yRot;
-            livingEntity.lerpXRot = xRot;
-        }
-        if (entity instanceof Boat) {
-            Boat boat = (Boat) entity;
-            boat.lerpSteps = 0;
-            boat.lerpX = x;
-            boat.lerpY = y;
-            boat.lerpZ = z;
-            boat.lerpYRot = yRot;
-            boat.lerpXRot = xRot;
-        }
-        if (entity instanceof AbstractMinecart) {
-            AbstractMinecart minecart = (AbstractMinecart) entity;
-            minecart.lerpTo(x, y, z, yRot, xRot, 0);
+        net.minecraft.world.entity.InterpolationHandler interpolation = entity.getInterpolation();
+        if (interpolation != null) {
+            interpolation.cancel();
         }
     }
 

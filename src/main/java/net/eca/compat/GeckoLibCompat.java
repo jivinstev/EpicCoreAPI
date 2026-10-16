@@ -1,3 +1,5 @@
+// Fork multi-version layer: 1.21.5 version of the authors' file (GeckoLib 5: layers are added through the event's addLayer;
+// the entity comes from the animatable (GeoEntity) or the related object (replaced entity)).
 package net.eca.compat;
 
 import net.eca.client.render.GeoEntityExtensionLayer;
@@ -22,19 +24,16 @@ public class GeckoLibCompat {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void onGeoCompileRenderLayers(GeoRenderEvent.Entity.CompileRenderLayers event) {
-        GeoEntityRenderer geoRenderer = event.getRenderer();
-        geoRenderer.addRenderLayer(new GeoEntityExtensionLayer<>(geoRenderer, animatable -> (Entity) animatable));
+        event.addLayer(new GeoEntityExtensionLayer(event.getRenderer(), (animatable, related) -> (Entity) animatable));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void onGeoReplacedCompileRenderLayers(GeoRenderEvent.ReplacedEntity.CompileRenderLayers event) {
-        GeoReplacedEntityRenderer geoRenderer = event.getRenderer();
-        geoRenderer.addRenderLayer(new GeoEntityExtensionLayer<>(geoRenderer, animatable -> geoRenderer.getCurrentEntity()));
+        event.addLayer(new GeoEntityExtensionLayer(event.getRenderer(), (animatable, related) -> (Entity) related));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void onGeoBlockCompileRenderLayers(GeoRenderEvent.Block.CompileRenderLayers event) {
-        GeoBlockRenderer geoRenderer = event.getRenderer();
-        geoRenderer.addRenderLayer(new GeoBlockExtensionLayer<>(geoRenderer));
+        event.addLayer(new GeoBlockExtensionLayer(event.getRenderer()));
     }
 }

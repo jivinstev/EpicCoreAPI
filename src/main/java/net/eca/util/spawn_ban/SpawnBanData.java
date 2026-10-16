@@ -31,12 +31,12 @@ public class SpawnBanData extends SavedData {
     public static SpawnBanData load(CompoundTag tag) {
         SpawnBanData data = new SpawnBanData();
 
-        if (tag.contains(NBT_BANS, 10)) { // 10 = CompoundTag
-            CompoundTag bansTag = tag.getCompound(NBT_BANS);
-            for (String key : bansTag.getAllKeys()) {
+        if ((tag.get(NBT_BANS) instanceof net.minecraft.nbt.CompoundTag)) { // 10 = CompoundTag
+            CompoundTag bansTag = tag.getCompoundOrEmpty(NBT_BANS);
+            for (String key : bansTag.keySet()) {
                 ResourceLocation typeId = ResourceLocation.tryParse(key);
                 if (typeId != null) {
-                    int seconds = bansTag.getInt(key);
+                    int seconds = bansTag.getIntOr(key, 0);
                     if (seconds > 0) {
                         data.bans.put(typeId, seconds);
                         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(typeId);
@@ -51,7 +51,7 @@ public class SpawnBanData extends SavedData {
         return data;
     }
 
-    @Override
+    
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         CompoundTag bansTag = new CompoundTag();
         for (Map.Entry<ResourceLocation, Integer> entry : bans.entrySet()) {
@@ -62,13 +62,7 @@ public class SpawnBanData extends SavedData {
     }
 
     public static SpawnBanData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
-            new SavedData.Factory<>(
-                SpawnBanData::new,
-                (tag, registries) -> load(tag),
-                null
-            ),
-            DATA_NAME
+        return net.eca.mv.SavedDatas.computeIfAbsent(level.getDataStorage(), SpawnBanData::new, (tag, registries) -> load(tag), DATA_NAME
         );
     }
 

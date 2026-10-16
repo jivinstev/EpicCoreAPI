@@ -1,6 +1,6 @@
 package net.eca.client.render.shader;
 
-import com.mojang.blaze3d.shaders.Uniform;
+import net.eca.mv.Uniform;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.ShaderMaskSource;

@@ -4,7 +4,7 @@ package net.eca.mv;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -13,30 +13,31 @@ import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
-/** 1.21.1's ItemRenderer.getModel(stack, level, entity, seed) returned the item's BakedModel (overrides applied);
- *  1.21.4 resolves an item into an ItemStackRenderState instead. This resolves one and returns its first layer's
- *  model, which is what the old call answered for an ordinary item. Null when the item has no baked model. */
+/** 1.21.1's ItemRenderer.getModel(stack, level, entity, seed) returned the item's BakedModel (overrides applied).
+ *  1.21.4 resolves an item into an ItemStackRenderState instead, and 1.21.5 has no BakedModel at all: a layer holds the
+ *  model's quads. This resolves one and returns its first layer's quads (all faces, culled or not), which is what the
+ *  old model answered for an ordinary item. Null when the item has no baked geometry. */
 public final class ItemModels {
     // before the Field lookups below: field() logs through it during class initialisation
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean warned;
     private static final Field LAYERS = field(ItemStackRenderState.class, "layers");
-    private static final Field MODEL = field(ItemStackRenderState.LayerRenderState.class, "model");
 
     private ItemModels() {
     }
 
-    public static BakedModel resolve(ItemStack stack, Level level, LivingEntity entity, int seed) {
+    public static List<BakedQuad> quads(ItemStack stack, Level level, LivingEntity entity, int seed) {
         ItemStackRenderState state = new ItemStackRenderState();
         Minecraft.getInstance().getItemModelResolver()
-                .updateForTopItem(state, stack, ItemDisplayContext.NONE, false, level, entity, seed);
-        if (state.isEmpty() || LAYERS == null || MODEL == null) {
+                .updateForTopItem(state, stack, ItemDisplayContext.NONE, level, entity, seed);
+        if (state.isEmpty() || LAYERS == null) {
             return null;
         }
         try {
             Object[] layers = (Object[]) LAYERS.get(state);
-            return layers.length == 0 ? null : (BakedModel) MODEL.get(layers[0]);
+            return layers.length == 0 ? null : ((ItemStackRenderState.LayerRenderState) layers[0]).prepareQuadList();
         } catch (ReflectiveOperationException e) {
             warnOnce("reading the item layers", e);
             return null;

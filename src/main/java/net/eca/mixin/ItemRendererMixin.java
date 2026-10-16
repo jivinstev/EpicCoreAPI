@@ -1,9 +1,10 @@
-// Fork multi-version layer: 1.21.4 version of the authors' mixin. 1.21.4 renders an item layer by layer from an
+// Fork multi-version layer: 1.21.5 copy of the 1.21.4 mixin (the layer holds its quads, not a BakedModel). 1.21.4 renders an item layer by layer from an
 // ItemStackRenderState (no stack on it): the extension pass runs at the end of LayerRenderState.render, once per
 // item, with the layer's resolved tints. Once per RENDER of the state, not per fill: an item entity fills one state and
 // renders it up to five times (ItemEntityRenderer.renderMultipleFromCount), where 1.21.1 called ItemRenderer.render per
 // copy, so the pass runs for the state's first layer on every render. The stack comes from net.eca.mv.ItemStacks
 // (filled by ItemModelResolverMixin): claimed once per fill and kept on the first layer until that layer is cleared.
+// The layers accessor (ItemStackRenderStateLayersAccessor, 1.21.4's file) is added here by target.properties mixin_add.
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -18,7 +19,7 @@ import net.eca.mv.ItemStacks;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Unique;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -35,7 +36,8 @@ import java.util.List;
 public abstract class ItemRendererMixin {
 
     @Shadow
-    BakedModel model;
+    @Final
+    private List<BakedQuad> quads;
 
     @Shadow
     private int[] tintLayers;
@@ -65,7 +67,7 @@ public abstract class ItemRendererMixin {
         ItemStack claimed = ItemStacks.claim(this$0);
         if (claimed != null) eca$stack = claimed;
         ItemStack stack = eca$stack;
-        if (stack == null || model == null) return;
+        if (stack == null || quads.isEmpty()) return;
         ItemDisplayContext displayContext = ((ItemStackRenderStateAccessor) this$0).eca$displayContext();
         if (stack.isEmpty()) return;
         ItemExtension extension = ItemExtensionManager.getExtension(stack.getItem());
@@ -81,7 +83,7 @@ public abstract class ItemRendererMixin {
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
             SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
-            ItemStacks.renderModelLists(model, tintLayers, combinedLight, combinedOverlay, poseStack, consumer);
+            ItemStacks.renderModelLists(quads, tintLayers, combinedLight, combinedOverlay, poseStack, consumer);
             consumer.finish(batch -> {
                 if (queued) {
                     ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),

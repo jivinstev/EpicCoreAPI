@@ -1,3 +1,4 @@
+// 1.21.5: render() dropped the (unused here) modelView/projection Matrix4f params.
 // OVERLAY-ONLY: community fork multi-version layer. 1.21.1's LevelRendererMixin cancelled renderClouds; in 1.21.2
 // clouds are drawn by CloudRenderer.render inside a frame-graph pass that runs after the entities, so the skip
 // moves here. Added to eca.mixins.json for this target by .multiversion (target.properties mixin_add).
@@ -17,7 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class CloudRendererMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void eca$skipOccludingClouds(int color, net.minecraft.client.CloudStatus status, float height,
-                                        org.joml.Matrix4f modelView, org.joml.Matrix4f projection,
                                         net.minecraft.world.phys.Vec3 cameraPosition, float ticks, CallbackInfo ci) {
         if (CloudGate.occlude) {
             ci.cancel();

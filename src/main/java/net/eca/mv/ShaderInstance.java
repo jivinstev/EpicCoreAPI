@@ -1,79 +1,209 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
+// MV-REQUIRES: LegacyGl
+// MV-REQUIRES: Uniform
 package net.eca.mv;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.platform.DestFactor;
+import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.preprocessor.GlslPreprocessor;
-import com.mojang.blaze3d.shaders.CompiledShader;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.shaders.ShaderType;
+import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.serialization.JsonOps;
+import com.mojang.logging.LogUtils;
 import net.minecraft.FileUtil;
-import net.minecraft.client.renderer.CompiledShaderProgram;
-import net.minecraft.client.renderer.ShaderManager;
-import net.minecraft.client.renderer.ShaderProgramConfig;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import org.apache.commons.io.IOUtils;
-import org.lwjgl.opengl.GL14;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 1.21.1's ShaderInstance, rebuilt on 1.21.2's CompiledShaderProgram so the mod's shader code keeps its shape:
- * a program is made from {@code <ns>:shaders/core/<name>.json} through whatever ResourceProvider the caller passes
- * (the mod's preset provider included), in the 1.21.1 JSON format, with its "blend" applied on {@link #apply()}.
- * The vanilla ShaderManager in 1.21.2 cannot do this: it only compiles programs it found itself and has no
- * blend state. The constructor CompiledShaderProgram(int) is widened by this target's access transformer.
+ * 1.21.1's ShaderInstance on 1.21.5, where a program is no longer bound and fed by hand: drawing goes through a
+ * RenderPipeline (fixed blend/depth/cull/mask state + shader ids + declared uniforms and samplers) and a RenderPass.
+ * This keeps the 1.21.1 surface the mod's code was written against -- built from {@code shaders/core/<name>.json}
+ * through any ResourceProvider (a mod's generated-shader provider included), {@code getUniform(name).set(...)},
+ * {@code setSampler} -- and derives a pipeline per draw state ({@link #pipeline}), compiled from THIS instance's
+ * sources through {@code GpuDevice.precompilePipeline} (see {@link LegacyGl#draw}).
+ *
+ * <p>Ids are made unique per instance: the device caches compiled shaders by id, so a mod that rebuilds a shader under
+ * the same name (a live shader editor) would otherwise keep drawing the first version it compiled.
  */
-public class ShaderInstance extends CompiledShaderProgram {
+public class ShaderInstance implements AutoCloseable {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final AtomicInteger SERIAL = new AtomicInteger();
+
+    // 1.21.1's public built-in uniform fields: null when the shader's JSON does not declare them. Only COLOR_MODULATOR
+    // is honoured when the mod overwrites it (LegacyGl.draw); the others are read from RenderSystem by 1.21.5 itself.
+    public Uniform MODEL_VIEW_MATRIX, PROJECTION_MATRIX, TEXTURE_MATRIX, SCREEN_SIZE, COLOR_MODULATOR, LIGHT0_DIRECTION,
+            LIGHT1_DIRECTION, GLINT_ALPHA, FOG_START, FOG_END, FOG_COLOR, FOG_SHAPE, LINE_WIDTH, GAME_TIME;
+
     private final String name;
-    private final Blend blend;
+    private final VertexFormat format;
+    private final ResourceLocation vertexId;
+    private final ResourceLocation fragmentId;
+    private final String vertexSource;
+    private final String fragmentSource;
+    private final List<String> samplers = new ArrayList<>();
+    private final Map<String, Uniform> uniforms = new LinkedHashMap<>();
+    private final Map<String, GpuTexture> boundSamplers = new HashMap<>();
+    private final BlendFunction blend;
+    private final Map<List<Object>, RenderPipeline> pipelines = new HashMap<>();
+    private final int serial = SERIAL.incrementAndGet();
+    private int lastProgramId = -1;
 
     public ShaderInstance(ResourceProvider provider, ResourceLocation location, VertexFormat format) throws IOException {
-        this(provider, location, format, readConfig(provider, location));
-    }
-
-    private ShaderInstance(ResourceProvider provider, ResourceLocation location, VertexFormat format, JsonObject json)
-            throws IOException {
-        super(link(provider, location, format, json));
         this.name = location.toString();
-        ShaderProgramConfig config = ShaderProgramConfig.CODEC.parse(JsonOps.INSTANCE, json)
-                .getOrThrow(msg -> new IOException("Invalid shader config " + location + ": " + msg));
-        setupUniforms(config.uniforms(), config.samplers());
-        this.blend = json.has("blend") ? Blend.parse(json.getAsJsonObject("blend")) : null;
+        this.format = format;
+        JsonObject json = readConfig(provider, location);
+        ResourceLocation vertex = ResourceLocation.parse(json.get("vertex").getAsString());
+        ResourceLocation fragment = ResourceLocation.parse(json.get("fragment").getAsString());
+        this.vertexSource = source(provider, vertex, ShaderType.VERTEX);
+        this.fragmentSource = source(provider, fragment, ShaderType.FRAGMENT);
+        this.vertexId = vertex.withSuffix("/mv_" + serial);
+        this.fragmentId = fragment.withSuffix("/mv_" + serial);
+        if (json.has("samplers")) {
+            for (JsonElement e : json.getAsJsonArray("samplers")) {
+                samplers.add(e.getAsJsonObject().get("name").getAsString());
+            }
+        }
+        if (json.has("uniforms")) {
+            for (JsonElement e : json.getAsJsonArray("uniforms")) {
+                JsonObject u = e.getAsJsonObject();
+                String n = u.get("name").getAsString();
+                UniformType type = type(u.get("type").getAsString(), u.has("count") ? u.get("count").getAsInt() : 1);
+                if (type == null) {
+                    LOGGER.warn("[mv] {}: uniform {} has a type 1.21.5 cannot declare ({}); it is left out", name, n, u);
+                    continue;
+                }
+                float[] defaults = null;
+                if (u.has("values")) {
+                    JsonArray v = u.getAsJsonArray("values");
+                    defaults = new float[v.size()];
+                    for (int i = 0; i < defaults.length; i++) defaults[i] = v.get(i).getAsFloat();
+                }
+                uniforms.put(n, new Uniform(n, type, defaults));
+            }
+        }
+        MODEL_VIEW_MATRIX = uniforms.get("ModelViewMat");
+        PROJECTION_MATRIX = uniforms.get("ProjMat");
+        TEXTURE_MATRIX = uniforms.get("TextureMat");
+        SCREEN_SIZE = uniforms.get("ScreenSize");
+        COLOR_MODULATOR = uniforms.get("ColorModulator");
+        LIGHT0_DIRECTION = uniforms.get("Light0_Direction");
+        LIGHT1_DIRECTION = uniforms.get("Light1_Direction");
+        GLINT_ALPHA = uniforms.get("GlintAlpha");
+        FOG_START = uniforms.get("FogStart");
+        FOG_END = uniforms.get("FogEnd");
+        FOG_COLOR = uniforms.get("FogColor");
+        FOG_SHAPE = uniforms.get("FogShape");
+        LINE_WIDTH = uniforms.get("LineWidth");
+        GAME_TIME = uniforms.get("GameTime");
+        this.blend = json.has("blend") ? blend(json.getAsJsonObject("blend")) : null;
     }
 
-    public String getName() {
-        return name;
-    }
+    public String getName() { return name; }
 
-    public int getId() {
-        return getProgramId();
-    }
+    /** The GL program of the pipeline this shader last drew with (-1 before the first draw). */
+    public int getId() { return lastProgramId; }
 
-    /** 1.21.1 accepted a texture object or an id for any sampler. */
+    public VertexFormat getVertexFormat() { return format; }
+
+    /** 1.21.1 returned null for a uniform the program does not declare; so does this. */
+    public Uniform getUniform(String name) { return uniforms.get(name); }
+
+    public Uniform safeGetUniform(String name) { return uniforms.getOrDefault(name, Uniform.DUMMY); }
+
+    /** 1.21.1 accepted a texture object for any sampler; 1.21.5 binds a GpuTexture. */
     public void setSampler(String sampler, Object texture) {
         if (texture instanceof AbstractTexture t) {
-            bindSampler(sampler, t.getId());
-        } else if (texture instanceof Integer id) {
-            bindSampler(sampler, id);
+            boundSamplers.put(sampler, t.getTexture());
+        } else if (texture instanceof GpuTexture g) {
+            boundSamplers.put(sampler, g);
+        } else if (texture != null) {
+            LOGGER.warn("[mv] {}: sampler {} given a {}, which 1.21.5 cannot bind", name, sampler, texture.getClass().getName());
         }
     }
 
+    public void apply() {}
+
+    public void clear() {}
+
     @Override
-    public void apply() {
-        if (blend != null) {
-            blend.apply();
+    public void close() {}
+
+    /** The JSON's own "blend", or null; LegacyGl prefers state the caller set explicitly. */
+    BlendFunction blend() { return blend; }
+
+    List<String> samplers() { return samplers; }
+
+    String sourceFor(ResourceLocation id, ShaderType type) {
+        if (type == ShaderType.VERTEX && id.equals(vertexId)) return vertexSource;
+        if (type == ShaderType.FRAGMENT && id.equals(fragmentId)) return fragmentSource;
+        return null;
+    }
+
+    RenderPipeline pipeline(VertexFormat format, VertexFormat.Mode mode, LegacyGl.Key key) {
+        return pipelines.computeIfAbsent(List.of(key, format, mode), l -> {
+            LegacyGl.Key k = key;
+            RenderPipeline.Builder b = RenderPipeline.builder()
+                    .withLocation(vertexId.withSuffix("_p" + pipelines.size()))
+                    .withVertexShader(vertexId)
+                    .withFragmentShader(fragmentId)
+                    .withVertexFormat(format, mode);
+            for (String s : samplers) b.withSampler(s);
+            for (Uniform u : uniforms.values()) b.withUniform(u.getName(), u.getType());
+            return k.apply(b).build();
+        });
+    }
+
+    void bind(RenderPass pass, int programId) {
+        lastProgramId = programId;
+        for (Uniform u : uniforms.values()) {
+            if (!LegacyGl.BUILT_IN.contains(u.getName())) u.applyTo(pass);
         }
-        super.apply();
+        for (String s : samplers) {
+            GpuTexture t = boundSamplers.get(s);
+            if (t == null) t = LegacyGl.slotTexture(s);
+            // 1.21.1's GL let a declared sampler stay unset: its uniform is 0, so it read texture unit 0. From 1.21.5 the
+            // command encoder refuses the draw instead ("Missing sampler X", thrown from the frame), so a sampler the
+            // mod only binds on some paths (a mask set only when a mask source is chosen) takes unit 0's texture, and
+            // with nothing there the missing-texture sprite -- never an unbound sampler
+            if (t == null) t = LegacyGl.slotTexture("Sampler0");
+            if (t == null) t = LegacyGl.missingTexture();
+            if (t != null) pass.bindSampler(s, t);
+        }
+    }
+
+    private static UniformType type(String type, int count) {
+        return switch (type.toLowerCase(Locale.ROOT)) {
+            case "float" -> switch (count) {
+                case 1 -> UniformType.FLOAT; case 2 -> UniformType.VEC2; case 3 -> UniformType.VEC3; case 4 -> UniformType.VEC4;
+                default -> null;
+            };
+            case "int" -> count == 1 ? UniformType.INT : count == 3 ? UniformType.IVEC3 : null;
+            case "matrix4x4" -> UniformType.MATRIX4X4;
+            default -> null;
+        };
     }
 
     private static JsonObject readConfig(ResourceProvider provider, ResourceLocation location) throws IOException {
@@ -83,37 +213,11 @@ public class ShaderInstance extends CompiledShaderProgram {
         }
     }
 
-    private static int link(ResourceProvider provider, ResourceLocation location, VertexFormat format, JsonObject json)
-            throws IOException {
-        RenderSystem.assertOnRenderThread();
-        CompiledShader vertex = compile(provider, ResourceLocation.parse(json.get("vertex").getAsString()), CompiledShader.Type.VERTEX);
-        CompiledShader fragment = compile(provider, ResourceLocation.parse(json.get("fragment").getAsString()), CompiledShader.Type.FRAGMENT);
-        try {
-            int program = GlStateManager.glCreateProgram();
-            if (program <= 0) {
-                throw new IOException("Could not create shader program for " + location);
-            }
-            format.bindAttributes(program);
-            GlStateManager.glAttachShader(program, vertex.getShaderId());
-            GlStateManager.glAttachShader(program, fragment.getShaderId());
-            GlStateManager.glLinkProgram(program);
-            if (GlStateManager.glGetProgrami(program, 35714) == 0) {
-                String log = GlStateManager.glGetProgramInfoLog(program, 32768);
-                GlStateManager.glDeleteProgram(program);
-                throw new IOException("Could not link shader program " + location + ": " + log);
-            }
-            return program;
-        } finally {
-            vertex.close();
-            fragment.close();
-        }
-    }
-
-    private static CompiledShader compile(ResourceProvider provider, ResourceLocation id, CompiledShader.Type type) throws IOException {
-        ResourceLocation file = id.withPath(p -> "shaders/core/" + p + (type == CompiledShader.Type.VERTEX ? ".vsh" : ".fsh"));
-        String source;
+    private static String source(ResourceProvider provider, ResourceLocation id, ShaderType type) throws IOException {
+        ResourceLocation file = id.withPath(p -> "shaders/core/" + p + (type == ShaderType.VERTEX ? ".vsh" : ".fsh"));
+        String text;
         try (Reader reader = provider.openAsReader(file)) {
-            source = IOUtils.toString(reader);
+            text = IOUtils.toString(reader);
         }
         ResourceLocation dir = file.withPath(FileUtil::getFullResourcePath);
         Set<ResourceLocation> imported = new HashSet<>();
@@ -123,9 +227,7 @@ public class ShaderInstance extends CompiledShaderProgram {
                 ResourceLocation target = relative
                         ? dir.withPath(p -> FileUtil.normalizeResourcePath(p + path))
                         : ResourceLocation.parse(path).withPrefix("shaders/include/");
-                if (!imported.add(target)) {
-                    return null;
-                }
+                if (!imported.add(target)) return null;
                 try (Reader reader = provider.openAsReader(target)) {
                     return IOUtils.toString(reader);
                 } catch (IOException e) {
@@ -133,71 +235,47 @@ public class ShaderInstance extends CompiledShaderProgram {
                 }
             }
         };
-        try {
-            return CompiledShader.compile(id, type, String.join("", preprocessor.process(source)));
-        } catch (ShaderManager.CompilationException e) {
-            throw new IOException("Could not compile " + file + ": " + e.getMessage(), e);
-        }
+        return String.join("", preprocessor.process(text));
     }
 
-    /** The "blend" object of a 1.21.1 shader JSON, as 1.21.1's BlendMode applied it. */
-    private record Blend(boolean opaque, boolean separate, int srcRgb, int dstRgb, int srcAlpha, int dstAlpha, int func) {
-        static Blend parse(JsonObject o) {
-            String func = string(o, "func", "add");
-            int src = factor(string(o, "srcrgb", "1"));
-            int dst = factor(string(o, "dstrgb", "0"));
-            boolean separate = o.has("srcalpha") || o.has("dstalpha");
-            int srcA = separate ? factor(string(o, "srcalpha", "1")) : src;
-            int dstA = separate ? factor(string(o, "dstalpha", "0")) : dst;
-            boolean opaque = src == 1 && dst == 0 && srcA == 1 && dstA == 0 && func.equals("add");
-            return new Blend(opaque, separate, src, dst, srcA, dstA, equation(func));
+    /** The "blend" object of a 1.21.1 shader JSON. 1.21.5 blends with ADD only; another "func" is logged and ignored. */
+    private BlendFunction blend(JsonObject o) {
+        String func = o.has("func") ? o.get("func").getAsString() : "add";
+        if (!"add".equalsIgnoreCase(func)) {
+            LOGGER.warn("[mv] {}: blend func {} has no 1.21.5 pipeline equivalent; ADD is used", name, func);
         }
+        SourceFactor src = src(o, "srcrgb", SourceFactor.ONE);
+        DestFactor dst = dst(o, "dstrgb", DestFactor.ZERO);
+        boolean separate = o.has("srcalpha") || o.has("dstalpha");
+        return separate ? new BlendFunction(src, dst, src(o, "srcalpha", SourceFactor.ONE), dst(o, "dstalpha", DestFactor.ZERO))
+                : new BlendFunction(src, dst);
+    }
 
-        void apply() {
-            if (opaque) {
-                RenderSystem.disableBlend();
-                return;
-            }
-            RenderSystem.enableBlend();
-            RenderSystem.blendEquation(func);
-            if (separate) {
-                RenderSystem.blendFuncSeparate(srcRgb, dstRgb, srcAlpha, dstAlpha);
-            } else {
-                RenderSystem.blendFunc(srcRgb, dstRgb);
-            }
-        }
+    /** 1.21.1's BlendMode vocabulary: 0/zero, 1/one, [1-]srccolor, [1-]dstcolor, [1-]srcalpha, [1-]dstalpha. */
+    private static String factor(JsonObject o, String key) {
+        if (!o.has(key)) return null;
+        String f = o.get(key).getAsString().trim().toLowerCase(Locale.ROOT).replace(" ", "").replace("_", "");
+        boolean minus = f.startsWith("1-");
+        String base = minus ? f.substring(2) : f;
+        String e = switch (base) {
+            case "0", "zero" -> "ZERO";
+            case "1", "one" -> "ONE";
+            case "srccolor" -> "SRC_COLOR";
+            case "dstcolor" -> "DST_COLOR";
+            case "srcalpha" -> "SRC_ALPHA";
+            case "dstalpha" -> "DST_ALPHA";
+            default -> null;
+        };
+        return e == null ? null : (minus ? "ONE_MINUS_" + e : e);
+    }
 
-        private static String string(JsonObject o, String key, String fallback) {
-            JsonElement e = o.get(key);
-            return e == null ? fallback : e.getAsString();
-        }
+    private static SourceFactor src(JsonObject o, String key, SourceFactor dflt) {
+        String f = factor(o, key);
+        try { return f == null ? dflt : SourceFactor.valueOf(f); } catch (IllegalArgumentException e) { return dflt; }
+    }
 
-        private static int equation(String s) {
-            return switch (s.trim().toLowerCase(Locale.ROOT)) {
-                case "subtract" -> 32778;
-                case "reversesubtract", "reverse_subtract" -> 32779;
-                case "min" -> 32775;
-                case "max" -> 32776;
-                default -> 32774;
-            };
-        }
-
-        private static int factor(String s) {
-            String f = s.trim().toLowerCase(Locale.ROOT).replace("_", "").replace("one", "1").replace("zero", "0")
-                    .replace("minus", "-");
-            return switch (f) {
-                case "0" -> 0;
-                case "1" -> 1;
-                case "srccolor" -> 768;
-                case "1-srccolor" -> 769;
-                case "dstcolor" -> 774;
-                case "1-dstcolor" -> 775;
-                case "srcalpha" -> 770;
-                case "1-srcalpha" -> 771;
-                case "dstalpha" -> 772;
-                case "1-dstalpha" -> 773;
-                default -> GL14.GL_ONE;
-            };
-        }
+    private static DestFactor dst(JsonObject o, String key, DestFactor dflt) {
+        String f = factor(o, key);
+        try { return f == null ? dflt : DestFactor.valueOf(f); } catch (IllegalArgumentException e) { return dflt; }
     }
 }

@@ -24,7 +24,7 @@ public final class BossShowEditorSessionManager {
     //重复打开编辑器时保留第一次进入前的模式，避免旁观模式覆盖原快照。
     public static void begin(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
-        if (!persistent.contains(NBT_ROOT, Tag.TAG_COMPOUND)) {
+        if (!(persistent.get(NBT_ROOT) instanceof net.minecraft.nbt.CompoundTag)) {
             CompoundTag root = new CompoundTag();
             root.putString(NBT_PREV_GAMEMODE, player.gameMode.getGameModeForPlayer().getName());
             persistent.put(NBT_ROOT, root);
@@ -36,17 +36,17 @@ public final class BossShowEditorSessionManager {
     }
 
     public static boolean isActive(ServerPlayer player) {
-        return player.getPersistentData().contains(NBT_ROOT, Tag.TAG_COMPOUND);
+        return (player.getPersistentData().get(NBT_ROOT) instanceof net.minecraft.nbt.CompoundTag);
     }
 
     //先清除会话标记再切换模式，使重复退出保持幂等。
     public static boolean end(ServerPlayer player) {
         CompoundTag persistent = player.getPersistentData();
         LAST_HEARTBEAT.remove(player.getUUID());
-        if (!persistent.contains(NBT_ROOT, Tag.TAG_COMPOUND)) return false;
+        if (!(persistent.get(NBT_ROOT) instanceof net.minecraft.nbt.CompoundTag)) return false;
 
-        CompoundTag root = persistent.getCompound(NBT_ROOT);
-        GameType previous = GameType.byName(root.getString(NBT_PREV_GAMEMODE), GameType.SURVIVAL);
+        CompoundTag root = persistent.getCompoundOrEmpty(NBT_ROOT);
+        GameType previous = GameType.byName(root.getStringOr(NBT_PREV_GAMEMODE, ""), GameType.SURVIVAL);
         persistent.remove(NBT_ROOT);
         if (player.gameMode.getGameModeForPlayer() != previous) {
             player.setGameMode(previous);

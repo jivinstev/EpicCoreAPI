@@ -1,28 +1,38 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
+// MV-REQUIRES: LegacyGl
+// MV-REQUIRES: ShaderInstance
 package net.eca.mv;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.renderer.CompiledShaderProgram;
 import net.minecraft.client.renderer.RenderStateShard;
 
 import java.util.function.Supplier;
 
 /**
- * 1.21.1's ShaderStateShard took a Supplier of a ShaderInstance; 1.21.2's takes a ShaderProgram key that the
- * vanilla ShaderManager compiles. the mod builds its own programs (see {@link ShaderInstance}), so this shard binds
- * the supplied program directly. Not final: the authors subclass the shard anonymously.
+ * 1.21.4's RenderStateShard.ShaderStateShard, gone in 1.21.5 (a RenderType's shader is part of its pipeline). Setting it
+ * up makes the supplied shader the one {@link LegacyGl} draws with; the mod's own subclasses still override
+ * setupRenderState to push uniforms first, exactly as before. Not final: mods subclass it anonymously.
  */
-public class ShaderShard extends RenderStateShard.ShaderStateShard {
-    private final Supplier<? extends CompiledShaderProgram> shader;
+public class ShaderShard extends RenderStateShard {
+    private final Supplier<?> shader;
 
-    public ShaderShard(Supplier<? extends CompiledShaderProgram> shader) {
-        super();
+    public ShaderShard(Supplier<?> shader) {
+        super("mv_shader", () -> {}, () -> {});
         this.shader = shader;
+    }
+
+    public ShaderShard() {
+        this(() -> null);
+    }
+
+    Object shader() {
+        return shader.get();
     }
 
     @Override
     public void setupRenderState() {
-        RenderSystem.setShader(this.shader.get());
+        Object s = shader.get();
+        if (s instanceof ShaderInstance i) LegacyGl.setShader(i);
+        else if (s instanceof LegacyGl.Vanilla v) LegacyGl.setShader(v);
     }
 
     @Override

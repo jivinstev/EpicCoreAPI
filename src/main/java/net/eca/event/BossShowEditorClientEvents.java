@@ -72,8 +72,8 @@ public final class BossShowEditorClientEvents {
             || localPlayer.isPassenger()) {
             return;
         }
-        boolean noMovementInput = localPlayer.input.forwardImpulse == 0.0F
-            && localPlayer.input.leftImpulse == 0.0F
+        boolean noMovementInput = localPlayer.input.getMoveVector().y == 0.0F
+            && localPlayer.input.getMoveVector().x == 0.0F
             && !localPlayer.input.keyPresses.jump()
             && !localPlayer.input.keyPresses.shift();
         //只清除松键后的残余速度，避免压低正常飞行速度。

@@ -1,8 +1,10 @@
+// Fork multi-version layer: 1.21.5 version of the authors' file (the prepared 1.21.5 tree's, renames applied). One change,
+// in draw(): a vanilla RenderType in the queue is drawn with its own draw(mesh) (see the comment there). Everything else
+// is the authors', unchanged.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -79,7 +81,7 @@ public final class ShaderMaskRenderQueue {
         if (RenderSystem.isOnRenderThread()) {
             work.run();
         } else {
-            RenderSystem.recordRenderCall(work::run);
+            net.eca.mv.LegacyGl.recordRenderCall(work::run);
         }
     }
 
@@ -111,9 +113,17 @@ public final class ShaderMaskRenderQueue {
         EcaShaderInstance.setOpacity(pass.alpha());
         boolean stateActive = false;
         try {
+            if (!(pass.renderType() instanceof net.eca.mv.LegacyRenderType)) {
+                // [mv] 1.21.5: a vanilla RenderType's setupRenderState no longer sets its shader or its blend / depth /
+                // cull state (they are its RenderPipeline), so LegacyGl.drawWithShader would draw it with whatever
+                // shader was set last; its own draw(mesh) sets it up, draws with its pipeline and clears it, as 1.21.1's
+                // setupRenderState + BufferUploader.drawWithShader + clearRenderState did
+                pass.renderType().draw(renderedBuffer);
+                return;
+            }
             pass.renderType().setupRenderState();
             stateActive = true;
-            BufferUploader.drawWithShader(renderedBuffer);
+            net.eca.mv.LegacyGl.drawWithShader(renderedBuffer);
         } finally {
             if (stateActive) {
                 pass.renderType().clearRenderState();

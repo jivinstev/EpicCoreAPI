@@ -50,10 +50,10 @@ public final class BossShowClientEvents {
             if (bar > 0) {
                 PoseStack pose = gui.pose();
                 pose.pushPose();
-                RenderSystem.enableBlend();
+                net.eca.mv.LegacyGl.enableBlend();
                 gui.fill(0, 0, width, bar, 0xFF000000);
                 gui.fill(0, height - bar, width, height, 0xFF000000);
-                RenderSystem.disableBlend();
+                net.eca.mv.LegacyGl.disableBlend();
                 pose.popPose();
             }
         }

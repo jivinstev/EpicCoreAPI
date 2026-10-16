@@ -6,11 +6,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.world.item.ItemStack;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -45,8 +46,8 @@ public final class ItemStacks {
 
     private static Method renderModelLists() {
         try {
-            Method m = ItemRenderer.class.getDeclaredMethod("renderModelLists", BakedModel.class, int[].class, int.class,
-                    int.class, PoseStack.class, VertexConsumer.class);
+            Method m = ItemRenderer.class.getDeclaredMethod("renderQuadList", PoseStack.class, VertexConsumer.class, List.class,
+                    int[].class, int.class, int.class);
             m.setAccessible(true);
             return m;
         } catch (ReflectiveOperationException | RuntimeException e) {
@@ -55,15 +56,16 @@ public final class ItemStacks {
     }
 
     /** 1.21.1's public ItemRenderer.renderModelLists(model, stack, light, overlay, pose, consumer); 1.21.4's is private
-     *  static and takes the tint array the render state already resolved instead of the stack. */
-    public static void renderModelLists(BakedModel model, int[] tints, int light, int overlay, PoseStack pose, VertexConsumer consumer) {
-        if (RENDER_MODEL_LISTS == null || model == null) {
+     *  static and takes the tint array the render state already resolved instead of the stack; 1.21.5 has no model to
+     *  pass, only the layer's quads (the private renderQuadList). */
+    public static void renderModelLists(List<BakedQuad> quads, int[] tints, int light, int overlay, PoseStack pose, VertexConsumer consumer) {
+        if (RENDER_MODEL_LISTS == null || quads == null) {
             return;
         }
         try {
-            RENDER_MODEL_LISTS.invoke(null, model, tints, light, overlay, pose, consumer);
+            RENDER_MODEL_LISTS.invoke(null, pose, consumer, quads, tints, light, overlay);
         } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("ItemRenderer.renderModelLists", e);
+            throw new IllegalStateException("ItemRenderer.renderQuadList", e);
         }
     }
 }

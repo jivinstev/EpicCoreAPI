@@ -30,11 +30,11 @@ public class RaidSavedData extends SavedData {
 
     public static RaidSavedData load(CompoundTag tag) {
         RaidSavedData data = new RaidSavedData();
-        data.nextId = Math.max(1, tag.getInt(NBT_NEXT_ID));
+        data.nextId = Math.max(1, tag.getIntOr(NBT_NEXT_ID, 0));
 
-        ListTag list = tag.getList(NBT_RAIDS, Tag.TAG_COMPOUND);
+        ListTag list = tag.getListOrEmpty(NBT_RAIDS);
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag raidTag = list.getCompound(i);
+            CompoundTag raidTag = list.getCompoundOrEmpty(i);
             if (!raidTag.isEmpty()) {
                 data.raidTags.add(raidTag);
             }
@@ -42,7 +42,7 @@ public class RaidSavedData extends SavedData {
         return data;
     }
 
-    @Override
+    
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putInt(NBT_NEXT_ID, nextId);
 
@@ -57,12 +57,8 @@ public class RaidSavedData extends SavedData {
     }
 
     public static RaidSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        RaidSavedData::new,
-                        (tag, registries) -> load(tag)
-                ),
-                DATA_NAME
+        return net.eca.mv.SavedDatas.computeIfAbsent(level.getDataStorage(), RaidSavedData::new, (tag, registries) -> load(tag)
+                , DATA_NAME
         );
     }
 

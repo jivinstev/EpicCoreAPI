@@ -15,7 +15,7 @@ public final class ShaderPreset {
 
     private final ResourceLocation id;
     private final String name;
-    private final RenderStateShard.ShaderStateShard entityShaderState;
+    private final net.eca.mv.ShaderShard entityShaderState;
     private final RenderType bossBar;
     private final RenderType bossLayer;
     private final RenderType skybox;
@@ -25,7 +25,7 @@ public final class ShaderPreset {
     ShaderPreset(ResourceLocation id, GenericPresetShader shader) {
         this.id = id;
         this.name = "eca_preset_" + id.getNamespace() + "_" + id.getPath().replace('/', '_');
-        RenderStateShard.ShaderStateShard blockShaderState = profileState(shader.block());
+        net.eca.mv.ShaderShard blockShaderState = profileState(shader.block());
         this.entityShaderState = profileState(shader.entity());
         this.bossBar = PresetRenderTypes.bossBar(name, blockShaderState);
         this.skybox = PresetRenderTypes.skybox(name, blockShaderState);
@@ -35,7 +35,7 @@ public final class ShaderPreset {
     }
 
     //用一个 profile 的当前 ShaderInstance 构造 ShaderState，并在渲染前喂入该 profile 的标准 uniform
-    private static RenderStateShard.ShaderStateShard profileState(GenericPresetShader.Profile profile) {
+    private static net.eca.mv.ShaderShard profileState(GenericPresetShader.Profile profile) {
         return new net.eca.mv.ShaderShard(profile::getShader) {
             @Override
             public void setupRenderState() {

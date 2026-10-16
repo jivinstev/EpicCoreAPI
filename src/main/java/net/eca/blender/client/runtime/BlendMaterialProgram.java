@@ -167,11 +167,11 @@ public final class BlendMaterialProgram implements AutoCloseable {
             shader = null;
             throw new IOException("Material requires more texture units than the renderer or GPU supports");
         }
-        type = RenderType.create("eca_blend_" + id, DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, true, true,
-            RenderType.CompositeState.builder().setShaderState(new net.eca.mv.ShaderShard(() -> shader))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY).setCullState(RenderType.NO_CULL)
+        type = net.eca.mv.LegacyRenderType.create("eca_blend_" + id, DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, true, true,
+            net.eca.mv.LegacyRenderType.state().setShaderState(new net.eca.mv.ShaderShard(() -> shader))
+                .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY).setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
                 .setLightmapState(RenderType.LIGHTMAP).setOverlayState(RenderType.OVERLAY)
-                .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST).setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
+                .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST).setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true));
         if (byteBuffer != null) byteBuffer.close();
         byteBuffer = new ByteBufferBuilder(256);

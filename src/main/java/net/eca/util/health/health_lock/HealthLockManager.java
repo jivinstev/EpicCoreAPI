@@ -392,11 +392,11 @@ public class HealthLockManager {
     }
 
     private static Float readNbtDecrypt(CompoundTag data, String encKey, String keyKey, String checkKey) {
-        String encryptedValue = data.contains(encKey, Tag.TAG_STRING)
-                ? data.getString(encKey) : String.valueOf(data.getInt(encKey));
+        String encryptedValue = (data.get(encKey) instanceof net.minecraft.nbt.StringTag)
+                ? data.getStringOr(encKey, "") : String.valueOf(data.getIntOr(encKey, 0));
         int encrypted   = parseEncryptedPayload(encryptedValue);
-        int key         = data.getInt(keyKey);
-        int storedCheck = data.getInt(checkKey);
+        int key         = data.getIntOr(keyKey, 0);
+        int storedCheck = data.getIntOr(checkKey, 0);
         if (encrypted == 0 && key == 0 && storedCheck == 0) return null;
         int expected;
         try {
@@ -574,7 +574,7 @@ public class HealthLockManager {
         if (EntityUtil.HEAL_BAN_VALUE != null) {
             encrypted = readSynchedSafely(entity, EntityUtil.HEAL_BAN_VALUE);
         } else {
-            encrypted = entity.getPersistentData().getString(NBT_HEAL_BAN_VALUE);
+            encrypted = entity.getPersistentData().getStringOr(NBT_HEAL_BAN_VALUE, "");
         }
         if (encrypted == null || encrypted.isEmpty()) return null;
         try { return Float.parseFloat(encrypted) + ENCRYPTION_OFFSET; }

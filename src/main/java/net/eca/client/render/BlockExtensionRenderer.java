@@ -1,3 +1,4 @@
+// Fork multi-version layer: 1.21.5 version of the authors' file (BakedModel is BlockStateModel/BlockModelPart).
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -7,7 +8,8 @@ import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.RandomSource;
@@ -20,7 +22,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 
@@ -161,13 +162,15 @@ public final class BlockExtensionRenderer {
     private static void renderBlock(ClientLevel level, PoseStack poseStack, Vec3 camPos, BlockPos pos,
                                     BlockState state, SpriteBatchingVertexConsumer consumer) {
         Minecraft minecraft = Minecraft.getInstance();
-        BakedModel model = minecraft.getBlockRenderer().getBlockModel(state);
-        ModelData modelData = model.getModelData(level, pos, state, ModelData.EMPTY);
+        // 1.21.5: a block model is a BlockStateModel that yields BlockModelParts; the level/pos/state overload is the one that
+        // gives a model its ModelData (the 1.21.4 getModelData + tesselateBlock(..., modelData, renderType) pair)
+        BlockStateModel model = minecraft.getBlockRenderer().getBlockModel(state);
+        java.util.List<BlockModelPart> parts = model.collectParts(level, pos, state, RandomSource.create(state.getSeed(pos)));
         poseStack.pushPose();
         // RenderLevelStageEvent 的 PoseStack 只含摄像机旋转，世界坐标须自行减去摄像机位置
         poseStack.translate(pos.getX() - camPos.x, pos.getY() - camPos.y, pos.getZ() - camPos.z);
-        minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(level, model, state, pos, poseStack,
-            consumer, true, RandomSource.create(), state.getSeed(pos), 0, modelData, null);
+        minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(level, parts, state, pos, poseStack,
+            consumer, true, 0);
         poseStack.popPose();
     }
 

@@ -366,7 +366,7 @@ public final class EcaAPI {
         if (EntityUtil.INVULNERABLE != null) {
             dataInvulnerable = livingEntity.getEntityData().get(EntityUtil.INVULNERABLE);
         } else {
-            dataInvulnerable = livingEntity.getPersistentData().getBoolean(EcaOwnedState.NBT_INVULNERABLE);
+            dataInvulnerable = livingEntity.getPersistentData().getBooleanOr(EcaOwnedState.NBT_INVULNERABLE, false);
         }
         if (dataInvulnerable || !EcaConfiguration.getDefenceEnableRadicalLogicSafely()) {
             return dataInvulnerable;

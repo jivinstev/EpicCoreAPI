@@ -88,7 +88,7 @@ final class AnimatedPreviewTexture implements PreviewAnimation {
     ) {
         this.sheet = sheet;
         this.currentImage = new NativeImage(frameWidth, frameHeight, false);
-        this.texture = new DynamicTexture(currentImage);
+        this.texture = new DynamicTexture(() -> "eca_preview", currentImage);
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
         this.columns = sheet.getWidth() / frameWidth;

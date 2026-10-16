@@ -1,0 +1,25 @@
+# 1.21.5: from<TAB>to (plain type, member:, re:) -- see prepare-sources.py
+# NBT getters whose KEY is a variable (the shared 1.21.5 rows only take a string literal or CONSTANT, because a byte-offset
+# read like ByteBuffer.getInt(at) looks the same). The receivers below are this fork's own tags/lists, named by what the
+# compiler reported -- a new one shows up as an Optional<...> error, not silently.
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getInt\((\w+)\)	\1.getIntOr(\2, 0)
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getString\((\w+)\)	\1.getStringOr(\2, "")
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getCompound\((\w+)\)	\1.getCompoundOrEmpty(\2)
+re:\b(bansTag|data|factionsTag|relTag|seenMap|raiders|list|memberList)\.getList\(([\w.()]+),\s*Tag\.TAG_\w+\)	\1.getListOrEmpty(\2)
+# 1.21.5: LivingEntity.lastHurtByPlayerTime is lastHurtByPlayerMemoryTime and setLastHurtByPlayer(player, ticks) is public
+# (the 1.21.1 comment about it writing tickCount no longer holds: it now writes the 100-tick memory directly)
+re:entity\.lastHurtByPlayer = credit;\s*entity\.lastHurtByPlayerTime = 100;	entity.setLastHurtByPlayer(credit, 100);
+# 1.21.5: lerpSteps/lerpX/... and Minecart.lerpTo became an InterpolationHandler; cancelling it is "lerpSteps = 0"
+re:(?s)if \(entity instanceof LivingEntity\) \{\s*LivingEntity livingEntity = \(LivingEntity\) entity;\s*livingEntity\.lerpSteps = 0;.*?minecart\.lerpTo\([^;]*\);\s*\}	net.minecraft.world.entity.InterpolationHandler interpolation = entity.getInterpolation();\n        if (interpolation != null) {\n            interpolation.cancel();\n        }
+# HealthDataflowAnalyzer's duality table registers CompoundTag.getFloat/getInt/getLong/getDouble(String) as identity
+# calls (key owner#name#desc). Since 1.21.5 those return Optional and the primitive getters are getXxxOr(String, prim)
+# (javap 1.21.5 and 1.21.8 CompoundTag: getFloatOr (Ljava/lang/String;F)F, getIntOr (Ljava/lang/String;I)I,
+# getLongOr (Ljava/lang/String;J)J, getDoubleOr (Ljava/lang/String;D)D), so the 1.21.1 keys match no call a mod
+# compiled for 1.21.5+ makes and an NBT-held health read is reported "no inverse" and harvested as a dead-end root
+# instead. getXxxOr(k, 0) is exactly 1.21.1's getXxx(k) (0 when absent). Each row matches the authors' two copies.
+#!exhaustive  # live on 1.21.5-1.21.8; dead on 1.21.10+, where HealthDataflowAnalyzer is an overlay
+re:registerIdentityCall\("net/minecraft/nbt/CompoundTag", "getFloat", "\(Ljava/lang/String;\)F"\)	registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloatOr", "(Ljava/lang/String;F)F")
+re:registerIdentityCall\("net/minecraft/nbt/CompoundTag", "getInt", "\(Ljava/lang/String;\)I"\)	registerIdentityCall("net/minecraft/nbt/CompoundTag", "getIntOr", "(Ljava/lang/String;I)I")
+re:registerIdentityCall\("net/minecraft/nbt/CompoundTag", "getLong", "\(Ljava/lang/String;\)J"\)	registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLongOr", "(Ljava/lang/String;J)J")
+re:registerIdentityCall\("net/minecraft/nbt/CompoundTag", "getDouble", "\(Ljava/lang/String;\)D"\)	registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDoubleOr", "(Ljava/lang/String;D)D")
+#!strict

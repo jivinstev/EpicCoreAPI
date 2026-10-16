@@ -577,7 +577,7 @@ public class FactionManager {
      */
     private static String resolveOwnerFaction(Entity entity) {
         if (!(entity instanceof TamableAnimal pet)) return null;
-        UUID ownerUuid = pet.getOwnerUUID();
+        UUID ownerUuid = net.eca.mv.Owners.uuid(pet);
         if (ownerUuid == null) return null;
         String ownerFaction = MEMBER_INDEX.get(ownerUuid);
         return (ownerFaction != null && !ownerFaction.isEmpty()) ? ownerFaction : null;

@@ -1,4 +1,4 @@
-// Fork multi-version layer: 1.21.2 version of the authors' mixin (FallingBlockRenderer renders a render state).
+// Fork multi-version layer: 1.21.5 copy of the 1.21.2 version (BakedModel is BlockStateModel/BlockModelParts; ModelData comes from collectParts) of the authors' mixin (FallingBlockRenderer renders a render state).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -11,14 +11,14 @@ import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.FallingBlockRenderer;
-import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.client.renderer.entity.state.FallingBlockRenderState;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.client.model.data.ModelData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -49,7 +49,8 @@ public class FallingBlockRendererMixin {
 
         BlockPos renderPos = BlockPos.containing(entity.getX(), entity.getBoundingBox().maxY, entity.getZ());
         Minecraft minecraft = Minecraft.getInstance();
-        BakedModel model = minecraft.getBlockRenderer().getBlockModel(state);
+        BlockStateModel model = minecraft.getBlockRenderer().getBlockModel(state);
+        List<BlockModelPart> parts = model.collectParts(entity.level(), renderPos, state, RandomSource.create(state.getSeed(entity.getStartPos())));
         boolean fullBright = BlockExtensionSafeAccess.isGlow(extension);
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
@@ -57,9 +58,8 @@ public class FallingBlockRendererMixin {
                 new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright);
             poseStack.pushPose();
             poseStack.translate(-0.5, 0.0, -0.5);
-            minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(entity.level(), model, state, renderPos,
-                poseStack, consumer, false, RandomSource.create(), state.getSeed(entity.getStartPos()), 0,
-                ModelData.EMPTY, null);
+            minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(entity.level(), parts, state, renderPos,
+                poseStack, consumer, false, 0);
             poseStack.popPose();
             consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(),
                 batch.builder().buildOrThrow(), batch.uvTransform()));

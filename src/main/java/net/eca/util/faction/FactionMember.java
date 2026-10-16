@@ -85,7 +85,7 @@ public final class FactionMember {
      * @return the same tag, for chaining
      */
     public CompoundTag save(CompoundTag tag) {
-        tag.putUUID(NBT_UUID, uuid);
+        net.eca.mv.Nbt.putUuid(tag, NBT_UUID, uuid);
         tag.putString(NBT_TYPE, typeId);
         tag.putBoolean(NBT_PLAYER, player);
         return tag;
@@ -97,11 +97,11 @@ public final class FactionMember {
      * @return the member record, or null if the tag carries no valid UUID
      */
     public static FactionMember load(CompoundTag tag) {
-        if (tag == null || !tag.hasUUID(NBT_UUID)) return null;
+        if (tag == null || !net.eca.mv.Nbt.hasUuid(tag, NBT_UUID)) return null;
         return new FactionMember(
-                tag.getUUID(NBT_UUID),
-                tag.getString(NBT_TYPE),
-                tag.getBoolean(NBT_PLAYER)
+                net.eca.mv.Nbt.getUuid(tag, NBT_UUID),
+                tag.getStringOr(NBT_TYPE, ""),
+                tag.getBooleanOr(NBT_PLAYER, false)
         );
     }
 

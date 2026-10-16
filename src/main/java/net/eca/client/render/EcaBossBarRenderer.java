@@ -1,9 +1,8 @@
 package net.eca.client.render;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -225,29 +224,29 @@ public final class EcaBossBarRenderer {
         Matrix4f matrix = graphics.pose().last().pose();
 
         // 清除渲染区域的 alpha 通道为 0
-        RenderSystem.colorMask(false, false, false, true);
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ZERO,
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ZERO
+        net.eca.mv.LegacyGl.colorMask(false, false, false, true);
+        net.eca.mv.LegacyGl.enableBlend();
+        net.eca.mv.LegacyGl.blendFuncSeparate(
+                com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ZERO,
+                com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ZERO
         );
-        RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR);
+        net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_COLOR);
         BufferBuilder clearBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         clearBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 255);
         clearBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 255);
-        BufferUploader.drawWithShader(clearBuilder.buildOrThrow());
-        RenderSystem.colorMask(true, true, true, true);
+        net.eca.mv.LegacyGl.drawWithShader(clearBuilder.buildOrThrow());
+        net.eca.mv.LegacyGl.colorMask(true, true, true, true);
 
         // 渲染贴图，alpha 通道直接写入帧缓冲区
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO
+        net.eca.mv.LegacyGl.enableBlend();
+        net.eca.mv.LegacyGl.blendFuncSeparate(
+                com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_SRC_ALPHA,
+                com.mojang.blaze3d.platform.SourceFactor.ONE, com.mojang.blaze3d.platform.DestFactor.ZERO
         );
-        RenderSystem.setShaderTexture(0, texture);
-        RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX);
+        net.eca.mv.LegacyGl.setShaderTexture(0, texture);
+        net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_TEX);
         float texU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         float texV1 = fullHeight <= 0 ? 0.0f : (float) drawHeight / (float) fullHeight;
         BufferBuilder texBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
@@ -255,29 +254,29 @@ public final class EcaBossBarRenderer {
         texBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setUv(texU1, texV1);
         texBuilder.addVertex(matrix, x + drawWidth, y, 0).setUv(texU1, 0.0f);
         texBuilder.addVertex(matrix, x, y, 0).setUv(0.0f, 0.0f);
-        BufferUploader.drawWithShader(texBuilder.buildOrThrow());
+        net.eca.mv.LegacyGl.drawWithShader(texBuilder.buildOrThrow());
 
         // 将 alpha 缩放到 0.5，使着色器半透明叠加在贴图上
-        RenderSystem.colorMask(false, false, false, true);
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE,
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.SRC_ALPHA
+        net.eca.mv.LegacyGl.colorMask(false, false, false, true);
+        net.eca.mv.LegacyGl.enableBlend();
+        net.eca.mv.LegacyGl.blendFuncSeparate(
+                com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE,
+                com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.SRC_ALPHA
         );
-        RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR);
+        net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_COLOR);
         BufferBuilder scaleBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         scaleBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(0, 0, 0, 127);
         scaleBuilder.addVertex(matrix, x, y, 0).setColor(0, 0, 0, 127);
-        BufferUploader.drawWithShader(scaleBuilder.buildOrThrow());
-        RenderSystem.colorMask(true, true, true, true);
+        net.eca.mv.LegacyGl.drawWithShader(scaleBuilder.buildOrThrow());
+        net.eca.mv.LegacyGl.colorMask(true, true, true, true);
 
         // 渲染着色器，使用 DST_ALPHA 混合（只在贴图非透明区域显示）
         renderType.setupRenderState();
-        RenderSystem.blendFuncSeparate(
-                GlStateManager.SourceFactor.DST_ALPHA, GlStateManager.DestFactor.ONE_MINUS_DST_ALPHA,
-                GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE
+        net.eca.mv.LegacyGl.blendFuncSeparate(
+                com.mojang.blaze3d.platform.SourceFactor.DST_ALPHA, com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_DST_ALPHA,
+                com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE
         );
         float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         int light = LightTexture.FULL_BRIGHT;
@@ -286,10 +285,10 @@ public final class EcaBossBarRenderer {
         shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        BufferUploader.drawWithShader(shaderBuilder.buildOrThrow());
+        net.eca.mv.LegacyGl.drawWithShader(shaderBuilder.buildOrThrow());
         renderType.clearRenderState();
 
-        RenderSystem.defaultBlendFunc();
+        net.eca.mv.LegacyGl.defaultBlendFunc();
     }
 
     private static void drawRenderType(GuiGraphics graphics, RenderType renderType,

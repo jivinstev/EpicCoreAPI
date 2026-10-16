@@ -2103,14 +2103,14 @@ public final class HealthDataflowAnalyzer {
         registerIdentityCall("java/lang/Long", "valueOf", "(J)Ljava/lang/Long;");
 
         // Minecraft CompoundTag getXxx (identity,写回由 sink IO 完成)
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDouble", "(Ljava/lang/String;)D");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloat", "(Ljava/lang/String;)F");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getInt", "(Ljava/lang/String;)I");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLong", "(Ljava/lang/String;)J");
-        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDouble", "(Ljava/lang/String;)D");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloatOr", "(Ljava/lang/String;F)F");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getIntOr", "(Ljava/lang/String;I)I");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLongOr", "(Ljava/lang/String;J)J");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDoubleOr", "(Ljava/lang/String;D)D");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getFloatOr", "(Ljava/lang/String;F)F");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getIntOr", "(Ljava/lang/String;I)I");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getLongOr", "(Ljava/lang/String;J)J");
+        registerIdentityCall("net/minecraft/nbt/CompoundTag", "getDoubleOr", "(Ljava/lang/String;D)D");
 
         // String.substring(str, begin, end)：sink 在 arg[0] 时，从当前值取前缀/后缀还原完整字符串
         TABLE.registerCall("java/lang/String", "substring", "(II)Ljava/lang/String;",

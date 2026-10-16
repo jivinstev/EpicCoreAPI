@@ -1,6 +1,6 @@
 package net.eca.client.render.shader_generator;
 
-import com.mojang.blaze3d.shaders.Uniform;
+import net.eca.mv.Uniform;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -73,12 +73,12 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         this.whitePreviewTexture = whitePreviewTexture;
         this.maskSamplerName = maskSamplerName;
 
-        RenderStateShard.ShaderStateShard blockState = shaderState(
+        net.eca.mv.ShaderShard blockState = shaderState(
             blockShader,
             blockUniforms,
             maskBinding(blockShader, maskSamplerName, whitePreviewTexture)
         );
-        RenderStateShard.ShaderStateShard itemState = shaderState(
+        net.eca.mv.ShaderShard itemState = shaderState(
             entityShader,
             entityUniforms,
             maskBinding(entityShader, maskSamplerName, net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS)
@@ -259,7 +259,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         }
     }
 
-    private static RenderStateShard.ShaderStateShard shaderState(
+    private static net.eca.mv.ShaderShard shaderState(
         ShaderInstance shader,
         UniformSet uniforms,
         Runnable beforeShaderSetup
@@ -287,92 +287,92 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
 
     private static RenderType createBossBar(
         String name,
-        RenderStateShard.ShaderStateShard shader,
+        net.eca.mv.ShaderShard shader,
         ResourceLocation texture
     ) {
-        return RenderType.create(
+        return net.eca.mv.LegacyRenderType.create(
             name + "_boss_bar",
             DefaultVertexFormat.BLOCK,
             VertexFormat.Mode.QUADS,
             256,
             false,
             true,
-            RenderType.CompositeState.builder()
+            net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
                 .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.NO_DEPTH_TEST)
-                .setWriteMaskState(RenderType.COLOR_WRITE)
+                .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
+                .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
                 .createCompositeState(false)
         );
     }
 
     private static RenderType createSkybox(
         String name,
-        RenderStateShard.ShaderStateShard shader,
+        net.eca.mv.ShaderShard shader,
         ResourceLocation texture
     ) {
-        return RenderType.create(
+        return net.eca.mv.LegacyRenderType.create(
             name + "_skybox",
             DefaultVertexFormat.BLOCK,
             VertexFormat.Mode.QUADS,
             256,
             true,
             false,
-            RenderType.CompositeState.builder()
+            net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
                 .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.NO_DEPTH_TEST)
-                .setWriteMaskState(RenderType.COLOR_WRITE)
+                .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
+                .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
                 .createCompositeState(false)
         );
     }
 
     private static RenderType createItem(
         String name,
-        RenderStateShard.ShaderStateShard shader
+        net.eca.mv.ShaderShard shader
     ) {
-        return RenderType.create(
+        return net.eca.mv.LegacyRenderType.create(
             name + "_item",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,
             false,
-            RenderType.CompositeState.builder()
+            net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
                 .setTextureState(RenderType.BLOCK_SHEET_MIPPED)
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
-                .setCullState(RenderType.NO_CULL)
+                .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
+                .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
                 .setOverlayState(RenderType.OVERLAY)
-                .setWriteMaskState(RenderType.COLOR_WRITE)
+                .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
                 .createCompositeState(true)
         );
     }
 
     private static RenderType createEntity(
         String name,
-        RenderStateShard.ShaderStateShard shader,
+        net.eca.mv.ShaderShard shader,
         ResourceLocation texture
     ) {
-        return RenderType.create(
+        return net.eca.mv.LegacyRenderType.create(
             name + "_entity",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,
             true,
-            RenderType.CompositeState.builder()
+            net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
                 .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
+                .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)
                 .setOverlayState(RenderType.OVERLAY)
-                .setCullState(RenderType.NO_CULL)
-                .setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
+                .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
+                .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true)
         );
     }
@@ -464,7 +464,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
         long revision = TEXTURE_REVISION.incrementAndGet();
         NativeImage whiteImage = new NativeImage(1, 1, false);
         whiteImage.setPixel(0, 0, net.minecraft.util.ARGB.fromABGR(0xFFFFFFFF));
-        DynamicTexture whiteTexture = new DynamicTexture(whiteImage);
+        DynamicTexture whiteTexture = new DynamicTexture(() -> "net.eca.mv", whiteImage);
         ResourceLocation whiteLocation = net.eca.mv.Textures.register(textureManager, "eca_shader_generator/" + revision + "/preview_white", whiteTexture);
         registered.add(whiteLocation);
         for (String sampler : dependencies.samplers()) {

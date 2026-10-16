@@ -15,7 +15,7 @@ public class ForestRenderTypes {
 
     private static final ResourceLocation LEAVES_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/forest_leaves.png");
 
-    private static final RenderStateShard.ShaderStateShard SHADER_STATE = new net.eca.mv.ShaderShard(ForestShader::getShader) {
+    private static final net.eca.mv.ShaderShard SHADER_STATE = new net.eca.mv.ShaderShard(ForestShader::getShader) {
         @Override
         public void setupRenderState() {
             super.setupRenderState();
@@ -23,84 +23,84 @@ public class ForestRenderTypes {
         }
     };
 
-    public static final RenderType BOSS_BAR = RenderType.create("forest_boss_bar",
+    public static final RenderType BOSS_BAR = net.eca.mv.LegacyRenderType.create("forest_boss_bar",
         DefaultVertexFormat.BLOCK,
         VertexFormat.Mode.QUADS,
         256,
         false,
         true,
-        RenderType.CompositeState.builder()
+        net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
             .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
-            .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-            .setDepthTestState(RenderType.NO_DEPTH_TEST)
-            .setWriteMaskState(RenderType.COLOR_WRITE)
+            .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+            .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
+            .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
             .createCompositeState(false)
     );
 
-    public static final RenderType BOSS_LAYER = RenderType.create("forest_boss_layer",
+    public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("forest_boss_layer",
         DefaultVertexFormat.NEW_ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         false,
         true,
-        RenderType.CompositeState.builder()
+        net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
             .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
-            .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-            .setCullState(RenderType.NO_CULL)
-            .setWriteMaskState(RenderType.COLOR_WRITE)
+            .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+            .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
+            .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
             .createCompositeState(false)
     );
 
-    public static final RenderType SKYBOX = RenderType.create("forest_skybox",
+    public static final RenderType SKYBOX = net.eca.mv.LegacyRenderType.create("forest_skybox",
         DefaultVertexFormat.BLOCK,
         VertexFormat.Mode.QUADS,
         256,
         true,
         false,
-        RenderType.CompositeState.builder()
+        net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
             .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
-            .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-            .setDepthTestState(RenderType.NO_DEPTH_TEST)
-            .setWriteMaskState(RenderType.COLOR_WRITE)
+            .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+            .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
+            .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
             .createCompositeState(false)
     );
 
-    public static final RenderType ITEM = RenderType.create("forest_item",
+    public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("forest_item",
         DefaultVertexFormat.NEW_ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         true,
         false,
-        RenderType.CompositeState.builder()
+        net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
             .setTextureState(RenderType.BLOCK_SHEET_MIPPED)
-            .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-            .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
-            .setCullState(RenderType.NO_CULL)
+            .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+            .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
+            .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
             .setOverlayState(RenderType.OVERLAY)
-            .setWriteMaskState(RenderType.COLOR_WRITE)
+            .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
             .createCompositeState(true)
     );
 
     public static RenderType createEntityEffect(ResourceLocation texture) {
-        return RenderType.create("forest_entity_effect",
+        return net.eca.mv.LegacyRenderType.create("forest_entity_effect",
             DefaultVertexFormat.NEW_ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,
             true,
-            RenderType.CompositeState.builder()
+            net.eca.mv.LegacyRenderType.state()
                 .setShaderState(SHADER_STATE)
                 .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
-                .setTransparencyState(RenderType.TRANSLUCENT_TRANSPARENCY)
-                .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST)
+                .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
+                .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)
                 .setOverlayState(RenderType.OVERLAY)
-                .setCullState(RenderType.NO_CULL)
-                .setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
+                .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
+                .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true)
         );
     }

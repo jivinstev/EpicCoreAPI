@@ -1,16 +1,15 @@
-// OVERLAY-ONLY: community fork multi-version layer. The authors' LevelRendererMixin.renderSky TAIL injection. In
-// 1.21.2 the sky is a frame-graph pass, and NeoForge fires AFTER_SKY at the end of it -- but that pass is not added at
-// all in a foggy dimension (the Nether) or one with no sky type, where 1.21.1's renderSky still reached its TAIL, and it
-// fires even where a custom DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So the 1.21.3
-// LevelRendererMixin overlay calls render() itself -- inside the sky pass just before the AFTER_SKY dispatch, or from a
-// pass of its own before the main pass on a frame with no sky pass -- and sets passOwned, and the AFTER_SKY handler
-// stands down; a target whose LevelRendererMixin does not set passOwned keeps the AFTER_SKY path. The drawing code is
-// the authors', unchanged.
+// OVERLAY-ONLY: community fork multi-version layer (1.21.5 copy of the 1.21.3 overlay: the draw calls go through
+// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection. 1.21.5's sky is a
+// frame-graph pass, and NeoForge fires AFTER_SKY at the end of it -- but renderLevel adds no sky pass in a foggy
+// dimension (isFoggyAt, the Nether), and addSkyPass adds none for SkyType NONE, lava/powder snow or a sky-blocking
+// effect, where 1.21.1's renderSky still reached its TAIL; and it fires even where a custom
+// DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So the 1.21.5 LevelRendererMixin overlay
+// adds its own pass before the main pass, calls render() from it and sets passOwned, and the AFTER_SKY handler stands
+// down. The drawing code is the authors', unchanged.
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
@@ -64,7 +63,7 @@ public final class GlobalSkyboxHook {
     }
 
     /** The authors' renderSky TAIL handler body. frustumMatrix is what the PoseStack starts from: 1.21.1 passed the view
-     *  matrix because the model-view stack did not hold it yet; a caller inside a 1.21.2 frame pass passes identity. */
+     *  matrix because the model-view stack did not hold it yet; a caller inside a 1.21.5 frame pass passes identity. */
     public static void render(Matrix4f frustumMatrix, Camera camera) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || camera == null) {
@@ -102,10 +101,10 @@ public final class GlobalSkyboxHook {
     }
 
     private static void drawTextureSkybox(PoseStack poseStack, GlobalSkyboxExtension skybox, float size, float alpha) {
-        RenderSystem.enableBlend();
-        RenderSystem.depthMask(false);
-        RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX_COLOR);
-        RenderSystem.setShaderTexture(0, skybox.texture());
+        LegacyGl.enableBlend();
+        LegacyGl.depthMask(false);
+        LegacyGl.setShader(LegacyGl.Vanilla.POSITION_TEX_COLOR);
+        LegacyGl.setShaderTexture(0, skybox.texture());
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
 
         float uvScale = Math.max(1.0f, skybox.textureUvScale());
@@ -125,13 +124,13 @@ public final class GlobalSkyboxHook {
             bufferBuilder.addVertex(matrix, -size, -size, size).setUv(0.0f, uvScale).setColor(red, green, blue, alphaInt);
             bufferBuilder.addVertex(matrix, size, -size, size).setUv(uvScale, uvScale).setColor(red, green, blue, alphaInt);
             bufferBuilder.addVertex(matrix, size, -size, -size).setUv(uvScale, 0.0f).setColor(red, green, blue, alphaInt);
-            BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
+            LegacyGl.drawWithShader(bufferBuilder.buildOrThrow());
             poseStack.popPose();
         }
 
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        RenderSystem.depthMask(true);
-        RenderSystem.disableBlend();
+        LegacyGl.depthMask(true);
+        LegacyGl.disableBlend();
     }
 
     private static void drawShaderSkybox(PoseStack poseStack, RenderType renderType, float radius, float alpha) {
@@ -143,7 +142,6 @@ public final class GlobalSkyboxHook {
         Tesselator tesselator = Tesselator.getInstance();
         Matrix4f matrix = poseStack.last().pose();
 
-        renderType.setupRenderState();
         BufferBuilder bufferBuilder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
 
         for (int ring = 0; ring < rings; ring++) {
@@ -170,8 +168,8 @@ public final class GlobalSkyboxHook {
             }
         }
 
-        BufferUploader.drawWithShader(bufferBuilder.buildOrThrow());
-        renderType.clearRenderState();
+        // 1.21.5: a RenderType carries its own pipeline state, so it draws the mesh itself (setup, draw, clear)
+        renderType.draw(bufferBuilder.buildOrThrow());
     }
 
     private static void rotateToFace(PoseStack poseStack, int face) {

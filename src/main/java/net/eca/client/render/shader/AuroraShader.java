@@ -1,6 +1,6 @@
 package net.eca.client.render.shader;
 
-import com.mojang.blaze3d.shaders.Uniform;
+import net.eca.mv.Uniform;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;

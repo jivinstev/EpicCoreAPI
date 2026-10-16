@@ -494,7 +494,7 @@ public final class ResurrectionManager {
             rebuilt.setUUID(record.uuid);
             Vec3 position = record.position;
             if (position != null) {
-                rebuilt.moveTo(position.x, position.y, position.z, record.yRot, record.xRot);
+                rebuilt.snapTo(position.x, position.y, position.z, record.yRot, record.xRot);
             }
 
             if (!level.addFreshEntity(rebuilt)) {

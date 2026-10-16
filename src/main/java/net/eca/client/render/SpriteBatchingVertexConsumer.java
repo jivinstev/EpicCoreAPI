@@ -53,7 +53,7 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     public void putBulkData(PoseStack.Pose pose, BakedQuad quad, float[] brightness,
                             float red, float green, float blue, float alpha,
                             int[] lights, int overlay, boolean readExistingColor) {
-        builder(quad.getSprite()).putBulkData(pose, quad, brightness, red, green, blue,
+        builder(quad.sprite()).putBulkData(pose, quad, brightness, red, green, blue,
             alpha, fullBright ? FULL_BRIGHT_LIGHTMAP : lights, overlay, readExistingColor);
     }
 

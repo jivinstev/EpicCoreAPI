@@ -54,7 +54,8 @@
     "TransientEntitySectionManagerMixin",
     "TransientEntitySectionManagerMixin$CallbackMixin",
     "TrackedEntityMixin",
-    "EntitySelectorAccessor"
+    "EntitySelectorAccessor",
+    "LivingEntityPlayerSlotMixin"
   ],
   "injectors": {
     "defaultRequire": 1
