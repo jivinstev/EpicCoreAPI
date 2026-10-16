@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -87,12 +88,13 @@ public final class ShaderColorPickerScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 104;
         int top = height / 2 - PICKER_SIZE / 2;
         graphics.drawCenteredString(font, title, width / 2, top - 16, 0xFFFFFFFF);
         int color = currentArgb();
         graphics.fill(left + PICKER_SIZE + 32, top, left + PICKER_SIZE + 96, top + 56, color);
-        graphics.renderOutline(left + PICKER_SIZE + 32, top, 64, 56, 0xFFFFFFFF);
+        outline(graphics, left + PICKER_SIZE + 32, top, 64, 56, 0xFFFFFFFF);
         graphics.drawCenteredString(
             font,
             String.format("#%06X", color & 0xFFFFFF),
@@ -117,6 +119,13 @@ public final class ShaderColorPickerScreen extends Screen {
         return Math.round(clamp(value) * 255.0F);
     }
 
+    private static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {
+        g.fill(x, y, x + w, y + 1, color);
+        g.fill(x, y + h - 1, x + w, y + h, color);
+        g.fill(x, y + 1, x + 1, y + h - 1, color);
+        g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+    }
+
     private static float clamp(float value) {
         return Math.max(0.0F, Math.min(1.0F, value));
     }
@@ -134,13 +143,13 @@ public final class ShaderColorPickerScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
-            update(mouseX, mouseY);
+        public void onClick(MouseButtonEvent event, boolean doubleClick) {
+            update(event.x(), event.y());
         }
 
         @Override
-        protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
-            update(mouseX, mouseY);
+        protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
+            update(event.x(), event.y());
         }
 
         private void update(double mouseX, double mouseY) {
@@ -169,7 +178,7 @@ public final class ShaderColorPickerScreen extends Screen {
             }
             int markerX = getX() + Math.round(saturation * width);
             int markerY = getY() + Math.round((1.0F - brightness) * height);
-            graphics.renderOutline(markerX - 2, markerY - 2, 5, 5, 0xFFFFFFFF);
+            outline(graphics, markerX - 2, markerY - 2, 5, 5, 0xFFFFFFFF);
         }
 
         @Override
@@ -186,13 +195,13 @@ public final class ShaderColorPickerScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
-            update(mouseY);
+        public void onClick(MouseButtonEvent event, boolean doubleClick) {
+            update(event.y());
         }
 
         @Override
-        protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
-            update(mouseY);
+        protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
+            update(event.y());
         }
 
         private void update(double mouseY) {
@@ -217,7 +226,7 @@ public final class ShaderColorPickerScreen extends Screen {
                 );
             }
             int markerY = getY() + Math.round(hue * height);
-            graphics.renderOutline(getX() - 1, markerY - 1, width + 2, 3, 0xFFFFFFFF);
+            outline(graphics, getX() - 1, markerY - 1, width + 2, 3, 0xFFFFFFFF);
         }
 
         @Override

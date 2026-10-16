@@ -63,7 +63,7 @@ public final class DelayedHealthVerifier {
     public static Ticket schedule(LivingEntity entity, float target) {
         if (entity == null || entity instanceof Player) return null;
         if (!Float.isFinite(target)) return null;
-        if (entity.level() == null || entity.level().isClientSide) return null;
+        if (entity.level() == null || entity.level().isClientSide()) return null;
         MinecraftServer server = entity.level().getServer();
         if (server == null) return null;
 
@@ -118,7 +118,7 @@ public final class DelayedHealthVerifier {
     public static void scheduleDeathConvergence(LivingEntity entity,
                                                 HealthDataflowAnalyzer.EffectiveHealthModel model) {
         if (entity == null || model == null || entity instanceof Player) return;
-        if (entity.level() == null || entity.level().isClientSide) return;
+        if (entity.level() == null || entity.level().isClientSide()) return;
         MinecraftServer server = entity.level().getServer();
         if (server == null) return;
         if (DEATH_CONVERGENCE.size() >= MAX_PENDING

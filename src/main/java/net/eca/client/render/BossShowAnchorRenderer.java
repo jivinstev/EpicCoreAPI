@@ -65,7 +65,7 @@ public final class BossShowAnchorRenderer {
         double az = BossShowEditorState.getAnchorZ();
         float anchorYaw = BossShowEditorState.getAnchorYawDeg();
 
-        Camera cam = event.getCamera();
+        Camera cam = mc.gameRenderer.getMainCamera();
         Vec3 camPos = cam.getPosition();
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
@@ -80,13 +80,13 @@ public final class BossShowAnchorRenderer {
             ax - BEAM_HALF, ay, az - BEAM_HALF,
             ax + BEAM_HALF, ay + BEAM_HEIGHT, az + BEAM_HALF
         );
-        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose, vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose.last(), vc, beam, 0.2f, 1.0f, 0.2f, 1.0f);
 
         AABB base = new AABB(
             ax - BASE_HALF, ay, az - BASE_HALF,
             ax + BASE_HALF, ay + 0.02, az + BASE_HALF
         );
-        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose, vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose.last(), vc, base, 0.2f, 1.0f, 0.2f, 1.0f);
 
         //摄像机路径折线
         List<Frame> frames = BossShowEditorState.getFrames();
@@ -163,7 +163,11 @@ public final class BossShowAnchorRenderer {
         pose.pushPose();
         pose.translate(wp.x, wp.y, wp.z);
         pose.scale(-1.0f, -1.0f, 1.0f);
-        playerHeadModel.setupAnim(0f, worldYaw, 0f);
+        SkullModelBase.State headState = new SkullModelBase.State();
+        headState.animationPos = 0f;
+        headState.yRot = worldYaw;
+        headState.xRot = 0f;
+        playerHeadModel.setupAnim(headState);
         playerHeadModel.renderToBuffer(pose, buffer.getBuffer(playerHeadRenderType),
             LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
             ARGB.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));

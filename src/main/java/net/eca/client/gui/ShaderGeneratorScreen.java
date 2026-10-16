@@ -37,6 +37,8 @@ import net.eca.util.shader_generator.mcp.ShaderMcpSessionInfo;
 import net.eca.util.shader_generator.mcp.ShaderMcpSettings;
 import net.eca.util.shader_generator.mcp.ShaderMcpSettingsCodec;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -581,9 +583,19 @@ public final class ShaderGeneratorScreen extends Screen {
             .bounds(x, y, w, MENU_ITEM_H).build());
     }
 
+    private static void drawRectOutline(GuiGraphics g, int x, int y, int w, int h, int color) {
+        g.fill(x, y, x + w, y + 1, color);
+        g.fill(x, y + h - 1, x + w, y + h, color);
+        g.fill(x, y + 1, x + 1, y + h - 1, color);
+        g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+    }
+
     /* 点击菜单外关闭下拉 */
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mx = event.x();
+        double my = event.y();
+        int button = event.buttonInfo().button();
         if (editingLayerIndex >= 0
             && layerNameField != null
             && !layerNameField.isMouseOver(mx, my)
@@ -598,7 +610,7 @@ public final class ShaderGeneratorScreen extends Screen {
                  i++) {
                 GuiEventListener listener = kids.get(i);
                 if (listener.isMouseOver(mx, my)) {
-                    return listener.mouseClicked(mx, my, button);
+                    return listener.mouseClicked(event, doubleClick);
                 }
             }
             openDropdown = -1;
@@ -616,11 +628,14 @@ public final class ShaderGeneratorScreen extends Screen {
         if (button == 0 && handleCanvasClick(mx, my)) {
             return true;
         }
-        return super.mouseClicked(mx, my, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mx = event.x();
+        double my = event.y();
+        int button = event.buttonInfo().button();
         if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
             updateScrollbarScroll(my);
             return true;
@@ -638,11 +653,14 @@ public final class ShaderGeneratorScreen extends Screen {
             }
             return true;
         }
-        return super.mouseDragged(mx, my, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        double mx = event.x();
+        double my = event.y();
+        int button = event.buttonInfo().button();
         if (button == 0 && scrollbarDragTarget != ScrollbarTarget.NONE) {
             scrollbarDragTarget = ScrollbarTarget.NONE;
             return true;
@@ -656,11 +674,14 @@ public final class ShaderGeneratorScreen extends Screen {
             rebuildWidgets();
             return true;
         }
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
+        int scanCode = event.scancode();
+        int modifiers = event.modifiers();
         if (editingLayerIndex >= 0) {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 confirmLayerRename();
@@ -672,7 +693,7 @@ public final class ShaderGeneratorScreen extends Screen {
             }
         }
         /* 先给焦点控件（如滑条输入框）机会消费，避免抢走文本输入 */
-        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+        if (super.keyPressed(event)) {
             return true;
         }
         boolean ctrl = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
@@ -3265,7 +3286,7 @@ public final class ShaderGeneratorScreen extends Screen {
                 g.fill(row.x(), row.y(), row.x() + row.width(), row.y() + row.height(), background);
                 g.fill(row.x(), row.y(), row.x() + 4, row.y() + row.height(), row.color());
                 if (selected) {
-                    g.renderOutline(row.x(), row.y(), row.width(), row.height(), 0xFFE6E9ED);
+                    drawRectOutline(g, row.x(), row.y(), row.width(), row.height(), 0xFFE6E9ED);
                 }
             }
         }
@@ -3349,7 +3370,7 @@ public final class ShaderGeneratorScreen extends Screen {
         int top = (int) Math.round(-box.radiusY());
         int width = Math.max(1, (int) Math.round(box.radiusX() * 2.0D));
         int height = Math.max(1, (int) Math.round(box.radiusY() * 2.0D));
-        g.renderOutline(left, top, width, height, 0xFFE6E9ED);
+        drawRectOutline(g, left, top, width, height, 0xFFE6E9ED);
 
         drawHandle(g, left, top);
         drawHandle(g, left + width, top);
@@ -3687,13 +3708,7 @@ public final class ShaderGeneratorScreen extends Screen {
             graphics.fill(row.x(), row.y(), row.x() + row.width(), row.y() + row.height(), background);
             graphics.fill(row.x(), row.y(), row.x() + 4, row.y() + row.height(), row.color());
             if (selected) {
-                graphics.renderOutline(
-                    row.x(),
-                    row.y(),
-                    row.width(),
-                    row.height(),
-                    0xFFE6E9ED
-                );
+                drawRectOutline(graphics, row.x(), row.y(), row.width(), row.height(), 0xFFE6E9ED);
             }
         }
     }
@@ -3858,7 +3873,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
+        public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
             action.run();
         }
 
@@ -3871,7 +3886,7 @@ public final class ShaderGeneratorScreen extends Screen {
         ) {
             int border = isHoveredOrFocused() ? 0xFFFFFFFF : 0xFF8B9098;
             graphics.fill(getX(), getY(), getX() + width, getY() + height, 0x55212428);
-            graphics.renderOutline(getX(), getY(), width, height, border);
+            drawRectOutline(graphics, getX(), getY(), width, height, border);
             if (checked) {
                 graphics.drawCenteredString(
                     Minecraft.getInstance().font,
@@ -3906,7 +3921,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
+        public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
             action.run();
         }
 
@@ -3960,7 +3975,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        public void onClick(double mouseX, double mouseY) {
+        public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
             action.run();
         }
 
@@ -3976,10 +3991,10 @@ public final class ShaderGeneratorScreen extends Screen {
             if (width < 50) {
                 /* 窄控件仅显示色块，不绘制 hex 文本，避免与相邻图层名重叠 */
                 graphics.fill(getX() + 2, getY() + 2, getX() + width - 2, getY() + height - 2, color);
-                graphics.renderOutline(getX(), getY(), width, height, border);
+                drawRectOutline(graphics, getX(), getY(), width, height, border);
             } else {
                 graphics.fill(getX() + 2, getY() + 2, getX() + 28, getY() + height - 2, color);
-                graphics.renderOutline(getX(), getY(), width, height, border);
+                drawRectOutline(graphics, getX(), getY(), width, height, border);
                 graphics.drawString(
                     Minecraft.getInstance().font,
                     String.format("#%06X", color & 0xFFFFFF),

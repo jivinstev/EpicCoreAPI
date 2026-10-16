@@ -49,7 +49,7 @@ public record EntityTeleportSyncPacket(int entityId, double x, double y, double 
     }
 
     public static void handle(EntityTeleportSyncPacket message, IPayloadContext context) {
-        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandler.apply(message); });
+        context.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandler.apply(message); });
     }
 
     private static final class ClientHandler {

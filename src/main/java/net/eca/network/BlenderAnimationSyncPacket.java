@@ -58,7 +58,7 @@ public record BlenderAnimationSyncPacket(UUID entityId, long revision, BlenderPl
     }
 
     public static void handle(BlenderAnimationSyncPacket message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandler.apply(message); });
+        ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandler.apply(message); });
     }
 
     private static final class ClientHandler {

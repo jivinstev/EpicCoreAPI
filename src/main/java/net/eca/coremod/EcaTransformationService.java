@@ -1,10 +1,5 @@
 package net.eca.coremod;
 
-import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.api.IEnvironment;
-import cpw.mods.modlauncher.api.IModuleLayerManager;
-import cpw.mods.modlauncher.api.ITransformationService;
-import cpw.mods.modlauncher.api.ITransformer;
 import net.eca.agent.AgentLoader;
 import net.eca.coremod.EarlyLogWriter;
 import net.eca.agent.EcaAgent;
@@ -24,7 +19,7 @@ import java.util.*;
  * Responsibilities: select one transformation backend and prevent dual loading.
  */
 @SuppressWarnings("unchecked")
-public class EcaTransformationService implements ITransformationService {
+public class EcaTransformationService {
 
     private static final Class<?>[] PRELOADED = preloadAll(
         "net.eca.coremod.EcaCoreTransformer",
@@ -102,44 +97,15 @@ public class EcaTransformationService implements ITransformationService {
     private static String ecaModuleName;
     private static Path ecaJarPath;
 
-    @Override
-    public @NotNull String name() {
-        return SERVICE_NAME;
-    }
-
-    @Override
-    public void onLoad(@NotNull IEnvironment env, @NotNull Set<String> otherServices) {
-    }
-
-    @Override
-    public void initialize(@NotNull IEnvironment environment) {
-    }
-
-    @Override
-    public @NotNull List<Resource> beginScanning(@NotNull IEnvironment environment) {
-        return List.of();
-    }
-
-    @Override
-    public @NotNull List<Resource> completeScan(@NotNull IModuleLayerManager layerManager) {
-        return List.of();
-    }
-
-    @Override
-    public @NotNull List<? extends ITransformer<?>> transformers() {
+    public static boolean useCoremod() {
         if (TRANSFORMATION_BACKEND == TransformationBackend.AGENT) {
-            return List.of();
+            return false;
         }
         if (PRELOADED[0] == null) {
             log("[CoreMod] Load-time transformer unavailable");
-            return List.of();
+            return false;
         }
-        try {
-            return List.<ITransformer<?>>of((ITransformer<?>) PRELOADED[0].getDeclaredConstructor().newInstance());
-        } catch (Throwable t) {
-            log("[CoreMod] Failed to create load-time transformer: " + t.getMessage());
-            return List.of();
-        }
+        return true;
     }
 
     // 双重加载防护
@@ -226,7 +192,7 @@ public class EcaTransformationService implements ITransformationService {
         try {
             Unsafe unsafe = getUnsafe();
 
-            Class<?> launcherClass = Launcher.class;
+            Class<?> launcherClass = Class.forName("cpw.mods.modlauncher.Launcher");
             Class<?> moduleLayerHandlerClass = Class.forName(
                     "cpw.mods.modlauncher.ModuleLayerHandler");
             Class<?> layerInfoClass = Class.forName(

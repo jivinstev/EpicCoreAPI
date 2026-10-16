@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
@@ -25,7 +26,11 @@ import net.minecraft.client.renderer.PerspectiveProjectionMatrixBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.core.Direction;
@@ -38,6 +43,7 @@ import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.joml.Quaternionf;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public final class ShaderPreviewRenderer {
@@ -178,10 +184,13 @@ public final class ShaderPreviewRenderer {
         int bottom
     ) {
         Minecraft minecraft = Minecraft.getInstance();
-        ItemRenderer itemRenderer = minecraft.getItemRenderer();
         Level level = minecraft.level;
         List<BakedQuad> quads = net.eca.mv.ItemModels.quads(PREVIEW_ITEM, level, minecraft.player, 0);
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));
+        // 1.21.10: an item is submitted as render state and drawn by a feature dispatcher; this one draws into a buffer
+        // source that forces the preview's render type, as the forced MultiBufferSource did
+        MultiBufferSource.BufferSource delegate = new ForcedBufferSource(new ByteBufferBuilder(4096), source.item());
+        FeatureRenderDispatcher features = featureDispatcher(delegate);
+        ItemStackRenderState itemState = new ItemStackRenderState();
 
         int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);
         PoseStack pose = new PoseStack();
@@ -189,7 +198,6 @@ public final class ShaderPreviewRenderer {
         try {
             minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D); // 1.21.1's GUI default
             float[] bounds = computeUvBounds(quads);
-            MultiBufferSource forced = ignored -> delegate.getBuffer(source.item());
             EcaShaderInstance.setLocalUvBounds(
                 bounds[0],
                 bounds[1],
@@ -199,7 +207,9 @@ public final class ShaderPreviewRenderer {
             pose.translate((left + right) / 2.0, (top + bottom) / 2.0, 180.0);
             pose.scale(size, -size, size);
             pose.mulPose(new Quaternionf().rotateY(0.65F).rotateX(-0.35F));
-            itemRenderer.renderStatic(PREVIEW_ITEM, ItemDisplayContext.GUI, 0xF000F0, OverlayTexture.NO_OVERLAY, pose, forced, level, 0);
+            minecraft.getItemModelResolver().updateForTopItem(itemState, PREVIEW_ITEM, ItemDisplayContext.GUI, level, minecraft.player, 0);
+            itemState.submit(pose, features.getSubmitNodeStorage(), 0xF000F0, OverlayTexture.NO_OVERLAY, 0);
+            features.renderAllFeatures();
             delegate.endBatch();
         } finally {
             EcaShaderInstance.clearLocalUvBounds();
@@ -222,9 +232,9 @@ public final class ShaderPreviewRenderer {
             return;
         }
 
-        RenderType entityType = source.entity(minecraft.player.getSkin().texture());
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(8192));
-        MultiBufferSource forced = ignored -> delegate.getBuffer(entityType);
+        RenderType entityType = source.entity(minecraft.player.getSkin().body().texturePath());
+        MultiBufferSource.BufferSource delegate = new ForcedBufferSource(new ByteBufferBuilder(8192), entityType);
+        FeatureRenderDispatcher features = featureDispatcher(delegate);
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
         int size = Math.max(24, Math.min(right - left, bottom - top) / 3);
         float horizontal = (float) Math.atan(((left + right) * 0.5F - mouseX) / 80.0F);
@@ -241,22 +251,47 @@ public final class ShaderPreviewRenderer {
             pose.mulPose(new Matrix4f().scaling(size, size, -size));
             pose.mulPose(orientation);
             minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ENTITY_IN_UI);
-            dispatcher.overrideCameraOrientation(new Quaternionf().rotateX(vertical * 0.35F));
-            dispatcher.setRenderShadow(false);
-            net.eca.mv.Mv.run(() -> dispatcher.render(
-                minecraft.player,
-                0.0,
-                0.0,
-                0.0,
-                partialTick,
-                pose,
-                forced,
-                0xF000F0
-            ));
+            // 1.21.10: the camera orientation, light and shadow are per-submit render state, not dispatcher switches
+            CameraRenderState camera = new CameraRenderState();
+            camera.orientation = new Quaternionf().rotateX(vertical * 0.35F);
+            EntityRenderState state = dispatcher.extractEntity(minecraft.player, partialTick);
+            state.lightCoords = 0xF000F0;
+            state.shadowPieces.clear();
+            net.eca.mv.Mv.run(() -> {
+                dispatcher.submit(state, camera, 0.0, 0.0, 0.0, pose, features.getSubmitNodeStorage());
+                features.renderAllFeatures();
+            });
             delegate.endBatch();
         } finally {
-            dispatcher.setRenderShadow(true);
             pose.popPose();
+        }
+    }
+
+    private static FeatureRenderDispatcher featureDispatcher(MultiBufferSource.BufferSource buffers) {
+        Minecraft minecraft = Minecraft.getInstance();
+        return new FeatureRenderDispatcher(
+            new SubmitNodeStorage(),
+            minecraft.getBlockRenderer(),
+            buffers,
+            minecraft.getAtlasManager(),
+            minecraft.renderBuffers().outlineBufferSource(),
+            minecraft.renderBuffers().crumblingBufferSource(),
+            minecraft.font
+        );
+    }
+
+    /** Hands out the forced render type's buffer for every request. */
+    private static final class ForcedBufferSource extends MultiBufferSource.BufferSource {
+        private final RenderType forced;
+
+        ForcedBufferSource(ByteBufferBuilder buffer, RenderType forced) {
+            super(buffer, new LinkedHashMap<>());
+            this.forced = forced;
+        }
+
+        @Override
+        public VertexConsumer getBuffer(RenderType ignored) {
+            return super.getBuffer(forced);
         }
     }
 

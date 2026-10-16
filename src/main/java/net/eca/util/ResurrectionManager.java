@@ -263,7 +263,7 @@ public final class ResurrectionManager {
                 if (EntityUtil.repairClientPairing(level, entity, player)) {
                     totalClientRepairs.incrementAndGet();
                     EcaLogger.info("[ResurrectionManager] viewer pairing restored uuid={} player={}",
-                            record.uuid, player.getGameProfile().getName());
+                            record.uuid, player.getGameProfile().name());
                 } else {
                     refused++;
                     nearestDistSq = Math.min(nearestDistSq, player.distanceToSqr(entity));
@@ -582,7 +582,7 @@ public final class ResurrectionManager {
                         .whenComplete((response, error) -> {
                             if (error != null || response == null) {
                                 EcaLogger.info("[ResurrectionManager] client probe unanswered uuid={} player={} err={}",
-                                        record.uuid, player.getGameProfile().getName(),
+                                        record.uuid, player.getGameProfile().name(),
                                         error == null ? "null response" : error.getClass().getSimpleName());
                                 return;
                             }
@@ -604,10 +604,10 @@ public final class ResurrectionManager {
             if (EntityUtil.repairClientPairing(level, entity, player)) {
                 totalClientRepairs.incrementAndGet();
                 EcaLogger.info("[ResurrectionManager] client pairing repaired uuid={} player={}",
-                        record.uuid, player.getGameProfile().getName());
+                        record.uuid, player.getGameProfile().name());
             } else {
                 EcaLogger.info("[ResurrectionManager] client pairing refused uuid={} player={} distSq={}",
-                        record.uuid, player.getGameProfile().getName(), player.distanceToSqr(entity));
+                        record.uuid, player.getGameProfile().name(), player.distanceToSqr(entity));
             }
             return;
         }
@@ -616,7 +616,7 @@ public final class ResurrectionManager {
             NetworkHandler.sendToPlayer(new ClientReviveContainersPacket(record.uuid), player);
             totalClientRepairs.incrementAndGet();
             EcaLogger.info("[ResurrectionManager] client containers repair sent uuid={} player={} missing={}",
-                    record.uuid, player.getGameProfile().getName(), missingClientContainers(response));
+                    record.uuid, player.getGameProfile().name(), missingClientContainers(response));
         }
     }
 

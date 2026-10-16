@@ -135,13 +135,21 @@ public final class ShaderLayerDetailsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 150;
         int top = height / 2 - 86;
         graphics.drawCenteredString(font, title, width / 2, top, 0xFFFFFFFF);
         super.render(graphics, mouseX, mouseY, partialTick);
         /* 颜色矩形和文本在按钮上层绘制，避免被遮挡 */
         graphics.fill(left + 8, top + 58, left + 44, top + 70, colorArgb());
-        graphics.renderOutline(left + 8, top + 58, 36, 12, 0xFFFFFFFF);
+        int outlineX = left + 8;
+        int outlineY = top + 58;
+        int outlineW = 36;
+        int outlineH = 12;
+        graphics.fill(outlineX, outlineY, outlineX + outlineW, outlineY + 1, 0xFFFFFFFF);
+        graphics.fill(outlineX, outlineY + outlineH - 1, outlineX + outlineW, outlineY + outlineH, 0xFFFFFFFF);
+        graphics.fill(outlineX, outlineY + 1, outlineX + 1, outlineY + outlineH - 1, 0xFFFFFFFF);
+        graphics.fill(outlineX + outlineW - 1, outlineY + 1, outlineX + outlineW, outlineY + outlineH - 1, 0xFFFFFFFF);
         if (imagePath != null) {
             graphics.drawCenteredString(font, imagePath, width / 2, top + 108, 0xFFCDD1D7);
         }

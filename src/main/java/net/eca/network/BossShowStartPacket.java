@@ -17,6 +17,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Collections;
@@ -126,7 +127,7 @@ public class BossShowStartPacket implements CustomPacketPayload {
     }
 
     public static void handle(BossShowStartPacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onStart(msg); });
+        ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onStart(msg); });
     }
 
     public ResourceLocation cutsceneId() { return cutsceneId; }

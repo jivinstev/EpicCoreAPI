@@ -1,0 +1,35 @@
+[
+ {
+  "file": "src/cf/java/net/eca/coremod/EcaTransformationService.java",
+  "why": "deletes overriding method(s) initialize, onLoad: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
+  "reviewed": "FML 10 has no ModLauncher, and the authors' onLoad and initialize were already empty; the one ITransformationService member that did work, transformers(), is EcaClassProcessorProvider (a ClassProcessorProvider service) handing FML the same EcaCoreTransformer after touching this class's static initialiser."
+ },
+ {
+  "file": "src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java",
+  "why": "empties 1 method body",
+  "reviewed": "Not a stub: the one new empty body is the private constructor of the new nested GuiPipRegistration class (the @SubscribeEvent RegisterPictureInPictureRenderersEvent listener that registers GuiPipRenderer for GuiPip, as 1.21.8's overlay does); no method of the authors' file was emptied. render() still draws every preview target (plane, skybox, boss bar, item, entity), now through the painter that GuiPipRenderer.renderToTexture runs when GuiRenderer prepares the frame.",
+  "hooks": [
+   "@SubscribeEvent RegisterPictureInPictureRenderersEvent"
+  ]
+ },
+ {
+  "file": "src/main/java/net/eca/coremod/EcaCoreTransformer.java",
+  "why": "deletes overriding method(s) castVote, getTargetType, labels, targets: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
+  "reviewed": "On FML 10's ClassProcessor these four have direct equivalents: targets() is handlesClass over the same targetNames(), castVote YES and getTargetType CLASS are implied by handlesClass on a class Type, and labels() is name() (eca:eca_core); transform is processClass over the same transformNode."
+ },
+ {
+  "file": "src/main/java/net/eca/coremod/EcaTransformationService.java",
+  "why": "deletes overriding method(s) initialize, onLoad: whatever they did is gone -- port each to the new API, or say why vanilla no longer needs it",
+  "reviewed": "FML 10 has no ModLauncher, and the authors' onLoad and initialize were already empty; the one ITransformationService member that did work, transformers(), is EcaClassProcessorProvider (a ClassProcessorProvider service) handing FML the same EcaCoreTransformer after touching this class's static initialiser."
+ },
+ {
+  "file": "src/main/java/net/eca/mixin/LevelRendererMixin.java",
+  "why": "removes 2 mixin injection handler(s): check each still applies somewhere, with the same effect",
+  "reviewed": "Each removed handler is re-done on 1.21.10's frame graph with 1.21.1's effect, not only moved. renderClouds HEAD: lambda$addCloudsPass$3 calls DimensionSpecialEffects.renderClouds(LevelRenderState,...) before CloudRenderer.render, so the overlay cancels that lambda at the renderClouds call (require = 1) and a dimension drawing its own clouds is skipped too; CloudRendererMixin still gates CloudRenderer.render. renderSky TAIL: AfterSky is posted only inside the sky pass, which renderLevel omits when its render-sky flag is false (GameRenderer passes !(isFoggyAt || boss world fog)) and addSkyPass omits for SkyType NONE, lava/powder snow or blindness/darkness, and it is posted even after a custom renderSky returned true; so the overlay adds an eca_global_skybox pass on targets.main just before addMainPass, sets renderLevel's world fog buffer with RenderSystem.setShaderFog as the sky pass does, skips it when lambda$addSkyPass$8's renderSky returned true (eca$recordCustomSky, require = 1) and, on a frame with no sky pass (render-sky flag false for a foggy/boss-fog dimension, SkyType NONE, blindness/darkness, lava/powder snow, where 1.21.10 never calls renderSky but 1.21.1 still asked it before the TAIL), when the dimension's DimensionSpecialEffects class overrides renderSky at all (the declaring class of its renderSky is neither DimensionSpecialEffects nor NeoForge's IDimensionSpecialEffectsExtension default, which 1.21.10 still has as renderSky(LevelRenderState,SkyRenderState,Matrix4f,Runnable) per javap of neoforge-21.10.64-merged.jar; cached per class), and sets GlobalSkyboxHook.passOwned so the AfterSky handler stands down. The PoseStack starts from identity because renderLevel has multiplied the view matrix onto the model-view stack and LegacyGl/RenderType.draw upload getModelViewMatrix() as ModelViewMat. The renderEntity HEAD/RETURN bracket is the extractVisibleEntities frustum capture plus the @Redirect of EntityRenderDispatcher.submit in submitEntities (entities are submitted, not drawn, there)."
+ },
+ {
+  "file": "src/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java",
+  "why": "empties 3 method bodies",
+  "reviewed": "The provider's only effect is its static initialiser (kept), which FML 10's ServiceLoaderUtil.loadEarlyServices still runs by instantiating every provider; the three empty bodies are FML 10's initialize(ProgramArgs) and the new setMinecraftVersion/setNeoForgeVersion, where the authors' initialize already did nothing."
+ }
+]

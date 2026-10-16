@@ -222,7 +222,7 @@ LivingEntityMixin {
         }
 
         if (invulnerable) {
-            if (!self.level().isClientSide && !self.getActiveEffects().isEmpty()) {
+            if (!self.level().isClientSide() && !self.getActiveEffects().isEmpty()) {
                 for (MobEffectInstance effectInstance : new ArrayList<>(self.getActiveEffects())) {
                     if (effectInstance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL) {
                         self.removeEffect(effectInstance.getEffect());
@@ -234,7 +234,7 @@ LivingEntityMixin {
 
         // 阵营目标验证：每 tick 检查当前目标是否仍然可攻击
         // 防止关系变更后（如命令设置友好）已锁定的目标继续被攻击
-        if (!self.level().isClientSide && self instanceof Mob mob && mob.getTarget() != null) {
+        if (!self.level().isClientSide() && self instanceof Mob mob && mob.getTarget() != null) {
             if (!FactionUtil.canTarget(mob, mob.getTarget())) {
                 mob.setTarget(null);
             }
@@ -374,7 +374,7 @@ LivingEntityMixin {
 
     // 向攻击者玩家发送动作栏阵营提示
     private static void eca$sendFactionActionBar(Entity attacker, Entity target) {
-        if (!target.level().isClientSide
+        if (!target.level().isClientSide()
                 && attacker instanceof Player player
                 && EcaConfiguration.getFactionActionBarMessagesSafely()) {
             player.displayClientMessage(

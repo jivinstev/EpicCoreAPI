@@ -24,11 +24,11 @@ public final class LegacyTargets {
         return color.getFbo(device.directStateAccess(), target.useDepth ? target.getDepthTexture() : null);
     }
 
-    /** RenderTarget.bindWrite(setViewport): bind the target for drawing, optionally resetting the viewport to it. */
+    /** RenderTarget.bindWrite(setViewport) (1.21.9 removed viewWidth/viewHeight; width/height are the same size): bind the target for drawing, optionally resetting the viewport to it. */
     public static void bindWrite(RenderTarget target, boolean setViewport) {
         GlStateManager._glBindFramebuffer(36160, fbo(target));   // GL_FRAMEBUFFER
         if (setViewport) {
-            GlStateManager._viewport(0, 0, target.viewWidth, target.viewHeight);
+            GlStateManager._viewport(0, 0, target.width, target.height);
         }
     }
 }

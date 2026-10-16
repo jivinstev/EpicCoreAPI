@@ -61,6 +61,6 @@ public final class FactionGlowSyncPacket implements CustomPacketPayload {
     }
 
     public static void handle(FactionGlowSyncPacket msg, IPayloadContext context) {
-        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) FactionGlowData.update(msg.glowMap, msg.durationTicks); });
+        context.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) FactionGlowData.update(msg.glowMap, msg.durationTicks); });
     }
 }

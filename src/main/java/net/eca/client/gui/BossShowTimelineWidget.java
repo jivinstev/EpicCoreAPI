@@ -11,7 +11,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.gui.screens.Screen;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.Window;
+import net.minecraft.client.input.MouseButtonEvent;
+import org.lwjgl.glfw.GLFW;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -49,24 +52,24 @@ final class BossShowTimelineWidget extends AbstractWidget {
     }
 
     @Override
-    public void onClick(double mouseX, double mouseY) {
-        selectAt(mouseX, mouseY);
+    public void onClick(MouseButtonEvent event, boolean doubleClick) {
+        selectAt(event.x(), event.y());
     }
 
     @Override
-    protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
-        selectAt(mouseX, mouseY);
+    protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
+        selectAt(event.x(), event.y());
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        return super.mouseReleased(mouseX, mouseY, button);
+    public boolean mouseReleased(MouseButtonEvent event) {
+        return super.mouseReleased(event);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double delta) {
         if (delta == 0.0) return false;
-        if (Screen.hasShiftDown()) {
+        if (hasShift()) {
             scrollTick += delta > 0 ? -visibleTicks() / 5 : visibleTicks() / 5;
             clampScroll();
         } else {
@@ -86,6 +89,12 @@ final class BossShowTimelineWidget extends AbstractWidget {
         BossShowEditorState.setSelectedKeyframeFrameIndex(tick);
         if (listener != null) listener.onSelected(track, tick);
         return true;
+    }
+
+    private static boolean hasShift() {
+        Window window = Minecraft.getInstance().getWindow();
+        return InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT)
+            || InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SHIFT);
     }
 
     private int contentLeft() {
@@ -161,7 +170,11 @@ final class BossShowTimelineWidget extends AbstractWidget {
         }
         drawRangeMarker(g, font, BossShowEditorState.getInPoint(), "I", 0xFF55D68A, -7);
         drawRangeMarker(g, font, BossShowEditorState.getOutPoint(), "O", 0xFFFF6B6B, 3);
-        g.renderOutline(left, top, getWidth(), getHeight(), 0xFF454A58);
+        int outline = 0xFF454A58;
+        g.fill(left, top, right, top + 1, outline);
+        g.fill(left, bottom - 1, right, bottom, outline);
+        g.fill(left, top, left + 1, bottom, outline);
+        g.fill(right - 1, top, right, bottom, outline);
     }
 
     private void drawRangeMarker(GuiGraphics g, Font font, int tick, String label, int color, int labelOffset) {

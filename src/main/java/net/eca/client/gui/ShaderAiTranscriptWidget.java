@@ -3,6 +3,8 @@ package net.eca.client.gui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractTextAreaWidget;
@@ -295,6 +297,13 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         return output;
     }
 
+    private static void drawOutline(GuiGraphics graphics, int x, int y, int width, int height, int color) {
+        graphics.fill(x, y, x + width, y + 1, color);
+        graphics.fill(x, y + height - 1, x + width, y + height, color);
+        graphics.fill(x, y + 1, x + 1, y + height - 1, color);
+        graphics.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
+    }
+
     private int minimumPositive(int... values) {
         int result = Integer.MAX_VALUE;
         for (int value : values) {
@@ -314,9 +323,12 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         // 1.21.4: the superclass handles the scrollbar (updateScrolling) itself.
-        boolean handled = super.mouseClicked(mouseX, mouseY, button);
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.buttonInfo().button();
+        boolean handled = super.mouseClicked(event, doubleClick);
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT || !withinContentAreaPoint(mouseX, mouseY)) {
             return handled;
         }
@@ -338,34 +350,31 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
     }
 
     @Override
-    public boolean mouseDragged(
-        double mouseX,
-        double mouseY,
-        int button,
-        double dragX,
-        double dragY
-    ) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.buttonInfo().button();
         if (selecting && button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             int caret = caretAt(mouseX, mouseY);
             if (caret >= 0) selectionCaret = caret;
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) selecting = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (event.buttonInfo().button() == GLFW.GLFW_MOUSE_BUTTON_LEFT) selecting = false;
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_C && Screen.hasControlDown() && hasSelection()) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_C && event.hasControlDown() && hasSelection()) {
             Minecraft.getInstance().keyboardHandler.setClipboard(selectedText());
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     void clearSelection() {
@@ -451,7 +460,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
                 case STATUS -> 0xFF806C42;
             };
             graphics.fill(cardX, top, cardX + cardWidth, top + layout.height, background);
-            graphics.renderOutline(cardX, top, cardWidth, layout.height, border);
+            drawOutline(graphics, cardX, top, cardWidth, layout.height, border);
             graphics.drawString(
                 font,
                 roleLabel(layout.role),
@@ -570,7 +579,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
 
         @Override
         public void render(GuiGraphics graphics, Font font, int baseX, int baseY) {
-            graphics.renderOutline(baseX + x, baseY + y, width, height, color);
+            drawOutline(graphics, baseX + x, baseY + y, width, height, color);
         }
     }
 

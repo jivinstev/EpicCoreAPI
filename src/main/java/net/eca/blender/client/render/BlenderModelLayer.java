@@ -5,8 +5,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.eca.blender.entity.BlenderEntityBinding;
 import net.eca.blender.client.entity.BlenderEntityBindings;
 import net.eca.blender.client.entity.BlenderEntityRenderer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
@@ -22,7 +23,7 @@ public final class BlenderModelLayer<S extends LivingEntityRenderState, M extend
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource buffers, int packedLight, S state,
+    public void submit(PoseStack poseStack, SubmitNodeCollector buffers, int packedLight, S state,
                        float netHeadYaw, float headPitch) {
         // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
         if (!(EntityOf.get(state) instanceof LivingEntity entity)) {
@@ -34,6 +35,8 @@ public final class BlenderModelLayer<S extends LivingEntityRenderState, M extend
             return;
         }
         int overlay = LivingEntityRenderer.getOverlayCoords(state, 0.0f);
-        BlenderEntityRenderer.render(entity, model, poseStack, buffers, packedLight, overlay, partialTick);
+        // 1.21.10: the layer gets a SubmitNodeCollector; the Blender renderer still writes straight into a MultiBufferSource
+        BlenderEntityRenderer.render(entity, model, poseStack, Minecraft.getInstance().renderBuffers().bufferSource(),
+                packedLight, overlay, partialTick);
     }
 }

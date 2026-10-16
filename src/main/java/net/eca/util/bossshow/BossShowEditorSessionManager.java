@@ -32,7 +32,7 @@ public final class BossShowEditorSessionManager {
         if (player.gameMode.getGameModeForPlayer() != GameType.SPECTATOR) {
             player.setGameMode(GameType.SPECTATOR);
         }
-        LAST_HEARTBEAT.put(player.getUUID(), player.getServer().getTickCount());
+        LAST_HEARTBEAT.put(player.getUUID(), player.level().getServer().getTickCount());
     }
 
     public static boolean isActive(ServerPlayer player) {
@@ -56,7 +56,7 @@ public final class BossShowEditorSessionManager {
 
     public static void heartbeat(ServerPlayer player) {
         if (isActive(player)) {
-            LAST_HEARTBEAT.put(player.getUUID(), player.getServer().getTickCount());
+            LAST_HEARTBEAT.put(player.getUUID(), player.level().getServer().getTickCount());
         }
     }
 

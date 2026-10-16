@@ -38,6 +38,7 @@ final class ShaderAiSettingsScreen extends Screen {
     private int contentBottom;
     private int footerTop;
     private int scrollRow;
+    private boolean apiKeyFormatterInstalled;
     private EditBox baseUrlField;
     private EditBox modelField;
     private EditBox apiKeyField;
@@ -226,7 +227,9 @@ final class ShaderAiSettingsScreen extends Screen {
     }
 
     private void updateApiKeyFormatter() {
-        apiKeyField.setFormatter((value, offset) -> FormattedCharSequence.forward(
+        if (apiKeyFormatterInstalled) return;
+        apiKeyFormatterInstalled = true;
+        apiKeyField.addFormatter((value, offset) -> FormattedCharSequence.forward(
             showApiKey ? value : "•".repeat(value.length()),
             Style.EMPTY
         ));
@@ -377,9 +380,14 @@ final class ShaderAiSettingsScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0xFF111315);
         graphics.fill(left - 8, top - 4, left + dialogWidth + 8, height - 4, 0xFF202225);
-        graphics.renderOutline(
-            left - 8, top - 4, dialogWidth + 16, height - top, 0xFF60656D
-        );
+        int outlineX = left - 8;
+        int outlineY = top - 4;
+        int outlineW = dialogWidth + 16;
+        int outlineH = height - top;
+        graphics.fill(outlineX, outlineY, outlineX + outlineW, outlineY + 1, 0xFF60656D);
+        graphics.fill(outlineX, outlineY + outlineH - 1, outlineX + outlineW, outlineY + outlineH, 0xFF60656D);
+        graphics.fill(outlineX, outlineY + 1, outlineX + 1, outlineY + outlineH - 1, 0xFF60656D);
+        graphics.fill(outlineX + outlineW - 1, outlineY + 1, outlineX + outlineW, outlineY + outlineH - 1, 0xFF60656D);
         graphics.drawCenteredString(font, title, width / 2, top, 0xFFFFFFFF);
         drawVisibleLabel(graphics, 0, "gui.eca.shader_generator.ai.profile");
         drawVisibleLabel(graphics, 1, "gui.eca.shader_generator.ai.protocol");

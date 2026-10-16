@@ -1,4 +1,6 @@
-// Fork multi-version layer: 1.21.5 copy of the 1.21.2 version (BakedModel is BlockStateModel/BlockModelParts; ModelData comes from collectParts) of the authors' mixin (FallingBlockRenderer renders a render state).
+// Fork multi-version layer: 1.21.10 copy of the 1.21.5 version (BakedModel is BlockStateModel/BlockModelParts; ModelData comes from collectParts) of the authors' mixin.
+// 1.21.9: FallingBlockRenderer SUBMITS the render state to a SubmitNodeCollector (render -> submit, and a CameraRenderState); the
+// extension passes are built here, at the end of submit, exactly as before (they were never drawn through the buffer source).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -9,7 +11,7 @@ import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
 import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.FallingBlockRenderer;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
@@ -17,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.client.renderer.entity.state.FallingBlockRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -29,10 +32,9 @@ import java.util.List;
 @Mixin(FallingBlockRenderer.class)
 public class FallingBlockRendererMixin {
 
-    @Inject(method = "render", at = @At("TAIL"))
-    private void eca$renderBlockExtension(FallingBlockRenderState renderState,
-                                          PoseStack poseStack, MultiBufferSource bufferSource,
-                                          int packedLight, CallbackInfo ci) {
+    @Inject(method = "submit", at = @At("TAIL"))
+    private void eca$renderBlockExtension(FallingBlockRenderState renderState, PoseStack poseStack,
+                                          SubmitNodeCollector collector, CameraRenderState cameraState, CallbackInfo ci) {
         // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
         if (!(net.eca.mv.EntityOf.get(renderState) instanceof FallingBlockEntity entity)) {
             return;

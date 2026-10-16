@@ -11,6 +11,8 @@ import net.eca.util.bossshow.BossShowEditorState;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -128,8 +130,8 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256 /* GLFW_KEY_ESCAPE */) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == 256 /* GLFW_KEY_ESCAPE */) {
             if (this.getFocused() instanceof EditBox eb && eb.isFocused()) {
                 eb.setFocused(false);
                 this.setFocused(null);
@@ -138,7 +140,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             doClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
@@ -213,8 +215,10 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             }
 
             @Override
-            public void render(GuiGraphics g, int entryIdx, int top, int left, int width, int height,
-                               int mouseX, int mouseY, boolean isHovering, float partialTick) {
+            public void renderContent(GuiGraphics g, int mouseX, int mouseY, boolean isHovering, float partialTick) {
+                int left = getContentX();
+                int top = getContentY();
+                int width = getContentWidth();
                 ResourceLocation typeId = BuiltInRegistries.ENTITY_TYPE.getKey(def.targetType());
                 String idLine = def.id().toString();
                 int contentCount = 0;
@@ -238,17 +242,17 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             }
 
             @Override
-            public boolean mouseClicked(double mouseX, double mouseY, int button) {
-                if (deleteBtn.mouseClicked(mouseX, mouseY, button)) {
+            public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+                if (deleteBtn.mouseClicked(event, doubleClick)) {
                     return true;
                 }
-                if (editBtn.mouseClicked(mouseX, mouseY, button)) {
+                if (editBtn.mouseClicked(event, doubleClick)) {
                     return true;
                 }
-                if (playBtn.mouseClicked(mouseX, mouseY, button)) {
+                if (playBtn.mouseClicked(event, doubleClick)) {
                     return true;
                 }
-                return super.mouseClicked(mouseX, mouseY, button);
+                return super.mouseClicked(event, doubleClick);
             }
         }
     }

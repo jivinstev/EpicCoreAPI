@@ -42,7 +42,7 @@ public class BossShowStopPacket implements CustomPacketPayload {
     }
 
     public static void handle(BossShowStopPacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onStop(msg); });
+        ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onStop(msg); });
     }
 
     public ResourceLocation cutsceneId() { return cutsceneId; }

@@ -21,14 +21,14 @@ A library mod that provides powerful entity manipulation APIs through CoreMod (I
 [[dependencies.eca]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.8,21.9)"
+versionRange = "[21.10,21.11)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.eca]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.8,1.21.9)"
+versionRange = "[1.21.10,1.21.11)"
 ordering = "NONE"
 side = "BOTH"
 

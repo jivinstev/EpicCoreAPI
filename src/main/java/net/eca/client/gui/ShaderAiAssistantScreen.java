@@ -7,6 +7,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -118,12 +120,13 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_ENTER && getFocused() == prompt && !hasShiftDown()) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_ENTER && getFocused() == prompt
+                && (event.modifiers() & GLFW.GLFW_MOD_SHIFT) == 0) {
             send();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     private void send() {
@@ -173,12 +176,12 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT
-                && !transcript.containsInteractionPoint(mouseX, mouseY)) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (event.buttonInfo().button() == GLFW.GLFW_MOUSE_BUTTON_LEFT
+                && !transcript.containsInteractionPoint(event.x(), event.y())) {
             transcript.clearSelection();
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override

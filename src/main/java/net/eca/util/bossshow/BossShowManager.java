@@ -86,17 +86,31 @@ public final class BossShowManager {
         autoGenerateMissingTemplates();
     }
 
+    // 在 mod 文件的内部根目录下解析路径，不存在则返回 null
+    private static Path findModResource(net.neoforged.neoforgespi.locating.IModFile modFile, String... parts) {
+        try {
+            java.util.Optional<java.net.URI> uri = modFile.getContents().findFile(String.join("/", parts));
+            if (uri.isEmpty()) {
+                return null;
+            }
+            Path p = Paths.get(uri.get());
+            return Files.exists(p) ? p : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // 从全部 mod 加载定义：新 eca/bossshow 路径覆盖旧 bossshow 路径
     private static void loadModDataDefinitions() {
         int[] count = {0};
         ModList.get().forEachModFile(modFile -> {
             for (IModInfo modInfo : modFile.getModInfos()) {
                 String modid = modInfo.getModId();
-                Path legacyDir = modFile.findResource("data", modid, "bossshow");
+                Path legacyDir = findModResource(modFile, "data", modid, "bossshow");
                 if (legacyDir != null && Files.isDirectory(legacyDir)) {
                     count[0] += scanModDataDirectory(legacyDir, legacyDir, modid);
                 }
-                Path canonicalDir = modFile.findResource("data", modid, "eca", "bossshow");
+                Path canonicalDir = findModResource(modFile, "data", modid, "eca", "bossshow");
                 if (canonicalDir != null && Files.isDirectory(canonicalDir)) {
                     count[0] += scanModDataDirectory(canonicalDir, canonicalDir, modid);
                 }

@@ -116,7 +116,7 @@ public final class BlockExtensionRenderer {
             return;
         }
 
-        Camera camera = event.getCamera();
+        Camera camera = minecraft.gameRenderer.getMainCamera();
         Vec3 camPos = camera.getPosition();
         Map<BatchKey, SpriteBatchingVertexConsumer> batches = new LinkedHashMap<>();
         Map<BlockExtension, List<ShaderMaskPass>> passCache = new HashMap<>();

@@ -5,6 +5,7 @@ import net.eca.config.EcaConfiguration;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.ClientAvatarState;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.world.entity.Entity;
@@ -145,15 +146,16 @@ public final class FrustumGuard {
             return;
         }
         Vec3 motion = player.getDeltaMovement();
+        ClientAvatarState avatar = player.avatarState();
         EcaLogger.info("[FrustumGuard] player pos=({}, {}, {}) old=({}, {}, {}) rot=({}, {})",
                 player.getX(), player.getY(), player.getZ(),
                 player.xo, player.yo, player.zo,
                 player.getXRot(), player.getYRot());
-        EcaLogger.info("[FrustumGuard] player motion=({}, {}, {}) walkDist={} bob={} oBob={}",
+        EcaLogger.info("[FrustumGuard] player motion=({}, {}, {}) walkAnim={} walkDist={} oBob={}",
                 motion == null ? "null" : motion.x,
                 motion == null ? "null" : motion.y,
                 motion == null ? "null" : motion.z,
-                player.walkDist, player.bob, player.oBob);
+                player.walkAnimation.position(), avatar.getInterpolatedWalkDistance(1.0F), avatar.getInterpolatedBob(0.0F));
         EcaLogger.info("[FrustumGuard] player hurtTime={} hurtDuration={} hurtDir={} health={} maxHealth={}",
                 player.hurtTime, player.hurtDuration, player.getHurtDir(),
                 player.getHealth(), player.getMaxHealth());

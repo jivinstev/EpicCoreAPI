@@ -11,7 +11,9 @@ import net.eca.util.entity_extension.EntityExtensionManager;
 import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.eca.blender.client.entity.BlenderEntityBindings;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
@@ -35,8 +37,9 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
     }
 
     @Override
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, S state,
+    public void submit(PoseStack poseStack, SubmitNodeCollector collector, int packedLight, S state,
                        float netHeadYaw, float headPitch) {
+        MultiBufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
         if (!(EntityOf.get(state) instanceof LivingEntity entity)) {
             return;

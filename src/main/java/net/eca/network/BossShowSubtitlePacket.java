@@ -39,7 +39,7 @@ public class BossShowSubtitlePacket implements CustomPacketPayload {
     }
 
     public static void handle(BossShowSubtitlePacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onSubtitle(msg); });
+        ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onSubtitle(msg); });
     }
 
     public String text() { return text; }

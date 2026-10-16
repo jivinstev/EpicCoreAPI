@@ -87,7 +87,7 @@ public class BossShowOpenEditorHomePacket implements CustomPacketPayload {
     }
 
     public static void handle(BossShowOpenEditorHomePacket msg, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onOpen(msg); });
+        ctx.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onOpen(msg); });
     }
 
     public List<BossShowDefinition> definitions() {

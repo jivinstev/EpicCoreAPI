@@ -1,11 +1,9 @@
+// Fork multi-version layer: 1.21.10 version of the authors' file. FML 10 (NeoForge 21.9+) has no ModLauncher, so the
+// ITransformationService-shaped members (name/onLoad/initialize/beginScanning/completeScan/transformers) and the compile-time
+// references to cpw.mods.modlauncher are gone; the reflective dual-loading guards below stay (they log and return if the
+// ModLauncher classes they look up are absent, as they are here).
 package net.eca.coremod;
 
-import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.api.IEnvironment;
-import cpw.mods.modlauncher.api.IModuleLayerManager;
-import cpw.mods.modlauncher.api.ITransformationService;
-import cpw.mods.modlauncher.api.ITransformer;
-import org.jetbrains.annotations.NotNull;
 import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandles;
@@ -20,7 +18,7 @@ import java.util.*;
  * Responsibilities: select one transformation backend and prevent dual loading.
  */
 @SuppressWarnings("unchecked")
-public class EcaTransformationService implements ITransformationService {
+public class EcaTransformationService {
 
     private static final Class<?>[] PRELOADED = preloadAll(
         "net.eca.coremod.EcaCoreTransformer",
@@ -63,43 +61,6 @@ public class EcaTransformationService implements ITransformationService {
     private static final String ARCHIVES_NAME = "epic-core-api";
     private static String ecaModuleName;
     private static Path ecaJarPath;
-
-    @Override
-    public @NotNull String name() {
-        return SERVICE_NAME;
-    }
-
-    @Override
-    public void onLoad(@NotNull IEnvironment env, @NotNull Set<String> otherServices) {
-    }
-
-    @Override
-    public void initialize(@NotNull IEnvironment environment) {
-    }
-
-    @Override
-    public @NotNull List<Resource> beginScanning(@NotNull IEnvironment environment) {
-        return List.of();
-    }
-
-    @Override
-    public @NotNull List<Resource> completeScan(@NotNull IModuleLayerManager layerManager) {
-        return List.of();
-    }
-
-    @Override
-    public @NotNull List<? extends ITransformer<?>> transformers() {
-        if (PRELOADED[0] == null) {
-            log("[CoreMod] Load-time transformer unavailable");
-            return List.of();
-        }
-        try {
-            return List.<ITransformer<?>>of((ITransformer<?>) PRELOADED[0].getDeclaredConstructor().newInstance());
-        } catch (Throwable t) {
-            log("[CoreMod] Failed to create load-time transformer: " + t.getMessage());
-            return List.of();
-        }
-    }
 
     // 双重加载防护
     private static void enableEcaDualLoading() {
@@ -185,7 +146,7 @@ public class EcaTransformationService implements ITransformationService {
         try {
             Unsafe unsafe = getUnsafe();
 
-            Class<?> launcherClass = Launcher.class;
+            Class<?> launcherClass = Class.forName("cpw.mods.modlauncher.Launcher");
             Class<?> moduleLayerHandlerClass = Class.forName(
                     "cpw.mods.modlauncher.ModuleLayerHandler");
             Class<?> layerInfoClass = Class.forName(

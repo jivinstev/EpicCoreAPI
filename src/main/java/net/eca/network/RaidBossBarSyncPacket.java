@@ -55,6 +55,6 @@ public final class RaidBossBarSyncPacket implements CustomPacketPayload {
     }
 
     public static void handle(RaidBossBarSyncPacket msg, IPayloadContext context) {
-        context.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) RaidClientState.setBarState(msg.bossEventId, msg.state); });
+        context.enqueueWork(() -> { if (FMLEnvironment.getDist() == Dist.CLIENT) RaidClientState.setBarState(msg.bossEventId, msg.state); });
     }
 }

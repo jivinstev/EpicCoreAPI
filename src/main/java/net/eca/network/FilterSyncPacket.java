@@ -52,7 +52,7 @@ public class FilterSyncPacket implements CustomPacketPayload {
             if (context.flow() != PacketFlow.CLIENTBOUND) {
                 return;
             }
-            if (FMLEnvironment.dist == Dist.CLIENT) ClientHandlerRef.onSync(msg);
+            if (FMLEnvironment.getDist() == Dist.CLIENT) ClientHandlerRef.onSync(msg);
         });
     }
 

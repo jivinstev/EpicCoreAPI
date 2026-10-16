@@ -1,8 +1,15 @@
-// Fork multi-version layer: 1.21.8 version of the authors' file (FML 9's ImmediateWindowProvider; see the comments below).
+// Fork multi-version layer: 1.21.10 version of the authors' file (FML 10's ImmediateWindowProvider: initialize takes the
+// ProgramArgs and returns nothing, the provider is told the Minecraft and NeoForge versions, and it must be able to show
+// a fatal loading error and exit). Built on the 1.21.8 version; see its comments for the methods that left the interface.
 package net.eca.pro;
 
 import net.eca.coremod.RuntimeExtensionBridge;
+import net.neoforged.fml.ModLoadingIssue;
+import net.neoforged.fml.loading.ProgramArgs;
 import net.neoforged.neoforgespi.earlywindow.ImmediateWindowProvider;
+
+import java.nio.file.Path;
+import java.util.List;
 
 
 // This service is loaded before transformation services, closing the unprotected startup window.
@@ -18,9 +25,26 @@ public final class EcaProImmediateWindowProvider implements ImmediateWindowProvi
     }
 
     @Override
-    public Runnable initialize(String[] arguments) {
-        return () -> {
-        };
+    public void initialize(ProgramArgs arguments) {
+    }
+
+    @Override
+    public void setMinecraftVersion(String version) {
+    }
+
+    @Override
+    public void setNeoForgeVersion(String version) {
+    }
+
+    // FML 10 asks the active provider to show a loading failure and exit. This provider draws nothing and owns no window, so
+    // there is nothing to show it in: the issues go to stderr (the crash report FML writes carries them too) and the
+    // process ends, which is what the window-owning provider does once its dialog is dismissed.
+    @Override
+    public void displayFatalErrorAndExit(List<ModLoadingIssue> issues, Path modsFolder, Path logFile, Path crashReportFile) {
+        for (ModLoadingIssue issue : issues) {
+            System.err.println("[eca_pro_bootstrap] " + issue);
+        }
+        System.exit(1);
     }
 
     // FML 9 (NeoForge 21.8) has no updateModuleReads: ImmediateWindowHandler loads the provider with a plain

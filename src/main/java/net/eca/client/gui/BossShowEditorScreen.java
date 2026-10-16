@@ -16,6 +16,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -502,7 +504,10 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     public boolean shouldCloseOnEsc() { return false; }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
+        int scanCode = event.scancode();
+        int modifiers = event.modifiers();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && contextMenuOpen) { closeContextMenu(); return true; }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && openDropdown >= 0) { closeDropdown(); return true; }
         if (this.getFocused() instanceof EditBox editBox) {
@@ -511,9 +516,9 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
                 this.setFocused(null);
                 return true;
             }
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(event);
         }
-        if (hasControlDown()) {
+        if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
             if (keyCode == GLFW.GLFW_KEY_Z) { undo(); return true; }
             if (keyCode == GLFW.GLFW_KEY_Y) { redo(); return true; }
             if (keyCode == GLFW.GLFW_KEY_C) { BossShowEditorState.copyRange(); closeContextMenu(); return true; }
@@ -524,7 +529,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
                 if (BossShowEditorState.pasteAtPlayhead()) syncFromState(); closeContextMenu(); return true;
             }
         } else {
-            int step = hasShiftDown() ? 10 : 1;
+            int step = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0 ? 10 : 1;
             if (keyCode == GLFW.GLFW_KEY_SPACE) { togglePreviewFromShortcut(); return true; }
             if (keyCode == GLFW.GLFW_KEY_LEFT) { BossShowEditorState.movePlayheadBy(-step); syncFromState(); return true; }
             if (keyCode == GLFW.GLFW_KEY_RIGHT) { BossShowEditorState.movePlayheadBy(step); syncFromState(); return true; }
@@ -537,11 +542,14 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             if (keyCode == GLFW.GLFW_KEY_DELETE) { deleteSelectedTrackContent(); return true; }
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) { attemptClose(); return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.buttonInfo().button();
         if (contextMenuOpen) {
             if (button == 0) return handleContextMenuClick(mouseX, mouseY);
             closeContextMenu();
@@ -557,11 +565,14 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             timelineResizeStartHeight = timelineCollapsed ? MIN_TIMELINE_HEIGHT : preferredTimelineHeight;
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.buttonInfo().button();
         if (button == 0 && resizingTimeline) {
             int delta = (int) Math.round(timelineResizeStartY - mouseY);
             if (Math.abs(delta) >= 2) timelineResizeMoved = true;
@@ -571,11 +582,14 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.buttonInfo().button();
         if (button == 0 && resizingTimeline) {
             resizingTimeline = false;
             if (!timelineResizeMoved) {
@@ -584,7 +598,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -594,7 +608,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         g.fill(0, 0, this.width, TOP_HEIGHT, 0xEE171922);
         g.fill(0, inspectorY, this.width, timelineY, 0xCC171A22);
         g.fill(0, timelineY - 1, this.width, this.height, 0xEE0E1016);
-        g.renderOutline(6, TOP_HEIGHT + 2, this.width - 12, previewBottom - TOP_HEIGHT - 2, 0x553F4657);
+        drawOutline(g, 6, TOP_HEIGHT + 2, this.width - 12, previewBottom - TOP_HEIGHT - 2, 0x553F4657);
         Component dirty = Component.translatable(BossShowEditorState.isDirty()
             ? "gui.eca.bossshow.editor.unsaved" : "gui.eca.bossshow.editor.clean");
         g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.tick",
@@ -631,7 +645,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
         }
         g.fill(left, top, right, bottom, 0xFF2C2F39);
-        g.renderOutline(left, top, right - left, bottom - top, 0xFF555B6A);
+        drawOutline(g, left, top, right - left, bottom - top, 0xFF555B6A);
         for (int i = dropdownFirstWidgetIndex; i <= dropdownLastWidgetIndex && i < kids.size(); i++) {
             if (kids.get(i) instanceof AbstractWidget w) w.render(g, mouseX, mouseY, partialTick);
         }
@@ -825,7 +839,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     private void drawContextEntries(GuiGraphics g, int x, int y, List<ContextEntry> entries, int hoveredIndex) {
         int height = entries.size() * CONTEXT_ROW_HEIGHT + 4;
         g.fill(x, y, x + CONTEXT_WIDTH, y + height, 0xFF2C2F39);
-        g.renderOutline(x, y, CONTEXT_WIDTH, height, 0xFF555B6A);
+        drawOutline(g, x, y, CONTEXT_WIDTH, height, 0xFF555B6A);
         for (int i = 0; i < entries.size(); i++) {
             ContextEntry entry = entries.get(i);
             int rowY = y + 2 + i * CONTEXT_ROW_HEIGHT;
@@ -893,8 +907,15 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         boolean hovered = isOverTimelineHandle(mouseX, mouseY);
         g.fill(8, timelineY - 2, this.width - 8, timelineY, 0xFF454A58);
         g.fill(left, top, left + 48, top + 12, hovered || resizingTimeline ? 0xFF555B6A : 0xFF303541);
-        g.renderOutline(left, top, 48, 12, 0xFF747B8D);
+        drawOutline(g, left, top, 48, 12, 0xFF747B8D);
         g.drawCenteredString(this.font, timelineCollapsed ? "▲" : "▼", this.width / 2, top + 2, 0xFFE1E5EE);
+    }
+
+    private static void drawOutline(GuiGraphics g, int x, int y, int w, int h, int color) {
+        g.fill(x, y, x + w, y + 1, color);
+        g.fill(x, y + h - 1, x + w, y + h, color);
+        g.fill(x, y + 1, x + 1, y + h - 1, color);
+        g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
     }
 
     private static String format(double value) { return String.format(Locale.ROOT, "%.4f", value); }

@@ -15,7 +15,9 @@ import org.lwjgl.glfw.GLFW;
 @EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public final class BossShowKeyBindings {
 
-    public static final String CATEGORY = "key.categories.eca";
+    public static final net.minecraft.client.KeyMapping.Category CATEGORY =
+        net.minecraft.client.KeyMapping.Category.register(
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("eca", "categories"));
 
     //J = 开始/恢复录制
     public static final KeyMapping REC_START = new KeyMapping(

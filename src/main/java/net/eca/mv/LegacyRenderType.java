@@ -1,5 +1,5 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.8 LegacyRenderType with its F1 fix (mc-mod-version-upgrade 3f4022c),
+// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.10 LegacyRenderType with its F1 fix (mc-mod-version-upgrade 3f4022c),
 // MV-AHEAD-OF-TEMPLATE: package filled in. Delete once sync-shared brings it.
 // MV-REQUIRES: LegacyGl
 // MV-REQUIRES: ShaderInstance
@@ -39,6 +39,9 @@ import java.util.function.UnaryOperator;
  * the same in {@code draw} through {@link LegacyGl#draw}. Nothing in 1.21.8 calls {@link #getRenderTarget()} or
  * {@link #getRenderPipeline()} (1.21.5 had hooks of those names that vanilla's batching read); they are kept as plain
  * accessors for the draw path and for a mod that wants the pipeline, and are deliberately NOT {@code @Override}.
+ *
+ * <p>1.21.10 copy: from 1.21.9 {@code RenderType.pipeline()} is a fourth abstract method, implemented below (with
+ * {@code @Override}) on top of {@link #getRenderPipeline()}.
  */
 public class LegacyRenderType extends RenderType {
     /** A 1.21.4 shard 1.21.8 folded into the pipeline: it edits the draw state instead of setting GL state. */
@@ -152,12 +155,19 @@ public class LegacyRenderType extends RenderType {
         return state.output.getRenderTarget();
     }
 
-    /** The pipeline this type's current shader and state compile to. Not a 1.21.8 hook: a plain accessor. */
+    /** The pipeline this type's current shader and state compile to. */
     public RenderPipeline getRenderPipeline() {
         Object s = state.shader.shader();
         if (s instanceof ShaderInstance i) return i.pipeline(format, mode, state.key.withBlendIfUnset(i.blend()));
         if (s instanceof LegacyGl.Vanilla v) return v.pipeline(format, mode, state.key);
         throw new IllegalStateException(this + " has no shader to build a pipeline from");
+    }
+
+    /** 1.21.9 made {@code pipeline()} an abstract method of RenderType (the buffer source batches on it); it answers with the
+     *  pipeline {@link #getRenderPipeline()} derives, which is what {@link #draw} draws with. */
+    @Override
+    public RenderPipeline pipeline() {
+        return getRenderPipeline();
     }
 
     @Override

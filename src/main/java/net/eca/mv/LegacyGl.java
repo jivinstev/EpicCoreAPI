@@ -1,7 +1,7 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.8 LegacyGl with its F1 fix (mc-mod-version-upgrade 3f4022c) and the
+// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.10 LegacyGl with its F1 fix (mc-mod-version-upgrade 3f4022c) and the
 // MV-AHEAD-OF-TEMPLATE: package filled in, plus 1.21.5's opacity rule in draw() (a COLOR_MODULATOR written inside
-// MV-AHEAD-OF-TEMPLATE: apply() is not kept, as on 1.21.1), which 3f4022c left out for 1.21.8. Delete once sync-shared brings both.
+// MV-AHEAD-OF-TEMPLATE: apply() is not kept, as on 1.21.1), which 3f4022c left out for 1.21.8+. Delete once sync-shared brings both.
 package net.eca.mv;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -25,6 +25,7 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.ResourceLocation;
+import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
 
@@ -45,6 +46,9 @@ import java.util.OptionalInt;
  * RenderSystem holds, the sampler slots -- plus the shader's own uniform blocks and samplers (see {@link ShaderInstance}).
  * 1.21.6 replaced the per-uniform setters 1.21.5 still had with those blocks, which is why this file differs from the
  * 1.21.5 one.
+ *
+ * <p>1.21.10 copy of the 1.21.8 file: the only change is the model offset in the DynamicTransforms block (RenderSystem no
+ * longer holds one; vanilla's CompositeRenderType.draw writes a zero vector).
  *
  * <p>Not expressible on 1.21.8 and logged once: a blend equation other than ADD.
  */
@@ -255,7 +259,7 @@ public final class LegacyGl {
             float[] c = override ? own.COLOR_MODULATOR.floats() : shaderColor;
             GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(
                     own == null ? RenderSystem.getModelViewMatrix() : own.transformMatrix(own.MODEL_VIEW_MATRIX, RenderSystem.getModelViewMatrix()),
-                    new Vector4f(c[0], c[1], c[2], c[3]), RenderSystem.getModelOffset(),
+                    new Vector4f(c[0], c[1], c[2], c[3]), new Vector3f(),   // 1.21.9 dropped RenderSystem.getModelOffset(); vanilla's own draws pass a zero vector
                     own == null ? RenderSystem.getTextureMatrix() : own.transformMatrix(own.TEXTURE_MATRIX, RenderSystem.getTextureMatrix()),
                     own == null ? RenderSystem.getShaderLineWidth() : own.lineWidth(RenderSystem.getShaderLineWidth()));
             // as CompositeRenderType.draw: an output override (a post-effect pass) wins over the target's own views

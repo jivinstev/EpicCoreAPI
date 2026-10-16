@@ -3,6 +3,7 @@ package net.eca.client.gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -36,12 +37,12 @@ final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorS
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
             closePanel();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
@@ -51,7 +52,11 @@ final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorS
         int top = 18;
         int bottom = Math.min(this.height - 44, top + 26 + SHORTCUT_KEYS.size() * 17);
         g.fill(left, top, left + panelWidth, bottom, 0xE8171A22);
-        g.renderOutline(left, top, panelWidth, bottom - top, 0xFF555B6A);
+        int outlineHeight = bottom - top;
+        g.fill(left, top, left + panelWidth, top + 1, 0xFF555B6A);
+        g.fill(left, bottom - 1, left + panelWidth, bottom, 0xFF555B6A);
+        g.fill(left, top + 1, left + 1, bottom - 1, 0xFF555B6A);
+        g.fill(left + panelWidth - 1, top + 1, left + panelWidth, bottom - 1, 0xFF555B6A);
         g.drawCenteredString(this.font, this.title, this.width / 2, top + 8, 0xFFFFFFFF);
         int y = top + 26;
         for (String key : SHORTCUT_KEYS) {

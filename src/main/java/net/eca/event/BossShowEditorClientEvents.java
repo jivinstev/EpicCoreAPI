@@ -222,7 +222,7 @@ public final class BossShowEditorClientEvents {
         if (target == null || target.isRemoved()) return;
 
         Minecraft mc = Minecraft.getInstance();
-        Camera cam = event.getCamera();
+        Camera cam = mc.gameRenderer.getMainCamera();
         Vec3 camPos = cam.getPosition();
 
         PoseStack pose = event.getPoseStack();
@@ -232,7 +232,7 @@ public final class BossShowEditorClientEvents {
         MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
         VertexConsumer vc = buffer.getBuffer(RenderType.lines());
         AABB box = target.getBoundingBox().inflate(0.02);
-        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose, vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
+        net.minecraft.client.renderer.ShapeRenderer.renderLineBox(pose.last(), vc, box, 0.2f, 1.0f, 0.2f, 1.0f);
         buffer.endBatch(RenderType.lines());
 
         pose.popPose();
@@ -399,8 +399,9 @@ public final class BossShowEditorClientEvents {
         Vec3 look = player.getViewVector(1.0f);
         Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
         AABB scanBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0, 1.0, 1.0);
-        // 1.21.8: the (Level, Entity, from, to, box, filter, float margin) overload is 1.21.1's 6-argument one (margin 0.3,
-        // no distance limit); the (Entity, ..., double) overload takes the maximum distance SQUARED and getPickRadius margins
+        // 1.21.10 (as 1.21.8): the (Level, Entity, from, to, box, filter, float margin) overload is 1.21.1's 6-argument one
+        // (margin 0.3, no distance limit); the (Entity, ..., double) overload takes the maximum distance SQUARED and
+        // getPickRadius margins
         return ProjectileUtil.getEntityHitResult(
             player.level(),
             player,

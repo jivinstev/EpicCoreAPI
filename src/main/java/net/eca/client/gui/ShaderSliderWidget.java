@@ -6,6 +6,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
@@ -71,12 +74,14 @@ public final class ShaderSliderWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!active || !visible || button != 0 || !isMouseOver(mouseX, mouseY)) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        if (!active || !visible || event.buttonInfo().button() != 0 || !isMouseOver(mouseX, mouseY)) {
             return false;
         }
         if (editing) {
-            field.mouseClicked(mouseX, mouseY, button);
+            field.mouseClicked(event, doubleClick);
             return true;
         }
         long now = System.currentTimeMillis();
@@ -92,9 +97,9 @@ public final class ShaderSliderWidget extends AbstractWidget {
     }
 
     @Override
-    protected void onDrag(double mouseX, double mouseY, double dragX, double dragY) {
+    protected void onDrag(MouseButtonEvent event, double dragX, double dragY) {
         if (!editing) {
-            consumer.accept(valueFromX(mouseX));
+            consumer.accept(valueFromX(event.x()));
         }
     }
 
@@ -118,10 +123,11 @@ public final class ShaderSliderWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
         if (!editing) {
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(event);
         }
+        int keyCode = event.key();
         if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
             confirm();
             return true;
@@ -130,12 +136,12 @@ public final class ShaderSliderWidget extends AbstractWidget {
             cancel();
             return true;
         }
-        return field.keyPressed(keyCode, scanCode, modifiers);
+        return field.keyPressed(event);
     }
 
     @Override
-    public boolean charTyped(char codePoint, int modifiers) {
-        return editing ? field.charTyped(codePoint, modifiers) : super.charTyped(codePoint, modifiers);
+    public boolean charTyped(CharacterEvent event) {
+        return editing ? field.charTyped(event) : super.charTyped(event);
     }
 
     private void confirm() {
@@ -180,7 +186,10 @@ public final class ShaderSliderWidget extends AbstractWidget {
             graphics.fill(getX(), getY(), getX() + fillWidth, getY() + height, TRACK_FILL);
         }
         int border = isHoveredOrFocused() ? 0xFFFFFFFF : BORDER;
-        graphics.renderOutline(getX(), getY(), width, height, border);
+        graphics.fill(getX(), getY(), getX() + width, getY() + 1, border);
+        graphics.fill(getX(), getY() + height - 1, getX() + width, getY() + height, border);
+        graphics.fill(getX(), getY() + 1, getX() + 1, getY() + height - 1, border);
+        graphics.fill(getX() + width - 1, getY() + 1, getX() + width, getY() + height - 1, border);
         graphics.drawString(
             Minecraft.getInstance().font,
             formatter.format(value()),

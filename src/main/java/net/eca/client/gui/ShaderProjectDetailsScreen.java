@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -79,20 +80,25 @@ public final class ShaderProjectDetailsScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
         if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
             submit();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - DIALOG_WIDTH) / 2;
         int top = height / 2 - 72;
         graphics.fill(left, top, left + DIALOG_WIDTH, top + 144, 0xFF202225);
-        graphics.renderOutline(left, top, DIALOG_WIDTH, 144, 0xFF60656D);
+        graphics.fill(left, top, left + DIALOG_WIDTH, top + 1, 0xFF60656D);
+        graphics.fill(left, top + 143, left + DIALOG_WIDTH, top + 144, 0xFF60656D);
+        graphics.fill(left, top, left + 1, top + 144, 0xFF60656D);
+        graphics.fill(left + DIALOG_WIDTH - 1, top, left + DIALOG_WIDTH, top + 144, 0xFF60656D);
         graphics.drawCenteredString(font, title, width / 2, top + 10, 0xFFFFFFFF);
         graphics.drawString(font,
             Component.translatable("gui.eca.shader_generator.project.mod_id_prompt"),

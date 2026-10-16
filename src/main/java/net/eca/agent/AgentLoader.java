@@ -1,3 +1,5 @@
+// 1.21.10 overlay: identical to the author's AgentLoader except that a failed attach logs its whole cause chain
+// (the original logs only "InvocationTargetException: null"). Added to diagnose an intermittent self-attach failure.
 package net.eca.agent;
 
 import sun.misc.Unsafe;
@@ -83,6 +85,9 @@ public final class AgentLoader {
 
         } catch (Throwable t) {
             AgentLogWriter.error("[AgentLoader] Failed to load agent", t);
+            for (Throwable c = t; c != null; c = c.getCause()) {
+                AgentLogWriter.info("[AgentLoader] cause: " + c);
+            }
             return false;
         }
     }

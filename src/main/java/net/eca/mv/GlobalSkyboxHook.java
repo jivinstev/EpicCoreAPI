@@ -1,11 +1,11 @@
-// OVERLAY-ONLY: community fork multi-version layer (1.21.8 copy of the 1.21.3 overlay: the draw calls go through
-// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection. 1.21.8's sky is a
+// OVERLAY-ONLY: community fork multi-version layer (1.21.10 copy of the 1.21.8 overlay: the draw calls go through
+// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection. 1.21.10's sky is a
 // frame-graph pass, and NeoForge posts RenderLevelStageEvent.AfterSky at the end of it -- but renderLevel adds no sky
-// pass when its render-sky flag is false (GameRenderer passes !isFoggyAt: the Nether), and addSkyPass adds none for
-// SkyType NONE, lava/powder snow or a sky-blocking effect, where 1.21.1's renderSky still reached its TAIL; and it is
-// posted even where a custom DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So the 1.21.8
-// LevelRendererMixin overlay adds its own pass before the main pass, calls render() from it and sets passOwned, and the
-// AfterSky handler stands down. The drawing code is the authors', unchanged.
+// pass when its render-sky flag is false (GameRenderer passes !(isFoggyAt || boss-overlay world fog): the Nether), and
+// addSkyPass adds none for SkyType NONE, lava/powder snow or blindness/darkness, where 1.21.1's renderSky still reached its
+// TAIL; and it is posted even where a custom DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So
+// the 1.21.10 LevelRendererMixin overlay adds its own pass before the main pass, calls render() from it and sets passOwned,
+// and the AfterSky handler stands down. The drawing code is the authors', unchanged.
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -59,11 +59,13 @@ public final class GlobalSkyboxHook {
         if (passOwned) {
             return;
         }
-        render(event.getModelViewMatrix(), event.getCamera());
+        // 1.21.10's AfterSky carries no camera, and its model-view matrix is the view matrix renderLevel has already
+        // multiplied onto RenderSystem's model-view stack, so the PoseStack starts from identity here too.
+        render(new Matrix4f(), Minecraft.getInstance().gameRenderer.getMainCamera());
     }
 
     /** The authors' renderSky TAIL handler body. frustumMatrix is what the PoseStack starts from: 1.21.1 passed the view
-     *  matrix because the model-view stack did not hold it yet; a caller inside a 1.21.8 frame pass passes identity. */
+     *  matrix because the model-view stack did not hold it yet; on 1.21.10 the stack holds it, so callers pass identity. */
     public static void render(Matrix4f frustumMatrix, Camera camera) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || camera == null) {
