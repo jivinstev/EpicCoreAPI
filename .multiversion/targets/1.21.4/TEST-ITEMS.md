@@ -34,7 +34,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - stub: `.multiversion/targets/*/java/net/eca/mixin/LevelRendererMixin.java` (range 1.21.4, first 1.21.4, status reviewed)
 - behaviour: `net/eca/mixin/LevelRendererMixin.java` (range 1.21.4, first 1.21.4, status moved)
 - behaviour: `net/eca/mixin/LevelRendererMixin.java` (range 1.21.4, first 1.21.4, status moved)
-- behaviour: `net/eca/mixin/ItemRendererMixin.java` (range 1.21.4, first 1.21.4, status unaccounted)
+- behaviour: `net/eca/mixin/ItemRendererMixin.java` (range 1.21.4, first 1.21.4, status moved)
 - behaviour: `net/eca/mixin/LevelRendererMixin.java` (range 1.21.4, first 1.21.4, status moved)
 - behaviour: `net/eca/mixin/LevelRendererMixin.java` (range 1.21.4, first 1.21.4, status changed)
 - behaviour: `net/eca/mixin/LevelRendererMixin.java` (range 1.21.4, first 1.21.4, status moved)
