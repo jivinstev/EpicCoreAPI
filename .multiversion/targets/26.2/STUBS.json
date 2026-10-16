@@ -1,8 +1,20 @@
 [
  {
+  "file": ".multiversion/targets/26.2/java/net/eca/blender/client/runtime/BlendMaterialProgram.java",
+  "why": "empties 1 method body",
+  "reviewed": "Not a stub (#37): the one new empty body is the new record Uniforms(...) {} that keeps begin()'s per-draw uniforms for the deferred draw; no method of the authors' file was emptied. begin() and end() still set every uniform and draw, at once outside a level submit and from ShaderMaskRenderQueue.enqueueDraw (re-applying the uniforms) inside the main pass for one.",
+  "hooks": []
+ },
+ {
   "file": ".multiversion/targets/26.2/java/net/eca/client/render/EcaBossBarRenderer.java",
   "why": "empties 1 method body",
   "reviewed": "No longer a stub: the overlay is the 26.1.2 one with only mechanical 26.2 substitutions (BlendFactor, PrimitiveTopology, the shared Tesselator helper); flushBuffers() again ends the batch of the shared MultiBufferSource.main() that the bar's render types were written into, so every draw it made on 26.1.2 is made on 26.2, through LegacyRenderType.draw (the shader's own uniforms bound)."
+ },
+ {
+  "file": ".multiversion/targets/26.2/java/net/eca/client/render/ShaderMaskRenderQueue.java",
+  "why": "empties 1 method body",
+  "reviewed": "Not a stub (#37): the one new empty body is the private constructor of the new nested listener class InLevelPass; no method was emptied. InLevelPass.afterTranslucentFeatures draws the queue inside the level's main pass, and the after-level flushes are unchanged.",
+  "hooks": []
  },
  {
   "file": ".multiversion/targets/26.2/java/net/eca/mixin/FogRendererMixin.java",
