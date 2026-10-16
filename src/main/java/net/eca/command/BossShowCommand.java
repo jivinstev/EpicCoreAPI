@@ -153,7 +153,7 @@ public class BossShowCommand {
             if (!BossShowEditorSessionManager.isActive(player)) {
                 //首次进入才校验锚点候选，重复打开不应破坏既有会话。
                 AABB box = AABB.ofSize(player.position(), EDITOR_SCAN_RADIUS * 2, EDITOR_SCAN_RADIUS * 2, EDITOR_SCAN_RADIUS * 2);
-                List<LivingEntity> nearby = player.serverLevel().getEntitiesOfClass(
+                List<LivingEntity> nearby = player.level().getEntitiesOfClass(
                     LivingEntity.class, box, e -> e != null && e != player && e.isAlive());
                 if (nearby.isEmpty()) {
                     source.sendFailure(Component.literal("§cNo LivingEntity within " + (int) EDITOR_SCAN_RADIUS + " blocks. Editor needs at least one nearby entity."));

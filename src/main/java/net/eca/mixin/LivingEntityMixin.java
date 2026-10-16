@@ -1,3 +1,4 @@
+// Fork multi-version layer, 1.21.8: addAdditionalSaveData/readAdditionalSaveData take a ValueOutput/ValueInput (CATALOG §V31 shape, 1.21.6 on); same keys and tag types on disk.
 package net.eca.mixin;
 
 import net.eca.api.EcaAPI;
@@ -13,17 +14,19 @@ import net.eca.util.health.health_lock.HealthLockManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffectCategory;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
+import com.mojang.serialization.Codec;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -45,6 +48,19 @@ LivingEntityMixin {
     private static final String NBT_MAX_HEALTH_LOCK_KEY   = EcaOwnedState.NBT_MAX_HEALTH_LOCK_KEY;
     private static final String NBT_MAX_HEALTH_LOCK_CHECK = EcaOwnedState.NBT_MAX_HEALTH_LOCK_CHECK;
     private static final String NBT_RESURRECTION_TRACKED = EcaOwnedState.NBT_RESURRECTION_TRACKED;
+
+    // 1.21.6+: ValueInput has no contains() and no typed getters that fail loudly; a key is "there" when it reads as
+    // anything (Codec.PASSTHROUGH accepts every element), and "a string, else an int" is the two reads in that order.
+    // The on-disk layout is what addAdditionalSaveData wrote before: the same keys, the same tag types.
+    @Unique
+    private static boolean eca$has(ValueInput input, String key) {
+        return input.read(key, Codec.PASSTHROUGH).isPresent();
+    }
+
+    @Unique
+    private static String eca$stringOrInt(ValueInput input, String key) {
+        return input.getString(key).orElseGet(() -> String.valueOf(input.getIntOr(key, 0)));
+    }
 
     private static int parseIntSafe(String s) {
         if (s == null || s.isEmpty()) return 0;
@@ -91,7 +107,7 @@ LivingEntityMixin {
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
-    private void eca$writeAdditionalSaveData(CompoundTag tag, CallbackInfo ci) {
+    private void eca$writeAdditionalSaveData(ValueOutput tag, CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
         if (EntityUtil.INVULNERABLE == null ||
                 EntityUtil.HEALTH_LOCK_VALUE == null ||
@@ -117,7 +133,7 @@ LivingEntityMixin {
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
-    private void eca$readAdditionalSaveData(CompoundTag tag, CallbackInfo ci) {
+    private void eca$readAdditionalSaveData(ValueInput tag, CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
         if (EntityUtil.INVULNERABLE == null ||
                 EntityUtil.HEALTH_LOCK_VALUE == null ||
@@ -130,7 +146,7 @@ LivingEntityMixin {
             return;
         }
 
-        if (tag.contains(NBT_INVULNERABLE)) {
+        if (eca$has(tag, NBT_INVULNERABLE)) {
             boolean invulnerable = tag.getBooleanOr(NBT_INVULNERABLE, false);
             entity.getEntityData().set(EntityUtil.INVULNERABLE, invulnerable);
             if (invulnerable) {
@@ -141,25 +157,22 @@ LivingEntityMixin {
             }
         }
         // 锁血（新加密格式 int）
-        if (tag.contains(NBT_HEALTH_LOCK_ENC)) {
-            String encrypted = (tag.get(NBT_HEALTH_LOCK_ENC) instanceof net.minecraft.nbt.StringTag)
-                    ? tag.getStringOr(NBT_HEALTH_LOCK_ENC, "")
-                    : String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_ENC, 0));
+        if (eca$has(tag, NBT_HEALTH_LOCK_ENC)) {
+            String encrypted = eca$stringOrInt(tag, NBT_HEALTH_LOCK_ENC);
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_VALUE, encrypted);
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_KEY,   String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_KEY, 0)));
             entity.getEntityData().set(EntityUtil.HEALTH_LOCK_CHECK, String.valueOf(tag.getIntOr(NBT_HEALTH_LOCK_CHECK, 0)));
         }
-        if ((tag.get(NBT_HEAL_BAN_VALUE) instanceof net.minecraft.nbt.StringTag)) {
+        java.util.Optional<String> storedHealBan = tag.getString(NBT_HEAL_BAN_VALUE);
+        if (storedHealBan.isPresent()) {
             // TODO(1.1.6): 删除此迁移；将 1.1.5 前老哨兵 "-1024.0" 归一化为空串，避免被误判为 healBan=0
-            String healBan = tag.getStringOr(NBT_HEAL_BAN_VALUE, "");
+            String healBan = storedHealBan.get();
             if ("-1024.0".equals(healBan)) healBan = "";
             entity.getEntityData().set(EntityUtil.HEAL_BAN_VALUE, healBan);
         }
         // 最大血量锁定（新加密格式 int）
-        if (tag.contains(NBT_MAX_HEALTH_LOCK_ENC)) {
-            String encrypted = (tag.get(NBT_MAX_HEALTH_LOCK_ENC) instanceof net.minecraft.nbt.StringTag)
-                    ? tag.getStringOr(NBT_MAX_HEALTH_LOCK_ENC, "")
-                    : String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_ENC, 0));
+        if (eca$has(tag, NBT_MAX_HEALTH_LOCK_ENC)) {
+            String encrypted = eca$stringOrInt(tag, NBT_MAX_HEALTH_LOCK_ENC);
             entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_VALUE, encrypted);
             entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_KEY,   String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_KEY, 0)));
             entity.getEntityData().set(EntityUtil.MAX_HEALTH_LOCK_CHECK, String.valueOf(tag.getIntOr(NBT_MAX_HEALTH_LOCK_CHECK, 0)));
@@ -169,7 +182,7 @@ LivingEntityMixin {
         HealthLockManager.restoreFastPaths(entity);
 
         // 恢复复活追踪状态
-        if (tag.contains(NBT_RESURRECTION_TRACKED)) {
+        if (eca$has(tag, NBT_RESURRECTION_TRACKED)) {
             boolean tracked = tag.getBooleanOr(NBT_RESURRECTION_TRACKED, false);
             entity.getEntityData().set(EntityUtil.RESURRECTION_TRACKED, tracked);
             if (tracked) {

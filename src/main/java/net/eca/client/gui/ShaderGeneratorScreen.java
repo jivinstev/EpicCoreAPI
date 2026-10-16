@@ -72,7 +72,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-@OnlyIn(Dist.CLIENT)
 public final class ShaderGeneratorScreen extends Screen {
 
     private static final AtomicLong PREVIEW_REVISION = new AtomicLong();
@@ -3238,11 +3237,11 @@ public final class ShaderGeneratorScreen extends Screen {
         super.render(g, mx, my, pt);
 
         /* 5. 独立深度层确保下拉菜单覆盖已经写入深度缓冲的普通控件 */
-        g.pose().pushPose();
-        g.pose().translate(0.0F, 0.0F, 400.0F);
+        g.nextStratum();
+        g.pose().pushMatrix();
         drawDropdownBackground(g);
         renderDropdownWidgets(g, mx, my, pt);
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     /* 检查器 chrome 与文本标签；交互控件由 super.render 绘制 */
@@ -3343,9 +3342,9 @@ public final class ShaderGeneratorScreen extends Screen {
             return;
         }
         ElementScreenTransform box = elementScreenTransform(element, preview);
-        g.pose().pushPose();
-        g.pose().translate((float) box.centerX(), (float) box.centerY(), 0.0F);
-        g.pose().mulPose(new Quaternionf().rotateZ((float) box.rotationRadians()));
+        g.pose().pushMatrix();
+        g.pose().translate((float) box.centerX(), (float) box.centerY());
+        g.pose().rotate((float) box.rotationRadians());
         int left = (int) Math.round(-box.radiusX());
         int top = (int) Math.round(-box.radiusY());
         int width = Math.max(1, (int) Math.round(box.radiusX() * 2.0D));
@@ -3359,7 +3358,7 @@ public final class ShaderGeneratorScreen extends Screen {
         int handleY = top - CANVAS_ROTATE_HANDLE_OFFSET;
         g.fill(0, handleY, 1, top, 0xFFE6E9ED);
         drawHandle(g, 0, handleY, 0xFF4D8DFF);
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     /* 元素选框在屏幕空间的矩形，绘制与手柄命中共用以保证几何一致 */

@@ -6,6 +6,7 @@ import net.eca.util.EntityUtil;
 import net.eca.util.ResurrectionManager;
 import net.eca.util.faction.FactionUtil;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.entity.EntityInLevelCallback;
@@ -141,7 +142,7 @@ public class EntityMixin {
     }
 
     @Inject(method = "saveAsPassenger", at = @At("HEAD"), cancellable = true)
-    private void onSaveAsPassenger(CompoundTag tag, CallbackInfoReturnable<Boolean> cir) {
+    private void onSaveAsPassenger(ValueOutput tag, CallbackInfoReturnable<Boolean> cir) {
         Entity entity = (Entity) (Object) this;
 
         if (!(entity instanceof LivingEntity) || !EcaAPI.isInvulnerable(entity)) {
@@ -154,7 +155,7 @@ public class EntityMixin {
             return;
         }
 
-        tag.putString(Entity.ID_TAG, encodeId);
+        tag.putString("id", encodeId);
         entity.saveWithoutId(tag);
         cir.setReturnValue(true);
     }

@@ -296,7 +296,6 @@ public abstract class RaidDefinition {
      * @param state the synchronized state of this raid
      * @return music settings, or null for no raid music
      */
-    @OnlyIn(Dist.CLIENT)
     public RaidMusicExtension combatMusicExtension(RaidBarState state) {
         return null;
     }
@@ -314,7 +313,6 @@ public abstract class RaidDefinition {
      *
      * @return the custom bar appearance, or null to keep the vanilla bar
      */
-    @OnlyIn(Dist.CLIENT)
     public RaidBossBarExtension bossBarExtension() {
         return null;
     }

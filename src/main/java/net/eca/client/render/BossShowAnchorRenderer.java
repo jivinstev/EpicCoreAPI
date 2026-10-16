@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 //编辑器可视化：锚点光柱 + 摄像机路径折线 + 关键帧头颅
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowAnchorRenderer {
 
     private static final float BEAM_HEIGHT = 6.0f;
@@ -53,8 +53,7 @@ public final class BossShowAnchorRenderer {
     private BossShowAnchorRenderer() {}
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (!BossShowEditorState.isActive()) return;
         if (!BossShowEditorState.hasAnchor()) return;
 

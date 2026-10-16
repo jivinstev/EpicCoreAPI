@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class BlockExtension {
 
     private final Block block;

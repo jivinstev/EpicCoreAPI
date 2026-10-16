@@ -17,7 +17,6 @@ import net.neoforged.api.distmarker.OnlyIn;
    （id+"_entity"，NEW_ENTITY）服务 NEW_ENTITY 顶点格式的 RenderType（Boss 实体层 / 物品层 / 实体效果层）。
    两 profile 共享同一 fsh，但必须各按匹配的 VertexFormat 编译，不能共用单一实例。
    reload 在每次 RegisterShadersEvent（或注册晚于该事件时）重建两个 EcaShaderInstance（自带 Iris 深度颜色解锁）。 */
-@OnlyIn(Dist.CLIENT)
 @SuppressWarnings("removal")
 final class GenericPresetShader {
 

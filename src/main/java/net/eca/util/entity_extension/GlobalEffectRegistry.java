@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class GlobalEffectRegistry {
 
     private static final Map<ResourceLocation, RenderType> SKYBOX_PRESETS = new ConcurrentHashMap<>();

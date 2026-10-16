@@ -1,16 +1,13 @@
 package net.eca.pro;
 
 import net.eca.agent.AgentLogWriter;
-import net.neoforged.fml.earlydisplay.ElementShader;
-import net.neoforged.fml.earlydisplay.QuadHelper;
-import net.neoforged.fml.earlydisplay.RenderElement;
-import net.neoforged.fml.earlydisplay.SimpleBufferBuilder;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.STBImage;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
+import static org.lwjgl.opengl.GL32C.*;
 import static org.lwjgl.opengl.GL32C.GL_BLEND;
 import static org.lwjgl.opengl.GL32C.GL_CLAMP_TO_EDGE;
 import static org.lwjgl.opengl.GL32C.GL_COLOR_BUFFER_BIT;
@@ -52,7 +49,25 @@ final class EcaProIntroRenderer {
 
     private static byte[][] encodedAtlases;
     private static int[] textures;
-    private static SimpleBufferBuilder buffer;
+    private static int program;
+    private static int vao;
+    private static int vbo;
+    private static int samplerLocation;
+    private static final String VERTEX_SOURCE = "#version 150 core\n"
+            + "in vec2 Position;\n"
+            + "in vec2 UV0;\n"
+            + "out vec2 texCoord0;\n"
+            + "void main() {\n"
+            + "    gl_Position = vec4(Position, 0.0, 1.0);\n"
+            + "    texCoord0 = UV0;\n"
+            + "}\n";
+    private static final String FRAGMENT_SOURCE = "#version 150 core\n"
+            + "uniform sampler2D Sampler0;\n"
+            + "in vec2 texCoord0;\n"
+            + "out vec4 fragColor;\n"
+            + "void main() {\n"
+            + "    fragColor = texture(Sampler0, texCoord0);\n"
+            + "}\n";
     private static long startNanos;
     private static boolean finished;
     private static boolean failed;
@@ -84,7 +99,7 @@ final class EcaProIntroRenderer {
     }
 
     static boolean render(Object displayContext) {
-        if (finished || failed || !(displayContext instanceof RenderElement.DisplayContext context)) {
+        if (finished || failed) {
             return false;
         }
         try {
@@ -99,7 +114,7 @@ final class EcaProIntroRenderer {
                 return false;
             }
 
-            draw(context, frame);
+            draw(frame);
             return true;
         } catch (Throwable t) {
             failed = true;
@@ -125,8 +140,52 @@ final class EcaProIntroRenderer {
             textures[index] = loadTexture(encodedAtlases[index], atlasWidth, atlasHeight);
         }
         encodedAtlases = null;
-        buffer = new SimpleBufferBuilder("eca", 128);
+        initializeGeometry();
         AgentLogWriter.info("[EcaProIntro] Animation textures initialized");
+    }
+
+    private static int compileShader(int type, String source) {
+        int shader = glCreateShader(type);
+        glShaderSource(shader, source);
+        glCompileShader(shader);
+        if (glGetShaderi(shader, GL_COMPILE_STATUS) == 0) {
+            String log = glGetShaderInfoLog(shader);
+            glDeleteShader(shader);
+            throw new IllegalStateException("shader_compile_failed: " + log);
+        }
+        return shader;
+    }
+
+    private static void initializeGeometry() {
+        int vertex = compileShader(GL_VERTEX_SHADER, VERTEX_SOURCE);
+        int fragment = compileShader(GL_FRAGMENT_SHADER, FRAGMENT_SOURCE);
+        program = glCreateProgram();
+        glAttachShader(program, vertex);
+        glAttachShader(program, fragment);
+        glBindAttribLocation(program, 0, "Position");
+        glBindAttribLocation(program, 1, "UV0");
+        glLinkProgram(program);
+        glDeleteShader(vertex);
+        glDeleteShader(fragment);
+        if (glGetProgrami(program, GL_LINK_STATUS) == 0) {
+            String log = glGetProgramInfoLog(program);
+            glDeleteProgram(program);
+            program = 0;
+            throw new IllegalStateException("shader_link_failed: " + log);
+        }
+        samplerLocation = glGetUniformLocation(program, "Sampler0");
+
+        vao = glGenVertexArrays();
+        vbo = glGenBuffers();
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, 16 * Float.BYTES, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 2, GL_FLOAT, false, 4 * Float.BYTES, 0L);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, false, 4 * Float.BYTES, 2L * Float.BYTES);
+        glEnableVertexAttribArray(1);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
     }
 
     private static int loadTexture(byte[] encoded, int expectedWidth, int expectedHeight) {
@@ -156,7 +215,7 @@ final class EcaProIntroRenderer {
         }
     }
 
-    private static void draw(RenderElement.DisplayContext context, int frame) {
+    private static void draw(int frame) {
         int framesPerAtlas = ATLAS_COLUMNS * ATLAS_ROWS;
         int atlas = frame / framesPerAtlas;
         int cell = frame % framesPerAtlas;
@@ -175,12 +234,21 @@ final class EcaProIntroRenderer {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textures[atlas]);
-        context.elementShader().updateTextureUniform(0);
-        context.elementShader().updateRenderTypeUniform(ElementShader.RenderType.TEXTURE);
-        buffer.begin(SimpleBufferBuilder.Format.POS_TEX_COLOR, SimpleBufferBuilder.Mode.QUADS);
-        QuadHelper.loadQuad(buffer, 0, context.scaledWidth(), 0, context.scaledHeight(),
-                u0, u1, vTop, vBottom, 0xFFFFFFFF);
-        buffer.draw();
+        float[] vertices = {
+                -1f, 1f, u0, vTop,
+                -1f, -1f, u0, vBottom,
+                1f, -1f, u1, vBottom,
+                1f, 1f, u1, vTop
+        };
+        glUseProgram(program);
+        glUniform1i(samplerLocation, 0);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        glUseProgram(0);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
@@ -191,9 +259,17 @@ final class EcaProIntroRenderer {
             }
             textures = null;
         }
-        if (buffer != null) {
-            buffer.close();
-            buffer = null;
+        if (vbo != 0) {
+            glDeleteBuffers(vbo);
+            vbo = 0;
+        }
+        if (vao != 0) {
+            glDeleteVertexArrays(vao);
+            vao = 0;
+        }
+        if (program != 0) {
+            glDeleteProgram(program);
+            program = 0;
         }
     }
 

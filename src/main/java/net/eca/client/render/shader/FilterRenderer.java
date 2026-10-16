@@ -1,20 +1,18 @@
-// Fork multi-version layer: 1.21.5 overlay of the authors' FilterRenderer, taken from the 1.21.5 prepared source (the
-// authors' file after this target's rename rows, before any FilterRenderer overlay existed) and changed in three places:
-//  - the spotlight mask (#33): from 1.21.5 a RenderType draw no longer draws into whatever framebuffer is bound; it opens
-//    a RenderPass on its output target's GpuTextures (MAIN_TARGET -> Minecraft.getMainRenderTarget(), whose
-//    getColorTexture()/getDepthTexture() GlCommandEncoder turns into the FBO it binds), and RenderTarget has no
-//    frameBufferId any more (1.21.4's overlay redirected that). So the spotlight is now a TextureTarget, and while the
-//    entity is drawn the main target's colorTexture/depthTexture name the spotlight's (restored in a finally; the fields
-//    are widened in this target's access transformer). The pass viewport follows the colour texture, which is
-//    the main target's size.
-//  - depth copies in the main target's own format (#33): 1.21.5's main depth is sized (DEPTH32 -> GL_DEPTH_COMPONENT32,
-//    or NeoForge's stencil format when stencil is on); the copies were unsized GL_DEPTH_COMPONENT, and a format mismatch
-//    makes the COLOR|DEPTH blit fail as a whole. allocateDepthCopy/depthAttachment as 26.2's overlay does it, with 1.21.5's
-//    TextureFormat; reallocated when the format changes. The spotlight TextureTarget takes the main target's useStencil,
-//    so RenderTarget.createBuffers gives its depth the main's format.
-//  - nothing else: every other line is the prepared source.
-// An overlay passes down the `inherits` chain WITHOUT rename rows. No later target inherits this file: 1.21.8 and every
-// target after it carry their own FilterRenderer overlay.
+// Fork multi-version layer: 1.21.8 overlay of the authors' FilterRenderer. Beyond the 1.21.8 port (stage listeners,
+// projection buffers, the Cosmos projection), two review fixes (#33), shaped as 1.21.5's overlay and re-derived for 1.21.8:
+//  - the spotlight mask: a RenderType draw opens its RenderPass on its output target's GpuTextureViews (MAIN_TARGET ->
+//    Minecraft.getMainRenderTarget()), and the GL backend binds the FBO cached on that colour texture, so binding the
+//    authors' raw spotlight FBO was ignored: the mask stayed empty and the entity was drawn a second time into the main
+//    target. The spotlight is now a TextureTarget, and while the entity is drawn RenderSystem.outputColorTextureOverride /
+//    outputDepthTextureOverride (1.21.6+; CompositeRenderType.draw and net.eca.mv.LegacyGl both honour them) name its
+//    views, restored in a finally.
+//  - depth copies in the main target's own format: the main depth is sized (MainTarget: DEPTH32 -> GL_DEPTH_COMPONENT32,
+//    or NeoForge's stencil format), and an unsized GL_DEPTH_COMPONENT copy makes the COLOR|DEPTH blit fail as a whole.
+//    allocateDepthCopy/depthAttachment as 26.2's and 1.21.5's overlays do, reallocated when the format changes; the
+//    spotlight TextureTarget takes the main target's useStencil, so RenderTarget.createBuffers gives it the main's format.
+// Under Fabulous graphics the item-entity/translucent/outline targets are not redirected, as on 1.21.1.
+// An overlay passes down the `inherits` chain WITHOUT rename rows; no later target compiles this file (1.21.10 and
+// every target after it carry their own FilterRenderer overlay).
 package net.eca.client.render.shader;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -56,8 +54,16 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.Consumer;
 @SuppressWarnings("removal")
-@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public class FilterRenderer {
+
+    // 1.21.8: the projectionMatrix LevelRenderer.renderLevel was given this frame (GameRenderer.renderLevel's level
+    // projection, the matrix the depth buffer is written with); set by LevelRendererMixin at renderLevel HEAD
+    private static final Matrix4f LEVEL_PROJECTION = new Matrix4f();
+
+    public static void captureLevelProjection(org.joml.Matrix4fc projection) {
+        LEVEL_PROJECTION.set(projection);
+    }
 
     private static ShaderInstance sketchShader;
     private static ShaderInstance spotlightShader;
@@ -85,7 +91,7 @@ public class FilterRenderer {
     private static int copyWidth;
     private static int copyHeight;
 
-    // 1.21.5 (#33): the spotlight mask is a TextureTarget, so RenderType draws can be pointed at it (see captureSpotlightEntity)
+    // 1.21.8 (#33): the spotlight mask is a TextureTarget, so RenderType draws can be pointed at it (see captureSpotlightEntity)
     private static com.mojang.blaze3d.pipeline.TextureTarget spotlightTarget;
 
     /* 宇宙滤镜专用：在实体绘制前（AFTER_CUTOUT_BLOCKS_LAYER）快照纯地形深度，
@@ -95,7 +101,7 @@ public class FilterRenderer {
     private static int cosmosTerrainWidth;
     private static int cosmosTerrainHeight;
 
-    // 1.21.5 (#33): the depth format each copy was allocated in (the main target's, see allocateDepthCopy)
+    // 1.21.8 (#33): the depth format each copy was allocated in (the main target's, see allocateDepthCopy)
     private static com.mojang.blaze3d.textures.TextureFormat copyDepthFormat;
     private static com.mojang.blaze3d.textures.TextureFormat cosmosTerrainDepthFormat;
 
@@ -216,78 +222,104 @@ public class FilterRenderer {
         cosmosStartNanos = 0;
     }
 
+    private static net.minecraft.client.renderer.PerspectiveProjectionMatrixBuffer orthoBuffer;
+
+    private static com.mojang.blaze3d.buffers.GpuBufferSlice orthoSlice(Matrix4f ortho) {
+        if (orthoBuffer == null) {
+            orthoBuffer = new net.minecraft.client.renderer.PerspectiveProjectionMatrixBuffer("eca filter ortho");
+        }
+        return orthoBuffer.getBuffer(ortho);
+    }
+
+    // RenderLevelStageEvent is abstract on 1.21.8 (the bus refuses a listener for it): one listener per stage this
+    // filter reads, all sharing the authors' single handler body below (CATALOG X33)
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+    public static void onAfterOpaqueBlocks(RenderLevelStageEvent.AfterOpaqueBlocks event) {
+        onRenderLevelStage(event);
+    }
+
+    @SubscribeEvent
+    public static void onAfterEntities(RenderLevelStageEvent.AfterEntities event) {
+        onRenderLevelStage(event);
+    }
+
+    @SubscribeEvent
+    public static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
+        onRenderLevelStage(event);
+    }
+
+    private static void onRenderLevelStage(RenderLevelStageEvent event) {
         if (activeFilters.isEmpty() && bossShowFilter == null) return;
 
+        boolean afterLevel = event instanceof RenderLevelStageEvent.AfterLevel;
+
         if (isRenderedFilter(FilterType.SPOTLIGHT) && spotlightShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+            if (event instanceof RenderLevelStageEvent.AfterEntities) {
                 captureSpotlightEntity(event);
                 return;
             }
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (afterLevel) {
                 renderSpotlight(event);
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.MATRIX) && matrixShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (afterLevel) {
                 renderMatrix();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.RAIN) && rainShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (afterLevel) {
                 renderRain();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.DESERT) && desertShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (afterLevel) {
                 renderDesert();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.SNOW) && snowShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (afterLevel) {
                 renderSnow();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.TOXIC) && toxicShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (afterLevel) {
                 renderToxic();
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.COSMOS)) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_CUTOUT_BLOCKS) {
+            if (event instanceof RenderLevelStageEvent.AfterOpaqueBlocks) {
                 captureCosmosTerrainDepth();
                 return;
             }
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL && cosmosShader != null) {
+            if (afterLevel && cosmosShader != null) {
                 renderCosmos(event);
                 return;
             }
             return;
         }
         if (isRenderedFilter(FilterType.SKETCH) && sketchShader != null) {
-            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
+            if (afterLevel) {
                 renderSketch();
             }
         }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBossShowEffectRender(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_LEVEL
-            || !BossShowScreenEffectState.hasShaderEffects()) return;
+    public static void onBossShowEffectRender(RenderLevelStageEvent.AfterLevel event) {
+        if (!BossShowScreenEffectState.hasShaderEffects()) return;
         float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         renderFilterPass(bossShowEffectShader, shader -> {
             Minecraft mc = Minecraft.getInstance();
@@ -313,7 +345,7 @@ public class FilterRenderer {
         clearAll();
     }
 
-    // 1.21.5 (#33): the main target's depth format (MainTarget allocates DEPTH32, or NeoForge's stencil format)
+    // 1.21.8 (#33): the main target's depth format (MainTarget allocates DEPTH32, or NeoForge's stencil format)
     private static com.mojang.blaze3d.textures.TextureFormat mainDepthFormat() {
         com.mojang.blaze3d.textures.GpuTexture depth = Minecraft.getInstance().getMainRenderTarget().getDepthTexture();
         return depth != null ? depth.getFormat() : com.mojang.blaze3d.textures.TextureFormat.DEPTH32;
@@ -386,7 +418,7 @@ public class FilterRenderer {
                 && spotlightTarget.useStencil == mainTarget.useStencil
                 && spotlightTarget.getDepthTexture().getFormat() == mainDepthFormat()) return;
         destroySpotlightTargets();
-        // 1.21.5: colour RGBA8 and depth in the main target's format (createBuffers picks it from useStencil, as
+        // 1.21.8: colour RGBA8 and depth in the main target's format (createBuffers picks it from useStencil, as
         // MainTarget does), NEAREST filtering -- what the authors' raw textures were, as GpuTextures a RenderPass can use
         spotlightTarget = new com.mojang.blaze3d.pipeline.TextureTarget("eca_spotlight", width, height, true, mainTarget.useStencil);
     }
@@ -568,9 +600,9 @@ public class FilterRenderer {
         net.eca.mv.LegacyGl.disableCull();
         net.eca.mv.LegacyGl.disableBlend();
 
-        Matrix4f savedProj = RenderSystem.getProjectionMatrix();
+        com.mojang.blaze3d.buffers.GpuBufferSlice savedProj = RenderSystem.getProjectionMatrixBuffer();
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
+        RenderSystem.setProjectionMatrix(orthoSlice(ortho), com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
 
         RenderSystem.getModelViewStack().pushMatrix();
         try {
@@ -579,7 +611,7 @@ public class FilterRenderer {
             net.eca.mv.LegacyGl.setShader(() -> spotlightShader);
             net.eca.mv.LegacyGl.setShaderTexture(0, depthCopyTexture);
             net.eca.mv.LegacyGl.setShaderTexture(1, colorCopyTexture);
-            net.eca.mv.LegacyGl.setShaderTexture(2, spotlightTarget != null ? spotlightTarget.getColorTexture() : null);
+            net.eca.mv.LegacyGl.setShaderTexture(2, spotlightTarget != null ? spotlightTarget.getColorTextureView() : null);
             if (spotlightShader.getUniform("ScreenSize") != null) {
                 spotlightShader.getUniform("ScreenSize").set((float) width, (float) height);
             }
@@ -640,18 +672,19 @@ public class FilterRenderer {
 
         net.eca.mv.LegacyGl.enableDepthTest();
         net.eca.mv.LegacyGl.depthMask(true);
-        // 1.21.5 (#33): RenderType.draw opens its pass on MAIN_TARGET's textures, so for this draw they are the spotlight's
-        com.mojang.blaze3d.textures.GpuTexture mainColor = mainTarget.colorTexture;
-        com.mojang.blaze3d.textures.GpuTexture mainDepth = mainTarget.depthTexture;
-        mainTarget.colorTexture = spotlightTarget.getColorTexture();
-        mainTarget.depthTexture = spotlightTarget.getDepthTexture();
+        // 1.21.8 (#33): RenderType.draw opens its pass on MAIN_TARGET's views unless an output override is set, so for
+        // this draw the overrides name the spotlight's (any override already in place is put back afterwards)
+        com.mojang.blaze3d.textures.GpuTextureView savedColor = RenderSystem.outputColorTextureOverride;
+        com.mojang.blaze3d.textures.GpuTextureView savedDepth = RenderSystem.outputDepthTextureOverride;
+        RenderSystem.outputColorTextureOverride = spotlightTarget.getColorTextureView();
+        RenderSystem.outputDepthTextureOverride = spotlightTarget.getDepthTextureView();
         try {
             dispatcher.render(target, x, y, z, partialTick, poseStack, buffer,
                     dispatcher.getPackedLightCoords(target, partialTick));
             buffer.endBatch();
         } finally {
-            mainTarget.colorTexture = mainColor;
-            mainTarget.depthTexture = mainDepth;
+            RenderSystem.outputColorTextureOverride = savedColor;
+            RenderSystem.outputDepthTextureOverride = savedDepth;
         }
 
         net.eca.mv.LegacyTargets.bindWrite(mainTarget, false);
@@ -690,9 +723,9 @@ public class FilterRenderer {
         net.eca.mv.LegacyGl.disableCull();
         net.eca.mv.LegacyGl.disableBlend();
 
-        Matrix4f savedProj = RenderSystem.getProjectionMatrix();
+        com.mojang.blaze3d.buffers.GpuBufferSlice savedProj = RenderSystem.getProjectionMatrixBuffer();
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
+        RenderSystem.setProjectionMatrix(orthoSlice(ortho), com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
 
         RenderSystem.getModelViewStack().pushMatrix();
         try {
@@ -769,7 +802,9 @@ public class FilterRenderer {
         // 视图旋转改从 RenderSystem 的逆视图旋转矩阵还原，再与投影组合求逆
         Matrix3f viewRot = new Matrix3f().rotation(event.getCamera().rotation()).invert();
         Matrix4f view = new Matrix4f().set(viewRot);
-        Matrix4f invViewProj = new Matrix4f(event.getProjectionMatrix())
+        // 1.21.8: AfterLevel carries no projection; 1.21.1's event.getProjectionMatrix() was GameRenderer's level
+        // projection (FOV modifiers, bobHurt/bobView, getDepthFar), which renderLevel still receives -- captured there
+        Matrix4f invViewProj = new Matrix4f(LEVEL_PROJECTION)
                 .mul(view)
                 .invert();
         Vec3 cam = event.getCamera().getPosition();
@@ -779,9 +814,9 @@ public class FilterRenderer {
         net.eca.mv.LegacyGl.disableCull();
         net.eca.mv.LegacyGl.disableBlend();
 
-        Matrix4f savedProj = RenderSystem.getProjectionMatrix();
+        com.mojang.blaze3d.buffers.GpuBufferSlice savedProj = RenderSystem.getProjectionMatrixBuffer();
         Matrix4f ortho = new Matrix4f().setOrtho(0.0f, (float) width, (float) height, 0.0f, -1000.0f, 1000.0f);
-        RenderSystem.setProjectionMatrix(ortho, com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
+        RenderSystem.setProjectionMatrix(orthoSlice(ortho), com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC);
 
         RenderSystem.getModelViewStack().pushMatrix();
         try {

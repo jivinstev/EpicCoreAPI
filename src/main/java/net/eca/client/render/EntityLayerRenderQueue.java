@@ -14,7 +14,6 @@ import net.neoforged.api.distmarker.OnlyIn;
  * @deprecated Use {@link ShaderMaskRenderQueue}; all extension domains now share that queue.
  */
 @Deprecated
-@OnlyIn(Dist.CLIENT)
 public final class EntityLayerRenderQueue {
 
     private EntityLayerRenderQueue() {

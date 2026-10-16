@@ -6,7 +6,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 /**
  * Selects the texture source used by a {@link ShaderMaskPass}.
  */
-@OnlyIn(Dist.CLIENT)
 public enum ShaderMaskSource {
     /** No color mask; the shader covers the submitted geometry. */
     NONE,

@@ -36,9 +36,9 @@ public abstract class ServerCommonPacketListenerMixin {
     }
 
     //拦截危险数据包（断线包、死亡包），防止无敌玩家被恶意包影响
-    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;)V",
+    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V",
             at = @At("HEAD"), cancellable = true)
-    private void eca$onSendPacket(Packet<?> packet, PacketSendListener listener, CallbackInfo ci) {
+    private void eca$onSendPacket(Packet<?> packet, io.netty.channel.ChannelFutureListener listener, CallbackInfo ci) {
         if (!this.eca$isInvulnerableGamePlayer()) {
             return;
         }

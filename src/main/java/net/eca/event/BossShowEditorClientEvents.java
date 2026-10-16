@@ -46,7 +46,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.UUID;
 
 //BossShow 编辑器：实体选择 + 录制状态机
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowEditorClientEvents {
 
     private static Entity cachedHovered = null;
@@ -216,8 +216,7 @@ public final class BossShowEditorClientEvents {
     }
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (!BossShowEditorState.isAnySelectionMode()) return;
         Entity target = cachedHovered;
         if (target == null || target.isRemoved()) return;
@@ -400,13 +399,16 @@ public final class BossShowEditorClientEvents {
         Vec3 look = player.getViewVector(1.0f);
         Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
         AABB scanBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0, 1.0, 1.0);
+        // 1.21.8: the (Level, Entity, from, to, box, filter, float margin) overload is 1.21.1's 6-argument one (margin 0.3,
+        // no distance limit); the (Entity, ..., double) overload takes the maximum distance SQUARED and getPickRadius margins
         return ProjectileUtil.getEntityHitResult(
             player.level(),
             player,
             eye,
             end,
             scanBox,
-            e -> e instanceof LivingEntity && e.isAlive() && e != player
+            e -> e instanceof LivingEntity && e.isAlive() && e != player,
+            0.3F
         );
     }
 }

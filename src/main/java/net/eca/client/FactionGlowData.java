@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * 由 FactionGlowSyncPacket 更新，由 EntityFactionGlowMixin 的 isCurrentlyGlowing / getTeamColor 注入消费。
  * 复用原版队伍发光描边系统，无需自定义渲染。
  */
-@OnlyIn(Dist.CLIENT)
 public class FactionGlowData {
 
     // entityId → ARGB color

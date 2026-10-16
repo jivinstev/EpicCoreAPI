@@ -71,7 +71,6 @@ public final class ShaderProjectSelectionScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
         if (projects.isEmpty()) {
             graphics.drawCenteredString(

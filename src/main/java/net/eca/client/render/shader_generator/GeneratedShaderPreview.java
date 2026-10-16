@@ -299,7 +299,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
@@ -321,7 +321,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             false,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
                 .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
@@ -366,7 +366,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shader)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)

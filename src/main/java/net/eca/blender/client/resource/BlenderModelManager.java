@@ -28,7 +28,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-@OnlyIn(Dist.CLIENT)
 @SuppressWarnings("removal")
 public final class BlenderModelManager extends SimplePreparableReloadListener<Map<ResourceLocation, BlenderModelAsset>> {
     public static final BlenderModelManager INSTANCE = new BlenderModelManager();

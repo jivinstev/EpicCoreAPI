@@ -7,6 +7,7 @@ import net.eca.network.NetworkHandler;
 import net.eca.util.health.health_lock.HealthLockManager;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -426,8 +428,9 @@ public final class ResurrectionManager {
         try {
             /* 用 saveWithoutId 再自己补 id 字段：save/saveAsPassenger 在 removalReason 不可存档
                或类型无编码名时直接返回 false，正是最需要快照的时候拿不到快照。 */
-            CompoundTag tag = new CompoundTag();
-            entity.saveWithoutId(tag);
+            TagValueOutput out = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
+            entity.saveWithoutId(out);
+            CompoundTag tag = out.buildResult();
             ResourceLocation typeId = EntityType.getKey(entity.getType());
             if (typeId == null) return;
             tag.putString("id", typeId.toString());

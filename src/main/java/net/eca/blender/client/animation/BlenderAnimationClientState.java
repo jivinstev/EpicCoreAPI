@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlenderAnimationClientState {
     private static final Map<UUID, BlenderPlaybackState> STATES = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> REVISIONS = new ConcurrentHashMap<>();

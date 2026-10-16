@@ -31,7 +31,6 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 import java.util.function.BiFunction;
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRenderState> extends GeoRenderLayer<T, O, R> {
 
     /** The extension that applies to this frame's entity, parked on the render state by {@link #addRenderData}. */

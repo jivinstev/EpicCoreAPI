@@ -13,7 +13,6 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 import software.bernie.geckolib.renderer.GeoReplacedEntityRenderer;
 
-@OnlyIn(Dist.CLIENT)
 public class GeckoLibCompat {
 
     public static void register() {

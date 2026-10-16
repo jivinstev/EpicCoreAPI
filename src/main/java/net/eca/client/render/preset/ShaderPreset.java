@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.OnlyIn;
    BLOCK profile（<name>_block.vsh/.json）→ skybox / boss bar / block。
    NEW_ENTITY profile（<name>_entity.vsh/.json）→ boss layer / item / Geo block。
    共享 <name>.fsh。实体纹理叠加通过 EntityLayerExtension.getTexture() 支持。 */
-@OnlyIn(Dist.CLIENT)
 public final class ShaderPreset {
 
     private final ResourceLocation id;

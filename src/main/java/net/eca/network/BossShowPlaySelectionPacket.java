@@ -64,7 +64,7 @@ public class BossShowPlaySelectionPacket implements CustomPacketPayload {
             }
 
             //在玩家所在维度按 64 格半径查找目标实体
-            ServerLevel level = player.serverLevel();
+            ServerLevel level = (ServerLevel) player.level();
             AABB box = AABB.ofSize(player.position(), SCAN_RADIUS * 2, SCAN_RADIUS * 2, SCAN_RADIUS * 2);
             List<LivingEntity> nearby = level.getEntitiesOfClass(
                 LivingEntity.class, box,

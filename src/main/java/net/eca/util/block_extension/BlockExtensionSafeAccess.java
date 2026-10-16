@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlockExtensionSafeAccess {
 
     private static final Set<String> LOGGED = ConcurrentHashMap.newKeySet();

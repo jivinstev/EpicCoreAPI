@@ -29,7 +29,6 @@ import java.math.RoundingMode;
  * 绘制分两层：外框满宽渲染作为底层，填充按 progress 横向裁剪覆盖其上。
  * 同时提供贴图与 RenderType 时，着色器通过 alpha 通道遮罩叠加在贴图的非透明像素上。
  */
-@OnlyIn(Dist.CLIENT)
 public final class EcaBossBarRenderer {
 
     // 原版血条尺寸，未提供任何尺寸信息时作为回退
@@ -141,9 +140,9 @@ public final class EcaBossBarRenderer {
         float scaledWidth = layoutWidth * scale;
         float renderX = (guiWidth - scaledWidth) * 0.5f;
 
-        graphics.pose().pushPose();
-        graphics.pose().translate(renderX, y, 0.0f);
-        graphics.pose().scale(scale, scale, 1.0f);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(renderX, y);
+        graphics.pose().scale(scale, scale);
 
         int baseFillOffsetX = Math.max(0, (barWidth - fillTextureWidth) / 2);
         int baseFillOffsetY = Math.max(0, (barHeight - fillTextureHeight) / 2);
@@ -163,13 +162,13 @@ public final class EcaBossBarRenderer {
         }
 
         if (appearance.valueText != null) {
-            graphics.flush();
+            flushBuffers();
             int textY = (barHeight - Minecraft.getInstance().font.lineHeight) / 2;
             graphics.drawCenteredString(Minecraft.getInstance().font, appearance.valueText,
                     layoutWidth / 2, textY, 0xFFFFFFFF);
         }
 
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
         return true;
     }
 
@@ -200,28 +199,39 @@ public final class EcaBossBarRenderer {
         if (texture == null && renderType == null) {
             return;
         }
-        EcaShaderInstance.setOpacity(alpha);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
-        try {
-            if (texture != null && renderType != null) {
-                drawTextureWithShaderMask(graphics, texture, renderType,
-                        x, y, drawWidth, drawHeight, fullWidth, fullHeight);
-            } else if (texture != null) {
-                graphics.blit(net.minecraft.client.renderer.RenderType::guiTextured, texture, x, y, 0, 0, drawWidth, drawHeight, fullWidth, fullHeight);
-            } else {
-                drawRenderType(graphics, renderType, x, y, drawWidth, drawHeight, fullWidth);
-            }
-        } finally {
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-            EcaShaderInstance.clearOpacity();
+        if (renderType == null) {
+            // a deferred blit; 1.21.1's shader colour alpha is its vertex colour
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, texture, x, y, 0, 0, drawWidth, drawHeight,
+                    fullWidth, fullHeight, net.minecraft.util.ARGB.white(alpha));
+            return;
         }
+        // 1.21.6+: GuiGraphics only records; the shader layers are drawn into a picture-in-picture texture of this
+        // layer's rectangle when GuiRenderer prepares the frame, then blitted at this place in the GUI order with the
+        // bar's pose (translate/scale) -- see ShaderPreviewRenderer.submit. The painter draws in the layer's own
+        // coordinates (identity matrix); the PIP's projection and model-view map them onto its texture.
+        net.eca.client.render.shader_generator.ShaderPreviewRenderer.submit(graphics, x, y, x + drawWidth, y + drawHeight,
+                (x0, y0, x1, y1) -> {
+            EcaShaderInstance.setOpacity(alpha);
+            net.eca.mv.LegacyGl.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
+            try {
+                Matrix4f matrix = new Matrix4f();
+                if (texture != null) {
+                    drawTextureWithShaderMask(matrix, texture, renderType,
+                            x, y, drawWidth, drawHeight, fullWidth, fullHeight);
+                } else {
+                    drawRenderType(matrix, renderType, x, y, drawWidth, drawHeight, fullWidth);
+                }
+            } finally {
+                net.eca.mv.LegacyGl.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+                EcaShaderInstance.clearOpacity();
+            }
+        });
     }
 
-    private static void drawTextureWithShaderMask(GuiGraphics graphics, ResourceLocation texture, RenderType renderType,
+    private static void drawTextureWithShaderMask(Matrix4f matrix, ResourceLocation texture, RenderType renderType,
                                                   int x, int y, int drawWidth, int drawHeight,
                                                   int fullWidth, int fullHeight) {
-        graphics.flush();
-        Matrix4f matrix = graphics.pose().last().pose();
+        flushBuffers();
 
         // 清除渲染区域的 alpha 通道为 0
         net.eca.mv.LegacyGl.colorMask(false, false, false, true);
@@ -288,19 +298,42 @@ public final class EcaBossBarRenderer {
         net.eca.mv.LegacyGl.drawWithShader(shaderBuilder.buildOrThrow());
         renderType.clearRenderState();
 
+        // 1.21.8: the steps above ran on a cleared (transparent) picture-in-picture texture, not on the screen, so its
+        // colour is the premultiplied bar but its alpha is the 0.5 mask d. On 1.21.1 the screen under the bar kept
+        // (1 - a)(1 - d) of itself (a: the texture's alpha); write that coverage, a + d - a*d, as the alpha the
+        // premultiplied blit composites with: the texture again, alpha only, blended ONE_MINUS_DST_ALPHA / ONE.
+        net.eca.mv.LegacyGl.colorMask(false, false, false, true);
+        net.eca.mv.LegacyGl.enableBlend();
+        net.eca.mv.LegacyGl.blendFuncSeparate(
+                com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE,
+                com.mojang.blaze3d.platform.SourceFactor.ONE_MINUS_DST_ALPHA, com.mojang.blaze3d.platform.DestFactor.ONE
+        );
+        net.eca.mv.LegacyGl.setShaderTexture(0, texture);
+        net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_TEX);
+        BufferBuilder coverageBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        coverageBuilder.addVertex(matrix, x, y + drawHeight, 0).setUv(0.0f, texV1);
+        coverageBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setUv(texU1, texV1);
+        coverageBuilder.addVertex(matrix, x + drawWidth, y, 0).setUv(texU1, 0.0f);
+        coverageBuilder.addVertex(matrix, x, y, 0).setUv(0.0f, 0.0f);
+        net.eca.mv.LegacyGl.drawWithShader(coverageBuilder.buildOrThrow());
+        net.eca.mv.LegacyGl.colorMask(true, true, true, true);
+
         net.eca.mv.LegacyGl.defaultBlendFunc();
     }
 
-    private static void drawRenderType(GuiGraphics graphics, RenderType renderType,
+    private static void flushBuffers() {
+        Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
+    }
+
+    private static void drawRenderType(Matrix4f matrix, RenderType renderType,
                                        int x, int y, int width, int height, int fullWidth) {
         float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
-        Matrix4f matrix = graphics.pose().last().pose();
-        VertexConsumer consumer = graphics.bufferSource.getBuffer(renderType);
+        VertexConsumer consumer = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(renderType);
         int light = LightTexture.FULL_BRIGHT;
         consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        graphics.flush();
+        flushBuffers();
     }
 }

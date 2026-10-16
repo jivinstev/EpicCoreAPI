@@ -68,7 +68,6 @@ public final class ShaderImportSelectionScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
         super.render(graphics, mouseX, mouseY, partialTick);
     }

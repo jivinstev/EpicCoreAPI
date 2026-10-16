@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.Map;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class BlenderModelExtension implements BlenderEntityBinding {
 
     @Override

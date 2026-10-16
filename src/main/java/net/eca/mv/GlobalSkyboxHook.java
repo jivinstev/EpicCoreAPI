@@ -1,11 +1,11 @@
-// OVERLAY-ONLY: community fork multi-version layer (1.21.5 copy of the 1.21.3 overlay: the draw calls go through
-// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection. 1.21.5's sky is a
-// frame-graph pass, and NeoForge fires AFTER_SKY at the end of it -- but renderLevel adds no sky pass in a foggy
-// dimension (isFoggyAt, the Nether), and addSkyPass adds none for SkyType NONE, lava/powder snow or a sky-blocking
-// effect, where 1.21.1's renderSky still reached its TAIL; and it fires even where a custom
-// DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So the 1.21.5 LevelRendererMixin overlay
-// adds its own pass before the main pass, calls render() from it and sets passOwned, and the AFTER_SKY handler stands
-// down. The drawing code is the authors', unchanged.
+// OVERLAY-ONLY: community fork multi-version layer (1.21.8 copy of the 1.21.3 overlay: the draw calls go through
+// net.eca.mv.LegacyGl / RenderType.draw). The authors' LevelRendererMixin.renderSky TAIL injection. 1.21.8's sky is a
+// frame-graph pass, and NeoForge posts RenderLevelStageEvent.AfterSky at the end of it -- but renderLevel adds no sky
+// pass when its render-sky flag is false (GameRenderer passes !isFoggyAt: the Nether), and addSkyPass adds none for
+// SkyType NONE, lava/powder snow or a sky-blocking effect, where 1.21.1's renderSky still reached its TAIL; and it is
+// posted even where a custom DimensionSpecialEffects.renderSky took over (1.21.1 returned early there). So the 1.21.8
+// LevelRendererMixin overlay adds its own pass before the main pass, calls render() from it and sets passOwned, and the
+// AfterSky handler stands down. The drawing code is the authors', unchanged.
 package net.eca.mv;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -55,15 +55,15 @@ public final class GlobalSkyboxHook {
     public static volatile boolean passOwned;
 
     @SubscribeEvent
-    public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (passOwned || event.getStage() != RenderLevelStageEvent.Stage.AFTER_SKY) {
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterSky event) {
+        if (passOwned) {
             return;
         }
         render(event.getModelViewMatrix(), event.getCamera());
     }
 
     /** The authors' renderSky TAIL handler body. frustumMatrix is what the PoseStack starts from: 1.21.1 passed the view
-     *  matrix because the model-view stack did not hold it yet; a caller inside a 1.21.5 frame pass passes identity. */
+     *  matrix because the model-view stack did not hold it yet; a caller inside a 1.21.8 frame pass passes identity. */
     public static void render(Matrix4f frustumMatrix, Camera camera) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || camera == null) {
@@ -105,7 +105,7 @@ public final class GlobalSkyboxHook {
         LegacyGl.depthMask(false);
         LegacyGl.setShader(LegacyGl.Vanilla.POSITION_TEX_COLOR);
         LegacyGl.setShaderTexture(0, skybox.texture());
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
+        LegacyGl.setShaderColor(1.0f, 1.0f, 1.0f, alpha);
 
         float uvScale = Math.max(1.0f, skybox.textureUvScale());
         int red = (int)(Mth.clamp(skybox.textureRed(), 0.0f, 1.0f) * 255.0f);
@@ -128,7 +128,7 @@ public final class GlobalSkyboxHook {
             poseStack.popPose();
         }
 
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        LegacyGl.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         LegacyGl.depthMask(true);
         LegacyGl.disableBlend();
     }

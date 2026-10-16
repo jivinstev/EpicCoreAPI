@@ -30,7 +30,7 @@ public class NetworkHandler {
 
         registrar.playToClient(EntityExtensionBossEventTypePacket.TYPE, EntityExtensionBossEventTypePacket.STREAM_CODEC, EntityExtensionBossEventTypePacket::handle);
 
-        registrar.playBidirectional(EntityExtensionOverridePacket.TYPE, EntityExtensionOverridePacket.STREAM_CODEC, EntityExtensionOverridePacket::handle);
+        registrar.playBidirectional(EntityExtensionOverridePacket.TYPE, EntityExtensionOverridePacket.STREAM_CODEC, EntityExtensionOverridePacket::handle, EntityExtensionOverridePacket::handle);
 
         registrar.playToClient(EntityContainerCheckRequestPacket.TYPE, EntityContainerCheckRequestPacket.STREAM_CODEC, EntityContainerCheckRequestPacket::handle);
 
@@ -83,7 +83,7 @@ public class NetworkHandler {
      * @param message the message to send
      */
     public static <MSG extends CustomPacketPayload> void sendToServer(MSG message) {
-        PacketDistributor.sendToServer(message);
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(message);
     }
 
     /**

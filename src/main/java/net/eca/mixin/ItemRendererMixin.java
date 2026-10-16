@@ -31,7 +31,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 @Mixin(targets = "net.minecraft.client.renderer.item.ItemStackRenderState$LayerRenderState")
 public abstract class ItemRendererMixin {
 

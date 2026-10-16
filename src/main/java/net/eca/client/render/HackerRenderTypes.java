@@ -11,7 +11,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public class HackerRenderTypes {
 
     private static final net.eca.mv.ShaderShard SHADER_STATE = new net.eca.mv.ShaderShard(HackerShader::getShader) {
@@ -90,7 +89,7 @@ public class HackerRenderTypes {
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)

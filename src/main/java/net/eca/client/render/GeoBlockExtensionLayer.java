@@ -27,7 +27,6 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> extends GeoRenderLayer<T, Void, GeoRenderState> {
 
     /** The extension that applies to this frame's block entity, parked on the render state by {@link #addRenderData}. */

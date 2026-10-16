@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public final class BlenderModelRenderer {
     private static final ResourceLocation WHITE_TEXTURE = ResourceLocation.parse("textures/misc/white.png");
     private static final BlenderModelAsset.Material DEFAULT_MATERIAL =

@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
    NEW_ENTITY profile → boss layer / item / entity effect 的 RenderType。
    纯客户端：服务端无着色器子系统。 */
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public final class ShaderPresetRegistry {
 
     private ShaderPresetRegistry() {}

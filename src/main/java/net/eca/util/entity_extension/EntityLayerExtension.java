@@ -11,7 +11,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-@OnlyIn(Dist.CLIENT)
 public class EntityLayerExtension {
 
     public boolean enabled() {

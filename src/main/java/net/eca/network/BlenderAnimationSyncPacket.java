@@ -61,7 +61,6 @@ public record BlenderAnimationSyncPacket(UUID entityId, long revision, BlenderPl
         ctx.enqueueWork(() -> { if (FMLEnvironment.dist == Dist.CLIENT) ClientHandler.apply(message); });
     }
 
-    @OnlyIn(Dist.CLIENT)
     private static final class ClientHandler {
         private static void apply(BlenderAnimationSyncPacket message) {
             BlenderAnimationClientState.apply(message.entityId, message.revision, message.state);

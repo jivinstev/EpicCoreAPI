@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Posts {@link RegisterShadersEvent} on the mod's mod bus at every client resource reload (1.21.1 did it via NeoForge). */
-@EventBusSubscriber(modid = "eca", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class ShaderReloader implements ResourceManagerReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final List<ShaderInstance> LOADED = new ArrayList<>();

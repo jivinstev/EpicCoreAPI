@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.ForestShader;
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public class ForestRenderTypes {
 
     private static final ResourceLocation LEAVES_TEXTURE = ResourceLocation.fromNamespaceAndPath("eca", "textures/shader/forest_leaves.png");
@@ -31,7 +30,7 @@ public class ForestRenderTypes {
         true,
         net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false))
             .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
             .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
@@ -46,7 +45,7 @@ public class ForestRenderTypes {
         true,
         net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false))
             .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
             .setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
             .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
@@ -61,7 +60,7 @@ public class ForestRenderTypes {
         false,
         net.eca.mv.LegacyRenderType.state()
             .setShaderState(SHADER_STATE)
-            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false))
+            .setTextureState(new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false))
             .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
             .setDepthTestState(net.eca.mv.LegacyRenderType.NO_DEPTH_TEST)
             .setWriteMaskState(net.eca.mv.LegacyRenderType.COLOR_WRITE)
@@ -94,7 +93,7 @@ public class ForestRenderTypes {
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)
@@ -107,7 +106,7 @@ public class ForestRenderTypes {
 
     //方块扩展覆盖层：Sampler0 绑的整张贴图即一片叶子，着色器按 UV 全域取它再平铺撒布
     public static final RenderType BLOCK = PresetRenderTypes.block("forest", SHADER_STATE,
-        new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, net.minecraft.util.TriState.FALSE, false));
+        new RenderStateShard.TextureStateShard(LEAVES_TEXTURE, false));
 
     private ForestRenderTypes() {}
 }

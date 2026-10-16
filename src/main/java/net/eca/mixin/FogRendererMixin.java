@@ -1,7 +1,6 @@
 // Fork multi-version layer: 1.21.2 version of the authors' mixin.
 package net.eca.mixin;
 
-import com.mojang.blaze3d.shaders.FogShape;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.eca.util.entity_extension.EntityExtensionClientState;
 import net.eca.util.entity_extension.EntityExtension;
@@ -11,7 +10,7 @@ import net.eca.util.entity_extension.GlobalFogExtension;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.FogRenderer;
+import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -26,73 +25,89 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import net.minecraft.client.renderer.FogParameters;
+import net.minecraft.client.DeltaTracker;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import java.nio.ByteBuffer;
 import org.joml.Vector4f;
 
-@OnlyIn(Dist.CLIENT)
 @Mixin(FogRenderer.class)
 public class FogRendererMixin {
 
-    // Fork multi-version layer, 1.21.2: fog colour is the Vector4f computeFogColor returns (LevelRenderer
-    // clears with it and passes it to setupFog), and fog distance is the FogParameters setupFog returns,
-    // instead of FogRenderer's static colour fields and RenderSystem's fog state.
-    @Inject(method = "computeFogColor", at = @At("RETURN"), cancellable = true)
-    private static void eca$applyGlobalFogColor(Camera camera, float partialTick, ClientLevel level, int renderDistanceChunks,
-                                               float darkenWorldAmount, CallbackInfoReturnable<Vector4f> cir) {
+    // Fork multi-version layer, 1.21.8: setupFog returns the clear colour; the fog colour/distances that reach
+    // the shaders are the arguments of FogRenderer.updateBuffer (uniform buffer upload).
+    @Inject(method = "setupFog", at = @At("RETURN"), cancellable = true)
+    private void eca$applyGlobalFogColor(Camera camera, int renderDistanceChunks, boolean thickFog, DeltaTracker deltaTracker,
+                                         float darkenWorldAmount, ClientLevel level, CallbackInfoReturnable<Vector4f> cir) {
         float[] strengthHolder = new float[]{0.0f};
         GlobalFogExtension fog = eca$resolveFogContext(level, camera, strengthHolder);
         if (fog == null) {
             return;
         }
-        float strength = strengthHolder[0];
-        Vector4f base = cir.getReturnValue();
-        cir.setReturnValue(new Vector4f(
-                Mth.lerp(strength, base.x, eca$clampColor(fog.fogRed())),
-                Mth.lerp(strength, base.y, eca$clampColor(fog.fogGreen())),
-                Mth.lerp(strength, base.z, eca$clampColor(fog.fogBlue())),
-                base.w));
+        cir.setReturnValue(eca$blendColor(cir.getReturnValue(), fog, strengthHolder[0]));
     }
 
-    @Inject(method = "setupFog", at = @At("RETURN"), cancellable = true)
-    private static void eca$applyGlobalFogDistance(Camera camera, FogRenderer.FogMode fogMode, Vector4f fogColor, float renderDistance,
-                                                  boolean thickFog, float partialTick, CallbackInfoReturnable<FogParameters> cir) {
+    // 1.21.8: the colour and distances that reach the shaders are the arguments of setupFog's one updateBuffer call (the
+    // world fog buffer; the constructor's call fills the no-fog buffer and is left alone). As 1.21.1 did: the colour is
+    // tinted with no fluid check (setupColor TAIL -> levelFogColor); the distances are changed only with no fluid in the
+    // camera (setupFog TAIL). 1.21.1 forced FogShape.CYLINDER unless the extension asked otherwise at full strength;
+    // fog.glsl takes the max of a spherical (environmental) and a cylindrical (render-distance) fog, with 1.21.1's
+    // cylindrical distance, so the shape is which pair of fields gets the custom start/end: the other pair is lerped (by
+    // strength, from vanilla's) to a finite distance where it is never the nearer fog, so s=0 is vanilla, s=1 1.21.1's shape.
+    @WrapOperation(method = "setupFog", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/fog/FogRenderer;updateBuffer(Ljava/nio/ByteBuffer;ILorg/joml/Vector4f;FFFFFF)V"))
+    private void eca$applyGlobalFogBuffer(FogRenderer self, ByteBuffer buffer, int offset, Vector4f color,
+                                          float envStart, float envEnd, float renderStart, float renderEnd,
+                                          float skyEnd, float cloudEnd, Operation<Void> original) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null) {
-            return;
-        }
-
-        if (camera.getFluidInCamera() != FogType.NONE) {
-            return;
-        }
-
+        Camera camera = minecraft.gameRenderer.getMainCamera();
         float[] strengthHolder = new float[]{0.0f};
         GlobalFogExtension fog = eca$resolveFogContext(minecraft.level, camera, strengthHolder);
         if (fog == null) {
+            original.call(self, buffer, offset, color, envStart, envEnd, renderStart, renderEnd, skyEnd, cloudEnd);
             return;
         }
         float strength = strengthHolder[0];
-
-        float customStart;
-        float customEnd;
-        if (fogMode == FogRenderer.FogMode.FOG_SKY) {
-            customStart = fog.skyFogStart(renderDistance);
-            customEnd = fog.skyFogEnd(renderDistance);
-        } else {
-            customStart = fog.terrainFogStart(renderDistance);
-            customEnd = fog.terrainFogEnd(renderDistance);
+        color = eca$blendColor(color, fog, strength);
+        if (camera.getFluidInCamera() == FogType.NONE) {
+            float renderDistance = minecraft.options.getEffectiveRenderDistance() * 16.0f;
+            float customStart = fog.terrainFogStart(renderDistance);
+            float customEnd = fog.terrainFogEnd(renderDistance);
+            GlobalFogExtension.Shape shape = strength >= 0.999f ? fog.fogShape() : null;
+            if (shape == GlobalFogExtension.Shape.SPHERE) {
+                float start = Mth.lerp(strength, envStart, customStart);
+                float end = Mth.lerp(strength, envEnd, customEnd);
+                envStart = start;
+                envEnd = end <= start ? start + 1.0f : end;
+                // the cylindrical distance is at most the spherical one, so a render-distance fog that starts at the
+                // custom end can never be the nearer of the two (fog.glsl total_fog_value takes the max)
+                renderStart = Mth.lerp(strength, renderStart, envEnd);
+                renderEnd = Mth.lerp(strength, renderEnd, envEnd + 1.0f);
+            } else {
+                float start = Mth.lerp(strength, renderStart, customStart);
+                float end = Mth.lerp(strength, renderEnd, customEnd);
+                renderStart = start;
+                renderEnd = end <= start ? start + 1.0f : end;
+                // the spherical distance is at most sqrt(2) times the cylindrical one (length(pos) against
+                // max(length(pos.xz), abs(pos.y))), so an environmental fog that starts at sqrt(2) x the custom end can
+                // never be the nearer of the two; lerped from vanilla's, so the fog fades in with strength as on 1.21.1
+                float pushed = renderEnd * Mth.SQRT_OF_TWO;
+                envStart = Mth.lerp(strength, envStart, pushed);
+                envEnd = Mth.lerp(strength, envEnd, pushed + 1.0f);
+            }
+            // the sky shader fogs from 0 to FogSkyEnd (1.21.1's FOG_SKY start has no field)
+            skyEnd = Mth.lerp(strength, skyEnd, fog.skyFogEnd(renderDistance));
         }
+        original.call(self, buffer, offset, color, envStart, envEnd, renderStart, renderEnd, skyEnd, cloudEnd);
+    }
 
-        FogParameters base = cir.getReturnValue();
-        float start = Mth.lerp(strength, base.start(), customStart);
-        float end = Mth.lerp(strength, base.end(), customEnd);
-
-        if (end <= start) {
-            end = start + 1.0f;
-        }
-
-        FogShape shape = strength >= 0.999f ? fog.fogShape() : null;
-        cir.setReturnValue(new FogParameters(start, end, shape == null ? FogShape.CYLINDER : shape,
-                base.red(), base.green(), base.blue(), base.alpha()));
+    @Unique
+    private static Vector4f eca$blendColor(Vector4f base, GlobalFogExtension fog, float strength) {
+        return new Vector4f(
+                Mth.lerp(strength, base.x, eca$clampColor(fog.fogRed())),
+                Mth.lerp(strength, base.y, eca$clampColor(fog.fogGreen())),
+                Mth.lerp(strength, base.z, eca$clampColor(fog.fogBlue())),
+                base.w);
     }
 
     @Unique

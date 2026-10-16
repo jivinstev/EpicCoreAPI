@@ -13,7 +13,6 @@ import net.neoforged.api.distmarker.OnlyIn;
  * @deprecated Use {@link ShaderMaskRenderQueue} and {@link ShaderMaskPass}.
  */
 @Deprecated
-@OnlyIn(Dist.CLIENT)
 public final class ItemLayerRenderQueue {
 
     private ItemLayerRenderQueue() {

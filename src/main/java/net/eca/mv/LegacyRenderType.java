@@ -1,4 +1,6 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
+// MV-AHEAD-OF-TEMPLATE: the migrator's shared/1.21.8 LegacyRenderType with its F1 fix (mc-mod-version-upgrade 3f4022c),
+// MV-AHEAD-OF-TEMPLATE: package filled in. Delete once sync-shared brings it.
 // MV-REQUIRES: LegacyGl
 // MV-REQUIRES: ShaderInstance
 // MV-REQUIRES: ShaderShard
@@ -22,14 +24,24 @@ import java.util.List;
 import java.util.function.UnaryOperator;
 
 /**
- * 1.21.4's {@code RenderType.create(name, format, mode, size, crumbling, sort, CompositeState)} on 1.21.5, where a
+ * 1.21.4's {@code RenderType.create(name, format, mode, size, crumbling, sort, CompositeState)} on 1.21.8, where a
  * RenderType's blend/depth/cull/write-mask state and its shader became one RenderPipeline. The builder keeps the
- * 1.21.4 shape: the shards 1.21.5 still has (texture, lightmap, overlay, layering, output, texturing, line) are
+ * 1.21.4 shape: the shards 1.21.8 still has (texture, lightmap, overlay, layering, output, texturing, line) are
  * set up as before, and the ones it folded into the pipeline (shader, transparency, depth test, write mask, cull)
  * become the pipeline {@link LegacyGl} derives at draw time.
+ *
+ * <p>What 1.21.8 asks of a RenderType subclass is exactly three abstract methods: {@code draw(MeshData)},
+ * {@code format()} and {@code mode()}. Everything else a buffer source needs -- {@code bufferSize()},
+ * {@code affectsCrumbling()}, {@code sortOnUpload()}, {@code canConsolidateConsecutiveGeometry()}, {@code outline()}
+ * (empty) -- has a working default, and its own {@code CompositeRenderType} (package-private, so not extendable) keeps
+ * its pipeline in a private field and draws inside {@code draw}: set up the shards, write the DynamicTransforms
+ * block, run a RenderPass with the default uniforms and the 12 sampler slots, tear the shards down. This class does
+ * the same in {@code draw} through {@link LegacyGl#draw}. Nothing in 1.21.8 calls {@link #getRenderTarget()} or
+ * {@link #getRenderPipeline()} (1.21.5 had hooks of those names that vanilla's batching read); they are kept as plain
+ * accessors for the draw path and for a mod that wants the pipeline, and are deliberately NOT {@code @Override}.
  */
 public class LegacyRenderType extends RenderType {
-    /** A 1.21.4 shard 1.21.5 folded into the pipeline: it edits the draw state instead of setting GL state. */
+    /** A 1.21.4 shard 1.21.8 folded into the pipeline: it edits the draw state instead of setting GL state. */
     public static final class Modifier extends RenderStateShard {
         final UnaryOperator<LegacyGl.Key> edit;
 
@@ -135,12 +147,12 @@ public class LegacyRenderType extends RenderType {
         }
     }
 
-    @Override
+    /** The target this type draws into (its OutputStateShard's). Not a 1.21.8 hook: only {@link #draw} reads it. */
     public RenderTarget getRenderTarget() {
         return state.output.getRenderTarget();
     }
 
-    @Override
+    /** The pipeline this type's current shader and state compile to. Not a 1.21.8 hook: a plain accessor. */
     public RenderPipeline getRenderPipeline() {
         Object s = state.shader.shader();
         if (s instanceof ShaderInstance i) return i.pipeline(format, mode, state.key.withBlendIfUnset(i.blend()));
@@ -158,7 +170,7 @@ public class LegacyRenderType extends RenderType {
         return mode;
     }
 
-    /** 1.21.4's RenderType.CompositeState, split into what 1.21.5 still sets up and what it bakes into the pipeline. */
+    /** 1.21.4's RenderType.CompositeState, split into what 1.21.8 still sets up and what it bakes into the pipeline. */
     public static final class State {
         final ShaderShard shader;
         final RenderStateShard.OutputStateShard output;

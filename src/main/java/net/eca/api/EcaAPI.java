@@ -1740,7 +1740,6 @@ public final class EcaAPI {
      * @param id the preset resource id
      * @return the shader preset, or null if no preset is registered for the id
      */
-    @OnlyIn(Dist.CLIENT)
     public static ShaderPreset shaderPreset(ResourceLocation id) {
         return ShaderPresetRegistry.getPreset(id);
     }

@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.eca.client.render.preset.PresetRenderTypes;
 import net.eca.client.render.shader.VolcanoShader;
 
-@OnlyIn(Dist.CLIENT)
 public class VolcanoRenderTypes {
 
     private static final net.eca.mv.ShaderShard SHADER_STATE = new net.eca.mv.ShaderShard(VolcanoShader::getShader) {
@@ -89,7 +88,7 @@ public class VolcanoRenderTypes {
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(SHADER_STATE)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)

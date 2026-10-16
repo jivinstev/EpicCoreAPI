@@ -16,7 +16,6 @@ import net.neoforged.api.distmarker.OnlyIn;
  * @param maskTolerance maximum normalized RGB distance from {@code maskColor}
  * @param alpha overlay opacity in the inclusive range {@code 0..1}
  */
-@OnlyIn(Dist.CLIENT)
 public record ShaderMaskPass(
     RenderType renderType,
     ShaderMaskSource maskSource,

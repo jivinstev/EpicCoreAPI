@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlockExtensionRenderer {
 
     private static final double MAX_RENDER_DISTANCE_SQR = 256.0 * 256.0;
@@ -110,10 +109,7 @@ public final class BlockExtensionRenderer {
         }
     }
 
-    private static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
-            return;
-        }
+    private static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
         if (level == null || SECTION_BLOCKS.isEmpty()) {

@@ -10,7 +10,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 
 /* 通用预设 RenderType 工厂：把原本每个内置预设各写一份的 5 种 RenderType 抽成"名字 + ShaderState"参数化的构造。
    各档的顶点格式与渲染状态与内置预设逐项一致，保证自定义预设在 boss 条 / 实体层 / 天空盒 / 物品 / 实体效果上的行为完全等价。 */
-@OnlyIn(Dist.CLIENT)
 public final class PresetRenderTypes {
 
     private PresetRenderTypes() {}
@@ -124,7 +123,7 @@ public final class PresetRenderTypes {
             true,
             net.eca.mv.LegacyRenderType.state()
                 .setShaderState(shaderState)
-                .setTextureState(new RenderStateShard.TextureStateShard(texture, net.minecraft.util.TriState.FALSE, false))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY)
                 .setDepthTestState(net.eca.mv.LegacyRenderType.LEQUAL_DEPTH_TEST)
                 .setLightmapState(RenderType.LIGHTMAP)

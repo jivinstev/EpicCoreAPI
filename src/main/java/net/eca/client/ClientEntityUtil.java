@@ -35,7 +35,6 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 // 客户端专属实体工具：所有触碰 ClientLevel 的逻辑集中于此，使公共类不会在专用服务端触发 ClientLevel 类加载
-@OnlyIn(Dist.CLIENT)
 public final class ClientEntityUtil {
 
     private ClientEntityUtil() {

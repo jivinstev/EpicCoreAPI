@@ -13,7 +13,6 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class TextureSizeCache {
 
     private static final int DEFAULT_WIDTH = 182;

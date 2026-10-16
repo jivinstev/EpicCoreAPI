@@ -16,7 +16,6 @@ import net.eca.mv.EntityOf;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlenderModelLayer<S extends LivingEntityRenderState, M extends EntityModel<? super S>> extends RenderLayer<S, M> {
     public BlenderModelLayer(RenderLayerParent<S, M> renderer) {
         super(renderer);

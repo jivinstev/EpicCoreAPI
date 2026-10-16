@@ -15,7 +15,6 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-@OnlyIn(Dist.CLIENT)
 public final class SpriteBatchingVertexConsumer implements VertexConsumer {
 
     // 烘焙方块的光照只经 putBulkData 的 lightmap 数组进入缓冲，没有独立的 packedLight 形参，

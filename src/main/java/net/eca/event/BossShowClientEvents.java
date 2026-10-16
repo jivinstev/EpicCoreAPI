@@ -22,7 +22,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 //客户端事件处理：tick 推进、HUD 隐藏、Letterbox、PauseScreen 拦截
-@EventBusSubscriber(modid = "eca", value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
 public final class BossShowClientEvents {
 
     private BossShowClientEvents() {}
@@ -48,13 +48,13 @@ public final class BossShowClientEvents {
         if (BossShowClientState.isCinematic()) {
             int bar = (int) (height * 0.12f);
             if (bar > 0) {
-                PoseStack pose = gui.pose();
-                pose.pushPose();
+                var pose = gui.pose();
+                pose.pushMatrix();
                 net.eca.mv.LegacyGl.enableBlend();
                 gui.fill(0, 0, width, bar, 0xFF000000);
                 gui.fill(0, height - bar, width, height, 0xFF000000);
                 net.eca.mv.LegacyGl.disableBlend();
-                pose.popPose();
+                pose.popMatrix();
             }
         }
 

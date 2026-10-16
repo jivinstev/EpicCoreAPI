@@ -28,7 +28,6 @@ import java.util.UUID;
  * Holds the full frame list so we can interpolate the camera each render frame
  * without per-tick network traffic.
  */
-@OnlyIn(Dist.CLIENT)
 public final class BossShowClientState {
 
     private static volatile boolean active = false;

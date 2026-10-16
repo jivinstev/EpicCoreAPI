@@ -28,7 +28,6 @@ import net.neoforged.api.distmarker.OnlyIn;
  * interchangeable with it — the entity version's condition methods take a {@code LivingEntity},
  * which a raid has no equivalent of.</p>
  */
-@OnlyIn(Dist.CLIENT)
 public class RaidBossBarExtension {
 
     // 是否启用自定义血条；返回 false 时使用原版血条

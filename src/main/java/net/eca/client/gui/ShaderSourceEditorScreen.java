@@ -105,11 +105,17 @@ public final class ShaderSourceEditorScreen extends Screen {
         diagnosticsTop = contentBottom - diagnosticsHeight;
         previewBottom = diagnosticsTop - 6;
 
-        editor = new MultiLineEditBox(
-            font, 8, CONTENT_TOP, editorRight - 12, contentBottom - CONTENT_TOP,
-            Component.translatable("gui.eca.shader_generator.source_editor.placeholder"),
-            Component.translatable("gui.eca.shader_generator.source_editor.editor")
-        );
+        editor = MultiLineEditBox.builder()
+            .setX(8)
+            .setY(CONTENT_TOP)
+            .setPlaceholder(Component.translatable("gui.eca.shader_generator.source_editor.placeholder"))
+            .setTextColor(0xFFE0E0E0)
+            .setTextShadow(true)
+            .setShowDecorations(true)
+            .build(
+                font, editorRight - 12, contentBottom - CONTENT_TOP,
+                Component.translatable("gui.eca.shader_generator.source_editor.editor")
+            );
         editor.setValueListener(this::sourceChanged);
         addRenderableWidget(editor);
         loadSelectedSource();
@@ -608,7 +614,6 @@ public final class ShaderSourceEditorScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, CONTENT_TOP - 2, 0xFF202225);
         graphics.fill(6, CONTENT_TOP - 2, editorRight, height - 6, 0xFF08090B);
         graphics.fill(previewLeft, CONTENT_TOP, width - 8, previewBottom, 0xFF08090B);
@@ -619,11 +624,11 @@ public final class ShaderSourceEditorScreen extends Screen {
         );
         renderDiagnostics(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.pose().pushPose();
-        graphics.pose().translate(0.0F, 0.0F, 400.0F);
+        graphics.pose().pushMatrix();
+        graphics.nextStratum();
         drawDropdownBackground(graphics);
         renderDropdownWidgets(graphics, mouseX, mouseY, partialTick);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
     private void drawDropdownBackground(GuiGraphics graphics) {
@@ -695,9 +700,9 @@ public final class ShaderSourceEditorScreen extends Screen {
         int visibleRows = diagnosticsVisibleRows();
         int start = Math.min(diagnosticsScroll, Math.max(0, lines.size() - visibleRows));
         int color = diagnosticsError ? 0xFFFF6B6B : 0xFF8FE388;
-        graphics.pose().pushPose();
-        graphics.pose().translate(textX, diagnosticsTop + 20, 0.0F);
-        graphics.pose().scale(DIAGNOSTIC_TEXT_SCALE, DIAGNOSTIC_TEXT_SCALE, 1.0F);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate((float) textX, (float) (diagnosticsTop + 20));
+        graphics.pose().scale(DIAGNOSTIC_TEXT_SCALE, DIAGNOSTIC_TEXT_SCALE);
         for (int row = 0; row < visibleRows && start + row < lines.size(); row++) {
             graphics.drawString(
                 font,
@@ -708,7 +713,7 @@ public final class ShaderSourceEditorScreen extends Screen {
                 false
             );
         }
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
     private int diagnosticsVisibleRows() {

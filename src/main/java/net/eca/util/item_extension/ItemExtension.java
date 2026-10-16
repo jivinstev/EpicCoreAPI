@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.List;
 
 @SuppressWarnings("removal")
-@OnlyIn(Dist.CLIENT)
 public abstract class ItemExtension {
     private final Item item;
 

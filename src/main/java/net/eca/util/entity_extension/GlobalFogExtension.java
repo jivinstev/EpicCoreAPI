@@ -1,8 +1,12 @@
 package net.eca.util.entity_extension;
 
-import com.mojang.blaze3d.shaders.FogShape;
-
 public interface GlobalFogExtension {
+
+    /** Fog shape; 1.21.8 no longer has a vanilla FogShape, so the mod owns it (same ordinals as before). */
+    enum Shape {
+        SPHERE,
+        CYLINDER
+    }
 
     default boolean enabled() {
         return false;
@@ -48,7 +52,7 @@ public interface GlobalFogExtension {
         return renderDistance;
     }
 
-    default FogShape fogShape() {
-        return FogShape.CYLINDER;
+    default Shape fogShape() {
+        return Shape.CYLINDER;
     }
 }

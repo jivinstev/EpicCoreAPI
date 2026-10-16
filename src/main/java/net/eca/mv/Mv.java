@@ -62,20 +62,24 @@ public final class Mv {
         }
     }
 
-    private static net.minecraft.client.renderer.FogParameters savedFog;
+    private static volatile boolean fogSuspended;
 
-    /** 1.21.1 code saved RenderSystem's fog start/end and pushed both to MAX_VALUE; 1.21.2 holds one FogParameters. */
+    /**
+     * 1.21.1 code pushed fog start/end to MAX_VALUE for the draws in between. 1.21.2-1.21.5 held one FogParameters in
+     * RenderSystem that could be swapped (see the 1.21.3 helper); from 1.21.6 the fog is a uniform block uploaded by
+     * {@code FogRenderer.updateBuffer}, with nothing to swap, so this only raises a flag. A mixin on
+     * {@code FogRenderer.updateBuffer} has to read {@link #isFogSuspended()} and push the distances out -- the mod's
+     * own, since only it knows where it suspends fog.
+     */
     public static void suspendFog() {
-        net.minecraft.client.renderer.FogParameters fog = com.mojang.blaze3d.systems.RenderSystem.getShaderFog();
-        savedFog = fog;
-        com.mojang.blaze3d.systems.RenderSystem.setShaderFog(new net.minecraft.client.renderer.FogParameters(
-                Float.MAX_VALUE, Float.MAX_VALUE, fog.shape(), fog.red(), fog.green(), fog.blue(), fog.alpha()));
+        fogSuspended = true;
     }
 
     public static void restoreFog() {
-        if (savedFog != null) {
-            com.mojang.blaze3d.systems.RenderSystem.setShaderFog(savedFog);
-            savedFog = null;
-        }
+        fogSuspended = false;
+    }
+
+    public static boolean isFogSuspended() {
+        return fogSuspended;
     }
 }

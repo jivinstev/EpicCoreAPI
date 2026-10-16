@@ -11,7 +11,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@OnlyIn(Dist.CLIENT)
 public final class BlockExtensionManager {
 
     private static final Map<Block, BlockExtension> REGISTRY = new ConcurrentHashMap<>();

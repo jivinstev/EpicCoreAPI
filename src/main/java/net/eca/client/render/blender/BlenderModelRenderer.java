@@ -9,7 +9,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 /** Compatibility entry point for existing entity extensions. */
-@OnlyIn(Dist.CLIENT)
 public final class BlenderModelRenderer {
     private BlenderModelRenderer() { }
 

@@ -15,7 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@EventBusSubscriber(modid = EcaMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = EcaMod.MOD_ID)
 public class FilterManager {
 
     private static final Map<UUID, Set<FilterType>> ACTIVE_FILTERS = new ConcurrentHashMap<>();

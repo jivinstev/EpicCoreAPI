@@ -15,7 +15,7 @@ public final class RawGlTexture extends GlTexture {
     private static final Map<Integer, RawGlTexture> BY_ID = new HashMap<>();
 
     private RawGlTexture(int id) {
-        super("mv_raw_" + id, TextureFormat.RGBA8, 1, 1, 1, id, true);
+        super(0, "mv_raw_" + id, TextureFormat.RGBA8, 1, 1, 1, 1, id);
     }
 
     public static RawGlTexture of(int glId) {

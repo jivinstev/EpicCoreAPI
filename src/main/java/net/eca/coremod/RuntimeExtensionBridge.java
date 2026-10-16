@@ -1,3 +1,4 @@
+// Fork multi-version layer, 1.21.8 copy of the authors' file: EARLY_DISPLAY_TARGET names FML 9's LoadingScreenRenderer.
 package net.eca.coremod;
 
 import net.eca.coremod.EarlyLogWriter;
@@ -10,7 +11,9 @@ import java.lang.reflect.Method;
  * Optional runtime-extension bridge. Platform artifacts contain only this inert boundary.
  */
 public final class RuntimeExtensionBridge {
-    public static final String EARLY_DISPLAY_TARGET = "net/neoforged/fml/earlydisplay/DisplayWindow";
+    // 1.21.8 (FML 9.0.18): the early loading screen paints in render/LoadingScreenRenderer, not DisplayWindow (see the
+    // 1.21.8 LoadingScreenTransformer); the agent retransforms it when it is already loaded, the coremod targets it
+    public static final String EARLY_DISPLAY_TARGET = "net/neoforged/fml/earlydisplay/render/LoadingScreenRenderer";
     private static final String PROVIDER = "net.eca.pro.EcaProRuntime";
     private static final String EARLY_DISPLAY_TRANSFORMER = "net.eca.coremod.LoadingScreenTransformer";
     private static volatile Class<?> provider;

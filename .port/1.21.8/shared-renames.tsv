@@ -1,0 +1,383 @@
+# ---- shared 1.21.8
+# Shared fork-layer rename table: NeoForge 1.21.5 -> 1.21.8 (Minecraft 1.21.8; NeoForge 21.8; FML 9). Applied FIRST (nearest
+# target) on the 1.21.1 text, then the 1.21.5/1.21.4/1.21.3 tables on whatever it left, so a row here that rewrites
+# something those rows also rewrite has to write the 1.21.8 form itself. Measured against neoforge-21.8.54-sources.jar
+# on the first layer-fork port (the unattended 1.21.8 loop's residue, which put every one of these in a per-fork overlay).
+#!exhaustive  # shared library: most forks use only some of these rows
+# ---- FML 9: @EventBusSubscriber has no `bus` any more; the bus follows from the event class (a mod-bus event is
+# delivered on the mod bus, anything else on the game bus), so dropping the argument keeps every subscriber where it was.
+re:,\s*bus\s*=\s*(?:EventBusSubscriber\.)?Bus\.(?:MOD|GAME)\b	
+re:\bbus\s*=\s*(?:EventBusSubscriber\.)?Bus\.(?:MOD|GAME)\s*,\s*	
+re:import net\.neoforged\.fml\.common\.EventBusSubscriber\.Bus;\n	
+# ---- mixin targets (invisible to javac; tools/audit-mixin-targets.py checks them against the target's sources)
+# LevelRenderer.renderLevel(DeltaTracker, boolean, Camera, GameRenderer, LightTexture, Matrix4f, Matrix4f) became
+# (GraphicsResourceAllocator, DeltaTracker, boolean, Camera, Matrix4f, Matrix4f, GpuBufferSlice, Vector4f, boolean): the
+# GameRenderer and LightTexture are gone, and the fog buffer, the fog colour and a "render the sky" flag arrived.
+# This row runs on the 1.21.1 text, before the 1.21.4/1.21.3 rows, so it writes the whole 1.21.8 descriptor itself.
+re:LevelRenderer;renderLevel\(Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;\)V	LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V
+# ... and the callback of an @Inject into it (the same eight 1.21.1 parameters, then the CallbackInfo)
+re:(@Inject\(method = "renderLevel"[\s\S]{0,300}?private void [\w$]+\()DeltaTracker (\w+), boolean (\w+), Camera (\w+),\s*GameRenderer \w+, LightTexture \w+,\s*Matrix4f (\w+), Matrix4f (\w+), CallbackInfo (\w+)\)	\1com.mojang.blaze3d.resource.GraphicsResourceAllocator mv$allocator, DeltaTracker \2, boolean \3, Camera \4,\n            Matrix4f \5, Matrix4f \6, com.mojang.blaze3d.buffers.GpuBufferSlice mv$fog, org.joml.Vector4f mv$fogColor, boolean mv$sky, CallbackInfo \7)
+# Entity.addAdditionalSaveData / readAdditionalSaveData (and LivingEntity's) take a ValueOutput / ValueInput (1.21.6). A handler
+# that only PUTS scalars keeps its body (ValueOutput has putInt/putString/putBoolean/...); one that reads needs
+# ValueInput's Optional/`...Or` getters and has no contains() -- see the fork's overlay of it for the shape.
+re:(@Inject\(method = "addAdditionalSaveData"[\s\S]{0,300}?private void [\w$]+\()CompoundTag (\w+)	\1net.minecraft.world.level.storage.ValueOutput \2
+re:(@Inject\(method = "readAdditionalSaveData"[\s\S]{0,300}?private void [\w$]+\()CompoundTag (\w+)	\1net.minecraft.world.level.storage.ValueInput \2
+# ServerCommonPacketListenerImpl.send(Packet, PacketSendListener) takes a netty ChannelFutureListener (1.21.6)
+re:(\bsend\(Lnet/minecraft/network/protocol/Packet;)Lnet/minecraft/network/PacketSendListener;\)V	\1Lio/netty/channel/ChannelFutureListener;)V
+re:(\bPacket<\?> \w+, )PacketSendListener (\w+)(, CallbackInfo)	\1io.netty.channel.ChannelFutureListener \2\3
+
+# ---- CATALOG V81: the 3-argument playBidirectional / commonBidirectional / configurationBidirectional(type, codec, handler)
+# registers only the SERVER handler on NeoForge 21.8 (the 4-argument form takes the client one, @Nullable), and the client then
+# refuses to load: "Some clientbound payloads are missing client-side handlers". 1.21.1's 3-argument form served both
+# directions, and a handler for a bidirectional payload already branches on ctx.flow(), so passing the SAME handler twice
+# restores that exactly. The rows fire only on the 3-argument shape (a 4-argument call has a second top-level comma before its
+# closing paren, which the handler group cannot cross). Two rows: a method reference (the usual shape), and an EXPRESSION lambda
+# (the text is repeated; a block lambda is not handled -- write that one by hand, or hoist it to a method).
+re:(\b(?:play|common|configuration)Bidirectional\(\s*(?:[^,()]|\([^()]*\))+,\s*(?:[^,()]|\([^()]*\))+,\s*)([\w.$]+(?:<[^>()]*>)?::[\w$]+)(\s*\))	\1\2, \2\3
+re:(\b(?:play|common|configuration)Bidirectional\(\s*(?:[^,()]|\([^()]*\))+,\s*(?:[^,()]|\([^()]*\))+,\s*)((?:\w+|\([^()]*\))\s*->\s*(?:[^(),;{}]|\((?:[^()]|\([^()]*\))*\))+)(\s*\))	\1\2, \2\3
+# PacketDistributor.sendToServer moved to the client-only ClientPacketDistributor (NeoForge 21.6+); written fully qualified (a row cannot add an import).
+re:\bPacketDistributor\.sendToServer\(	net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
+# ---- a former @OnlyIn(CLIENT) method in a common class is verified on the server once strip_onlyin removes the
+# annotation; widening a client local to its common type loads the client class there (ClientRefs explains). Only the
+# widening assignment form is rewritten: a local that keeps LocalPlayer/ClientLevel needs the client class anyway.
+re:\b((?:net\.minecraft\.world\.entity\.player\.)?Player \w+ = )(?:net\.minecraft\.client\.)?Minecraft\.getInstance\(\)\.player;	\1net.eca.mv.ClientRefs.player();
+re:\b((?:net\.minecraft\.world\.level\.)?Level \w+ = )(?:net\.minecraft\.client\.)?Minecraft\.getInstance\(\)\.level;	\1net.eca.mv.ClientRefs.level();
+# ---- 1.21.6: Screen.renderWithTooltip draws the background (renderBackground) BEFORE calling render, and Screen.render no
+# longer does. A screen whose render() opens with its own renderBackground(...) call (the 1.20.2-1.21.5 idiom) now draws
+# it twice, and for a plain Screen the second menu blur throws "IllegalStateException: Can only blur once per frame" --
+# a real-client crash the moment the screen opens. Drop the leading call; the background is still drawn once, below.
+# Only in a Screen: the match starts at an `extends ...Screen` and takes the first render(GuiGraphics, ...) after it, so a
+# widget or other Renderable's render() in a file with no Screen class is left alone.
+re:(\bextends\s+[\w$.]*Screen\b(?:(?!public void render\(GuiGraphics\b)[\s\S])*?public void render\(GuiGraphics (\w+),\s*int (\w+),\s*int (\w+),\s*float (\w+)\)\s*\{[ \t]*\n?(?:[ \t]*//[^\n]*\n)*)[ \t]*(?:this\.)?renderBackground\(\2,\s*\3,\s*\4,\s*\5\);[ \t]*\n	\1
+#!strict
+
+# ---- shared 1.21.5
+# Shared rows for a fork layer's 1.21.5 target (and every later one that inherits it).
+# 1.21.5 is where CompoundTag/ListTag getters started returning Optional -- the same change 26.2 carries
+# (CATALOG §V12), so these rows come from templates/multi-version/versions/26.2.renames.hand.tsv.
+# ⚠ NOT copied verbatim: the 26.2 rows matched `.getInt(<anything without a comma>)`, which also rewrites a
+# ByteBuffer read (`bytes.getInt(at)` -> `bytes.getIntOr(at, 0)`) -- Battle of Lord had no binary readers, the
+# first fork that went through here (a Blender/glTF loader) has eight. A shared row cannot know the receiver's
+# type, so it anchors on what the NBT API guarantees and a byte offset never is: a string literal key, or an
+# UPPER_CASE constant (bare or Class.CONST). A key held in a variable, and a ListTag index, are left to the
+# fork's own rows or its workers.
+#!exhaustive  # shared library: most forks use only some of these rows
+# GameRules.getBoolean/getInt(GameRules.Key) still return the value on 1.21.5 and take an UPPER_CASE key too: a call
+# on getGameRules() or with a GameRules.RULE_* argument is not an NBT read (CATALOG M74)
+re:(?<!getGameRules\(\))\.getInt\(("[^"]*"|(?!GameRules\.)(?:\w+\.)?[A-Z][A-Z0-9_]*)\)	.getIntOr(\1, 0)
+re:\.getString\(("[^"]*"|(?:\w+\.)?[A-Z][A-Z0-9_]*)\)	.getStringOr(\1, "")
+re:(?<!Boolean)(?<!getGameRules\(\))\.getBoolean\(("[^"]*"|(?!GameRules\.)(?:\w+\.)?[A-Z][A-Z0-9_]*)\)	.getBooleanOr(\1, false)
+re:\.getLong\(("[^"]*"|(?:\w+\.)?[A-Z][A-Z0-9_]*)\)	.getLongOr(\1, 0L)
+re:\.getDouble\(("[^"]*"|(?:\w+\.)?[A-Z][A-Z0-9_]*)\)	.getDoubleOr(\1, 0.0)
+re:\.getFloat\(("[^"]*"|(?:\w+\.)?[A-Z][A-Z0-9_]*)\)	.getFloatOr(\1, 0.0F)
+re:\.getCompound\(("[^"]*"|(?:\w+\.)?[A-Z][A-Z0-9_]*)\)	.getCompoundOrEmpty(\1)
+re:\.getList\(("[^"]*"|(?:\w+\.)?[A-Z][A-Z0-9_]*),\s*[A-Za-z0-9_.]+\)	.getListOrEmpty(\1)
+# CompoundTag.getAllKeys() -> keySet() (same Set<String>)
+member:getAllKeys	keySet
+# CompoundTag.getUUID/putUUID/hasUUID are gone; a UUID goes through UUIDUtil.CODEC (the same int[4] on disk).
+# Each needs an argument, so the many no-arg Entity.getUUID() calls are untouched.
+re:([\w.]+(?:\(\))?)\.getUUID\(([^()]+)\)	net.eca.mv.Nbt.getUuid(\1, \2)
+re:([\w.]+(?:\(\))?)\.putUUID\(([^(),]+),\s*([^()]+)\)	net.eca.mv.Nbt.putUuid(\1, \2, \3)
+re:([\w.]+(?:\(\))?)\.hasUUID\(([^()]+)\)	net.eca.mv.Nbt.hasUuid(\1, \2)
+# CompoundTag.contains(key, type) lost its type argument (from the 26.2 table, verbatim: anchored on a tag id).
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:1|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_BYTE)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.ByteTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:2|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_SHORT)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.ShortTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:3|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_INT)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.IntTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:4|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_LONG)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.LongTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:5|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_FLOAT)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.FloatTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:6|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_DOUBLE)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.DoubleTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:7|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_BYTE_ARRAY)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.ByteArrayTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:8|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_STRING)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.StringTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:9|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_LIST)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.ListTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:10|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_COMPOUND)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.CompoundTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:11|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_INT_ARRAY)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.IntArrayTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:12|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_LONG_ARRAY)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.LongArrayTag)
+re:(?<![\w.)\]])((?:[A-Za-z_]\w*(?:\(\))?\.)*[A-Za-z_]\w*(?:\(\))?)\.contains\(\s*([^,()]+?)\s*,\s*(?:99|(?:(?:net\.minecraft\.nbt\.)?(?:Compound)?Tag\.)?TAG_ANY_NUMERIC)\s*\)	(\1.get(\2) instanceof net.minecraft.nbt.NumericTag)
+# ---- 1.21.4 -> 1.21.5 package moves
+com.mojang.blaze3d.platform.GlConst	com.mojang.blaze3d.opengl.GlConst
+com.mojang.blaze3d.platform.GlDebug	com.mojang.blaze3d.opengl.GlDebug
+com.mojang.blaze3d.platform.GlStateManager	com.mojang.blaze3d.opengl.GlStateManager
+com.mojang.blaze3d.shaders.AbstractUniform	com.mojang.blaze3d.opengl.AbstractUniform
+net.neoforged.neoforge.client.model.data.ModelData	net.neoforged.neoforge.model.data.ModelData
+net.neoforged.neoforge.client.model.data.ModelDataManager	net.neoforged.neoforge.model.data.ModelDataManager
+net.neoforged.neoforge.client.model.data.ModelProperty	net.neoforged.neoforge.model.data.ModelProperty
+net.minecraft.world.entity.animal.Sheep	net.minecraft.world.entity.animal.sheep.Sheep
+net.minecraft.world.entity.animal.Wolf	net.minecraft.world.entity.animal.wolf.Wolf
+net.minecraft.world.entity.animal.WolfVariant	net.minecraft.world.entity.animal.wolf.WolfVariant
+net.minecraft.world.entity.animal.WolfVariants	net.minecraft.world.entity.animal.wolf.WolfVariants
+net.minecraft.world.entity.animal.FrogVariant	net.minecraft.world.entity.animal.frog.FrogVariant
+net.minecraft.core.component.DataComponentPredicate	net.minecraft.core.component.predicates.DataComponentPredicate
+net.neoforged.neoforge.client.event.AddAttributeTooltipsEvent	net.neoforged.neoforge.event.AddAttributeTooltipsEvent
+net.neoforged.neoforge.client.event.GatherSkippedAttributeTooltipsEvent	net.neoforged.neoforge.event.GatherSkippedAttributeTooltipsEvent
+net.neoforged.neoforge.event.entity.player.PlayerHeartTypeEvent	net.neoforged.neoforge.client.event.PlayerHeartTypeEvent
+# ---- the RenderPipeline rewrite: immediate-mode GL on LegacyGl, 1.21.4 RenderType.create on LegacyRenderType
+# (the rest of the layer is java/Legacy*.java, ShaderInstance, ShaderShard, Uniform, RawGlTexture)
+net.minecraft.client.renderer.RenderStateShard.ShaderStateShard	net.eca.mv.ShaderShard
+re:\bRenderStateShard\.ShaderStateShard\b	net.eca.mv.ShaderShard
+re:\bShaderStateShard\b	net.eca.mv.ShaderShard
+com.mojang.blaze3d.shaders.Uniform	net.eca.mv.Uniform
+re:\bGlStateManager\.(SourceFactor|DestFactor)\b	com.mojang.blaze3d.platform.\1
+re:\bRenderSystem\.(enableBlend|disableBlend|defaultBlendFunc|blendFuncSeparate|blendFunc|blendEquation|enableDepthTest|disableDepthTest|depthFunc|depthMask|colorMask|enableCull|disableCull|recordRenderCall)\(	net.eca.mv.LegacyGl.\1(
+re:RenderSystem\.setShader\(\s*GameRenderer::getPositionColorShader\s*\)	net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_COLOR)
+re:RenderSystem\.setShader\(\s*GameRenderer::getPositionTexShader\s*\)	net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_TEX)
+re:RenderSystem\.setShader\(\s*GameRenderer::getPositionTexColorShader\s*\)	net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION_TEX_COLOR)
+re:RenderSystem\.setShader\(\s*GameRenderer::getPositionShader\s*\)	net.eca.mv.LegacyGl.setShader(net.eca.mv.LegacyGl.Vanilla.POSITION)
+re:\bRenderSystem\.setShader\(	net.eca.mv.LegacyGl.setShader(
+re:\bRenderSystem\.setShaderTexture\(	net.eca.mv.LegacyGl.setShaderTexture(
+re:\bBufferUploader\.drawWithShader\(	net.eca.mv.LegacyGl.drawWithShader(
+re:\bCoreShaders\.(POSITION_TEX_COLOR|POSITION_TEX|POSITION_COLOR|POSITION)\b	net.eca.mv.LegacyGl.Vanilla.\1
+re:\bRenderType\.create\(	net.eca.mv.LegacyRenderType.create(
+re:\bRenderType\.CompositeState\.builder\(\)	net.eca.mv.LegacyRenderType.state()
+re:\bRenderType\.CompositeState\b	net.eca.mv.LegacyRenderType.State
+re:\b(?:RenderStateShard|RenderType)\.(NO_TRANSPARENCY|ADDITIVE_TRANSPARENCY|LIGHTNING_TRANSPARENCY|GLINT_TRANSPARENCY|CRUMBLING_TRANSPARENCY|OVERLAY_TRANSPARENCY|VIGNETTE_TRANSPARENCY|TRANSLUCENT_TRANSPARENCY|NO_DEPTH_TEST|EQUAL_DEPTH_TEST|LEQUAL_DEPTH_TEST|GREATER_DEPTH_TEST|COLOR_DEPTH_WRITE|COLOR_WRITE|DEPTH_WRITE|CULL|NO_CULL|POLYGON_OFFSET_LAYERING)\b	net.eca.mv.LegacyRenderType.\1
+re:import com\.mojang\.blaze3d\.vertex\.BufferUploader;\n?	
+re:import net\.minecraft\.client\.renderer\.CoreShaders;\n?	
+# DynamicTexture(NativeImage) gained a name supplier (debug label only)
+re:new DynamicTexture\(([^(),]+)\)	new DynamicTexture(() -> "net.eca.mv", \1)
+# ---- Entity.moveTo(...) is snapTo(...) (CATALOG §V39: same body; NOT absSnapTo). A receiver that is a PathNavigation
+# keeps its own moveTo(x, y, z, speed) -- X7b: this guesses at the receiver's spelling, it cannot see its type.
+re:(?<!Navigation\(\))(?<!avigation)(?<!avigator)\.moveTo\(	.snapTo(
+# ---- chunk tickets lost their value type: addRegionTicket(type, pos, radius, value) -> addTicketWithRadius(type, pos, radius)
+# (the value only told two tickets of one type apart; vanilla 1.21.5 keeps one ticket per type, pos and level)
+re:\.addRegionTicket\(\s*((?:[^,()]|\([^()]*\))+),\s*((?:[^,()]|\([^()]*\))+),\s*((?:[^,()]|\([^()]*\))+),\s*(?:[^,()]|\([^()]*\))+\)	.addTicketWithRadius(\1, \2, \3)
+re:\.removeRegionTicket\(\s*((?:[^,()]|\([^()]*\))+),\s*((?:[^,()]|\([^()]*\))+),\s*((?:[^,()]|\([^()]*\))+),\s*(?:[^,()]|\([^()]*\))+\)	.removeTicketWithRadius(\1, \2, \3)
+# ---- ClientInput lost forwardImpulse/leftImpulse/jumping/shiftKeyDown
+re:\binput\.forwardImpulse\b	input.getMoveVector().y
+re:\binput\.leftImpulse\b	input.getMoveVector().x
+re:\binput\.jumping\b	input.keyPresses.jump()
+re:\binput\.shiftKeyDown\b	input.keyPresses.shift()
+# ---- OwnableEntity.getOwnerUUID() -> getOwnerReference() (a nullable EntityReference)
+re:([\w.]+(?:\(\))?)\.getOwnerUUID\(\)	net.eca.mv.Owners.uuid(\1)
+# ---- SavedData is a SavedDataType (id + constructor + codec) now; Factory is gone, and save() overrides nothing.
+# The helper keeps the mod's own save(CompoundTag, Provider)/load(CompoundTag[, Provider]) and the on-disk layout.
+re:([\w.]+(?:\(\))?)\.computeIfAbsent\(\s*new SavedData\.Factory<>\(\s*((?:[^,()]|\([^()]*\))+),\s*((?:[^,()]|\([^()]*\))+)(?:,\s*null)?\s*\),\s*((?:[^,()]|\([^()]*\))+)\s*\)	net.eca.mv.SavedDatas.computeIfAbsent(\1, \2, \3, \4)
+re:@Override(\s+public CompoundTag save\(CompoundTag \w+, HolderLookup\.Provider \w+\))	\1
+# ---- Screenshot.takeScreenshot(target) is callback-based now (the GL backend completes it before returning)
+re:\bScreenshot\.takeScreenshot\(\s*((?:[^,()]|\([^()]*\))+)\s*\)	net.eca.mv.Screenshots.take(\1)
+# ---- BakedQuad became a record: getSprite()/getVertices()/getDirection()/getTintIndex()/isShade()/getLightEmission()
+# are sprite()/vertices()/direction()/tintIndex()/shade()/lightEmission(). Anchored on the receiver names a quad is
+# conventionally held in (X7b: a guess at spelling, not at type; getSprite() alone belongs to far too many classes).
+re:\b(quad|bakedQuad|q)\.getSprite\(\)	\1.sprite()
+re:\b(quad|bakedQuad|q)\.getVertices\(\)	\1.vertices()
+re:\b(quad|bakedQuad|q)\.getDirection\(\)	\1.direction()
+re:\b(quad|bakedQuad|q)\.getTintIndex\(\)	\1.tintIndex()
+re:\b(quad|bakedQuad|q)\.isShade\(\)	\1.shade()
+re:\b(quad|bakedQuad|q)\.getLightEmission\(\)	\1.lightEmission()
+# ---- RenderTarget is textures, not a framebuffer: frameBufferId / bindWrite(viewport) ask the backend for the FBO
+# the receiver is the whole chain (`Minecraft.getInstance().getMainRenderTarget()`), never its tail
+re:((?<![\w$.])(?!super\.frameBufferId\b)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*)\.frameBufferId\b	net.eca.mv.LegacyTargets.fbo(\1)
+re:([\w.]+(?:\(\))?)\.bindWrite\(\s*(true|false)\s*\)	net.eca.mv.LegacyTargets.bindWrite(\1, \2)
+# GlStateManager no longer tracks the clear colour; the GL call is the same
+re:\bGlStateManager\._clearColor\(	org.lwjgl.opengl.GL11.glClearColor(
+# ---- Inventory.items is private in 1.21.5; the same NonNullList is getNonEquipmentItems()
+re:\.getInventory\(\)\.items\b	.getInventory().getNonEquipmentItems()
+# ---- GeckoLib: its only 1.21.5 line is 5.x. These classes only MOVED from 4.x (the predicate's AnimationState<T> is
+# AnimationTest<T> now; 5.x's own processing.AnimationState is a different class). The render-state rewrite itself
+# (GeoEntityRenderer<T, R extends EntityRenderState & GeoRenderState>, layers' addRenderData/addPerBoneRender,
+# BlockAndItemGeoLayer.getRelevantBones) is per file: CATALOG M49.
+software.bernie.geckolib.renderer.GeoRenderer	software.bernie.geckolib.renderer.base.GeoRenderer
+software.bernie.geckolib.animation.AnimatableManager	software.bernie.geckolib.animatable.manager.AnimatableManager
+software.bernie.geckolib.animation.AnimationController	software.bernie.geckolib.animatable.processing.AnimationController
+software.bernie.geckolib.animation.AnimationState	software.bernie.geckolib.animatable.processing.AnimationTest
+# AnimationController.getControllerState() is getAnimationState() (same State enum)
+re:\.getControllerState\(\)	.getAnimationState()
+# ---- GeckoLib 5 resource ids: a model/animation id is the BARE name under geckolib/{models,animations}/ (tools/fork-port.py
+# setup copies the 4.x geo/ and animations/ files there). The 4.x file-path ids do not survive every 5.x line's lookup:
+# 5.1-5.3 strip only geckolib/... and the suffix ("geo/x.geo.json" asks for "geo/x"), and 5.4.5's animation lookup strips
+# "animations/" and ".json" but not ".animation" (asks for "x.animation") -- so write the bare name everywhere.
+re:"geo/([\w/.-]+?)\.geo\.json"	"\1"
+re:"animations/([\w/.-]+?)\.animation\.json"	"\1"
+re:"([a-z0-9_.-]+):geo/([\w/.-]+?)\.geo\.json"	"\1:\2"
+re:"([a-z0-9_.-]+):animations/([\w/.-]+?)\.animation\.json"	"\1:\2"
+re:"geo/"\s*\+\s*([\w.()]+)\s*\+\s*"\.geo\.json"	\1
+re:"animations/"\s*\+\s*([\w.()]+)\s*\+\s*"\.animation\.json"	\1
+#!strict
+
+# ---- shared 1.21.4
+# Shared fork-layer rename table: NeoForge 1.21.3 -> 1.21.4 (Minecraft 1.21.4; NeoForge 21.4). Applied AFTER the
+# fork's own rows and on top of the 1.21.3 table (a 1.21.4 target inherits 1.21.3). Measured against
+# neoforge-21.4.158-sources.jar on the first layer-fork port. CATALOG §M / minor-version-deltas L8+.
+#!exhaustive  shared table: most rows are for API this mod does not use
+# ---- client reload listeners: a named graph in 1.21.4
+net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent	net.neoforged.neoforge.client.event.AddClientReloadListenersEvent
+RegisterClientReloadListenersEvent	AddClientReloadListenersEvent
+re:(\w+)\.registerReloadListener\(([\w.()]+)\)	\1.addListener(net.eca.mv.ReloadIds.of(\2), \2)
+# ---- atlases and textures
+re:\bInventoryMenu\.BLOCK_ATLAS\b	net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS
+# ---- NeoForge 21.4: ClientLevel.partEntities (id -> part map) is gone; dragonParts() is the list of all parts
+re:\b(\w+)\.partEntities\.get\(([^()]+)\)	net.eca.mv.PartEntities.byId(\1, \2)
+re:\b(\w+)\.partEntities\.values\(\)	\1.dragonParts()
+re:\b(\w+)\.partEntities\.remove\((\w+)\.getId\(\)\)	\1.dragonParts().remove(\2)
+# ---- tickets: vanilla dropped POST_TELEPORT
+re:\bTicketType\.POST_TELEPORT\b	net.eca.mv.Tickets.POST_TELEPORT
+# ---- TextureManager.register(String prefix, texture) -> named registration (the first argument is a string)
+re:(\w+)\.register\(\s*("(?:[^"\\]|\\.)*"(?:\s*\+\s*(?:[^,()]|\([^()]*\))+)*),\s*(\w+)\s*\)	net.eca.mv.Textures.register(\1, \2, \3)
+re:\bSkullBlockRenderer\.createSkullRenderers\(	net.eca.mv.Skulls.createSkullRenderers(
+# ---- FML 6 (NeoForge 21.4) early display: SimpleBufferBuilder takes a name for its buffer
+re:new SimpleBufferBuilder\((\d+)\)	new SimpleBufferBuilder("eca", \1)
+# ---- LevelRenderer.renderLevel lost its LightTexture argument (1.21.4); this row runs before the 1.21.3 one, on the
+# 1.21.1 text, so it writes the full 1.21.4 descriptor itself
+re:LevelRenderer;renderLevel\(Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;	LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;
+# ---- mixin targets: ScreenEffectRenderer.renderScreenEffect(Minecraft, PoseStack) gained a MultiBufferSource
+# (measured on neoforge-21.4.158); an @Inject handler needs the extra parameter before its CallbackInfo
+re:(method = "renderScreenEffect"[^;{]*?\(\s*Minecraft \w+,\s*PoseStack \w+,)(\s*CallbackInfo\b)	\1 net.minecraft.client.renderer.MultiBufferSource mv$bufferSource,\2
+# ---- RenderType.entityTranslucentCull is gone (1.21.2) and RenderType.entityTranslucent sets NO_CULL, so mapping one to
+# the other draws the model double-sided (compile-clean, gates green). NeoForgeRenderTypes.getItemLayeredTranslucent is
+# the 1.21.1 state: entity-translucent shader, default CULL, translucent, lightmap, overlay, sorted -- same signature on
+# 1.21.5 and 1.21.8 (NeoForgeRenderPipelines.ENTITY_TRANSLUCENT_CULL). Rows do not reach overlays. CATALOG M73.
+re:\bRenderType\.entityTranslucentCull\(	net.neoforged.neoforge.client.NeoForgeRenderTypes.getItemLayeredTranslucent(
+#!strict
+
+# ---- shared 1.21.3
+# Shared fork-layer rename table: NeoForge 1.21.1 -> 1.21.3 (Minecraft 1.21.2 API; NeoForge 21.3).
+# Harvested from the first layer-fork port and measured against neoforge-21.3.97-sources.jar.
+# Every fork that adds a 1.21.3 target inherits these rows (make-fork-layer.py sync-shared copies them to
+# .multiversion/shared/1.21.3/, with net.eca.mv = the fork's helper package). Fork-specific rows stay in
+# .multiversion/targets/1.21.3/renames.tsv. CATALOG §M (M26-M45) has the reasoning for each row.
+#
+# Most of a shared table matches nothing in any one mod, so it is exempt from the dead-rule report as one
+# block (CATALOG X23); the fork's own table is checked.
+#!exhaustive  shared table: most rows are for API this mod does not use
+# ---- type moves and renames
+net.minecraft.util.FastColor	net.minecraft.util.ARGB
+re:\bFastColor\.ARGB32\.	ARGB.
+net.minecraft.world.level.portal.DimensionTransition	net.minecraft.world.level.portal.TeleportTransition
+DimensionTransition	TeleportTransition
+net.minecraft.world.entity.MobSpawnType	net.minecraft.world.entity.EntitySpawnReason
+MobSpawnType	EntitySpawnReason
+member:registryOrThrow	lookupOrThrow
+re:\bBuiltInRegistries\.(\w+)\.get\(	BuiltInRegistries.\1.getValue(
+re:\.lookupOrThrow\((Registries\.\w+)\)\.get\(	.lookupOrThrow(\1).getValue(
+re:\bminecraft\.getTimer\(\)	minecraft.getDeltaTracker()
+re:\.getToasts\(\)	.getToastManager()
+re:\.input\.jumping\b	.input.keyPresses.jump()
+re:\.input\.shiftKeyDown\b	.input.keyPresses.shift()
+# from references/minor-version-deltas.md U11 (1.21.1 -> 1.21.4, all 1.21.2 changes)
+net.minecraft.client.ParticleStatus	net.minecraft.server.level.ParticleStatus
+re:\bDirection\.getNearest\(	Direction.getApproximateNearest(
+re:\.isSolidRender\(\w+, \w+\)	.isSolidRender()
+# ---- render system
+re:VertexSorting\.DISTANCE_TO_ORIGIN\)	com.mojang.blaze3d.ProjectionType.PERSPECTIVE)
+re:VertexSorting\.ORTHOGRAPHIC_Z\)	com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC)
+re:TextureStateShard\(([^,()]+), false, (true|false)\)	TextureStateShard(\1, net.minecraft.util.TriState.FALSE, \2)
+re:TextureStateShard\(([^,()]+), true, (true|false)\)	TextureStateShard(\1, net.minecraft.util.TriState.TRUE, \2)
+re:[ \t]*RenderSystem\.applyModelViewMatrix\(\);[ \t]*\n	
+re:RenderSystem\.setShader\(GameRenderer::getPositionColorShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR)
+re:RenderSystem\.setShader\(GameRenderer::getPositionTexShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX)
+re:RenderSystem\.setShader\(GameRenderer::getPositionTexColorShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION_TEX_COLOR)
+re:RenderSystem\.setShader\(GameRenderer::getPositionShader\)	RenderSystem.setShader(net.minecraft.client.renderer.CoreShaders.POSITION)
+re:GlStateManager\._clear\(([^;]*), false\);	GlStateManager._clear(\1);
+re:\bLevelRenderer\.renderLineBox\(	net.minecraft.client.renderer.ShapeRenderer.renderLineBox(
+re:RenderSystem\.runAsFancy\(	net.eca.mv.Mv.run(
+# the receiver is the whole chain (`this.entity`, `a.b()`), never its tail; a bare super./this. receiver is left alone
+re:((?<![\w$.])(?!(?:super|this)\.getBoundingBoxForCulling\b)[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*)\.getBoundingBoxForCulling\(\)	net.eca.mv.Mv.cullingBox(\1)
+re:\(EntityRenderer<\? super (\w+)>	(EntityRenderer<? super \1, ?>
+re:EntityRenderer<\? super (\w+)> (\w+) =	EntityRenderer<? super \1, ?> \2 =
+# 1.21.2 dropped the yaw argument of EntityRenderDispatcher.render(entity, x, y, z, yaw, partialTick, ...)
+re:(dispatcher\.render\(\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,\s*[^,()]+,)\s*[^,()]+,	\1
+re:(\w+)\.blit\((\w+), 	\1.blit(net.minecraft.client.renderer.RenderType::guiTextured, \2, 
+re:\.bufferSource\(\)\.getBuffer\(	.bufferSource.getBuffer(
+# NativeImage: 1.21.1 getPixelRGBA/setPixelRGBA took ABGR; 1.21.2 getPixel/setPixel take ARGB. Convert at the call.
+re:(\w+)\.getPixelRGBA\(((?:[^()]|\([^()]*\))*)\)	net.minecraft.util.ARGB.toABGR(\1.getPixel(\2))
+re:(\w+)\.setPixelRGBA\(\s*([^,]+),\s*([^,]+),\s*((?:[^()]|\((?:[^()]|\([^()]*\))*\))*)\)\s*;	\1.setPixel(\2, \3, net.minecraft.util.ARGB.fromABGR(\4));
+re:(\w+)\.asByteArray\(\)	net.eca.mv.Mv.pngBytes(\1)
+# ---- fog: one FogParameters value
+re:(\w+) = RenderSystem\.getShaderFogStart\(\);\s*(\w+) = RenderSystem\.getShaderFogEnd\(\);\s*RenderSystem\.setShaderFogStart\(Float\.MAX_VALUE\);\s*RenderSystem\.setShaderFogEnd\(Float\.MAX_VALUE\);	net.eca.mv.Mv.suspendFog();
+re:RenderSystem\.setShaderFogStart\((\w+)\);\s*RenderSystem\.setShaderFogEnd\((\w+)\);	net.eca.mv.Mv.restoreFog();
+# ---- shaders: the mod keeps building its own ShaderInstances (1.21.1 API) on 1.21.2 CompiledShaderPrograms
+net.minecraft.client.renderer.ShaderInstance	net.eca.mv.ShaderInstance
+net.neoforged.neoforge.client.event.RegisterShadersEvent	net.eca.mv.RegisterShadersEvent
+re:RenderSystem\.setShader\(\(\) -> (\w+)\)	RenderSystem.setShader(\1)
+re:RenderSystem\.setShader\((\w+)::(\w+)\)	RenderSystem.setShader(\1.\2())
+# a shard over a VANILLA core shader names its CoreShaders key (M71); written fully qualified, so the helper row below
+# does not take it again (it would wrap a ShaderProgram as a Supplier). These must stay ABOVE that row.
+re:new RenderStateShard\.ShaderStateShard\(GameRenderer::getPositionColorShader\)	new net.minecraft.client.renderer.RenderStateShard.ShaderStateShard(net.minecraft.client.renderer.CoreShaders.POSITION_COLOR)
+re:new RenderStateShard\.ShaderStateShard\(GameRenderer::getPositionTexShader\)	new net.minecraft.client.renderer.RenderStateShard.ShaderStateShard(net.minecraft.client.renderer.CoreShaders.POSITION_TEX)
+re:new RenderStateShard\.ShaderStateShard\(GameRenderer::getPositionTexColorShader\)	new net.minecraft.client.renderer.RenderStateShard.ShaderStateShard(net.minecraft.client.renderer.CoreShaders.POSITION_TEX_COLOR)
+re:new RenderStateShard\.ShaderStateShard\(GameRenderer::getPositionShader\)	new net.minecraft.client.renderer.RenderStateShard.ShaderStateShard(net.minecraft.client.renderer.CoreShaders.POSITION)
+re:new RenderStateShard\.ShaderStateShard\(	new net.eca.mv.ShaderShard(
+# ---- entities and saved data
+re:\b(\w+)\.create\((\w*[lL]evel)\)	\1.create(\2, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED)
+# the same through a holder (`ModEntities.X.get().create(level)`), which the bare receiver above cannot see
+re:(\.get\(\))\.create\((\w*[lL]evel)\)	\1.create(\2, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED)
+re:EntityType\.loadEntityRecursive\(([^,]+), (\w+), 	EntityType.loadEntityRecursive(\1, \2, net.minecraft.world.entity.EntitySpawnReason.LOAD, 
+re:import net\.neoforged\.neoforge\.common\.util\.DummySavedData;\n	
+# ---- registry ids in Properties (CATALOG R25; 1.21.2): a registration supplier names what it builds, and every
+# Properties a Block or Item is built from takes that name (net.eca.mv.RegIds). Prefix-only on the supplier, so no row
+# has to find a closing parenthesis. A registration by constructor reference (`REG.register("name", Y::new)`, Y a Supplier-shaped no-arg
+# constructor) becomes the same entering supplier; without it Y builds its Properties with no name recorded
+re:(\.register\(\s*"([a-z0-9_./-]+)"\s*,\s*)([A-Za-z_][\w.$]*)::new\b	\1() -> net.eca.mv.RegIds.enter("\2") ? null : new \3()
+re:(\.register\(\s*"([a-z0-9_./-]+)"\s*,\s*\(\)\s*->\s*)(new\s)	\1net.eca.mv.RegIds.enter("\2") ? null : \3
+re:\bnew ((?:Item\.)?Properties\(\))	net.eca.mv.RegIds.stamp(new \1)
+# the same, written fully qualified (the bare rows above cannot see past the package prefix)
+re:\bnew (net\.minecraft\.world\.item\.Item\.Properties\(\))	net.eca.mv.RegIds.stamp(new \1)
+re:(?<![\w.])(net\.minecraft\.world\.level\.block\.(?:state\.BlockBehaviour|Block)\.Properties\.of(?:(?:Full|Legacy)Copy)?\((?:[^()]|\([^()]*\))*\))	net.eca.mv.RegIds.stamp(\1)
+re:(?<![\w.])((?:BlockBehaviour\.|Block\.)?Properties\.of\(\))	net.eca.mv.RegIds.stamp(\1)
+re:(?<![\w.])((?:BlockBehaviour\.|Block\.)?Properties\.of(?:Full|Legacy)Copy\((?:[^()]|\([^()]*\))*\))	net.eca.mv.RegIds.stamp(\1)
+# ---- mixin targets (invisible to javac; audit-mixin-targets.py checks them against the target's sources)
+re:@Inject\(method = "hurt",([^\n]*)\n(\s*)private void ([\w$]+)\(DamageSource (\w+),	@Inject(method = "hurtServer",\1\n\2private void \3(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource \4,
+re:@Inject\(method = "actuallyHurt",([^\n]*)\n(\s*)private void ([\w$]+)\(DamageSource (\w+),	@Inject(method = "actuallyHurt",\1\n\2private void \3(net.minecraft.server.level.ServerLevel mv$hurtLevel, DamageSource \4,
+re:"changeDimension\(Lnet/minecraft/world/level/portal/DimensionTransition;\)Lnet/minecraft/world/entity/Entity;"	"teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/world/entity/Entity;"
+# EnderDragon.hurt(List<Entity>) (the head/body contact damage) became hurt(ServerLevel, List<Entity>) in 1.21.2
+re:"hurt\(Ljava/util/List;\)V"	"hurt(Lnet/minecraft/server/level/ServerLevel;Ljava/util/List;)V"
+re:LevelRenderer;renderLevel\(Lnet/minecraft/client/DeltaTracker;	LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;
+re:@Inject\(method = "render",(\s*at = @At\(value = "INVOKE",\s*target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose\(\)V")	@Inject(method = "renderItemModelRaw",\1
+re:(int \w+, int \w+, BakedModel \w+,)(\s*)CallbackInfo ci\)	\1 boolean mv$flat, float mv$depth,\2CallbackInfo ci)
+# SmithingTransformRecipe/SmithingTrimRecipe hold Optional<Ingredient> template/base/addition since 1.21.2: an
+# @Accessor returning Ingredient no longer matches the field (callers then fail to compile and get .orElse(null))
+re:(@Accessor\("(?:template|base|addition)"\)\s*)Ingredient\b	\1java.util.Optional<Ingredient>
+# GeckoLib 4.7.3 (1.21.3) / 4.8.5 (1.21.4): GeoRenderLayer preRender/render gained a trailing int colour
+re:(VertexConsumer \w+, float \w+,\s*int \w+, int \w+)\) \{	\1, int renderColor) {
+# ---- entities: Entity.hurt is `final void` since 1.21.2 (M66). A BOOLEAN use of it (`if (x.hurt(..))`, `b = x.hurt(..)`,
+# `&& x.hurt(..)`, a lambda's value) is hurtServer's result through the helper -- never a "did health drop?" comparison,
+# which miscounts an absorbed, blocked or cancelled hit. A statement call stays (it still compiles); a capitalised receiver
+# (a static `Api.hurt(e, s, a)`) and `super.` are left alone.
+re:([(&|!=?]\s*|\breturn\s+|->\s*)((?!super\.)(?![A-Z])[\w$]+(?:\(\))?(?:\.[\w$]+(?:\(\))?)*)\.hurt\(	\1net.eca.mv.Hurt.server(\2, 
+# an Entity.hurt OVERRIDE is a hurtServer override (the server is the only side 1.21.2 calls it on)
+re:public boolean hurt\(((?:@\w+ )?)DamageSource (\w+), float (\w+)\)	public boolean hurtServer(net.minecraft.server.level.ServerLevel mv$hurtLevel, \1DamageSource \2, float \3)
+re:\bsuper\.hurt\((\w+), (\w+)\)	super.hurtServer(mv$hurtLevel, \1, \2)
+# Mob.doHurtTarget and MobEffect.applyEffectTick take the ServerLevel (1.21.2)
+re:(public boolean doHurtTarget\()(Entity \w+\))	\1net.minecraft.server.level.ServerLevel mv$level, \2
+re:\bsuper\.doHurtTarget\((\w+)\)	super.doHurtTarget(mv$level, \1)
+re:(?m)^([ \t]*)((?!super\b)[a-z][\w$]*)\.doHurtTarget\((\w+)\);	\1{ if (\2.level() instanceof net.minecraft.server.level.ServerLevel mv$sl) \2.doHurtTarget(mv$sl, \3); }
+re:(public boolean applyEffectTick\()(LivingEntity \w+, int \w+\))	\1net.minecraft.server.level.ServerLevel mv$level, \2
+re:\bsuper\.applyEffectTick\((\w+), (\w+)\)	super.applyEffectTick(mv$level, \1, \2)
+# Recipe.canCraftInDimensions and Entity.getBoundingBoxForCulling are no longer overridable: keep the method, drop @Override
+re:@Override(\s*public boolean canCraftInDimensions\()	\1
+re:@Override(\s*public AABB getBoundingBoxForCulling\(\)\s*\{)	\1
+# ---- items: InteractionResultHolder is gone; an item's use returns an InteractionResult. A success or consume carrying a
+# stack keeps it (heldItemTransformedTo; for the held stack itself that is the plain result)
+re:\bInteractionResultHolder<ItemStack>	InteractionResult
+re:\bInteractionResultHolder\.pass\((?:[^()]|\([^()]*\))*\)	InteractionResult.PASS
+re:\bInteractionResultHolder\.fail\((?:[^()]|\([^()]*\))*\)	InteractionResult.FAIL
+re:\bInteractionResultHolder\.sidedSuccess\(((?:[^(),]|\([^()]*\))*),(?:[^()]|\([^()]*\))*\)	InteractionResult.SUCCESS.heldItemTransformedTo(\1)
+re:\bInteractionResultHolder\.success\(((?:[^()]|\([^()]*\))*)\)	InteractionResult.SUCCESS.heldItemTransformedTo(\1)
+re:\bInteractionResultHolder\.consume\(((?:[^()]|\([^()]*\))*)\)	InteractionResult.CONSUME.heldItemTransformedTo(\1)
+re:\bInteractionResult\.sidedSuccess\((?:[^()]|\([^()]*\))*\)	InteractionResult.SUCCESS
+net.minecraft.world.InteractionResultHolder	net.minecraft.world.InteractionResult
+# ItemCooldowns is keyed by stack (its cooldown group) since 1.21.2
+re:(getCooldowns\(\)\.(?:isOnCooldown|addCooldown|getCooldownPercent|removeCooldown)\(\s*)((?:[\w$]+(?:\(\))?\.)*[\w$]+(?:\(\))?)\.getItem\(\)	\1\2
+re:(getCooldowns\(\)\.(?:isOnCooldown|addCooldown|getCooldownPercent)\(\s*)([A-Z]\w*\.[A-Z_]+\.get\(\))	\1new net.minecraft.world.item.ItemStack(\2)
+# Ingredient.of(ItemStack...) is gone; an ingredient of one stack's item is Ingredient.of(item)
+re:\bIngredient\.of\(new ItemStack\(((?:[^()]|\([^()]*\))*)\)\)	Ingredient.of(\1)
+# GeckoLib 4.7+ (4.7.3 on 1.21.3, 4.8.5 on 1.21.4): GeoModel's resource getters and GeoRenderLayer.getDefaultBakedModel
+# take the renderer; GeoEntityRenderer.getDeathMaxRotation takes the partial tick (a GeckoLib 5 GeoRenderState getter is left)
+re:\b(ResourceLocation (?:getModelResource|getTextureResource)\()((?!GeoRenderState\b)[\w.$]+(?:<[^<>()]*>)?) (\w+)\)	\1\2 \3, software.bernie.geckolib.renderer.GeoRenderer<\2> renderer)
+re:(float getDeathMaxRotation\([\w.$<>?]+ \w+)\)	\1, float partialTick)
+re:\bgetDefaultBakedModel\((\w+)\)	getDefaultBakedModel(\1, getRenderer())
+# ---- items whose 1.21.1 getDefaultAttributeModifiers override no longer runs (M68): its `super` base is the item's own
+# ATTRIBUTE_MODIFIERS component, and the stack form is applied by the AttributeOverrides helper (named in a comment so
+# prepare pulls it in)
+re:\bsuper\.getDefaultAttributeModifiers\((?:\w+)?\)	net.eca.mv.AttributeOverrides.base(this)
+re:(public ItemAttributeModifiers getDefaultAttributeModifiers\(ItemStack \w+\)\s*\{)	\1 // MV-REQUIRES: AttributeOverrides
+# ---- blocks: light queries lost their BlockGetter/BlockPos; neighborChanged takes the redstone Orientation; the
+# BlockEntityType.Builder is gone
+re:(public (?:boolean propagatesSkylightDown|int getLightBlock)\(BlockState \w+), BlockGetter \w+, BlockPos \w+\)	\1)
+re:(void neighborChanged\(BlockState \w+, Level \w+, BlockPos \w+, Block \w+), BlockPos (\w+), boolean (\w+)\)	\1, @org.jetbrains.annotations.Nullable net.minecraft.world.level.redstone.Orientation \2, boolean \3)
+re:BlockEntityType\.Builder\.of\(\s*([\w$.]+::new),\s*((?:[^()]|\([^()]*\))+?)\s*\)\s*\.build\(null\)	new BlockEntityType<>(\1, java.util.Set.of(\2))
+# ---- client: GuiGraphics.blit takes the render type first also when the texture is built in place; the profiler is per
+# thread (Minecraft/Level.getProfiler() are gone) -- the whole receiver chain goes
+re:(\w+)\.blit\((ResourceLocation\.(?:parse|fromNamespaceAndPath|withDefaultNamespace)\()	\1.blit(net.minecraft.client.renderer.RenderType::guiTextured, \2
+re:(?<![\w$.])(?:[\w$]+(?:\(\))?\.)+getProfiler\(\)	net.minecraft.util.profiling.Profiler.get()
+#!strict
+

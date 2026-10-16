@@ -75,7 +75,6 @@ public final class ShaderImportScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 180;
         int top = height / 2 - 82;
         graphics.fill(left - 12, top, left + 372, top + 164, 0xFF202225);

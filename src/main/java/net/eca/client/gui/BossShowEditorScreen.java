@@ -605,16 +605,14 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         super.render(g, mouseX, mouseY, partialTick);
         drawTimelineHandle(g, timelineY, mouseX, mouseY);
         if (openDropdown >= 0) {
-            g.pose().pushPose();
-            g.pose().translate(0.0F, 0.0F, 400.0F);
+            g.pose().pushMatrix();
             drawDropdown(g, mouseX, mouseY, partialTick);
-            g.pose().popPose();
+            g.pose().popMatrix();
         }
         if (contextMenuOpen) {
-            g.pose().pushPose();
-            g.pose().translate(0.0F, 0.0F, 500.0F);
+            g.pose().pushMatrix();
             renderContextMenu(g, mouseX, mouseY);
-            g.pose().popPose();
+            g.pose().popMatrix();
         }
     }
 

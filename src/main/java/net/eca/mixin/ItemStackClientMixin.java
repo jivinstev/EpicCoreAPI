@@ -22,7 +22,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.Comparator;
 import java.util.List;
 
-@OnlyIn(Dist.CLIENT)
 @Mixin(ItemStack.class)
 public class ItemStackClientMixin {
 

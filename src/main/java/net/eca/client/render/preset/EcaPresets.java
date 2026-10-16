@@ -10,7 +10,6 @@ import java.util.Set;
 /* 着色器预设 RenderType 运行时查表。用预设 id ("modid:name") 获取对应的 RenderType，
    供 Boss 扩展、实体扩展、物品扩展和方块扩展直接调用。
    ECA 启动时自动发现所有可用预设，可用 getPresetIds() 枚举。 */
-@OnlyIn(Dist.CLIENT)
 public final class EcaPresets {
 
     private EcaPresets() {}

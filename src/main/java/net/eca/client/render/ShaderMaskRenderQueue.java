@@ -1,8 +1,8 @@
-// Fork multi-version layer: 1.21.5 version of the authors' file (the prepared 1.21.5 tree's, renames applied). One change,
-// in draw(): a vanilla RenderType in the queue is drawn with its own draw(mesh) (see the comment there). Everything else
-// is the authors', unchanged.
+// Fork multi-version layer: 1.21.8 version of the authors' file (1.21.5's overlay, with 1.21.8's GpuBufferSlice projection).
+// In draw(): a vanilla RenderType in the queue is drawn with its own draw(mesh) (see the comment there), as on 1.21.5.
 package net.eca.client.render;
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
@@ -21,7 +21,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-@OnlyIn(Dist.CLIENT)
 public final class ShaderMaskRenderQueue {
 
     private static final int MAX_POOL_SIZE = 64;
@@ -51,7 +50,7 @@ public final class ShaderMaskRenderQueue {
                                MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix());
-        Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
             uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform));
     }
@@ -86,7 +85,7 @@ public final class ShaderMaskRenderQueue {
     }
 
     private static void flushEntries(List<QueuedPass> entries) {
-        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        GpuBufferSlice savedProjection = RenderSystem.getProjectionMatrixBuffer();
         try {
             for (QueuedPass entry : entries) {
                 RenderSystem.getModelViewStack().pushMatrix();
@@ -114,7 +113,7 @@ public final class ShaderMaskRenderQueue {
         boolean stateActive = false;
         try {
             if (!(pass.renderType() instanceof net.eca.mv.LegacyRenderType)) {
-                // [mv] 1.21.5: a vanilla RenderType's setupRenderState no longer sets its shader or its blend / depth /
+                // [mv] 1.21.5+: a vanilla RenderType's setupRenderState no longer sets its shader or its blend / depth /
                 // cull state (they are its RenderPipeline), so LegacyGl.drawWithShader would draw it with whatever
                 // shader was set last; its own draw(mesh) sets it up, draws with its pipeline and clears it, as 1.21.1's
                 // setupRenderState + BufferUploader.drawWithShader + clearRenderState did
@@ -171,7 +170,7 @@ public final class ShaderMaskRenderQueue {
         BufferBuilder builder,
         MeshData renderedBuffer,
         Matrix4f modelView,
-        Matrix4f projection,
+        GpuBufferSlice projection,
         MaskUvTransform uvTransform
     ) {
     }
