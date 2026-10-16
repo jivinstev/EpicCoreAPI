@@ -1,5 +1,5 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-STAND-IN: shared/1.21.11's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
+// MV-STAND-IN: shared/26.1.2's LegacyRenderType, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyRenderType.java (the F1/F2 fix ahead of the
 // MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
 // MV-REQUIRES: LegacyGl
 // MV-REQUIRES: ShaderInstance
@@ -9,7 +9,7 @@ package net.eca.mv;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -39,6 +39,9 @@ import java.util.function.UnaryOperator;
  * opens {@code RenderType(String, RenderSetup)}, and this subclass hands it a placeholder {@code RenderSetup} (only its
  * buffer size and crumbling / sort flags are read by vanilla's batching) and overrides {@code draw}, {@code format},
  * {@code mode} and {@code pipeline} with the legacy ones, as the 1.21.10 copy did.
+ *
+ * <p>26.1.2 copy: the depth-test shards are {@code CompareOp}s ({@link LegacyGl.Key}; null = no depth test), and
+ * 1.21.4's {@code LIGHTMAP} binds {@code GameRenderer.lightmap()} (26.1 removed {@code lightTexture()}).
  */
 public class LegacyRenderType extends RenderType {
     /** What 1.21.4's RenderStateShard was to this layer: something set up before a draw and cleared after it. */
@@ -92,7 +95,7 @@ public class LegacyRenderType extends RenderType {
     public static final Shard LIGHTMAP = new Shard() {
         @Override
         public void setupRenderState() {
-            LegacyGl.setShaderTexture(2, Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(),
+            LegacyGl.setShaderTexture(2, Minecraft.getInstance().gameRenderer.lightmap(),
                     RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
         }
     };
@@ -101,7 +104,7 @@ public class LegacyRenderType extends RenderType {
         return new Modifier(name, k -> new LegacyGl.Key(f, k.depth(), k.depthWrite(), k.writeColor(), k.writeAlpha(), k.cull(), k.biasScale(), k.biasConstant()));
     }
 
-    private static Modifier depth(String name, DepthTestFunction f) {
+    private static Modifier depth(String name, CompareOp f) {
         return new Modifier(name, k -> new LegacyGl.Key(k.blend(), f, k.depthWrite(), k.writeColor(), k.writeAlpha(), k.cull(), k.biasScale(), k.biasConstant()));
     }
 
@@ -124,10 +127,10 @@ public class LegacyRenderType extends RenderType {
     public static final Modifier TRANSLUCENT_TRANSPARENCY = blend("translucent_transparency", BlendFunction.TRANSLUCENT);
     public static final Modifier VIGNETTE_TRANSPARENCY = blend("vignette_transparency",
             new BlendFunction(SourceFactor.ZERO, DestFactor.ONE_MINUS_SRC_COLOR));
-    public static final Modifier NO_DEPTH_TEST = depth("no_depth_test", DepthTestFunction.NO_DEPTH_TEST);
-    public static final Modifier EQUAL_DEPTH_TEST = depth("equal_depth_test", DepthTestFunction.EQUAL_DEPTH_TEST);
-    public static final Modifier LEQUAL_DEPTH_TEST = depth("lequal_depth_test", DepthTestFunction.LEQUAL_DEPTH_TEST);
-    public static final Modifier GREATER_DEPTH_TEST = depth("greater_depth_test", DepthTestFunction.GREATER_DEPTH_TEST);
+    public static final Modifier NO_DEPTH_TEST = depth("no_depth_test", null);
+    public static final Modifier EQUAL_DEPTH_TEST = depth("equal_depth_test", CompareOp.EQUAL);
+    public static final Modifier LEQUAL_DEPTH_TEST = depth("lequal_depth_test", CompareOp.LESS_THAN_OR_EQUAL);
+    public static final Modifier GREATER_DEPTH_TEST = depth("greater_depth_test", CompareOp.GREATER_THAN);
     public static final Modifier COLOR_DEPTH_WRITE = write("color_depth_write", true, true);
     public static final Modifier COLOR_WRITE = write("color_write", true, false);
     public static final Modifier DEPTH_WRITE = write("depth_write", false, true);
@@ -138,7 +141,7 @@ public class LegacyRenderType extends RenderType {
             k -> new LegacyGl.Key(k.blend(), k.depth(), k.depthWrite(), k.writeColor(), k.writeAlpha(), k.cull(), -1.0F, -10.0F));
 
     /** 1.21.4's defaults for a shard nobody set: no blending, LEQUAL depth test, colour and depth written, culled. */
-    private static final LegacyGl.Key DEFAULTS = new LegacyGl.Key(null, DepthTestFunction.LEQUAL_DEPTH_TEST, true, true, true, true, 0, 0);
+    private static final LegacyGl.Key DEFAULTS = new LegacyGl.Key(null, CompareOp.LESS_THAN_OR_EQUAL, true, true, true, true, 0, 0);
 
     public static State.Builder state() {
         return new State.Builder();

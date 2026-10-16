@@ -1,20 +1,21 @@
-// Fork multi-version layer: 1.21.11 overlay of the authors' FilterRenderer. Beyond the 1.21.11 port (stage listeners,
-// projection buffers, the Cosmos projection, extract -> submit -> feature-dispatch entity drawing, Identifier,
-// Camera.position()), two review fixes (#33), shaped as 1.21.10's overlay and re-derived for 1.21.11 with javap:
-//  - the spotlight mask: a RenderType draw (net.minecraft.client.renderer.rendertype.RenderType.draw on 1.21.11, reached
-//    from the feature renderers through the shared MultiBufferSource) opens its RenderPass on its OutputTarget's
+// Fork multi-version layer: 26.1.2 overlay of the authors' FilterRenderer. Beyond the 26.1.2 port (stage listeners,
+// ProjectionMatrixBuffer, the Cosmos projection, extract -> submit -> feature-dispatch entity drawing, Identifier,
+// Camera.position(), AfterTranslucentFeatures), two review fixes (#33), shaped as 1.21.11's overlay and re-derived for
+// 26.1.2 with javap of minecraft-patched-26.1.2.116-merged.jar:
+//  - the spotlight mask: net.minecraft.client.renderer.rendertype.RenderType.draw (reached from the feature renderers
+//    through the shared MultiBufferSource) opens its RenderPass (CommandEncoder.createRenderPass) on its OutputTarget's
 //    GpuTextureViews (the main target) unless RenderSystem.outputColorTextureOverride / outputDepthTextureOverride are
-//    set (both still public static on 1.21.11), so binding the authors' raw spotlight FBO was ignored: the mask stayed
-//    empty and the entity was drawn a second time into the main target. The spotlight is now a TextureTarget, and the
-//    whole entity draw (submit, renderAllFeatures, endBatch) runs with both overrides naming its views, restored in a
-//    finally; net.eca.mv.LegacyGl (shared/1.21.11) honours the same overrides.
-//  - depth copies in the main target's own format: the main depth is sized (DEPTH32 -> GL_DEPTH_COMPONENT32, or
-//    NeoForge's stencil format), and an unsized GL_DEPTH_COMPONENT copy makes the COLOR|DEPTH blit fail as a whole.
-//    allocateDepthCopy/depthAttachment (GlConst.toGlInternalId/toGlExternalId/toGlType), reallocated when the format
-//    changes; the spotlight TextureTarget takes the main target's useStencil, so createBuffers gives it the main's format.
+//    set (both public static on 26.1.2, read before createRenderPass), so binding a raw spotlight FBO was ignored: the
+//    mask stayed empty and the entity was drawn a second time into the main target. The spotlight is now a
+//    TextureTarget, and the whole entity draw (submit, renderAllFeatures, endBatch) runs with both overrides naming its
+//    views, restored in a finally; net.eca.mv.LegacyGl (shared/26.1.2) honours the same overrides.
+//  - depth copies in the main target's own format: RenderTarget.createBuffers allocates DEPTH32, or NeoForge's
+//    ClientHooks.getStencilFormat() when useStencil, and an unsized GL_DEPTH_COMPONENT copy makes the COLOR|DEPTH blit
+//    fail as a whole. allocateDepthCopy/depthAttachment (GlConst.toGlInternalId/toGlExternalId/toGlType), reallocated
+//    when the format changes; the spotlight TextureTarget takes the main target's useStencil, so it gets the main's format.
 // Under Fabulous graphics the item-entity/translucent/outline targets are not redirected, as on 1.21.1.
-// An overlay passes down the `inherits` chain WITHOUT rename rows; no later target compiles this file (26.1.2 and every
-// target after it carry their own FilterRenderer overlay).
+// An overlay passes down the `inherits` chain WITHOUT rename rows; 26.2 carries its own FilterRenderer overlay, so no
+// later target compiles this file.
 package net.eca.client.render.shader;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
@@ -85,7 +86,7 @@ public class FilterRenderer {
     private static int copyWidth;
     private static int copyHeight;
 
-    // 1.21.11 (#33): the spotlight mask is a TextureTarget, so RenderType draws can be pointed at it (see captureSpotlightEntity)
+    // 26.1.2 (#33): the spotlight mask is a TextureTarget, so RenderType draws can be pointed at it (see captureSpotlightEntity)
     private static com.mojang.blaze3d.pipeline.TextureTarget spotlightTarget;
 
     /* 宇宙滤镜专用：在实体绘制前（AFTER_CUTOUT_BLOCKS_LAYER）快照纯地形深度，
@@ -95,7 +96,7 @@ public class FilterRenderer {
     private static int cosmosTerrainWidth;
     private static int cosmosTerrainHeight;
 
-    // 1.21.11 (#33): the depth format each copy was allocated in (the main target's, see allocateDepthCopy)
+    // 26.1.2 (#33): the depth format each copy was allocated in (the main target's, see allocateDepthCopy)
     private static com.mojang.blaze3d.textures.TextureFormat copyDepthFormat;
     private static com.mojang.blaze3d.textures.TextureFormat cosmosTerrainDepthFormat;
 
@@ -216,11 +217,11 @@ public class FilterRenderer {
         cosmosStartNanos = 0;
     }
 
-    private static net.minecraft.client.renderer.PerspectiveProjectionMatrixBuffer orthoBuffer;
+    private static net.minecraft.client.renderer.ProjectionMatrixBuffer orthoBuffer;
 
     private static com.mojang.blaze3d.buffers.GpuBufferSlice orthoSlice(Matrix4f ortho) {
         if (orthoBuffer == null) {
-            orthoBuffer = new net.minecraft.client.renderer.PerspectiveProjectionMatrixBuffer("eca filter ortho");
+            orthoBuffer = new net.minecraft.client.renderer.ProjectionMatrixBuffer("eca filter ortho");
         }
         return orthoBuffer.getBuffer(ortho);
     }
@@ -233,7 +234,7 @@ public class FilterRenderer {
     }
 
     @SubscribeEvent
-    public static void onAfterEntities(RenderLevelStageEvent.AfterEntities event) {
+    public static void onAfterEntities(RenderLevelStageEvent.AfterTranslucentFeatures event) {
         onRenderLevelStage(event);
     }
 
@@ -248,7 +249,7 @@ public class FilterRenderer {
         boolean afterLevel = event instanceof RenderLevelStageEvent.AfterLevel;
 
         if (isRenderedFilter(FilterType.SPOTLIGHT) && spotlightShader != null) {
-            if (event instanceof RenderLevelStageEvent.AfterEntities) {
+            if (event instanceof RenderLevelStageEvent.AfterTranslucentFeatures) {
                 captureSpotlightEntity(event);
                 return;
             }
@@ -339,7 +340,7 @@ public class FilterRenderer {
         clearAll();
     }
 
-    // 1.21.11 (#33): the main target's depth format (MainTarget allocates DEPTH32, or NeoForge's stencil format)
+    // 26.1.2 (#33): the main target's depth format (MainTarget allocates DEPTH32, or NeoForge's stencil format)
     private static com.mojang.blaze3d.textures.TextureFormat mainDepthFormat() {
         com.mojang.blaze3d.textures.GpuTexture depth = Minecraft.getInstance().getMainRenderTarget().getDepthTexture();
         return depth != null ? depth.getFormat() : com.mojang.blaze3d.textures.TextureFormat.DEPTH32;
@@ -412,7 +413,7 @@ public class FilterRenderer {
                 && spotlightTarget.useStencil == mainTarget.useStencil
                 && spotlightTarget.getDepthTexture().getFormat() == mainDepthFormat()) return;
         destroySpotlightTargets();
-        // 1.21.11: colour RGBA8 and depth in the main target's format (createBuffers picks it from useStencil, as
+        // 26.1.2: colour RGBA8 and depth in the main target's format (createBuffers picks it from useStencil, as
         // MainTarget does), NEAREST filtering -- what the authors' raw textures were, as GpuTextures a RenderPass can use
         spotlightTarget = new com.mojang.blaze3d.pipeline.TextureTarget("eca_spotlight", width, height, true, mainTarget.useStencil);
     }

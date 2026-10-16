@@ -14,7 +14,7 @@ import net.eca.util.bossshow.BossShowDefinition;
 import net.eca.util.bossshow.BossShowEditorState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.player.LocalPlayer;
@@ -347,7 +347,7 @@ public final class BossShowEditorClientEvents {
         if (mc.screen != null) return;
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        event.getGuiGraphics().drawCenteredString(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
+        event.getGuiGraphics().centeredText(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
     }
 
     @SubscribeEvent
@@ -358,7 +358,7 @@ public final class BossShowEditorClientEvents {
 
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        GuiGraphics g = event.getGuiGraphics();
+        GuiGraphicsExtractor g = event.getGuiGraphics();
 
         boolean targeted = BossShowEditorState.getHoveredEntityUuid() != null;
         boolean isPlay = BossShowEditorState.isPlaySelectionMode();
@@ -387,12 +387,12 @@ public final class BossShowEditorClientEvents {
                 : "gui.eca.bossshow.selection.hint");
 
         int y = h / 4;
-        g.drawCenteredString(mc.font, line1, w / 2, y, 0xFFFFFF);
+        g.centeredText(mc.font, line1, w / 2, y, 0xFFFFFF);
         if (targeted && cachedHovered != null) {
             Component hint = Component.literal("§7").append(cachedHovered.getType().getDescription());
-            g.drawCenteredString(mc.font, hint, w / 2, y + 12, 0xCCCCCC);
+            g.centeredText(mc.font, hint, w / 2, y + 12, 0xCCCCCC);
         }
-        g.drawCenteredString(mc.font, line2, w / 2, y + 26, 0xAAAAAA);
+        g.centeredText(mc.font, line2, w / 2, y + 26, 0xAAAAAA);
     }
 
     private static EntityHitResult raycastEntity(LocalPlayer player, double reach) {

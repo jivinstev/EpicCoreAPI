@@ -11,9 +11,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.PerspectiveProjectionMatrixBuffer;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
@@ -21,9 +21,9 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -40,10 +40,10 @@ import java.util.List;
 public final class ShaderPreviewRenderer {
 
     private static final ItemStack PREVIEW_ITEM = createPreviewItem();
-    private static final PerspectiveProjectionMatrixBuffer PREVIEW_PROJECTION = new PerspectiveProjectionMatrixBuffer("eca_shader_preview");
+    private static final ProjectionMatrixBuffer PREVIEW_PROJECTION = new ProjectionMatrixBuffer("eca_shader_preview");
 
     public static void render(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         ShaderPreviewTarget target,
         int left,
@@ -158,7 +158,7 @@ public final class ShaderPreviewRenderer {
     }
 
     private static void renderItem(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         int left,
         int top,
@@ -199,7 +199,7 @@ public final class ShaderPreviewRenderer {
     }
 
     private static void renderEntity(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         int left,
         int top,
@@ -253,12 +253,13 @@ public final class ShaderPreviewRenderer {
         Minecraft minecraft = Minecraft.getInstance();
         return new FeatureRenderDispatcher(
             new SubmitNodeStorage(),
-            minecraft.getBlockRenderer(),
+            minecraft.getModelManager(),
             buffers,
             minecraft.getAtlasManager(),
             minecraft.renderBuffers().outlineBufferSource(),
             minecraft.renderBuffers().crumblingBufferSource(),
-            minecraft.font
+            minecraft.font,
+            minecraft.gameRenderer.getGameRenderState()
         );
     }
 
@@ -315,8 +316,13 @@ public final class ShaderPreviewRenderer {
         float vMax
     ) {
         for (BakedQuad quad : quads) {
-            for (int vertex = 0; vertex < BakedQuad.VERTEX_COUNT; vertex++) {
-                long packedUv = quad.packedUV(vertex);
+            for (int vertex = 0; vertex < 4; vertex++) {
+                long packedUv = switch (vertex) {
+                    case 0 -> quad.packedUV0();
+                    case 1 -> quad.packedUV1();
+                    case 2 -> quad.packedUV2();
+                    default -> quad.packedUV3();
+                };
                 float u = net.minecraft.client.model.geom.builders.UVPair.unpackU(packedUv);
                 float v = net.minecraft.client.model.geom.builders.UVPair.unpackV(packedUv);
                 uMin = Math.min(uMin, u);

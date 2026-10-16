@@ -1,3 +1,5 @@
+// Fork multi-version layer: 26.1.2 version (LevelRenderer.renderLevel takes the CameraRenderState and the chunk sections;
+// GameRenderer.getDepthFar became Camera.depthFar -- see CameraDepthFarMixin).
 package net.eca.mixin;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -42,13 +44,8 @@ public class GameRendererPostLevelMixin {
     @Final
     private Camera mainCamera;
 
-    @Inject(method = "getDepthFar", at = @At("RETURN"), cancellable = true)
-    private void eca$extendForceLoadedDepthFar(CallbackInfoReturnable<Float> cir) {
-        float forceLoadedFar = EcaConfiguration.getForceLoadingMaxRenderDistanceSafely() + 32.0f;
-        if (cir.getReturnValue() < forceLoadedFar) {
-            cir.setReturnValue(forceLoadedFar);
-        }
-    }
+    // 26.1: GameRenderer.getDepthFar is gone; the far plane is Camera.depthFar, set in Camera.update. The force-loaded
+    // extension of it moved to CameraDepthFarMixin (added for this target by target.properties mixin_add).
 
     // 在renderLevel()返回后注入，此时Oculus延迟渲染管线已完成合成，主帧缓冲区活跃
     @Inject(method = "renderLevel", at = @At("RETURN"))
@@ -75,7 +72,7 @@ public class GameRendererPostLevelMixin {
 
     @Inject(method = "renderLevel",
             at = @At(value = "INVOKE",
-                     target = "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;Z)V",
+                     target = "Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/renderer/state/level/CameraRenderState;Lorg/joml/Matrix4fc;Lcom/mojang/blaze3d/buffers/GpuBufferSlice;Lorg/joml/Vector4f;ZLnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;)V",
                      shift = At.Shift.AFTER))
     private void eca$flushItemLayersAfterWorld(DeltaTracker deltaTracker, CallbackInfo ci) {
         if (!EcaShaderInstance.isOculusShadersActive()) {

@@ -10,9 +10,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.EcaLogger;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -81,7 +80,7 @@ public final class EcaBossBarRenderer {
      * @return true if the bar was drawn; false when required sizes are missing and the caller
      *         should fall back to the vanilla bar
      */
-    public static boolean draw(GuiGraphics graphics, int y, float progress,
+    public static boolean draw(GuiGraphicsExtractor graphics, int y, float progress,
                                BarAppearance appearance, String debugName) {
         if (appearance == null || appearance.isEmpty()) {
             return false;
@@ -164,7 +163,7 @@ public final class EcaBossBarRenderer {
         if (appearance.valueText != null) {
             flushBuffers();
             int textY = (barHeight - Minecraft.getInstance().font.lineHeight) / 2;
-            graphics.drawCenteredString(Minecraft.getInstance().font, appearance.valueText,
+            graphics.centeredText(Minecraft.getInstance().font, appearance.valueText,
                     layoutWidth / 2, textY, 0xFFFFFFFF);
         }
 
@@ -193,7 +192,7 @@ public final class EcaBossBarRenderer {
                 .toPlainString();
     }
 
-    private static void renderLayer(GuiGraphics graphics, Identifier texture, RenderType renderType,
+    private static void renderLayer(GuiGraphicsExtractor graphics, Identifier texture, RenderType renderType,
                                     int x, int y, int drawWidth, int drawHeight, int fullWidth, int fullHeight,
                                     float alpha) {
         if (texture == null && renderType == null) {
@@ -216,7 +215,7 @@ public final class EcaBossBarRenderer {
         }
     }
 
-    private static void drawTextureWithShaderMask(GuiGraphics graphics, Identifier texture, RenderType renderType,
+    private static void drawTextureWithShaderMask(GuiGraphicsExtractor graphics, Identifier texture, RenderType renderType,
                                                   int x, int y, int drawWidth, int drawHeight,
                                                   int fullWidth, int fullHeight) {
         flushBuffers();
@@ -278,7 +277,7 @@ public final class EcaBossBarRenderer {
                 com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE
         );
         float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
-        int light = LightTexture.FULL_BRIGHT;
+        int light = 0xF000F0; // LightTexture.FULL_BRIGHT
         BufferBuilder shaderBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
         shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
@@ -301,12 +300,12 @@ public final class EcaBossBarRenderer {
         Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
     }
 
-    private static void drawRenderType(GuiGraphics graphics, RenderType renderType,
+    private static void drawRenderType(GuiGraphicsExtractor graphics, RenderType renderType,
                                        int x, int y, int width, int height, int fullWidth) {
         float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
         Matrix4f matrix = toMatrix4f(graphics.pose());
         VertexConsumer consumer = Minecraft.getInstance().renderBuffers().bufferSource().getBuffer(renderType);
-        int light = LightTexture.FULL_BRIGHT;
+        int light = 0xF000F0; // LightTexture.FULL_BRIGHT
         consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);

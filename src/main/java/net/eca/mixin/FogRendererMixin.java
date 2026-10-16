@@ -1,4 +1,4 @@
-// Fork multi-version layer: 1.21.2 version of the authors' mixin.
+// Fork multi-version layer: 26.1.2 version (one edit of setupFog's FogData) of the 1.21.2 version of the authors' mixin.
 package net.eca.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -32,50 +32,30 @@ import org.joml.Vector4f;
 @Mixin(FogRenderer.class)
 public class FogRendererMixin {
 
-    // Fork multi-version layer, 1.21.11: setupFog no longer takes the thickFog flag, so the callback does not either.
-    // Fork multi-version layer, 1.21.8: setupFog returns the clear colour; the fog colour/distances that reach
-    // the shaders are the arguments of FogRenderer.updateBuffer (uniform buffer upload).
-    @Inject(method = "setupFog", at = @At("RETURN"), cancellable = true)
-    private void eca$applyGlobalFogColor(Camera camera, int renderDistanceChunks, DeltaTracker deltaTracker,
-                                         float darkenWorldAmount, ClientLevel level, CallbackInfoReturnable<Vector4f> cir) {
-        float[] strengthHolder = new float[]{0.0f};
-        GlobalFogExtension fog = eca$resolveFogContext(level, camera, strengthHolder);
-        if (fog == null) {
+    // Fork multi-version layer, 26.1.2: setupFog returns the frame's FogData (colour + distances), and that one object is
+    // both the clear colour (FogData.color is LevelRenderer.renderLevel's fogColor) and what updateBuffer(FogData) uploads to
+    // the fog uniform block. So the 1.21.8-1.21.11 pair -- the clear colour at setupFog's RETURN plus @ModifyVariable on
+    // the private updateBuffer's arguments (now an overload, so the name-only target matched nothing) -- becomes one edit
+    // of the returned FogData: the colour blended once (not twice) and the same five distances.
+    @Inject(method = "setupFog", at = @At("RETURN"))
+    private void eca$applyGlobalFog(Camera camera, int renderDistanceChunks, DeltaTracker deltaTracker,
+                                    float darkenWorldAmount, ClientLevel level,
+                                    CallbackInfoReturnable<net.minecraft.client.renderer.fog.FogData> cir) {
+        net.minecraft.client.renderer.fog.FogData data = cir.getReturnValue();
+        if (data == null) {
             return;
         }
-        cir.setReturnValue(eca$blendColor(cir.getReturnValue(), fog, strengthHolder[0]));
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private static Vector4f eca$modifyBufferColor(Vector4f color) {
         float[] strengthHolder = new float[]{0.0f};
-        GlobalFogExtension fog = eca$currentFog(strengthHolder);
-        return fog == null ? color : eca$blendColor(color, fog, strengthHolder[0]);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 0)
-    private static float eca$modifyEnvStart(float value) {
-        return eca$distance(value, 0);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 1)
-    private static float eca$modifyEnvEnd(float value) {
-        return eca$distance(value, 1);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 2)
-    private static float eca$modifyRenderStart(float value) {
-        return eca$distance(value, 0);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 3)
-    private static float eca$modifyRenderEnd(float value) {
-        return eca$distance(value, 1);
-    }
-
-    @ModifyVariable(method = "updateBuffer", at = @At("HEAD"), argsOnly = true, ordinal = 4)
-    private static float eca$modifySkyEnd(float value) {
-        return eca$distance(value, 2);
+        // the colour is blended in any medium, as 1.21.1's setupColor TAIL did; the distances only in air (eca$distance)
+        GlobalFogExtension fog = eca$resolveFogContext(level, camera, strengthHolder);
+        if (fog != null) {
+            data.color = eca$blendColor(data.color, fog, strengthHolder[0]);
+        }
+        data.environmentalStart = eca$distance(data.environmentalStart, 0);
+        data.environmentalEnd = eca$distance(data.environmentalEnd, 1);
+        data.renderDistanceStart = eca$distance(data.renderDistanceStart, 0);
+        data.renderDistanceEnd = eca$distance(data.renderDistanceEnd, 1);
+        data.skyEnd = eca$distance(data.skyEnd, 2);
     }
 
     @Unique

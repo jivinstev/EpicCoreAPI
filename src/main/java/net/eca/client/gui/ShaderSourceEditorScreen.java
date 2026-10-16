@@ -1,5 +1,3 @@
-// MV-STAND-IN: 1.21.11's prepared copy of the 1.21.10 ShaderSourceEditorScreen overlay as it was before 1.21.10's single renderBackground
-// MV-STAND-IN: (no second blur) and 1.21.1 cursor colour / editor background, unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
 package net.eca.client.gui;
 
 import net.eca.client.render.shader_generator.GeneratedShaderPreview;
@@ -15,7 +13,7 @@ import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
 import net.eca.util.shader_generator.ShaderSourceAssembler;
 import net.eca.util.shader_generator.ShaderSourceFile;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -625,8 +623,8 @@ public final class ShaderSourceEditorScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, CONTENT_TOP - 2, 0xFF202225);
         graphics.fill(6, CONTENT_TOP - 2, editorRight, height - 6, 0xFF08090B);
         graphics.fill(previewLeft, CONTENT_TOP, width - 8, previewBottom, 0xFF08090B);
@@ -636,7 +634,7 @@ public final class ShaderSourceEditorScreen extends Screen {
             mouseX, mouseY, partialTick
         );
         renderDiagnostics(graphics);
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.pose().pushMatrix();
         graphics.nextStratum();
         drawDropdownBackground(graphics);
@@ -644,7 +642,7 @@ public final class ShaderSourceEditorScreen extends Screen {
         graphics.pose().popMatrix();
     }
 
-    private void drawDropdownBackground(GuiGraphics graphics) {
+    private void drawDropdownBackground(GuiGraphicsExtractor graphics) {
         DropdownBounds bounds = dropdownBounds();
         if (bounds == null) return;
         graphics.fill(bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), DROPDOWN_BACKGROUND);
@@ -659,7 +657,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     }
 
     private void renderDropdownWidgets(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
@@ -670,7 +668,7 @@ public final class ShaderSourceEditorScreen extends Screen {
              index <= dropdownLastWidgetIndex && index < children.size();
              index++) {
             if (children.get(index) instanceof AbstractWidget widget) {
-                widget.render(graphics, mouseX, mouseY, partialTick);
+                widget.extractRenderState(graphics, mouseX, mouseY, partialTick);
             }
         }
     }
@@ -699,10 +697,10 @@ public final class ShaderSourceEditorScreen extends Screen {
         return new DropdownBounds(left, top, right, bottom);
     }
 
-    private void renderDiagnostics(GuiGraphics graphics) {
+    private void renderDiagnostics(GuiGraphicsExtractor graphics) {
         int textX = previewLeft + 6;
         int textWidth = Math.max(20, width - previewLeft - 22);
-        graphics.drawString(
+        graphics.text(
             font,
             Component.translatable("gui.eca.shader_generator.source_editor.diagnostics"),
             textX,
@@ -718,7 +716,7 @@ public final class ShaderSourceEditorScreen extends Screen {
         graphics.pose().translate((float) textX, (float) (diagnosticsTop + 20));
         graphics.pose().scale(DIAGNOSTIC_TEXT_SCALE, DIAGNOSTIC_TEXT_SCALE);
         for (int row = 0; row < visibleRows && start + row < lines.size(); row++) {
-            graphics.drawString(
+            graphics.text(
                 font,
                 lines.get(start + row),
                 0,

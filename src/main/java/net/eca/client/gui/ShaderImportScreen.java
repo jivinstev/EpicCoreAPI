@@ -2,7 +2,7 @@ package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderFolderImporter.Candidate;
 import net.eca.util.shader_generator.ShaderProjectCodec;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -76,13 +76,13 @@ public final class ShaderImportScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 180;
         int top = height / 2 - 82;
         graphics.fill(left - 12, top, left + 372, top + 164, 0xFF202225);
-        graphics.drawCenteredString(font, title, width / 2, top + 8, 0xFFFFFFFF);
-        graphics.drawCenteredString(
+        graphics.centeredText(font, title, width / 2, top + 8, 0xFFFFFFFF);
+        graphics.centeredText(
             font,
             Component.translatable(
                 "gui.eca.shader_generator.import.candidate",
@@ -93,16 +93,16 @@ public final class ShaderImportScreen extends Screen {
             top + 24,
             0xFFC7CBD1
         );
-        graphics.drawString(font,
+        graphics.text(font,
             Component.translatable("gui.eca.shader_generator.project.mod_id_prompt"),
             left, top + 44, 0xFFC7CBD1, false);
-        graphics.drawString(font,
+        graphics.text(font,
             Component.translatable("gui.eca.shader_generator.project.shader_name_prompt"),
             left, top + 88, 0xFFC7CBD1, false);
         if (error != null) {
-            graphics.drawCenteredString(font, error, width / 2, top + 120, 0xFFFF6B6B);
+            graphics.centeredText(font, error, width / 2, top + 120, 0xFFFF6B6B);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

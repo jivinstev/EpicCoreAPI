@@ -9,7 +9,7 @@ import net.eca.util.bossshow.BossShowDefinition.Keyframe;
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.BossShowEffectCue;
 import net.eca.util.bossshow.Curve;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -602,7 +602,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         int timelineY = timeline == null ? this.height - preferredTimelineHeight - 8 : timeline.getY();
         int previewBottom = Math.max(TOP_HEIGHT + 20, inspectorY - 4);
         g.fill(0, 0, this.width, TOP_HEIGHT, 0xEE171922);
@@ -611,12 +611,12 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         drawOutline(g, 6, TOP_HEIGHT + 2, this.width - 12, previewBottom - TOP_HEIGHT - 2, 0x553F4657);
         Component dirty = Component.translatable(BossShowEditorState.isDirty()
             ? "gui.eca.bossshow.editor.unsaved" : "gui.eca.bossshow.editor.clean");
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.tick",
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.tick",
             BossShowEditorState.getPlayhead(), BossShowEditorState.frameCount(), dirty), 8, TOP_HEIGHT + 4, 0xFFB8BFCE, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.track." + selectedTrack.name().toLowerCase(Locale.ROOT)),
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.track." + selectedTrack.name().toLowerCase(Locale.ROOT)),
             this.width / 2 - 45, TOP_HEIGHT + 4, 0xFFB8BFCE, false);
         drawInspectorLabels(g);
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         drawTimelineHandle(g, timelineY, mouseX, mouseY);
         if (openDropdown >= 0) {
             g.pose().pushMatrix();
@@ -630,7 +630,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         }
     }
 
-    private void drawDropdown(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    private void drawDropdown(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         if (dropdownFirstWidgetIndex < 0 || dropdownLastWidgetIndex < dropdownFirstWidgetIndex) return;
         List<? extends GuiEventListener> kids = this.children();
         if (dropdownFirstWidgetIndex >= kids.size()) return;
@@ -647,27 +647,27 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         g.fill(left, top, right, bottom, 0xFF2C2F39);
         drawOutline(g, left, top, right - left, bottom - top, 0xFF555B6A);
         for (int i = dropdownFirstWidgetIndex; i <= dropdownLastWidgetIndex && i < kids.size(); i++) {
-            if (kids.get(i) instanceof AbstractWidget w) w.render(g, mouseX, mouseY, partialTick);
+            if (kids.get(i) instanceof AbstractWidget w) w.extractRenderState(g, mouseX, mouseY, partialTick);
         }
     }
 
-    private void drawInspectorLabels(GuiGraphics g) {
+    private void drawInspectorLabels(GuiGraphicsExtractor g) {
         if (selectedTrack == SelectedTrack.CAMERA) {
             int fieldGap = 6;
             int fieldWidth = Math.max(36, (this.width - 16 - fieldGap * 4) / 5);
             int x = 8;
             for (String label : new String[]{"dx", "dy", "dz", "yaw", "pitch"}) {
-                g.drawString(this.font, Component.literal(label), x, inspectorY + 4, 0xFF858C9B, false);
+                g.text(this.font, Component.literal(label), x, inspectorY + 4, 0xFF858C9B, false);
                 x += fieldWidth + fieldGap;
             }
         } else if (selectedTrack == SelectedTrack.EVENT) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.label.event"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.label.event"),
                 8, inspectorY + 4, 0xFF858C9B, false);
         } else if (selectedTrack == SelectedTrack.SUBTITLE) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.label.subtitle"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.label.subtitle"),
                 8, inspectorY + 4, 0xFF858C9B, false);
         } else if (selectedTrack == SelectedTrack.EFFECT) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.track.effect"),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.track.effect"),
                 8, inspectorY + 4, 0xFF858C9B, false);
         }
     }
@@ -821,7 +821,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         return true;
     }
 
-    private void renderContextMenu(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderContextMenu(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         int rootHover = menuIndexAt(mouseX, mouseY, contextMenuX, contextMenuY, contextEntries.size());
         if (rootHover >= 0) {
             contextSubmenuIndex = contextEntries.get(rootHover).children().isEmpty() ? -1 : rootHover;
@@ -836,7 +836,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
         }
     }
 
-    private void drawContextEntries(GuiGraphics g, int x, int y, List<ContextEntry> entries, int hoveredIndex) {
+    private void drawContextEntries(GuiGraphicsExtractor g, int x, int y, List<ContextEntry> entries, int hoveredIndex) {
         int height = entries.size() * CONTEXT_ROW_HEIGHT + 4;
         g.fill(x, y, x + CONTEXT_WIDTH, y + height, 0xFF2C2F39);
         drawOutline(g, x, y, CONTEXT_WIDTH, height, 0xFF555B6A);
@@ -845,7 +845,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             int rowY = y + 2 + i * CONTEXT_ROW_HEIGHT;
             if (i == hoveredIndex && entry.enabled()) g.fill(x + 2, rowY, x + CONTEXT_WIDTH - 2, rowY + CONTEXT_ROW_HEIGHT, 0xFF5A6070);
             Component label = entry.children().isEmpty() ? entry.label() : entry.label().copy().append("  ▶");
-            g.drawString(this.font, label, x + 6, rowY + 5, entry.enabled() ? 0xFFF1F3F7 : 0xFF777C87, false);
+            g.text(this.font, label, x + 6, rowY + 5, entry.enabled() ? 0xFFF1F3F7 : 0xFF777C87, false);
         }
     }
 
@@ -901,17 +901,17 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             && mouseY >= timelineY - 8 && mouseY <= timelineY + 5;
     }
 
-    private void drawTimelineHandle(GuiGraphics g, int timelineY, int mouseX, int mouseY) {
+    private void drawTimelineHandle(GuiGraphicsExtractor g, int timelineY, int mouseX, int mouseY) {
         int left = this.width / 2 - 24;
         int top = timelineY - 8;
         boolean hovered = isOverTimelineHandle(mouseX, mouseY);
         g.fill(8, timelineY - 2, this.width - 8, timelineY, 0xFF454A58);
         g.fill(left, top, left + 48, top + 12, hovered || resizingTimeline ? 0xFF555B6A : 0xFF303541);
         drawOutline(g, left, top, 48, 12, 0xFF747B8D);
-        g.drawCenteredString(this.font, timelineCollapsed ? "▲" : "▼", this.width / 2, top + 2, 0xFFE1E5EE);
+        g.centeredText(this.font, timelineCollapsed ? "▲" : "▼", this.width / 2, top + 2, 0xFFE1E5EE);
     }
 
-    private static void drawOutline(GuiGraphics g, int x, int y, int w, int h, int color) {
+    private static void drawOutline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         g.fill(x, y, x + w, y + 1, color);
         g.fill(x, y + h - 1, x + w, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);

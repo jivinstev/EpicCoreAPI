@@ -1,4 +1,4 @@
-// Fork multi-version layer: 1.21.11 version of the authors' file (GeckoLib 5.4: a bone no longer carries hidden state of its
+// Fork multi-version layer: 26.1.2 (GeckoLib 5.5, com.geckolib) copy of the 1.21.11 version of the authors' file (GeckoLib 5.4: a bone no longer carries hidden state of its
 // own. setHidden / isHidden / isHidingChildren / getChildBones / getName are gone from GeoBone; "skip this bone" is a flag on the
 // BoneSnapshot of the CURRENT render pass, GeoBone.frameSnapshot, which exists only while RenderPassInfo.renderPosed runs).
 //
@@ -11,10 +11,10 @@
 package net.eca.client.render;
 
 import net.eca.util.entity_extension.EntityLayerExtension;
-import software.bernie.geckolib.animation.state.BoneSnapshot;
-import software.bernie.geckolib.cache.model.BakedGeoModel;
-import software.bernie.geckolib.cache.model.GeoBone;
-import software.bernie.geckolib.renderer.base.BoneSnapshots;
+import com.geckolib.animation.state.BoneSnapshot;
+import com.geckolib.cache.model.BakedGeoModel;
+import com.geckolib.cache.model.GeoBone;
+import com.geckolib.renderer.base.BoneSnapshots;
 
 import java.util.IdentityHashMap;
 import java.util.Map;

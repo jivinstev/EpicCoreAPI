@@ -1,5 +1,5 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-STAND-IN: shared/1.21.11's LegacyGl, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyGl.java (the F1/F2 fix ahead of the
+// MV-STAND-IN: shared/26.1.2's LegacyGl, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyGl.java (the F1/F2 fix ahead of the
 // MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
 package net.eca.mv;
 
@@ -7,10 +7,12 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.opengl.GlRenderPipeline;
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.CompiledRenderPipeline;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.shaders.UniformType;
@@ -34,6 +36,7 @@ import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
@@ -53,6 +56,13 @@ import java.util.OptionalInt;
  * <p>1.21.10 copy of the 1.21.8 file: the only change is the model offset in the DynamicTransforms block (RenderSystem no
  * longer holds one; vanilla's CompositeRenderType.draw writes a zero vector).
  *
+ * <p>26.1.2 copy of the 1.21.11 file: 26.1 replaced the pipeline's DepthTestFunction / depth write / depth bias with one
+ * {@code DepthStencilState(CompareOp, writeDepth, biasScale, biasConstant)} (absent = depth test off, which also stops
+ * depth writes, as GL did with the test disabled) and its blend / colour / alpha write with one
+ * {@code ColorTargetState(Optional<BlendFunction>, writeMask)}. A pipeline built without a depth state now has NO depth
+ * test (1.21.11's default was LEQUAL), so {@link Key#apply} always sets one. 26.1.2 is not reverse-Z: LEQUAL is
+ * {@code LESS_THAN_OR_EQUAL}, as vanilla's {@code DepthStencilState.DEFAULT}.
+ *
  * <p>Not expressible on 1.21.8 and logged once: a blend equation other than ADD.
  */
 // MV-REQUIRES: RawGlTexture
@@ -66,7 +76,7 @@ public final class LegacyGl {
     private static boolean blend;
     private static BlendFunction blendFunction = BlendFunction.TRANSLUCENT;
     private static boolean depthTest = true;
-    private static DepthTestFunction depthFunction = DepthTestFunction.LEQUAL_DEPTH_TEST;
+    private static CompareOp depthFunction = CompareOp.LESS_THAN_OR_EQUAL;
     private static boolean depthWrite = true;
     private static boolean writeColor = true;
     private static boolean writeAlpha = true;
@@ -97,11 +107,14 @@ public final class LegacyGl {
     public static void disableDepthTest() { depthTest = false; }
     public static void depthFunc(int glFunc) {
         depthFunction = switch (glFunc) {
-            case 514 -> DepthTestFunction.EQUAL_DEPTH_TEST;
-            case 513 -> DepthTestFunction.LESS_DEPTH_TEST;
-            case 516 -> DepthTestFunction.GREATER_DEPTH_TEST;
-            case 519 -> DepthTestFunction.NO_DEPTH_TEST;   // GL_ALWAYS
-            default -> DepthTestFunction.LEQUAL_DEPTH_TEST;
+            case 512 -> CompareOp.NEVER_PASS;              // GL_NEVER
+            case 513 -> CompareOp.LESS_THAN;               // GL_LESS
+            case 514 -> CompareOp.EQUAL;                   // GL_EQUAL
+            case 516 -> CompareOp.GREATER_THAN;            // GL_GREATER
+            case 517 -> CompareOp.NOT_EQUAL;               // GL_NOTEQUAL
+            case 518 -> CompareOp.GREATER_THAN_OR_EQUAL;   // GL_GEQUAL
+            case 519 -> CompareOp.ALWAYS_PASS;             // GL_ALWAYS: tested (and written) but always passes
+            default -> CompareOp.LESS_THAN_OR_EQUAL;       // GL_LEQUAL
         };
     }
     public static void depthMask(boolean write) { depthWrite = write; }
@@ -166,13 +179,16 @@ public final class LegacyGl {
     }
 
     // ---- state as a value -------------------------------------------------------------------------------------
-    /** One draw's fixed-function state: what a 1.21.8 pipeline bakes in. Part of the pipeline cache key. */
-    public record Key(BlendFunction blend, DepthTestFunction depth, boolean depthWrite, boolean writeColor,
+    /** One draw's fixed-function state: what a pipeline bakes in. Part of the pipeline cache key. {@code depth} null is
+     *  1.21.11's NO_DEPTH_TEST (the depth test disabled). */
+    public record Key(BlendFunction blend, CompareOp depth, boolean depthWrite, boolean writeColor,
                       boolean writeAlpha, boolean cull, float biasScale, float biasConstant) {
         RenderPipeline.Builder apply(RenderPipeline.Builder b) {
-            if (blend != null) b.withBlend(blend); else b.withoutBlend();
-            b.withDepthTestFunction(depth).withDepthWrite(depthWrite).withColorWrite(writeColor, writeAlpha).withCull(cull);
-            if (biasScale != 0 || biasConstant != 0) b.withDepthBias(biasScale, biasConstant);
+            int mask = (writeColor ? ColorTargetState.WRITE_COLOR : 0) | (writeAlpha ? ColorTargetState.WRITE_ALPHA : 0);
+            b.withColorTargetState(new ColorTargetState(Optional.ofNullable(blend), mask));
+            b.withDepthStencilState(depth == null ? Optional.empty()
+                    : Optional.of(new DepthStencilState(depth, depthWrite, biasScale, biasConstant)));
+            b.withCull(cull);
             return b;
         }
 
@@ -182,7 +198,7 @@ public final class LegacyGl {
     }
 
     static Key current() {
-        return new Key(blend ? blendFunction : null, depthTest ? depthFunction : DepthTestFunction.NO_DEPTH_TEST,
+        return new Key(blend ? blendFunction : null, depthTest ? depthFunction : null,
                 depthWrite, writeColor, writeAlpha, cull, 0, 0);
     }
 
@@ -275,7 +291,8 @@ public final class LegacyGl {
         }
     }
 
-    /** The missing-texture sprite as a sampler slot: what a declared but never-bound sampler reads (see ShaderInstance.bind). */
+    /** The missing-texture sprite's view and sampler: what a declared sampler nothing bound falls back to (1.21.11's
+     *  ShaderInstance calls it; 26.1.2 inherits that helper, so this copy must have it too). */
     static Slot missingTextureSlot() {
         net.minecraft.client.renderer.texture.AbstractTexture t = net.minecraft.client.Minecraft.getInstance().getTextureManager()
                 .getTexture(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());

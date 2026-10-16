@@ -3,10 +3,10 @@ package net.eca.client.render;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -19,9 +19,11 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
 
     // 烘焙方块的光照只经 putBulkData 的 lightmap 数组进入缓冲，没有独立的 packedLight 形参，
     // 所以发光只能在这里替换该数组。VertexConsumer 的默认实现只读不写，共享常量数组安全。
+    // LightTexture.FULL_BRIGHT (sky 15, block 15 packed lightmap coords), inlined because LightTexture is absent in 26.1.2.
+    private static final int FULL_BRIGHT = 0xF000F0;
     private static final int[] FULL_BRIGHT_LIGHTMAP = {
-        LightTexture.FULL_BRIGHT, LightTexture.FULL_BRIGHT,
-        LightTexture.FULL_BRIGHT, LightTexture.FULL_BRIGHT
+        FULL_BRIGHT, FULL_BRIGHT,
+        FULL_BRIGHT, FULL_BRIGHT
     };
 
     private final VertexFormat format;
@@ -49,11 +51,11 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     }
 
     @Override
-    public void putBulkData(PoseStack.Pose pose, BakedQuad quad, float[] brightness,
-                            float red, float green, float blue, float alpha,
-                            int[] lights, int overlay) {
-        builder(quad.sprite()).putBulkData(pose, quad, brightness, red, green, blue,
-            alpha, fullBright ? FULL_BRIGHT_LIGHTMAP : lights, overlay);
+    public void putBakedQuad(PoseStack.Pose pose, BakedQuad quad, QuadInstance instance) {
+        if (fullBright) {
+            instance.setLightCoords(FULL_BRIGHT);
+        }
+        builder(quad.materialInfo().sprite()).putBakedQuad(pose, quad, instance);
     }
 
     private BufferBuilder builder(TextureAtlasSprite sprite) {

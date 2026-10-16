@@ -31,7 +31,7 @@ public final class PresetRenderTypes {
 
     public static RenderType bossLayer(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_boss_layer",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             false,
@@ -63,7 +63,7 @@ public final class PresetRenderTypes {
 
     public static RenderType item(String name, net.eca.mv.ShaderShard shaderState) {
         return net.eca.mv.LegacyRenderType.create(name + "_item",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,
@@ -115,7 +115,7 @@ public final class PresetRenderTypes {
 
     static RenderType entityEffect(String name, net.eca.mv.ShaderShard shaderState, Identifier texture) {
         return net.eca.mv.LegacyRenderType.create(name + "_entity_effect",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,

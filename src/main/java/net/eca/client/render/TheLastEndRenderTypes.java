@@ -34,7 +34,7 @@ public class TheLastEndRenderTypes {
     );
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("the_last_end_boss_layer",
-        DefaultVertexFormat.NEW_ENTITY,
+        DefaultVertexFormat.ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         false,
@@ -62,7 +62,7 @@ public class TheLastEndRenderTypes {
     );
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("the_last_end_item",
-        DefaultVertexFormat.NEW_ENTITY,
+        DefaultVertexFormat.ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         true,
@@ -80,7 +80,7 @@ public class TheLastEndRenderTypes {
 
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("the_last_end_entity_effect",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,

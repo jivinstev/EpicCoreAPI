@@ -1,6 +1,6 @@
 package net.eca.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -46,7 +46,7 @@ final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorS
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         int panelWidth = Math.min(440, this.width - 24);
         int left = this.width / 2 - panelWidth / 2;
         int top = 18;
@@ -57,13 +57,13 @@ final class BossShowShortcutHelpScreen extends Screen implements BossShowEditorS
         g.fill(left, bottom - 1, left + panelWidth, bottom, 0xFF555B6A);
         g.fill(left, top + 1, left + 1, bottom - 1, 0xFF555B6A);
         g.fill(left + panelWidth - 1, top + 1, left + panelWidth, bottom - 1, 0xFF555B6A);
-        g.drawCenteredString(this.font, this.title, this.width / 2, top + 8, 0xFFFFFFFF);
+        g.centeredText(this.font, this.title, this.width / 2, top + 8, 0xFFFFFFFF);
         int y = top + 26;
         for (String key : SHORTCUT_KEYS) {
-            g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.shortcuts." + key),
+            g.text(this.font, Component.translatable("gui.eca.bossshow.editor.shortcuts." + key),
                 left + 12, y, 0xFFD5D9E2, false);
             y += 17;
         }
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 }

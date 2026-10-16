@@ -1,7 +1,7 @@
 package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -70,10 +70,11 @@ public final class ShaderProjectSelectionScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.centeredText(font, title, width / 2, 18, 0xFFFFFFFF);
         if (projects.isEmpty()) {
-            graphics.drawCenteredString(
+            graphics.centeredText(
                 font,
                 Component.translatable("gui.eca.shader_generator.project.none"),
                 width / 2,
@@ -81,7 +82,7 @@ public final class ShaderProjectSelectionScreen extends Screen {
                 0xFF9DA3AC
             );
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

@@ -17,12 +17,13 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import software.bernie.geckolib.animatable.GeoAnimatable;
-import software.bernie.geckolib.constant.dataticket.DataTicket;
-import software.bernie.geckolib.renderer.GeoBlockRenderer;
-import software.bernie.geckolib.renderer.base.GeoRenderState;
-import software.bernie.geckolib.renderer.base.RenderPassInfo;
-import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
+import com.geckolib.animatable.GeoAnimatable;
+import com.geckolib.constant.dataticket.DataTicket;
+import com.geckolib.renderer.GeoBlockRenderer;
+import com.geckolib.renderer.base.GeoRenderState;
+import com.geckolib.renderer.base.RenderPassInfo;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import com.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
 
@@ -42,9 +43,9 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable, R ext
     @Override
     public void addRenderData(T animatable, Void relatedObject, R renderState, float partialTick) {
         BlockExtension extension = BlockExtensionManager.getExtension(animatable.getBlockState().getBlock());
-        renderState.addGeckolibData(EXTENSION, extension != null && animatable.getLevel() != null
+        renderState.addGeckolibData(EXTENSION, extension != null && animatable.getLevel() instanceof BlockAndTintGetter level
             && BlockExtensionSafeAccess.shouldRender(extension, animatable.getBlockState(),
-                animatable.getLevel(), animatable.getBlockPos()) ? extension : null);
+                level, animatable.getBlockPos()) ? extension : null);
     }
 
     /** Before GeckoLib submits the model: hide the configured bones in the pass's snapshots, for every task of the pass. */
@@ -81,7 +82,7 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable, R ext
 
     /** What GeckoLib's own model task draws with: the render type its renderer picks for this state. */
     private RenderType modelRenderType(R renderState) {
-        return this.renderer.getRenderType(renderState, this.renderer.getTextureLocation(renderState));
+        return getRenderer().getRenderType(renderState, getRenderer().getTextureLocation(renderState));
     }
 
     private void renderPass(RenderPassInfo<R> renderPassInfo, BlockExtension extension, PoseStack.Pose pose, int light,

@@ -6,7 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractTextAreaWidget;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -38,7 +38,8 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
     ShaderAiTranscriptWidget(Font font, int x, int y, int width, int height) {
         super(
             x, y, width, height,
-            Component.translatable("gui.eca.shader_generator.ai.transcript")
+            Component.translatable("gui.eca.shader_generator.ai.transcript"),
+            net.minecraft.client.gui.components.AbstractScrollArea.defaultSettings(9)
         );
         this.font = font;
     }
@@ -297,7 +298,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         return output;
     }
 
-    private static void drawOutline(GuiGraphics graphics, int x, int y, int width, int height, int color) {
+    private static void drawOutline(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
         graphics.fill(x, y, x + width, y + 1, color);
         graphics.fill(x, y + height - 1, x + width, y + height, color);
         graphics.fill(x, y + 1, x + 1, y + height - 1, color);
@@ -439,8 +440,8 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
     }
 
     @Override
-    protected void renderContents(
-        GuiGraphics graphics,
+    protected void extractContents(
+        GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
@@ -461,7 +462,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
             };
             graphics.fill(cardX, top, cardX + cardWidth, top + layout.height, background);
             drawOutline(graphics, cardX, top, cardWidth, layout.height, border);
-            graphics.drawString(
+            graphics.text(
                 font,
                 roleLabel(layout.role),
                 cardX + CARD_PADDING,
@@ -502,7 +503,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
 
     private interface RenderCommand {
 
-        void render(GuiGraphics graphics, Font font, int baseX, int baseY);
+        void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY);
     }
 
     private static final class TextCommand implements RenderCommand {
@@ -533,7 +534,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         }
 
         private void renderSelection(
-            GuiGraphics graphics,
+            GuiGraphicsExtractor graphics,
             Font font,
             int baseX,
             int baseY,
@@ -560,8 +561,8 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         }
 
         @Override
-        public void render(GuiGraphics graphics, Font font, int baseX, int baseY) {
-            graphics.drawString(font, text, baseX + x, baseY + y, color, false);
+        public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
+            graphics.text(font, text, baseX + x, baseY + y, color, false);
         }
     }
 
@@ -569,7 +570,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         implements RenderCommand {
 
         @Override
-        public void render(GuiGraphics graphics, Font font, int baseX, int baseY) {
+        public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
             graphics.fill(baseX + x, baseY + y, baseX + x + width, baseY + y + height, color);
         }
     }
@@ -578,7 +579,7 @@ final class ShaderAiTranscriptWidget extends AbstractTextAreaWidget {
         implements RenderCommand {
 
         @Override
-        public void render(GuiGraphics graphics, Font font, int baseX, int baseY) {
+        public void render(GuiGraphicsExtractor graphics, Font font, int baseX, int baseY) {
             drawOutline(graphics, baseX + x, baseY + y, width, height, color);
         }
     }

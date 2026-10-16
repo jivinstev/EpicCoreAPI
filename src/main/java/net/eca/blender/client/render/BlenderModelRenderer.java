@@ -281,7 +281,7 @@ public final class BlenderModelRenderer {
                 ? asset.materials.get(primitive.material()) : DEFAULT_MATERIAL;
             Identifier texture = material.texture() == null ? WHITE_TEXTURE : material.texture();
             RenderType type = material.translucent()
-                ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(texture) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutoutNoCull(texture);
+                ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(texture) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(texture);
             DeformedVertices deformed = deformVertices(primitive, skinPose);
             BlendMaterialProgram program = material.program();
             VertexConsumer consumer = program == null ? buffers.getBuffer(type)

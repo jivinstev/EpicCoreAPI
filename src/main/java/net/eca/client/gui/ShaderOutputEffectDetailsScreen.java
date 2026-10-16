@@ -2,7 +2,7 @@ package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderModuleDefinition;
 import net.eca.util.shader_generator.ShaderOutputEffectInstance;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -119,17 +119,18 @@ public final class ShaderOutputEffectDetailsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - PANEL_WIDTH) / 2;
-        graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, 18, 0xFFFFFFFF);
         int baseY = 70;
         int end = Math.min(parameters.size(), scroll + visibleRows);
         for (int index = scroll; index < end; index++) {
             ShaderModuleDefinition.Parameter parameter = parameters.get(index);
-            graphics.drawString(font, Component.translatable(parameter.displayName()), left,
+            graphics.text(font, Component.translatable(parameter.displayName()), left,
                 baseY + (index - scroll) * 22, 0xFFC7CBD1, false);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

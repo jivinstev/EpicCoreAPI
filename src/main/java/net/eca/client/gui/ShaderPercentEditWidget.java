@@ -2,7 +2,7 @@
 package net.eca.client.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -135,20 +135,20 @@ public final class ShaderPercentEditWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(
-        GuiGraphics graphics,
+    protected void extractWidgetRenderState(
+        GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
     ) {
         if (editing) {
-            field.render(graphics, mouseX, mouseY, partialTick);
+            field.extractRenderState(graphics, mouseX, mouseY, partialTick);
             return;
         }
         if (isHoveredOrFocused()) {
             graphics.fill(getX(), getY(), getX() + width, getY() + height, 0x33FFFFFF);
         }
-        graphics.drawCenteredString(
+        graphics.centeredText(
             Minecraft.getInstance().font,
             labelFormatter.format(value()),
             getX() + width / 2,

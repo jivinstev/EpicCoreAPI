@@ -38,7 +38,7 @@ public class DreamSakuraRenderTypes {
     );
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("dream_sakura_boss_layer",
-        DefaultVertexFormat.NEW_ENTITY,
+        DefaultVertexFormat.ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         false,
@@ -68,7 +68,7 @@ public class DreamSakuraRenderTypes {
     );
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("dream_sakura_item",
-        DefaultVertexFormat.NEW_ENTITY,
+        DefaultVertexFormat.ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         true,
@@ -86,7 +86,7 @@ public class DreamSakuraRenderTypes {
 
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("dream_sakura_entity_effect",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,

@@ -377,8 +377,8 @@ LivingEntityMixin {
         if (!target.level().isClientSide()
                 && attacker instanceof Player player
                 && EcaConfiguration.getFactionActionBarMessagesSafely()) {
-            player.displayClientMessage(
-                    Component.translatable("message.eca.faction.cannot_attack_friendly"), true);
+            player.sendOverlayMessage(
+                    Component.translatable("message.eca.faction.cannot_attack_friendly"));
         }
     }
 

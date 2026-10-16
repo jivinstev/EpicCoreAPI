@@ -8,7 +8,7 @@ import net.eca.util.bossshow.BossShowDefinition.Frame;
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.BossShowInterpolator;
 import net.eca.util.bossshow.Curve;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -505,22 +505,22 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         if (!preview.isEmpty()) {
             double cursor = Math.min(preview.size() - 1, (System.nanoTime() - previewStarted) / 50000000.0);
             BossShowEditorState.setGeneratedPreview(preview, cursor);
         }
-        graphics.drawCenteredString(this.font, this.title, this.width / 2, 7, 0xFFFFFF);
+        graphics.centeredText(this.font, this.title, this.width / 2, 7, 0xFFFFFF);
         for (Label label : labels) {
             if (label.y >= 48 && label.y + 10 <= this.height - 48) {
-                graphics.drawString(this.font, label.text, label.x, label.y, 0xCCCCCC, false);
+                graphics.text(this.font, label.text, label.x, label.y, 0xCCCCCC, false);
             }
         }
         Component status = error.getString().isEmpty() ? text("scroll_hint") : error;
         List<FormattedCharSequence> lines = this.font.split(status, panelWidth());
         for (int i = 0; i < Math.min(2, lines.size()); i++) {
-            graphics.drawCenteredString(this.font, lines.get(i), this.width / 2, this.height - 46 + i * 10, 0xFFCC88);
+            graphics.centeredText(this.font, lines.get(i), this.width / 2, this.height - 46 + i * 10, 0xFFCC88);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 }

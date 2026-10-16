@@ -2,7 +2,7 @@
 package net.eca.client.gui;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -169,14 +169,14 @@ public final class ShaderSliderWidget extends AbstractWidget {
     }
 
     @Override
-    protected void renderWidget(
-        GuiGraphics graphics,
+    protected void extractWidgetRenderState(
+        GuiGraphicsExtractor graphics,
         int mouseX,
         int mouseY,
         float partialTick
     ) {
         if (editing) {
-            field.render(graphics, mouseX, mouseY, partialTick);
+            field.extractRenderState(graphics, mouseX, mouseY, partialTick);
             return;
         }
         graphics.fill(getX(), getY(), getX() + width, getY() + height, TRACK_BG);
@@ -190,7 +190,7 @@ public final class ShaderSliderWidget extends AbstractWidget {
         graphics.fill(getX(), getY() + height - 1, getX() + width, getY() + height, border);
         graphics.fill(getX(), getY() + 1, getX() + 1, getY() + height - 1, border);
         graphics.fill(getX() + width - 1, getY() + 1, getX() + width, getY() + height - 1, border);
-        graphics.drawString(
+        graphics.text(
             Minecraft.getInstance().font,
             formatter.format(value()),
             getX() + 4,

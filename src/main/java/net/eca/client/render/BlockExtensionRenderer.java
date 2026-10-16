@@ -8,8 +8,8 @@ import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.RandomSource;
@@ -76,7 +76,7 @@ public final class BlockExtensionRenderer {
             return;
         }
         ChunkPos chunkPos = chunk.getPos();
-        SECTION_BLOCKS.keySet().removeIf(key -> SectionPos.x(key) == chunkPos.x && SectionPos.z(key) == chunkPos.z);
+        SECTION_BLOCKS.keySet().removeIf(key -> SectionPos.x(key) == chunkPos.x() && SectionPos.z(key) == chunkPos.z());
     }
 
     private static void scanChunk(LevelChunk chunk) {
@@ -84,7 +84,7 @@ public final class BlockExtensionRenderer {
         for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
             LevelChunkSection section = sections[sectionIndex];
             int sectionY = chunk.getSectionYFromSectionIndex(sectionIndex);
-            long sectionKey = SectionPos.asLong(chunk.getPos().x, sectionY, chunk.getPos().z);
+            long sectionKey = SectionPos.asLong(chunk.getPos().x(), sectionY, chunk.getPos().z());
             SECTION_BLOCKS.remove(sectionKey);
             if (!section.maybeHas(state -> BlockExtensionManager.getExtension(state.getBlock()) != null)) {
                 continue;
@@ -160,13 +160,17 @@ public final class BlockExtensionRenderer {
         Minecraft minecraft = Minecraft.getInstance();
         // 1.21.5: a block model is a BlockStateModel that yields BlockModelParts; the level/pos/state overload is the one that
         // gives a model its ModelData (the 1.21.4 getModelData + tesselateBlock(..., modelData, renderType) pair)
-        BlockStateModel model = minecraft.getBlockRenderer().getBlockModel(state);
-        java.util.List<BlockModelPart> parts = model.collectParts(level, pos, state, RandomSource.create(state.getSeed(pos)));
+        BlockStateModel model = minecraft.getModelManager().getBlockStateModelSet().get(state);
         poseStack.pushPose();
         // RenderLevelStageEvent 的 PoseStack 只含摄像机旋转，世界坐标须自行减去摄像机位置
         poseStack.translate(pos.getX() - camPos.x, pos.getY() - camPos.y, pos.getZ() - camPos.z);
-        minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(level, parts, state, pos, poseStack,
-            consumer, true, 0);
+        new net.minecraft.client.renderer.block.ModelBlockRenderer(true, false, minecraft.getBlockColors())
+            .tesselateBlock((x, y, z, quad, instance) -> {
+                poseStack.pushPose();
+                poseStack.translate(x, y, z);
+                consumer.putBakedQuad(poseStack.last(), quad, instance);
+                poseStack.popPose();
+            }, 0.0f, 0.0f, 0.0f, level, pos, state, model, state.getSeed(pos));
         poseStack.popPose();
     }
 

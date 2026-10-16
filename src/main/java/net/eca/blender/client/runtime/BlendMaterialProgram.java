@@ -152,7 +152,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
     }
 
     public void load() throws IOException {
-        shader = new EcaShaderInstance(provider, id, DefaultVertexFormat.NEW_ENTITY);
+        shader = new EcaShaderInstance(provider, id, DefaultVertexFormat.ENTITY);
         int activeImages = 0;
         for (int i = 0; i < textures.size(); i++) {
             if (GL20.glGetUniformLocation(shader.getId(), "Image" + i) >= 0) activeImages++;
@@ -167,7 +167,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
             shader = null;
             throw new IOException("Material requires more texture units than the renderer or GPU supports");
         }
-        type = net.eca.mv.LegacyRenderType.create("eca_blend_" + id, DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, true, true,
+        type = net.eca.mv.LegacyRenderType.create("eca_blend_" + id, DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS, 256, true, true,
             net.eca.mv.LegacyRenderType.state().setShaderState(new net.eca.mv.ShaderShard(() -> shader))
                 .setTransparencyState(net.eca.mv.LegacyRenderType.TRANSLUCENT_TRANSPARENCY).setCullState(net.eca.mv.LegacyRenderType.NO_CULL)
                 .setLightmapState(net.eca.mv.LegacyRenderType.LIGHTMAP).setOverlayState(net.eca.mv.LegacyRenderType.OVERLAY)

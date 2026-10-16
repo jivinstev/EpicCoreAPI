@@ -25,7 +25,7 @@ final class GenericPresetShader {
 
     GenericPresetShader(Identifier id) {
         this.block = new Profile(suffixed(id, "block"), DefaultVertexFormat.BLOCK);
-        this.entity = new Profile(suffixed(id, "entity"), DefaultVertexFormat.NEW_ENTITY);
+        this.entity = new Profile(suffixed(id, "entity"), DefaultVertexFormat.ENTITY);
     }
 
     Profile block() {

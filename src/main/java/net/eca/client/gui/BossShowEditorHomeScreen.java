@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
@@ -144,30 +144,30 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         //完全透明，世界透出来
 
-        g.drawCenteredString(this.font, this.title, this.width / 2, 14, 0xFFFFFF);
-        g.drawCenteredString(this.font,
+        g.centeredText(this.font, this.title, this.width / 2, 14, 0xFFFFFF);
+        g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.home.subtitle"),
             this.width / 2, 30, 0xAAAAAA);
 
         //创建按钮下方说明
-        g.drawCenteredString(this.font,
+        g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.home.new_hint"),
             this.width / 2, 80, 0xFF888888);
 
         //列表标题
         int listHeaderY = 96;
-        g.drawCenteredString(this.font,
+        g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.home.existing",
                 BossShowEditorState.getAvailableDefs().size()),
             this.width / 2, listHeaderY, 0xFFAAAAAA);
 
         //列表
-        if (defList != null) defList.render(g, mouseX, mouseY, partialTick);
+        if (defList != null) defList.extractRenderState(g, mouseX, mouseY, partialTick);
 
-        super.render(g, mouseX, mouseY, partialTick);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 
     //=== 内嵌 def 列表 widget ===
@@ -215,7 +215,7 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
             }
 
             @Override
-            public void renderContent(GuiGraphics g, int mouseX, int mouseY, boolean isHovering, float partialTick) {
+            public void extractContent(GuiGraphicsExtractor g, int mouseX, int mouseY, boolean isHovering, float partialTick) {
                 int left = getContentX();
                 int top = getContentY();
                 int width = getContentWidth();
@@ -226,8 +226,8 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                 String meta = (typeId != null ? typeId.toString() : "?")
                     + "    " + def.frames().size() + " frames    "
                     + contentCount + " content ticks    " + def.trigger().type();
-                g.drawString(Minecraft.getInstance().font, idLine, left + 4, top + 2, 0xFFFFFF, false);
-                g.drawString(Minecraft.getInstance().font, meta, left + 4, top + 12, 0xAAAAAA, false);
+                g.text(Minecraft.getInstance().font, idLine, left + 4, top + 2, 0xFFFFFF, false);
+                g.text(Minecraft.getInstance().font, meta, left + 4, top + 12, 0xAAAAAA, false);
 
                 //右侧按钮（从右到左）：删除 | 编辑 | 播放
                 deleteBtn.setX(left + width - 44);
@@ -236,9 +236,9 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                 editBtn.setY(top + 2);
                 playBtn.setX(left + width - 132);
                 playBtn.setY(top + 2);
-                deleteBtn.render(g, mouseX, mouseY, partialTick);
-                editBtn.render(g, mouseX, mouseY, partialTick);
-                playBtn.render(g, mouseX, mouseY, partialTick);
+                deleteBtn.extractRenderState(g, mouseX, mouseY, partialTick);
+                editBtn.extractRenderState(g, mouseX, mouseY, partialTick);
+                playBtn.extractRenderState(g, mouseX, mouseY, partialTick);
             }
 
             @Override

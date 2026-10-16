@@ -35,7 +35,7 @@ public class CosmosRenderTypes {
     );
 
     public static final RenderType BOSS_LAYER = net.eca.mv.LegacyRenderType.create("cosmos_boss_layer",
-        DefaultVertexFormat.NEW_ENTITY,
+        DefaultVertexFormat.ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         false,
@@ -63,7 +63,7 @@ public class CosmosRenderTypes {
     );
 
     public static final RenderType ITEM = net.eca.mv.LegacyRenderType.create("cosmos_item",
-        DefaultVertexFormat.NEW_ENTITY,
+        DefaultVertexFormat.ENTITY,
         VertexFormat.Mode.QUADS,
         256,
         true,
@@ -81,7 +81,7 @@ public class CosmosRenderTypes {
 
     public static RenderType createEntityEffect(Identifier texture) {
         return net.eca.mv.LegacyRenderType.create("cosmos_entity_effect",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,

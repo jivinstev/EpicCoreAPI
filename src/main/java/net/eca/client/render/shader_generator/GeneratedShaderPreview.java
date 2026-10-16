@@ -147,7 +147,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
             entityShader = EcaShaderInstance.create(
                 provider,
                 Identifier.fromNamespaceAndPath(namespace, path + "_entity"),
-                DefaultVertexFormat.NEW_ENTITY
+                DefaultVertexFormat.ENTITY
             );
             ImportedTextureBindings importedBindings = bindImportedTextures(
                 blockShader,
@@ -335,7 +335,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     ) {
         return net.eca.mv.LegacyRenderType.create(
             name + "_item",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,
@@ -359,7 +359,7 @@ public final class GeneratedShaderPreview implements ShaderPreviewSource, AutoCl
     ) {
         return net.eca.mv.LegacyRenderType.create(
             name + "_entity",
-            DefaultVertexFormat.NEW_ENTITY,
+            DefaultVertexFormat.ENTITY,
             VertexFormat.Mode.QUADS,
             256,
             true,

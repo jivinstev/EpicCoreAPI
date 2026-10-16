@@ -1373,11 +1373,13 @@ public class EntityUtil {
         }
 
         try {
-            ChunkPos targetChunk = new ChunkPos(BlockPos.containing(x, y, z));
+            ChunkPos targetChunk = new ChunkPos(
+                    SectionPos.blockToSectionCoord(Mth.floor(x)),
+                    SectionPos.blockToSectionCoord(Mth.floor(z)));
             if (entity instanceof ServerPlayer) {
                 serverLevel.getChunkSource().addTicketWithRadius(net.eca.mv.Tickets.POST_TELEPORT, targetChunk, 1);
             }
-            serverLevel.getChunk(targetChunk.x, targetChunk.z);
+            serverLevel.getChunk(targetChunk.x(), targetChunk.z());
 
             Entity previousVehicle = detachFromVehicle(entity);
             if (previousVehicle != null) {
@@ -1480,9 +1482,11 @@ public class EntityUtil {
                     || blockZ != entity.blockPosition.getZ()) {
                 entity.blockPosition = new BlockPos(blockX, blockY, blockZ);
 
-                if (SectionPos.blockToSectionCoord(blockX) != entity.chunkPosition.x
-                        || SectionPos.blockToSectionCoord(blockZ) != entity.chunkPosition.z) {
-                    entity.chunkPosition = new ChunkPos(entity.blockPosition);
+                if (SectionPos.blockToSectionCoord(blockX) != entity.chunkPosition.x()
+                        || SectionPos.blockToSectionCoord(blockZ) != entity.chunkPosition.z()) {
+                    entity.chunkPosition = new ChunkPos(
+                            SectionPos.blockToSectionCoord(blockX),
+                            SectionPos.blockToSectionCoord(blockZ));
                 }
             }
             entity.levelCallback.onMove();

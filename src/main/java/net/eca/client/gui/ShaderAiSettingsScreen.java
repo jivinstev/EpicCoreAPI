@@ -3,7 +3,7 @@ package net.eca.client.gui;
 import net.eca.util.shader_generator.ai.ShaderAiProtocol;
 import net.eca.util.shader_generator.ai.ShaderAiSettings;
 import net.eca.util.shader_generator.ai.ShaderAiSettingsCodec;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -377,7 +377,7 @@ final class ShaderAiSettingsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, width, height, 0xFF111315);
         graphics.fill(left - 8, top - 4, left + dialogWidth + 8, height - 4, 0xFF202225);
         int outlineX = left - 8;
@@ -388,7 +388,7 @@ final class ShaderAiSettingsScreen extends Screen {
         graphics.fill(outlineX, outlineY + outlineH - 1, outlineX + outlineW, outlineY + outlineH, 0xFF60656D);
         graphics.fill(outlineX, outlineY + 1, outlineX + 1, outlineY + outlineH - 1, 0xFF60656D);
         graphics.fill(outlineX + outlineW - 1, outlineY + 1, outlineX + outlineW, outlineY + outlineH - 1, 0xFF60656D);
-        graphics.drawCenteredString(font, title, width / 2, top, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, top, 0xFFFFFFFF);
         drawVisibleLabel(graphics, 0, "gui.eca.shader_generator.ai.profile");
         drawVisibleLabel(graphics, 1, "gui.eca.shader_generator.ai.protocol");
         drawVisibleLabel(graphics, 2, "gui.eca.shader_generator.ai.base_url");
@@ -399,17 +399,17 @@ final class ShaderAiSettingsScreen extends Screen {
         drawVisibleLabel(graphics, 7, "gui.eca.shader_generator.ai.max_tool_rounds");
         drawScrollbar(graphics);
         if (!status.getString().isBlank()) {
-            graphics.drawCenteredString(
+            graphics.centeredText(
                 font, status, width / 2, footerTop - 13,
                 statusError ? 0xFFFF6B6B : 0xFF8FE388
             );
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
-    private void drawVisibleLabel(GuiGraphics graphics, int row, String key) {
+    private void drawVisibleLabel(GuiGraphicsExtractor graphics, int row, String key) {
         if (row < scrollRow || row >= scrollRow + visibleRows()) return;
-        graphics.drawString(
+        graphics.text(
             font,
             Component.translatable(key),
             left + 8,
@@ -419,7 +419,7 @@ final class ShaderAiSettingsScreen extends Screen {
         );
     }
 
-    private void drawScrollbar(GuiGraphics graphics) {
+    private void drawScrollbar(GuiGraphicsExtractor graphics) {
         int visibleRows = visibleRows();
         if (visibleRows >= TOTAL_ROWS) return;
         int x = left + dialogWidth - 4;

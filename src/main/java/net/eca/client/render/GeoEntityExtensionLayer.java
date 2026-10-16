@@ -35,12 +35,12 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import software.bernie.geckolib.animatable.GeoAnimatable;
-import software.bernie.geckolib.constant.dataticket.DataTicket;
-import software.bernie.geckolib.renderer.base.GeoRenderState;
-import software.bernie.geckolib.renderer.base.GeoRenderer;
-import software.bernie.geckolib.renderer.base.RenderPassInfo;
-import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
+import com.geckolib.animatable.GeoAnimatable;
+import com.geckolib.constant.dataticket.DataTicket;
+import com.geckolib.renderer.base.GeoRenderState;
+import com.geckolib.renderer.base.GeoRenderer;
+import com.geckolib.renderer.base.RenderPassInfo;
+import com.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.util.List;
 import java.util.function.BiFunction;
@@ -124,7 +124,7 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
 
     /** What GeckoLib's own model task draws with: the render type its renderer picks for this state. */
     private RenderType modelRenderType(R renderState) {
-        return this.renderer.getRenderType(renderState, this.renderer.getTextureLocation(renderState));
+        return getRenderer().getRenderType(renderState, getRenderer().getTextureLocation(renderState));
     }
 
     /**

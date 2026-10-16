@@ -4,7 +4,7 @@ import net.eca.api.EcaAPI;
 import net.eca.util.EntityUtil;
 import net.eca.util.health.health_lock.HealthLockManager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,8 +33,8 @@ public class DeathScreenMixin {
         }
     }
 
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Inject(method = "extractRenderState", at = @At("HEAD"), cancellable = true)   // 26.1: Screen.render is extractRenderState
+    private void onRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (eca$shouldCloseDeathScreen(Minecraft.getInstance().player)) {
             ci.cancel();
         }

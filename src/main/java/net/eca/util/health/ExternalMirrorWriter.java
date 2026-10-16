@@ -8,7 +8,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.world.level.storage.DimensionDataStorage;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -212,9 +211,9 @@ public final class ExternalMirrorWriter {
         return out;
     }
 
-    private static void collectFrom(DimensionDataStorage storage, List<SavedData> out, Set<Object> seen) {
+    private static void collectFrom(Object storage, List<SavedData> out, Set<Object> seen) {
         if (storage == null || !seen.add(storage)) return;
-        Field cacheField = ReflectUtil.getField(DimensionDataStorage.class, "DimensionDataStorage.cache");
+        Field cacheField = ReflectUtil.getField(storage.getClass(), "DimensionDataStorage.cache");
         if (cacheField == null) return;
         try {
             Object cache = cacheField.get(storage);

@@ -3,7 +3,7 @@ package net.eca.client.gui;
 import net.eca.util.shader_generator.ai.ShaderAiSettings;
 import net.eca.util.shader_generator.ai.ShaderAiSettingsCodec;
 import net.eca.util.shader_generator.ai.ShaderAiToolResult;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -185,7 +185,7 @@ final class ShaderAiAssistantScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         transcript.setMessages(session.messages());
         graphics.fill(0, 0, width, height, 0xFF111315);
         graphics.fill(0, 0, width, 26, 0xFF17191C);
@@ -206,15 +206,15 @@ final class ShaderAiAssistantScreen extends Screen {
         );
         graphics.disableScissor();
         graphics.fill(panelRight - 1, 0, panelRight, height, 0xFF60656D);
-        graphics.drawCenteredString(font, title, panelRight / 2, 9, 0xFFFFFFFF);
-        graphics.drawCenteredString(
+        graphics.centeredText(font, title, panelRight / 2, 9, 0xFFFFFFFF);
+        graphics.centeredText(
             font,
             Component.translatable("gui.eca.shader_generator.ai.preview"),
             previewLeft + (previewRight - previewLeft) / 2,
             12,
             0xFFCDD1D7
         );
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

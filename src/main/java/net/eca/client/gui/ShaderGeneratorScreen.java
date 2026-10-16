@@ -39,7 +39,7 @@ import net.eca.util.shader_generator.mcp.ShaderMcpSettingsCodec;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -583,7 +583,7 @@ public final class ShaderGeneratorScreen extends Screen {
             .bounds(x, y, w, MENU_ITEM_H).build());
     }
 
-    private static void drawRectOutline(GuiGraphics g, int x, int y, int w, int h, int color) {
+    private static void drawRectOutline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         g.fill(x, y, x + w, y + 1, color);
         g.fill(x, y + h - 1, x + w, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);
@@ -2577,7 +2577,7 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     void renderAiPreview(
-        GuiGraphics graphics,
+        GuiGraphicsExtractor graphics,
         int left,
         int top,
         int right,
@@ -3205,7 +3205,7 @@ public final class ShaderGeneratorScreen extends Screen {
     /* ---------- render ---------- */
 
     @Override
-    public void render(GuiGraphics g, int mx, int my, float pt) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float pt) {
         /* 1. 背景 + 面板 */
         g.fill(0, 0, this.width, this.height, 0xFF111315);
         g.fill(0, 0, this.width, TOP_HEIGHT, PANEL_DARK);
@@ -3223,7 +3223,7 @@ public final class ShaderGeneratorScreen extends Screen {
             ? Component.translatable("gui.eca.shader_generator.project.unnamed")
             : Component.literal(currentProjectRef().id());
         String projectText = this.font.plainSubstrByWidth(projectLabel.getString(), 112);
-        g.drawString(this.font, projectText, 8, PROJECT_ROW_Y + 5, 0xFFCDD1D7, false);
+        g.text(this.font, projectText, 8, PROJECT_ROW_Y + 5, 0xFFCDD1D7, false);
 
         /* 2. 预览区域：视口固定作裁剪框，内容矩形按缩放/平移绘制 */
         PreviewRect viewport = previewViewport();
@@ -3240,14 +3240,14 @@ public final class ShaderGeneratorScreen extends Screen {
         Component panelLabel = rightPanelMode == RightPanelMode.LAYER_DETAIL
             ? Component.translatable("gui.eca.shader_generator.panel.layer_detail")
             : Component.translatable("gui.eca.shader_generator.panel.layers");
-        g.drawString(this.font, panelLabel,
+        g.text(this.font, panelLabel,
             this.width - RIGHT_WIDTH + 8, TOP_HEIGHT + 4, 0xFFBFC4CC, false);
         int panelLeft = this.width - RIGHT_WIDTH + 8;
         if (rightPanelMode == RightPanelMode.LAYER_LIST) {
             int effectHeaderTop = outputEffectPanelTop();
             g.fill(panelLeft, effectHeaderTop - RIGHT_PANEL_GAP / 2,
                 this.width - 8, effectHeaderTop - RIGHT_PANEL_GAP / 2 + 1, BORDER_COLOR);
-            g.drawString(this.font, Component.translatable("gui.eca.shader_generator.panel.effects"),
+            g.text(this.font, Component.translatable("gui.eca.shader_generator.panel.effects"),
                 panelLeft, effectHeaderTop + 4, 0xFFBFC4CC, false);
         }
         if (rightPanelMode == RightPanelMode.LAYER_DETAIL) {
@@ -3255,7 +3255,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         /* 4. 普通控件 */
-        super.render(g, mx, my, pt);
+        super.extractRenderState(g, mx, my, pt);
 
         /* 5. 独立深度层确保下拉菜单覆盖已经写入深度缓冲的普通控件 */
         g.nextStratum();
@@ -3266,13 +3266,13 @@ public final class ShaderGeneratorScreen extends Screen {
     }
 
     /* 检查器 chrome 与文本标签；交互控件由 super.render 绘制 */
-    private void drawInspector(GuiGraphics g) {
+    private void drawInspector(GuiGraphicsExtractor g) {
         ShaderLayer layer = selectedLayer();
         int x = this.width - RIGHT_WIDTH + 8;
         int w = RIGHT_WIDTH - 16;
         g.fill(x, inspectorTop - 8, x + w, inspectorTop - 7, BORDER_COLOR);
         if (layer == null) {
-            g.drawCenteredString(this.font,
+            g.centeredText(this.font,
                 Component.translatable("gui.eca.shader_generator.inspector.no_layer"),
                 x + w / 2, inspectorTop + 8, 0xFF9DA3AC);
             return;
@@ -3294,7 +3294,7 @@ public final class ShaderGeneratorScreen extends Screen {
         if ((!elementParamView || element == null)
                 && layer.elements().isEmpty()
                 && inspectorListBottom - inspectorListTop >= font.lineHeight + 2) {
-            g.drawCenteredString(this.font,
+            g.centeredText(this.font,
                 Component.translatable("gui.eca.shader_generator.layer_editor.no_element"),
                 x + w / 2, inspectorListTop + 6, 0xFF9DA3AC);
         }
@@ -3350,7 +3350,7 @@ public final class ShaderGeneratorScreen extends Screen {
         return true;
     }
 
-    private void drawCanvasSelection(GuiGraphics g, PreviewRect preview) {
+    private void drawCanvasSelection(GuiGraphicsExtractor g, PreviewRect preview) {
         if (rightPanelMode != RightPanelMode.LAYER_DETAIL) {
             return;
         }
@@ -3428,11 +3428,11 @@ public final class ShaderGeneratorScreen extends Screen {
         return Math.abs(mouseX - handleX) <= reach && Math.abs(mouseY - handleY) <= reach;
     }
 
-    private void drawHandle(GuiGraphics g, int cx, int cy) {
+    private void drawHandle(GuiGraphicsExtractor g, int cx, int cy) {
         drawHandle(g, cx, cy, 0xFFE6E9ED);
     }
 
-    private void drawHandle(GuiGraphics g, int cx, int cy, int color) {
+    private void drawHandle(GuiGraphicsExtractor g, int cx, int cy, int color) {
         int half = CANVAS_HANDLE_SIZE / 2;
         g.fill(cx - half - 1, cy - half - 1, cx + half + 1, cy + half + 1, 0xFF111315);
         g.fill(cx - half, cy - half, cx + half, cy + half, color);
@@ -3701,7 +3701,7 @@ public final class ShaderGeneratorScreen extends Screen {
         double rotationRadians
     ) {}
 
-    private void drawLayerRows(GuiGraphics graphics) {
+    private void drawLayerRows(GuiGraphicsExtractor graphics) {
         for (LayerRowVisual row : visibleLayerRows) {
             boolean selected = row.layerIndex() == selectedLayerIndex;
             int background = (selected ? 0x66000000 : 0x33000000) | (row.color() & 0x00FFFFFF);
@@ -3713,7 +3713,7 @@ public final class ShaderGeneratorScreen extends Screen {
         }
     }
 
-    private void drawOutputEffectRows(GuiGraphics graphics) {
+    private void drawOutputEffectRows(GuiGraphicsExtractor graphics) {
         for (OutputEffectRowVisual row : visibleOutputEffectRows) {
             int background = 0x33000000 | (row.color() & 0x00FFFFFF);
             graphics.fill(row.x(), row.y(), row.x() + row.width(), row.y() + row.height(), background);
@@ -3722,22 +3722,22 @@ public final class ShaderGeneratorScreen extends Screen {
         if (project.outputEffects().isEmpty()
                 && outputEffectListBottom - outputEffectListTop >= font.lineHeight + 2) {
             int x = this.width - RIGHT_WIDTH + 8;
-            graphics.drawCenteredString(this.font,
+            graphics.centeredText(this.font,
                 Component.translatable("gui.eca.shader_generator.output_effect.empty"),
                 x + (RIGHT_WIDTH - 16) / 2, outputEffectListTop + 6, 0xFF9DA3AC);
         }
     }
 
-    private void drawUpperScrollbar(GuiGraphics graphics) {
+    private void drawUpperScrollbar(GuiGraphicsExtractor graphics) {
         ScrollbarGeometry geometry = upperScrollbarGeometry();
         drawScrollbar(graphics, geometry);
     }
 
-    private void drawOutputEffectScrollbar(GuiGraphics graphics) {
+    private void drawOutputEffectScrollbar(GuiGraphicsExtractor graphics) {
         drawScrollbar(graphics, outputEffectScrollbarGeometry());
     }
 
-    private void drawScrollbar(GuiGraphics graphics, ScrollbarGeometry geometry) {
+    private void drawScrollbar(GuiGraphicsExtractor graphics, ScrollbarGeometry geometry) {
         if (geometry == null) {
             return;
         }
@@ -3782,7 +3782,7 @@ public final class ShaderGeneratorScreen extends Screen {
             thumbTop, thumbTop + thumbHeight, total, visible);
     }
 
-    private void drawDropdownBackground(GuiGraphics g) {
+    private void drawDropdownBackground(GuiGraphicsExtractor g) {
         if (openDropdown < 0 || dropdownLastWidgetIndex < dropdownFirstWidgetIndex) {
             return;
         }
@@ -3819,7 +3819,7 @@ public final class ShaderGeneratorScreen extends Screen {
         g.fill(dr - 1, dt, dr, db, BORDER_COLOR);
     }
 
-    private void renderDropdownWidgets(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    private void renderDropdownWidgets(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         if (openDropdown < 0 || dropdownLastWidgetIndex < dropdownFirstWidgetIndex) {
             return;
         }
@@ -3828,7 +3828,7 @@ public final class ShaderGeneratorScreen extends Screen {
              i <= dropdownLastWidgetIndex && i < kids.size();
              i++) {
             if (kids.get(i) instanceof AbstractWidget widget) {
-                widget.render(graphics, mouseX, mouseY, partialTick);
+                widget.extractRenderState(graphics, mouseX, mouseY, partialTick);
             }
         }
     }
@@ -3878,8 +3878,8 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
-            GuiGraphics graphics,
+        protected void extractWidgetRenderState(
+            GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
             float partialTick
@@ -3888,7 +3888,7 @@ public final class ShaderGeneratorScreen extends Screen {
             graphics.fill(getX(), getY(), getX() + width, getY() + height, 0x55212428);
             drawRectOutline(graphics, getX(), getY(), width, height, border);
             if (checked) {
-                graphics.drawCenteredString(
+                graphics.centeredText(
                     Minecraft.getInstance().font,
                     "◉",
                     getX() + width / 2,
@@ -3926,8 +3926,8 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
-            GuiGraphics graphics,
+        protected void extractWidgetRenderState(
+            GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
             float partialTick
@@ -3939,7 +3939,7 @@ public final class ShaderGeneratorScreen extends Screen {
                 getMessage().getString(),
                 width - 8
             );
-            graphics.drawString(
+            graphics.text(
                 Minecraft.getInstance().font,
                 name,
                 getX() + 5,
@@ -3980,8 +3980,8 @@ public final class ShaderGeneratorScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
-            GuiGraphics graphics,
+        protected void extractWidgetRenderState(
+            GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
             float partialTick
@@ -3995,7 +3995,7 @@ public final class ShaderGeneratorScreen extends Screen {
             } else {
                 graphics.fill(getX() + 2, getY() + 2, getX() + 28, getY() + height - 2, color);
                 drawRectOutline(graphics, getX(), getY(), width, height, border);
-                graphics.drawString(
+                graphics.text(
                     Minecraft.getInstance().font,
                     String.format("#%06X", color & 0xFFFFFF),
                     getX() + 32,

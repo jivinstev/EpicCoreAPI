@@ -3,13 +3,12 @@ package net.eca.mv;
 
 import com.google.common.collect.MapMaker;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.QuadInstance;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.world.item.ItemStack;
 
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,30 +41,24 @@ public final class ItemStacks {
         return STACKS.get(state);
     }
 
-    private static final Method RENDER_MODEL_LISTS = renderModelLists();
-
-    private static Method renderModelLists() {
-        try {
-            Method m = ItemRenderer.class.getDeclaredMethod("renderQuadList", PoseStack.class, VertexConsumer.class, List.class,
-                    int[].class, int.class, int.class);
-            m.setAccessible(true);
-            return m;
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            return null;
-        }
-    }
-
     /** 1.21.1's public ItemRenderer.renderModelLists(model, stack, light, overlay, pose, consumer); 1.21.4's is private
      *  static and takes the tint array the render state already resolved instead of the stack; 1.21.5 has no model to
-     *  pass, only the layer's quads (the private renderQuadList). */
+     *  pass, only the layer's quads (the private renderQuadList). 26.1.2 has no ItemRenderer: this does what its
+     *  ItemFeatureRenderer does per quad -- the layer's tint for a tinted quad (white otherwise), then
+     *  {@code VertexConsumer.putBakedQuad} with the light and overlay. */
     public static void renderModelLists(List<BakedQuad> quads, int[] tints, int light, int overlay, PoseStack pose, VertexConsumer consumer) {
-        if (RENDER_MODEL_LISTS == null || quads == null) {
+        if (quads == null) {
             return;
         }
-        try {
-            RENDER_MODEL_LISTS.invoke(null, pose, consumer, quads, tints, light, overlay);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("ItemRenderer.renderQuadList", e);
+        QuadInstance instance = new QuadInstance();
+        instance.setLightCoords(light);
+        instance.setOverlayCoords(overlay);
+        PoseStack.Pose last = pose.last();
+        for (BakedQuad quad : quads) {
+            BakedQuad.MaterialInfo material = quad.materialInfo();
+            int layer = material.tintIndex();
+            instance.setColor(material.isTinted() && tints != null && layer >= 0 && layer < tints.length ? tints[layer] : -1);
+            consumer.putBakedQuad(last, quad, instance);
         }
     }
 }

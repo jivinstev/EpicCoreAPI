@@ -13,13 +13,12 @@ import net.eca.util.block_extension.BlockExtensionSafeAccess;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.FallingBlockRenderer;
-import net.minecraft.client.renderer.block.model.BlockModelPart;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.client.renderer.entity.state.FallingBlockRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
@@ -40,10 +39,12 @@ public class FallingBlockRendererMixin {
             return;
         }
         BlockState state = entity.getBlockState();
+        net.minecraft.client.renderer.block.BlockAndTintGetter tintLevel =
+            (net.minecraft.client.renderer.block.BlockAndTintGetter) entity.level();
         BlockExtension extension = BlockExtensionManager.getExtension(state.getBlock());
         if (extension == null || state.getRenderShape() != RenderShape.MODEL
             || state == entity.level().getBlockState(entity.blockPosition())
-            || !BlockExtensionSafeAccess.shouldRender(extension, state, entity.level(), entity.blockPosition())) {
+            || !BlockExtensionSafeAccess.shouldRender(extension, state, tintLevel, entity.blockPosition())) {
             return;
         }
         List<ShaderMaskPass> passes = extension.getBlockShaderPasses();
@@ -51,8 +52,9 @@ public class FallingBlockRendererMixin {
 
         BlockPos renderPos = BlockPos.containing(entity.getX(), entity.getBoundingBox().maxY, entity.getZ());
         Minecraft minecraft = Minecraft.getInstance();
-        BlockStateModel model = minecraft.getBlockRenderer().getBlockModel(state);
-        List<BlockModelPart> parts = model.collectParts(entity.level(), renderPos, state, RandomSource.create(state.getSeed(entity.getStartPos())));
+        BlockStateModel model = minecraft.getModelManager().getBlockStateModelSet().get(state);
+        ModelBlockRenderer blockRenderer = new ModelBlockRenderer(minecraft.options.ambientOcclusion().get(), false, minecraft.getBlockColors());
+        long seed = state.getSeed(entity.getStartPos());
         boolean fullBright = BlockExtensionSafeAccess.isGlow(extension);
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
@@ -60,8 +62,12 @@ public class FallingBlockRendererMixin {
                 new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright);
             poseStack.pushPose();
             poseStack.translate(-0.5, 0.0, -0.5);
-            minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(entity.level(), parts, state, renderPos,
-                poseStack, consumer, false, 0);
+            blockRenderer.tesselateBlock((x, y, z, quad, instance) -> {
+                poseStack.pushPose();
+                poseStack.translate(x, y, z);
+                consumer.putBakedQuad(poseStack.last(), quad, instance);
+                poseStack.popPose();
+            }, 0.0F, 0.0F, 0.0F, tintLevel, renderPos, state, model, seed);
             poseStack.popPose();
             consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(),
                 batch.builder().buildOrThrow(), batch.uvTransform()));

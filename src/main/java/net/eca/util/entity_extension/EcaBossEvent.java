@@ -12,7 +12,7 @@ public class EcaBossEvent extends ServerBossEvent {
     private final UUID entityUuid;
 
     public EcaBossEvent(UUID entityUuid, Component name) {
-        super(name, BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);
+        super(entityUuid, name, BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);
         this.entityUuid = entityUuid;
         this.setVisible(true);
     }

@@ -1,6 +1,6 @@
 package net.eca.client.gui;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -87,22 +87,22 @@ public final class ShaderColorPickerScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 104;
         int top = height / 2 - PICKER_SIZE / 2;
-        graphics.drawCenteredString(font, title, width / 2, top - 16, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, top - 16, 0xFFFFFFFF);
         int color = currentArgb();
         graphics.fill(left + PICKER_SIZE + 32, top, left + PICKER_SIZE + 96, top + 56, color);
         outline(graphics, left + PICKER_SIZE + 32, top, 64, 56, 0xFFFFFFFF);
-        graphics.drawCenteredString(
+        graphics.centeredText(
             font,
             String.format("#%06X", color & 0xFFFFFF),
             left + PICKER_SIZE + 64,
             top + 106,
             0xFFCDD1D7
         );
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
@@ -119,7 +119,7 @@ public final class ShaderColorPickerScreen extends Screen {
         return Math.round(clamp(value) * 255.0F);
     }
 
-    private static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {
+    private static void outline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         g.fill(x, y, x + w, y + 1, color);
         g.fill(x, y + h - 1, x + w, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);
@@ -158,8 +158,8 @@ public final class ShaderColorPickerScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
-            GuiGraphics graphics,
+        protected void extractWidgetRenderState(
+            GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
             float partialTick
@@ -209,8 +209,8 @@ public final class ShaderColorPickerScreen extends Screen {
         }
 
         @Override
-        protected void renderWidget(
-            GuiGraphics graphics,
+        protected void extractWidgetRenderState(
+            GuiGraphicsExtractor graphics,
             int mouseX,
             int mouseY,
             float partialTick

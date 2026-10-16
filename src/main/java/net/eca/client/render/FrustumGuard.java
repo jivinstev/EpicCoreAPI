@@ -118,7 +118,8 @@ public final class FrustumGuard {
     private static void reportDepthFar(Minecraft minecraft) {
         GameRenderer gameRenderer = minecraft.gameRenderer;
         EcaLogger.info("[FrustumGuard] depthFar={} forceLoadingMaxRenderDistance={}",
-                gameRenderer == null ? "n/a" : gameRenderer.getDepthFar(),
+                gameRenderer == null || minecraft.options == null ? "n/a"
+                    : (Object) (minecraft.options.getEffectiveRenderDistance() * 16.0F * 4.0F),
                 EcaConfiguration.getForceLoadingMaxRenderDistanceSafely());
     }
 

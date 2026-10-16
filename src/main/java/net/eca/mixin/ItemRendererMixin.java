@@ -1,6 +1,4 @@
-// MV-STAND-IN: 1.21.11's prepared copy of the 1.21.10 ItemRendererMixin overlay as it was before 1.21.10's once-per-submit
-// MV-STAND-IN: item extension pass (first layer, stack kept until LayerRenderState.clear), unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
-// Fork multi-version layer: 1.21.10 copy of the 1.21.5 mixin. 1.21.9 draws items in two steps: LayerRenderState.submit hands the
+// Fork multi-version layer: 26.1.2 copy (tintLayers is an IntList) of the 1.21.10 copy of the 1.21.5 mixin. 1.21.9 draws items in two steps: LayerRenderState.submit hands the
 // item's quads to a SubmitNodeCollector and a feature renderer draws them later. The extension pass is therefore built at
 // the end of submit (the pose stack is only right now) and, when it must be drawn at once (a GUI / tooltip item, not a world
 // one), the drawing is a custom-geometry task in the collector's order 1 -- after every order-0 task, the item's own among them.
@@ -20,7 +18,7 @@ import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.eca.mv.ItemStacks;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Final;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -39,8 +37,9 @@ public abstract class ItemRendererMixin {
     @Final
     private List<BakedQuad> quads;
 
+    // 26.1: the layer's tints are a nullable IntList (int[] up to 1.21.11)
     @Shadow
-    private int[] tintLayers;
+    private it.unimi.dsi.fastutil.ints.IntList tintLayers;
 
     @Shadow
     @Final
@@ -66,7 +65,7 @@ public abstract class ItemRendererMixin {
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
             SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
-            ItemStacks.renderModelLists(quads, tintLayers, combinedLight, combinedOverlay, poseStack, consumer);
+            ItemStacks.renderModelLists(quads, tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
             consumer.finish(batch -> {
                 if (queued) {
                     ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),

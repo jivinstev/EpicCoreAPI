@@ -531,7 +531,7 @@ public class RaidInstance {
             }
 
             ChunkPos lastChunk = raiderLastChunks.get(uuid);
-            if (lastChunk != null && level.getChunkSource().hasChunk(lastChunk.x, lastChunk.z)) {
+            if (lastChunk != null && level.getChunkSource().hasChunk(lastChunk.x(), lastChunk.z())) {
                 // 原区块仍加载但实体已不在 EntityLookup，说明发生了绕过事件的底层清除。
                 onRaiderRemoved(uuid);
             }
@@ -539,7 +539,7 @@ public class RaidInstance {
     }
 
     private static ChunkPos copyChunkPos(ChunkPos chunkPos) {
-        return new ChunkPos(chunkPos.x, chunkPos.z);
+        return new ChunkPos(chunkPos.x(), chunkPos.z());
     }
 
     // 清理已确认死亡的袭击者；解析不到的实体交给 reconcileRaiders 判断
@@ -632,7 +632,7 @@ public class RaidInstance {
 
     private ServerBossEvent getBossEvent(RaidDefinition def) {
         if (bossEvent == null) {
-            bossEvent = new ServerBossEvent(Component.translatable(def.getDisplayName()),
+            bossEvent = new ServerBossEvent(UUID.randomUUID(), Component.translatable(def.getDisplayName()),
                     def.getBossBarColor(), BossEvent.BossBarOverlay.NOTCHED_10);
         }
         return bossEvent;

@@ -14,7 +14,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.blockentity.SkullBlockRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.util.ARGB;
@@ -172,7 +171,7 @@ public final class BossShowAnchorRenderer {
         headState.xRot = 0f;
         playerHeadModel.setupAnim(headState);
         playerHeadModel.renderToBuffer(pose, buffer.getBuffer(playerHeadRenderType),
-            LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+            0xF000F0, OverlayTexture.NO_OVERLAY,
             ARGB.color((int) (HEAD_ALPHA * 255f), 255, 255, 255));
         pose.popPose();
 
@@ -190,7 +189,7 @@ public final class BossShowAnchorRenderer {
         Matrix4f mat = pose.last().pose();
         float x = -font.width(label) / 2f;
         font.drawInBatch(label, x, 0f, 0xFFFFFFFF, true, mat, buffer,
-            Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);
+            Font.DisplayMode.NORMAL, 0, 0xF000F0);
         pose.popPose();
     }
 

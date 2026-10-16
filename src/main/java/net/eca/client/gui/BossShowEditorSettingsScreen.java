@@ -3,7 +3,7 @@ package net.eca.client.gui;
 
 import net.eca.util.bossshow.BossShowEditorState;
 import net.eca.util.bossshow.Trigger;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -140,12 +140,12 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        g.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
         int x = this.width / 2 - 150;
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.target"), x, 63, 0xCCCCCC, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.trigger"), x, 87, 0xCCCCCC, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.value"), x, 111, 0xCCCCCC, false);
-        super.render(g, mouseX, mouseY, partialTick);
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.target"), x, 63, 0xCCCCCC, false);
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.trigger"), x, 87, 0xCCCCCC, false);
+        g.text(this.font, Component.translatable("gui.eca.bossshow.editor.settings.value"), x, 111, 0xCCCCCC, false);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
     }
 }

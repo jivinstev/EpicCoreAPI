@@ -2,7 +2,7 @@ package net.eca.client.gui;
 
 import net.eca.util.shader_generator.ShaderModuleDefinition;
 import net.eca.util.shader_generator.ShaderModuleRegistry;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -122,12 +122,13 @@ public final class ShaderEffectSelectionScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         Component heading = selectedCategory == null
             ? title
             : Component.translatable(selectedCategory.translationKey());
-        graphics.drawCenteredString(font, heading, width / 2, 18, 0xFFFFFFFF);
-        graphics.drawCenteredString(
+        graphics.centeredText(font, heading, width / 2, 18, 0xFFFFFFFF);
+        graphics.centeredText(
             font,
             Component.translatable(selectedCategory == null
                 ? "gui.eca.shader_generator.effects.category_description"
@@ -137,7 +138,7 @@ public final class ShaderEffectSelectionScreen extends Screen {
             0xFF9DA3AC
         );
         if (selectedCategory != null && categoryEffects().isEmpty()) {
-            graphics.drawCenteredString(
+            graphics.centeredText(
                 font,
                 Component.translatable("gui.eca.shader_generator.effects.empty_category"),
                 width / 2,
@@ -145,7 +146,7 @@ public final class ShaderEffectSelectionScreen extends Screen {
                 0xFF9DA3AC
             );
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

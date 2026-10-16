@@ -1,3 +1,4 @@
+// 26.1.2 (GeckoLib 5.5, com.geckolib): the 1.21.10 overlay with the package move; the GeoRenderEvent.*.CompileRenderLayers types are still interfaces.
 // 1.21.10 (GeckoLib 5.3): GeoRenderEvent.* became interfaces; the postable events are the concrete Compile*RenderLayersEvent classes
 // (NeoForge bus NPEs on an interface listener type). Based on the 1.21.5 version of the authors' file (GeckoLib 5: layers are added through the event's addLayer;
 // the entity comes from the animatable (GeoEntity) or the related object (replaced entity)).
@@ -9,12 +10,12 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.world.entity.Entity;
-import software.bernie.geckolib.event.block.CompileBlockRenderLayersEvent;
-import software.bernie.geckolib.event.entity.CompileEntityRenderLayersEvent;
-import software.bernie.geckolib.event.replacedentity.CompileReplacedEntityRenderLayersEvent;
-import software.bernie.geckolib.renderer.GeoEntityRenderer;
-import software.bernie.geckolib.renderer.GeoBlockRenderer;
-import software.bernie.geckolib.renderer.GeoReplacedEntityRenderer;
+import com.geckolib.event.block.CompileBlockRenderLayersEvent;
+import com.geckolib.event.entity.CompileEntityRenderLayersEvent;
+import com.geckolib.event.replacedentity.CompileReplacedEntityRenderLayersEvent;
+import com.geckolib.renderer.GeoEntityRenderer;
+import com.geckolib.renderer.GeoBlockRenderer;
+import com.geckolib.renderer.GeoReplacedEntityRenderer;
 
 public class GeckoLibCompat {
 

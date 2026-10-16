@@ -6,7 +6,7 @@ import net.eca.util.bossshow.Curve;
 import net.eca.util.filter.FilterType;
 import net.eca.util.shader_generator.ShaderOutputEffectDefinition;
 import net.eca.util.shader_generator.ShaderOutputEffectRegistry;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -223,16 +223,17 @@ final class BossShowEffectEditorScreen extends Screen implements BossShowEditorS
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.drawCenteredString(font, title, width / 2, height / 2 - 112, 0xFFFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.centeredText(font, title, width / 2, height / 2 - 112, 0xFFFFFFFF);
         int y = height / 2 - 86;
-        graphics.drawString(font, Component.translatable("gui.eca.bossshow.effect.duration"), width / 2 - 154, y + 22, 0xFFAAAAAA);
-        graphics.drawString(font, Component.translatable("gui.eca.bossshow.effect.fade_in"), width / 2 - 50, y + 22, 0xFFAAAAAA);
-        graphics.drawString(font, Component.translatable("gui.eca.bossshow.effect.fade_out"), width / 2 + 54, y + 22, 0xFFAAAAAA);
-        graphics.drawString(font, Component.translatable("gui.eca.bossshow.effect.parameters"), width / 2, y + 52, 0xFFAAAAAA);
-        graphics.drawCenteredString(font, Component.literal((cues.isEmpty() ? 0 : selected + 1) + "/" + cues.size()),
+        graphics.text(font, Component.translatable("gui.eca.bossshow.effect.duration"), width / 2 - 154, y + 22, 0xFFAAAAAA);
+        graphics.text(font, Component.translatable("gui.eca.bossshow.effect.fade_in"), width / 2 - 50, y + 22, 0xFFAAAAAA);
+        graphics.text(font, Component.translatable("gui.eca.bossshow.effect.fade_out"), width / 2 + 54, y + 22, 0xFFAAAAAA);
+        graphics.text(font, Component.translatable("gui.eca.bossshow.effect.parameters"), width / 2, y + 52, 0xFFAAAAAA);
+        graphics.centeredText(font, Component.literal((cues.isEmpty() ? 0 : selected + 1) + "/" + cues.size()),
             width / 2, y + 118, 0xFFAAAAAA);
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

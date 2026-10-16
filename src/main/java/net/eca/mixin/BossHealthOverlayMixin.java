@@ -13,7 +13,7 @@ import net.eca.util.raid.RaidDefinition;
 import net.eca.util.raid.RaidManager;
 import net.eca.util.raid.RaidSafeAccess;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.BossHealthOverlay;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
@@ -31,8 +31,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(BossHealthOverlay.class)
 public class BossHealthOverlayMixin {
 
-    @Inject(method = "drawBar(Lnet/minecraft/client/gui/GuiGraphics;IILnet/minecraft/world/BossEvent;)V", at = @At("HEAD"), cancellable = true)
-    private void eca$drawCustomBossBar(GuiGraphics graphics, int x, int y, BossEvent event, CallbackInfo ci) {
+    @Inject(method = "extractBar(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IILnet/minecraft/world/BossEvent;)V", at = @At("HEAD"), cancellable = true)
+    private void eca$drawCustomBossBar(GuiGraphicsExtractor graphics, int x, int y, BossEvent event, CallbackInfo ci) {
         // 实体扩展优先；未命中再尝试袭击血条
         if (eca$tryRenderEntityExtensionBar(graphics, y, event)
                 || eca$tryRenderRaidBar(graphics, y, event)) {
@@ -43,7 +43,7 @@ public class BossHealthOverlayMixin {
     // ==================== 实体扩展血条 ====================
 
     @Unique
-    private boolean eca$tryRenderEntityExtensionBar(GuiGraphics graphics, int y, BossEvent event) {
+    private boolean eca$tryRenderEntityExtensionBar(GuiGraphicsExtractor graphics, int y, BossEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
             return false;
@@ -112,7 +112,7 @@ public class BossHealthOverlayMixin {
     // ==================== 袭击血条 ====================
 
     @Unique
-    private boolean eca$tryRenderRaidBar(GuiGraphics graphics, int y, BossEvent event) {
+    private boolean eca$tryRenderRaidBar(GuiGraphicsExtractor graphics, int y, BossEvent event) {
         RaidBarState state = RaidClientState.getBarState(event.getId());
         if (state == null) {
             return false;

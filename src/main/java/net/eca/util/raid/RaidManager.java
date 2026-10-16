@@ -421,9 +421,9 @@ public class RaidManager {
 
     // 申请或释放袭击中心区块的强制加载
     private static void forceLoadCenter(ServerLevel level, RaidInstance raid, boolean add) {
-        ChunkPos chunk = new ChunkPos(raid.getCenter());
+        ChunkPos chunk = ChunkPos.containing(raid.getCenter());
         if (!add) {
-            level.setChunkForced(chunk.x, chunk.z, false);
+            level.setChunkForced(chunk.x(), chunk.z(), false);
             return;
         }
         /* 申请侧内部会同步阻塞取块。本类的 startRaid/endRaid 等入口是对外 API，
@@ -434,7 +434,7 @@ public class RaidManager {
         level.getServer().execute(() -> {
             // 延迟期间袭击可能已结束，届时不再申请，否则票据无人释放
             if (getRaids(level).get(raid.getId()) == raid) {
-                level.setChunkForced(chunk.x, chunk.z, true);
+                level.setChunkForced(chunk.x(), chunk.z(), true);
             }
         });
     }

@@ -4,7 +4,7 @@ package net.eca.mv;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -18,7 +18,8 @@ import java.util.List;
 /** 1.21.1's ItemRenderer.getModel(stack, level, entity, seed) returned the item's BakedModel (overrides applied).
  *  1.21.4 resolves an item into an ItemStackRenderState instead, and 1.21.5 has no BakedModel at all: a layer holds the
  *  model's quads. This resolves one and returns its first layer's quads (all faces, culled or not), which is what the
- *  old model answered for an ordinary item. Null when the item has no baked geometry. */
+ *  old model answered for an ordinary item. Null when the item has no baked geometry.
+ *  26.1.2 copy: BakedQuad moved to net.minecraft.client.resources.model.geometry. */
 public final class ItemModels {
     // before the Field lookups below: field() logs through it during class initialisation
     private static final Logger LOGGER = LogUtils.getLogger();

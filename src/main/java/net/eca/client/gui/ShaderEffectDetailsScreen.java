@@ -5,7 +5,7 @@ import net.eca.util.shader_generator.ShaderModuleDefinition;
 import net.eca.util.shader_generator.ShaderModuleInstance;
 import net.eca.util.shader_generator.ShaderProjectCodec;
 import net.eca.util.shader_generator.ShaderProjectCodec.ProjectRef;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -185,12 +185,12 @@ public final class ShaderEffectDetailsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        extractBackground(graphics, mouseX, mouseY, partialTick);
         int left = (width - PANEL_WIDTH) / 2;
         /* 颜色色块：紧跟在标题下方，与颜色按钮的 y=44（或含导入则 y=70）对齐 */
         int swatchY = effect.definition().id().equals("image_element") ? 70 : 44;
-        graphics.drawCenteredString(font, title, width / 2, 18, 0xFFFFFFFF);
+        graphics.centeredText(font, title, width / 2, 18, 0xFFFFFFFF);
         int color = colorArgb();
         graphics.fill(left + 8, swatchY + 4, left + 44, swatchY + 16, color);
         int outlineX = left + 8;
@@ -206,7 +206,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
         for (int index = scroll; index < end; index++) {
             ShaderModuleDefinition.Parameter parameter = visibleParameters.get(index);
             int y = paramBaseY + (index - scroll) * 22;
-            graphics.drawString(
+            graphics.text(
                 font,
                 Component.translatable(parameter.displayName()),
                 left,
@@ -215,7 +215,7 @@ public final class ShaderEffectDetailsScreen extends Screen {
                 false
             );
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
