@@ -1,5 +1,17 @@
 [
  {
+  "file": ".multiversion/targets/26.3/java/net/eca/blender/client/runtime/BlendMaterialProgram.java",
+  "why": "empties 1 method body",
+  "reviewed": "Not a stub (26.3, #37): the one new empty body is the record Uniforms(...) {} that keeps begin()'s per-draw uniforms (drivers, node inverse, bounds) for the deferred draw; no method of the authors' file was emptied. begin()/end() still set every uniform and draw: at once outside a level submit, and from ShaderMaskRenderQueue.enqueueDraw (re-applying the uniforms) into the level's main pass at AfterTranslucentFeatures, or in its own pass from the after-level flush.",
+  "hooks": []
+ },
+ {
+  "file": ".multiversion/targets/26.3/java/net/eca/client/render/ShaderMaskRenderQueue.java",
+  "why": "empties 1 method body",
+  "reviewed": "Not a stub (26.3, #37): the one new empty body is the private constructor of the nested listener class InLevelPass; no method was emptied. InLevelPass.afterTranslucentFeatures draws the queue INTO the level's main pass (flushInto(event.getRenderPass())); the after-level flushes are unchanged.",
+  "hooks": []
+ },
+ {
   "file": ".multiversion/targets/26.3/java/net/eca/mixin/GameRendererPostLevelMixin.java",
   "why": "removes 1 mixin injection handler(s): check each still applies somewhere, with the same effect",
   "reviewed": "(inherited from 26.1.2) 26.1 removed GameRenderer.getDepthFar, so the force-loaded far-plane extension moved to CameraDepthFarMixin, which raises Camera.depthFar right after Camera.update stores it (before the culling projection and perspective use it) and is added by mixin_add."

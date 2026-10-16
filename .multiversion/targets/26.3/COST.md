@@ -80,3 +80,14 @@
 - ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '333': 1, '111': 1}} -- the cost includes that work
 - attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 8 (≈ $0.44), other targets' 0, outside this checkout 935. Records of concurrent targets add up.
 - window: requests from 2026-10-15T19:55:00.000Z to 2026-10-16T02:33:12.798Z (requests before it are not in this record)
+
+## fork-port.py run since 2026-10-16T03:37:37+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $6.57** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.46 h active, 0.47 h wall (2026-10-16T03:20Z to 2026-10-16T03:48Z)
+- model: claude-opus-5-5 (97 req); effort: medium 97
+- tokens: output 3,811 (thinking 300), input 202, cache read 19,296,377, cache write 511,427 (5m 485,630 / 1h 25,797)
+- size: 65 Java files, 11 mixin classes; target Minecraft 26.3
+- ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '111': 1, '333': 1}} -- the cost includes that work
+- attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 1 (≈ $0.15), other targets' 12, outside this checkout 446. Records of concurrent targets add up.
+- window: requests from 2026-10-16T02:33:12.799Z to 2026-10-16T03:48:09.847Z (requests before it are not in this record)
