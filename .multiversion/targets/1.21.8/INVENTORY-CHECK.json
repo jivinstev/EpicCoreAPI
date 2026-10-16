@@ -3513,10 +3513,10 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=setupFog @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=setupFog @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart",
@@ -11504,14 +11504,11 @@
    "accounted": true
   }
  ],
- "unaccounted": [
-  "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value=\"TAIL\")"
- ],
+ "unaccounted": [],
  "counts": {
   "same": 1037,
   "moved": 199,
-  "changed": 15,
-  "unaccounted": 1
+  "changed": 16
  },
  "notes": []
 }
