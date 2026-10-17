@@ -1,0 +1,684 @@
+{
+  "issues": [
+    {
+      "files": [
+        "src/main/java/net/eca/client/gui/ShaderColorPickerScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderImportScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderEffectDetailsScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderLayerDetailsScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderProjectDetailsScreen.java"
+      ],
+      "id": "ECA-001",
+      "lowest": "1.21.10",
+      "notes": "Evidence: 1.21.10/1.21.11: one renderBackground call in each of the five screens (git show); 26.x: one extractBackground call each, and 26.x Screen.extractRenderStateWithTooltipAndSubtitles already calls extractBackground while GuiRenderState.blurBeforeThisStratum throws 'Can only blur once per frame' (26.x neoform source); 1.21.8: 0 calls (renderBackground rename row strips them). fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: small (delete one line per screen (5 screens x 5 versions); 26.x is the renamed call). Rename rows never run on overlays (#47), which is why 1.21.8's renderBackground row did not reach these 1.21.10 overlays. The sixth screen, ShaderSourceEditorScreen, is ECA-002. Sources: REVIEW.md neoforge-1.21.10 .port/1.21.10/REVIEW.md rows L38 L39 L41 L42 L44 (not-ok); https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 3); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "feature",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Five shader-generator screens crash on open: 'Can only blur once per frame' (render() calls renderBackground/extractBackground a second time)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/gui/ShaderSourceEditorScreen.java"
+      ],
+      "id": "ECA-002",
+      "lowest": "1.21.11",
+      "notes": "Evidence: 1.21.11 file has one renderBackground call and 26.1.2/26.2/26.3 one extractBackground call; 1.21.10's copy has none (reviewer: 'no second renderBackground'). fixable_from_1_21_8_up: true (affected versions are 1.21.11 and later). Effort: small (port 1.21.10's one-line removal; delete the stand-in header). Sources: neoforge-1.21.11 src/main/java/net/eca/client/gui/ShaderSourceEditorScreen.java lines 1-2 (MV-STAND-IN header); https://github.com/jivinstev/EpicCoreAPI/issues/47 (1.21.11 stand-ins)",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "feature",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "ShaderSourceEditorScreen blurs twice and crashes on open on 1.21.11 and 26.x (1.21.11 MV-STAND-IN carries the pre-fix 1.21.10 overlay)"
+    },
+    {
+      "files": [
+        "src/cf/java/net/eca/coremod/EcaTransformationService.java"
+      ],
+      "id": "ECA-003",
+      "lowest": "1.21.10",
+      "notes": "workaround=false: swapping to the _mr jar is not open to a CurseForge modpack user; with workaround=true the rubric gives S3. Evidence: Local ci-gates.py --shipped: _cf EcaBootstrap.log lacks the container-replacement line on 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3; _cf boots pass on 1.21.3-1.21.8. fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: large (needs a new loading route for CF (an early-service jar or the agent backend) on FML 10, 11 and 12, plus making the CI shipped-jar gate see it (ECA-N03)). Severity S2 not S1 because the boot itself completes on 1.21.11+ (only the transformation is missing) and a workaround exists; the 1.21.10 server crash is graded separately (ECA-004). Owner may raise to S1 if CF is the primary distribution. Not a regression of the migration: the _cf boot check postdates the layer's gate records. Sources: REVIEW.md neoforge-1.21.10 rows L24 (changed src/cf/.../EcaTransformationService.java) and L285 (stub); https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 8); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; scratchpad eca-branches-results.md (FINAL RESULTS: shipped _cf FAIL on 1.21.10..26.3)",
+      "override": {
+        "by": "owner-direction-2026-10-17",
+        "reason": "the library's core patching is inactive in the CurseForge jar, the only channel open today; it must not ship there",
+        "severity": "S1"
+      },
+      "platforms": [
+        "cf"
+      ],
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "gate",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "_cf (CurseForge) jar has no transformer at all on FML 10+: ClassProcessorProvider is loaded only from the launch class loader, so the COREMOD backend never runs"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/util/UnsafeUtil.java"
+      ],
+      "id": "ECA-004",
+      "lowest": "1.21.10",
+      "notes": "Evidence: Local shipped boot of epic-core-api-1.1.9_cf-mc1.21.10.jar: ChunkMap onTickStart -> UnsafeUtil.initLwjglUnsafe -> UnsatisfiedLinkError; the same check on 1.21.11/26.x did not crash. CI 'shipped jars' job on 58afbc8 (run 39063089831) passed. fixable_from_1_21_8_up: true (only 1.21.10 is affected). Effort: medium (reproduce first (CI passes on the same head); likely cured or changed by ECA-003's backend fix, but the dedicated-server LWJGL path needs its own guard). 1.21.11..26.3 marked n/a because the same local check booted them without this crash; that is an observation, not a proof. Reproduce in CI before closing; if it is environment-only, regrade. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503 (item 8); scratchpad eca-branches-results.md (cf FAIL detail: only 1.21.10 also crashed the server)",
+      "override": null,
+      "platforms": [
+        "cf"
+      ],
+      "rubric": {
+        "failure": "crash",
+        "reach": "normal",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "gate",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "n/a",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "n/a",
+        "26.2": "n/a",
+        "26.3": "n/a"
+      },
+      "title": "_cf jar crashes the dedicated server on the first tick on 1.21.10: UnsafeUtil.initLwjglUnsafe -> UnsatisfiedLinkError liblwjgl.so"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/preset/ShaderPresetRegistry.java",
+        "src/main/java/net/eca/util/bossshow/BossShowManager.java"
+      ],
+      "id": "ECA-005",
+      "lowest": "1.21.10",
+      "notes": "Evidence: 1.21.10..26.3: ShaderPresetRegistry and BossShowManager each call modFile.getContents().findFile on a directory; FML loader 10.0.32 and 12.0.12 JarFileContents.findFile return Optional.empty() for a directory ZipEntry (javap). 1.21.8 (FML 9.0.18) uses IModFile.findResource -> SecureJar.getPath, which resolves directories (javap), so 1.21.8 is not affected. fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later; the FML 9 check clears 1.21.8). Effort: small (two lookup helpers per version (getContentRoots() or visitContent(prefix, visitor)) x 5 versions). FML 9 findFile check at 1.21.8 (asked in #47): done here by bytecode -- 1.21.8 n/a. It does not reopen 1.21.8. Sources: REVIEW.md neoforge-1.21.10 rows L53 (ShaderPresetRegistry), L68 (BossShowManager), L233-L280 (40 shader item rows); https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 2); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S2",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "File-based shader presets and boss-show definitions never load on FML 10+: JarContents.findFile returns only regular files, never directories"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/EntityExtensionLayer.java"
+      ],
+      "id": "ECA-006",
+      "lowest": "1.21.10",
+      "notes": "Graded cosmetic (the effect's look is wrong, nothing the player needs is lost) -> S3 at most; owner may override to S2 if extension effects count as a core library feature. n/a here means NOT ESTABLISHED (was 'unknown') at: 26.2, 26.3. Evidence: 1.21.10, 1.21.11 and 26.1.2 EntityExtensionLayer still call source.endBatch() + ShaderMaskRenderQueue.drawNow at submit (git show). 26.2/26.3 route level submits to an after-level / in-pass queue (#37, #39, #40), which changes the order; not reviewed. fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: medium (queue the passes as GeoEntityExtensionLayer does, or submit with order(1); three call paths). Graded S2 because an effect drawn under the body is mostly hidden; owner may grade it S3 (visual only). Sources: REVIEW.md neoforge-1.21.10 row L49; https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 1); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "n/a",
+        "26.3": "n/a"
+      },
+      "title": "EntityExtensionLayer: extension effects are drawn under the entity body on 1.21.9+ (overlay flushes at submit time; the body is drawn later in renderAllFeatures); also the force-loaded path and the FilterRenderer spotlight"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/gui/ShaderAiSettingsScreen.java"
+      ],
+      "id": "ECA-007",
+      "lowest": "1.21.10",
+      "notes": "A credential shown on screen; the rubric has no security input, so the owner may override upward. Evidence: apiKeyFormatterInstalled flag present on 1.21.10..26.3 (git grep); reset not added anywhere. fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: small. A credential shown on screen; the rubric has no security input, so owner may raise it to S2. Sources: REVIEW.md neoforge-1.21.10 row L36; https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 4)",
+      "override": null,
+      "rubric": {
+        "failure": "security",
+        "reach": "feature",
+        "visibility": "rare",
+        "workaround": true
+      },
+      "severity": "S1",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "ShaderAiSettingsScreen shows the AI API key in plain text after a resize or GUI-scale change (mask installed once; init() rebuilds the field)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/BossShowKeyBindings.java"
+      ],
+      "id": "ECA-008",
+      "lowest": "1.21.10",
+      "notes": "Evidence: BossShowKeyBindings registers KeyMapping.Category on 1.21.10..26.3; no 'key.category.eca' key in src/main/resources on any branch (git grep). fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: small. Sources: REVIEW.md neoforge-1.21.10 row L27; https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 5)",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Controls screen shows the raw key-category id key.category.eca.categories (1.21.9 KeyMapping.Category label key missing from en_us/zh_cn)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/util/EntityUtil.java"
+      ],
+      "id": "ECA-009",
+      "lowest": "1.21.10",
+      "notes": "Evidence: 1.21.10..26.3 build a passengersPacket variable and broadcast it themselves; 1.21.8 still uses the chunk-cache broadcast to trackers (git show EntityUtil.java). fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: small. 1.21.11/26.x matched by code shape (same overlay), not re-reviewed. Clients ignore a passengers packet for an entity they do not track, so no visible effect is expected. Sources: REVIEW.md neoforge-1.21.10 row L65; https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 6)",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "invisible",
+        "workaround": false
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "EntityUtil dismount sync sends ClientboundSetPassengersPacket to every player in the level instead of the vehicle's trackers"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/gui/BossShowEditorScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderSourceEditorScreen.java"
+      ],
+      "id": "ECA-010",
+      "lowest": "1.21.10",
+      "notes": "Evidence: GLFW_MOD_CONTROL in BossShowEditorScreen and ShaderSourceEditorScreen on 1.21.10..26.3; ShaderGeneratorScreen's own GLFW_MOD_CONTROL is the authors' 1.21.1 code (not a port defect). fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: small. Sources: REVIEW.md neoforge-1.21.10 rows L29 (BossShowEditorScreen), L46 (ShaderSourceEditorScreen); https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 7)",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "rare",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Boss-show editor and shader source editor shortcuts do not work with Cmd on macOS (overlay tests GLFW_MOD_CONTROL; authors used hasControlDown)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/gui/BossShowRangeTransformScreen.java",
+        "src/main/java/net/eca/client/gui/BossShowEditorHomeScreen.java",
+        "src/main/java/net/eca/client/gui/BossShowEditorSettingsScreen.java",
+        "src/main/java/net/eca/event/BossShowEditorClientEvents.java",
+        "src/main/java/net/eca/client/gui/BossShowPathGeneratorScreen.java",
+        "src/main/java/net/eca/event/BossShowRecordingHud.java",
+        "src/main/java/net/eca/client/gui/ShaderColorPickerScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderGeneratorScreen.java"
+      ],
+      "id": "ECA-011",
+      "lowest": "1.21.8",
+      "notes": "reach=feature (editor tools only) gives S3; with reach=normal it would be S2. Evidence: Scan of drawString/drawCenteredString/text calls with a 6-hex-digit literal: 25 sites in 8 files on 1.21.8 and the same 25 on 26.3; 26.x GuiGraphicsExtractor.text skips ARGB.alpha(color)==0 (source). Computed colours were not scanned. fixable_from_1_21_8_up: true (lowest affected version is 1.21.8). Effort: small (one regex rename row (0xRRGGBB -> 0xFFRRGGBB) at 1.21.8 plus ARGB.opaque on any computed colour; cascades up). Graded S3 because every site is in a creator/editor tool, not normal play. The rubric's S2 example is 'invisible GUI text': if the owner counts the editors as core, this is S2. Either way it does not reopen done 1.21.8 under #135 §2 (only an S1 does). Boss-bar value text and HUD named in #47 had no 6-digit literal hits; a computed-colour scan is still owed. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (Known issues: GUI text from 1.21.6, not yet checked); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; this triage's scan: scratchpad ledger-work/alpha.py over origin/neoforge-1.21.8 and 26.3",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "open",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "GUI text with a 24-bit (alpha-less) colour is invisible from 1.21.6: 25 literal sites in 8 files (boss-show editor home/settings/path/range screens, editor client events, recording HUD, colour picker, shader generator)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/mixin/ItemModelResolverMixin.java"
+      ],
+      "id": "ECA-012",
+      "lowest": "1.21.4",
+      "notes": "Evidence: Recorded by the 1.21.4 and 1.21.5 reviews as the known post-ladder item ('Bundle overdraw ... unchanged'); not a 1.21.1 regression. fixable_from_1_21_8_up: false (lowest affected version is 1.21.4: a fix from 1.21.8 up leaves 1.21.4 and 1.21.5 open (as S3 it may not reopen them)). Effort: medium (move the stack recording to updateForTopItem in ItemModelResolverMixin on each version's own API). Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (Open bundle 1.21.4+); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "feature",
+        "visibility": "rare",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "open",
+        "1.21.5": "open",
+        "1.21.8": "open",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Open bundle: the selected item's extension effect can draw over the bundle tooltip (stack recorded at appendItemLayers, not updateForTopItem)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/mixin/ItemStackRenderStateLayersAccessor.java"
+      ],
+      "id": "ECA-013",
+      "lowest": "1.21.4",
+      "notes": "Evidence: Same comment text on 1.21.4, 1.21.5, 1.21.8, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (git show line 1-3); absent on 1.21.3. fixable_from_1_21_8_up: false (the comment is on 1.21.4 and inherited up; fixing from 1.21.8 up leaves 1.21.4/1.21.5 stale (comment-only, fix when 1.21.4 is next reopened)). Effort: small. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (1.21.4 stale comment); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "invisible",
+        "workaround": false
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "open",
+        "1.21.5": "open",
+        "1.21.8": "open",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Stale header comment on ItemStackRenderStateLayersAccessor: says 1.21.4-only, but 1.21.5 and later use it"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/util/health/HealthDataflowAnalyzer.java"
+      ],
+      "id": "ECA-014",
+      "lowest": "1.21.11",
+      "notes": "Rubric inputs are PROVISIONAL (visibility/reach not established; no gate or review exercises the analyzer). S2 is the conservative grade so a fixer looks at it; regrade after an in-game check. Evidence: 1.21.11..26.3: HURT = hurt(DamageSource,F)Z and getFloat(String) identity calls; 1.21.8/1.21.10 use hurtServer(ServerLevel,DamageSource,F)Z and getFloatOr (git show). fixable_from_1_21_8_up: true (affected versions are 1.21.11 and later). Effort: medium (port 1.21.10's descriptors and the 1.21.5 NBT identity rows, then check 26.x descriptors with javap). Severity unknown: no gate or review exercises the analyzer, and I could not establish what a player sees when it matches no hurt method (likely health control of modded entities silently not applied, which would be S2). Needs a reviewer's call or an in-game check. Sources: neoforge-1.21.11 src/main/java/net/eca/util/health/HealthDataflowAnalyzer.java lines 1-2, 81-82, 2108-2112; https://github.com/jivinstev/EpicCoreAPI/issues/47 (1.21.11 stand-ins)",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S2",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "HealthDataflowAnalyzer on 1.21.11 and 26.x is an MV-STAND-IN with 1.21.1's hurt/actuallyHurt descriptors and getFloat NBT identity keys"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/coremod/LoadingScreenTransformer.java",
+        "src/main/java/net/eca/coremod/RuntimeExtensionBridge.java"
+      ],
+      "id": "ECA-015",
+      "lowest": "1.21.11",
+      "notes": "reach=unusual: the Pro/dev jars only. Evidence: Stand-in headers on 1.21.11, 26.1.2, 26.2, 26.3; 1.21.10 has its own port (no stand-in). Gate C launch passes on all, so no crash. fixable_from_1_21_8_up: true (affected versions are 1.21.11 and later). Effort: medium (each FML major (10/11/12) has its own loading-screen class; port 1.21.10's overlay per version). The 1.21.8 Pro intro itself is unverified in a client (#47 play-test list). Sources: neoforge-1.21.11 src/main/java/net/eca/coremod/LoadingScreenTransformer.java and RuntimeExtensionBridge.java lines 1-4 (MV-STAND-IN); https://github.com/jivinstev/EpicCoreAPI/issues/47 (1.21.11 stand-ins)",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "unusual",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Loading-screen stand-ins on 1.21.11 and 26.x (LoadingScreenTransformer, RuntimeExtensionBridge carry the authors' pre-FML-9 code): the Pro loading-screen intro does not run"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/mixin/ItemModelResolverMixin.java"
+      ],
+      "id": "ECA-016",
+      "lowest": "1.21.11",
+      "notes": "Evidence: state.setAnimated() at 1.21.10 line 46; on 1.21.11..26.3 'setAnimated' appears only in the stand-in header. fixable_from_1_21_8_up: true (affected versions are 1.21.11 and later). Effort: small. Sources: neoforge-1.21.11 src/main/java/net/eca/mixin/ItemModelResolverMixin.java lines 1-2 (MV-STAND-IN); https://github.com/jivinstev/EpicCoreAPI/issues/47 (1.21.11 stand-ins); https://github.com/jivinstev/EpicCoreAPI/issues/37#issuecomment-6207750894",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "ItemModelResolverMixin stand-in on 1.21.11 and 26.x lacks setAnimated: animated item-extension effects freeze in the GUI item atlas"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/mixin/ItemRendererMixin.java"
+      ],
+      "id": "ECA-017",
+      "lowest": "1.21.11",
+      "notes": "n/a here means NOT ESTABLISHED (was 'unknown') at: 26.1.2, 26.2, 26.3. Evidence: Stand-in only on 1.21.11; 26.x carry their own ItemRendererMixin copies, never reviewed against 1.21.10's fix. fixable_from_1_21_8_up: true (affected versions are 1.21.11 and later). Effort: small. Sources: neoforge-1.21.11 src/main/java/net/eca/mixin/ItemRendererMixin.java lines 1-2 (MV-STAND-IN); https://github.com/jivinstev/EpicCoreAPI/issues/47 (1.21.11 stand-ins)",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "n/a",
+        "26.2": "n/a",
+        "26.3": "n/a"
+      },
+      "title": "ItemRendererMixin stand-in on 1.21.11: extension pass not once-per-submit (first layer, stack kept until LayerRenderState.clear) -- copies of a dropped stack miss or repeat the pass"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/mv/LegacyGl.java",
+        "src/main/java/net/eca/mv/LegacyRenderType.java"
+      ],
+      "id": "ECA-018",
+      "lowest": "1.21.11",
+      "notes": "Graded cosmetic (preset effects look wrong or are missing; nothing the player needs is lost) -> S3; owner may override to S2. Evidence: 1.21.5, 1.21.8 and 1.21.10 carry fixed copies (MV-AHEAD-OF-TEMPLATE); 1.21.11..26.3 carry the template's shared copy as MV-STAND-IN. fixable_from_1_21_8_up: true (affected versions are 1.21.11 and later). Effort: medium (blocked on MMVU's template fix (#133) and sync-shared; otherwise a per-version port of the F1 fix). Severity follows the 1.21.5 F1 finding (preset passes drawing without their own shader/state); not re-observed on 1.21.11+. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (Shared render helpers); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; neoforge-1.21.11 src/main/java/net/eca/mv/LegacyGl.java lines 2-3 (MV-STAND-IN)",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Shared render helpers on 1.21.11 and 26.x still have F1 partly: LegacyRenderType set-up does not load the key, state and output target into LegacyGl, so preset shader passes draw with the wrong state"
+    },
+    {
+      "id": "ECA-019",
+      "lowest": "26.3",
+      "notes": "reach=unusual: Fabulous graphics only. Evidence: Stated in the #37 closing comment after #40; not in a client yet. fixable_from_1_21_8_up: true (26.3 only). Effort: medium. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/37#issuecomment-6207750894 (Not changed, already like this before)",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "unusual",
+        "visibility": "always",
+        "workaround": true
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "n/a",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "n/a",
+        "26.2": "n/a",
+        "26.3": "open"
+      },
+      "title": "26.3 under Fabulous graphics: AfterTranslucentBlocks never fires, so the boss-show anchor and block extensions are not drawn at all"
+    },
+    {
+      "id": "ECA-020",
+      "lowest": "26.3",
+      "notes": "n/a here means NOT ESTABLISHED (was 'unknown') at: 26.2. Evidence: Listed as unchanged in the 26.3 follow-up; 26.2 not stated either way. fixable_from_1_21_8_up: true (26.x only). Effort: medium. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/37#issuecomment-6207750894",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "feature",
+        "visibility": "rare",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "n/a",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "n/a",
+        "26.2": "n/a",
+        "26.3": "open"
+      },
+      "title": "26.3: world-context passes and blend materials inside a picture-in-picture still draw on the main target"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/optional/jvmti/JvmTiBackend.java"
+      ],
+      "id": "ECA-022",
+      "lowest": "1.21.1",
+      "notes": "Evidence: 748f563 (warmDispatch) is an ancestor of every version branch and neoforge-1.21.1 (git merge-base); warmDispatch present on 1.21.3..26.3. fixable_from_1_21_8_up: true (already fixed on every version). Migrated from the #3 fix ledger. 'hang-load' stays fixed-unconfirmed until a person re-tests on a Mac. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/3",
+      "override": null,
+      "rubric": {
+        "failure": "hang",
+        "reach": "normal",
+        "visibility": "rare",
+        "workaround": true
+      },
+      "severity": "S1",
+      "source": "authors",
+      "status": {
+        "1.21.1": "fixed@748f563",
+        "1.21.10": "fixed@748f563",
+        "1.21.11": "fixed@748f563",
+        "1.21.3": "fixed@748f563",
+        "1.21.4": "fixed@748f563",
+        "1.21.5": "fixed@748f563",
+        "1.21.8": "fixed@748f563",
+        "26.1.2": "fixed@748f563",
+        "26.2": "fixed@748f563",
+        "26.3": "fixed@748f563"
+      },
+      "title": "Pre-existing upstream: JVMTI backend recurses inside its own class-load hook with The Last Sword loaded (hang at load or on exit)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/util/EntityUtil.java"
+      ],
+      "id": "ECA-023",
+      "lowest": "1.21.1",
+      "notes": "Evidence: 56a1448 is an ancestor of every version branch and neoforge-1.21.1; the unsafe-inbox copy is fixed by the authors' 1.1.9 (95a740b), the stack's upstream. fixable_from_1_21_8_up: true (already fixed on every version). Grade kept from the #1 ledger (S1, data). Its own impact note says 'low but real; no crash'; owner may regrade to S3. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/1",
+      "override": null,
+      "rubric": {
+        "failure": "data",
+        "reach": "normal",
+        "visibility": "rare",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "authors",
+      "status": {
+        "1.21.1": "fixed@56a1448",
+        "1.21.10": "fixed@56a1448",
+        "1.21.11": "fixed@56a1448",
+        "1.21.3": "fixed@56a1448",
+        "1.21.4": "fixed@56a1448",
+        "1.21.5": "fixed@56a1448",
+        "1.21.8": "fixed@56a1448",
+        "26.1.2": "fixed@56a1448",
+        "26.2": "fixed@56a1448",
+        "26.3": "fixed@56a1448"
+      },
+      "title": "Pre-existing upstream: force-removal aborts half-way while chunks load entities (ImmutableList.remove in removeFromLoadingInbox); entity left half-removed"
+    }
+  ],
+  "schema": 1
+}
