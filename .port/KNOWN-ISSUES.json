@@ -107,11 +107,8 @@
       ],
       "id": "ECA-004",
       "lowest": "1.21.10",
-      "notes": "Evidence: Local shipped boot of epic-core-api-1.1.9_cf-mc1.21.10.jar: ChunkMap onTickStart -> UnsafeUtil.initLwjglUnsafe -> UnsatisfiedLinkError; the same check on 1.21.11/26.x did not crash. CI 'shipped jars' job on 58afbc8 (run 39063089831) passed. fixable_from_1_21_8_up: true (only 1.21.10 is affected). Effort: medium (reproduce first (CI passes on the same head); likely cured or changed by ECA-003's backend fix, but the dedicated-server LWJGL path needs its own guard). 1.21.11..26.3 marked n/a because the same local check booted them without this crash; that is an observation, not a proof. Reproduce in CI before closing; if it is environment-only, regrade. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503 (item 8); scratchpad eca-branches-results.md (cf FAIL detail: only 1.21.10 also crashed the server)",
+      "notes": "Evidence: Local shipped boot of epic-core-api-1.1.9_cf-mc1.21.10.jar: ChunkMap onTickStart -> UnsafeUtil.initLwjglUnsafe -> UnsatisfiedLinkError; the same check on 1.21.11/26.x did not crash. CI 'shipped jars' job on 58afbc8 (run 39063089831) passed. fixable_from_1_21_8_up: true (only 1.21.10 is affected). Effort: medium (reproduce first (CI passes on the same head); likely cured or changed by ECA-003's backend fix, but the dedicated-server LWJGL path needs its own guard). 1.21.11..26.3 marked n/a because the same local check booted them without this crash; that is an observation, not a proof. Reproduce in CI before closing; if it is environment-only, regrade. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503 (item 8); scratchpad eca-branches-results.md (cf FAIL detail: only 1.21.10 also crashed the server) | 2026-10-17 CF design spike: reproduced with the unpatched _mr jar too, so not CF-specific; fix is catching LinkageError in UnsafeUtil.init(). No 1.21.10+ release exists yet, so nothing shipped is affected.",
       "override": null,
-      "platforms": [
-        "cf"
-      ],
       "rubric": {
         "failure": "crash",
         "reach": "normal",
@@ -123,16 +120,16 @@
       "status": {
         "1.21.1": "n/a",
         "1.21.10": "open",
-        "1.21.11": "n/a",
+        "1.21.11": "open",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "n/a",
+        "26.1.2": "open",
         "26.2": "n/a",
         "26.3": "n/a"
       },
-      "title": "_cf jar crashes the dedicated server on the first tick on 1.21.10: UnsafeUtil.initLwjglUnsafe -> UnsatisfiedLinkError liblwjgl.so"
+      "title": "Dedicated server crashes on the first world tick on 1.21.10, 1.21.11 and 26.1.2 (both jars): the server ships LWJGL without natives, MemoryUtil throws UnsatisfiedLinkError, UnsafeUtil.init() catches only Exception"
     },
     {
       "files": [
@@ -329,7 +326,7 @@
       ],
       "id": "ECA-011",
       "lowest": "1.21.8",
-      "notes": "reach=feature (editor tools only) gives S3; with reach=normal it would be S2. Evidence: Scan of drawString/drawCenteredString/text calls with a 6-hex-digit literal: 25 sites in 8 files on 1.21.8 and the same 25 on 26.3; 26.x GuiGraphicsExtractor.text skips ARGB.alpha(color)==0 (source). Computed colours were not scanned. fixable_from_1_21_8_up: true (lowest affected version is 1.21.8). Effort: small (one regex rename row (0xRRGGBB -> 0xFFRRGGBB) at 1.21.8 plus ARGB.opaque on any computed colour; cascades up). Graded S3 because every site is in a creator/editor tool, not normal play. The rubric's S2 example is 'invisible GUI text': if the owner counts the editors as core, this is S2. Either way it does not reopen done 1.21.8 under #135 §2 (only an S1 does). Boss-bar value text and HUD named in #47 had no 6-digit literal hits; a computed-colour scan is still owed. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (Known issues: GUI text from 1.21.6, not yet checked); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; this triage's scan: scratchpad ledger-work/alpha.py over origin/neoforge-1.21.8 and 26.3",
+      "notes": "reach=feature (editor tools only) gives S3; with reach=normal it would be S2. Evidence: Scan of drawString/drawCenteredString/text calls with a 6-hex-digit literal: 25 sites in 8 files on 1.21.8 and the same 25 on 26.3; 26.x GuiGraphicsExtractor.text skips ARGB.alpha(color)==0 (source). Computed colours were not scanned. fixable_from_1_21_8_up: true (lowest affected version is 1.21.8). Effort: small (one regex rename row (0xRRGGBB -> 0xFFRRGGBB) at 1.21.8 plus ARGB.opaque on any computed colour; cascades up). Graded S3 because every site is in a creator/editor tool, not normal play. The rubric's S2 example is 'invisible GUI text': if the owner counts the editors as core, this is S2. Either way it does not reopen done 1.21.8 under #135 \u00a72 (only an S1 does). Boss-bar value text and HUD named in #47 had no 6-digit literal hits; a computed-colour scan is still owed. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (Known issues: GUI text from 1.21.6, not yet checked); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; this triage's scan: scratchpad ledger-work/alpha.py over origin/neoforge-1.21.8 and 26.3",
       "override": null,
       "rubric": {
         "failure": "functional",
