@@ -178,6 +178,10 @@ tasks.register('cfCoremodJar', Jar) {
 
 tasks.register('cfJarJarMetadata') {
     dependsOn tasks.named('jar')
+    // Everything doLast reads: the version (the nested library's name and range) and the base jar (its jarJar list).
+    // Without them Gradle keeps a stale metadata.json after a version change, which points at a jar that is not nested.
+    inputs.property('version', project.version.toString())
+    inputs.file(tasks.named('jar').flatMap { it.archiveFile })
     def out = layout.buildDirectory.file('cf-jarjar/META-INF/jarjar/metadata.json')
     outputs.file(out)
     doLast {
