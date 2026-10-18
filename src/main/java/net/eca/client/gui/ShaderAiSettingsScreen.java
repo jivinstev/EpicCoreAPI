@@ -116,6 +116,7 @@ final class ShaderAiSettingsScreen extends Screen {
         baseUrlField = textField(row++, 2048);
         modelField = textField(row++, 256);
         currentRow = row++;
+        apiKeyFormatterInstalled = false;
         apiKeyField = textField(currentRow, 4096, fieldWidth - 76);
         apiKeyVisibilityButton = addScrollWidget(Button.builder(
             apiKeyVisibilityLabel(), button -> toggleApiKeyVisibility()
