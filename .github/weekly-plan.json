@@ -1,0 +1,29 @@
+{
+  "budget": 3,
+  "forks": [
+    {
+      "head": "neoforge-1.21.1",
+      "repo": "jivinstev/EpicCoreAPI",
+      "role": "library",
+      "upstream": "https://github.com/CJiangqiu/EpicCoreAPI",
+      "upstream_branch": "master"
+    },
+    {
+      "head": "neoforge-1.21.1",
+      "repo": "jivinstev/TheLastSword",
+      "role": "dependent",
+      "upstream": "https://github.com/CJiangqiu/TheLastSword",
+      "upstream_branch": "forge-1.20.1"
+    }
+  ],
+  "migrator_repo": "jivinstev/mc-mod-version-upgrade",
+  "plan_owner": "jivinstev",
+  "round": {
+    "cron": "CRON_TZ=America/Los_Angeles 26 8 * * 3",
+    "name": "keep-current weekly round: jivinstev/EpicCoreAPI, jivinstev/TheLastSword",
+    "time": "08:26",
+    "tz": "America/Los_Angeles",
+    "weekday": "Wednesday"
+  },
+  "schema": 1
+}
