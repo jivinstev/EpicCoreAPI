@@ -1,0 +1,12 @@
+# Expectations of tools/shipped-gate.py for the BUILT _cf (CurseForge) jar in a real server's mods/ folder (ECA-003).
+# FILE:REGEX, FILE under logs/. The _cf jar has no agent, so its only backend is COREMOD. This version's loader,
+# FancyModLoader 11.0.16 (NeoForge 26.2.0.90), finds a ClassProcessorProvider only in an FMLModType: LIBRARY jar:
+# the _cf jar nests one (META-INF/jarjar, build.gradle cfCoremodJar).
+# The provider must have run...
+EcaBootstrap.log:\[CoreMod\] ClassProcessorProvider registered EcaCoreTransformer; backend=COREMOD
+# ...and EcaCoreTransformer must have replaced ServerLevel's containers (the container-replacement line; an AGENT line
+# does not count here, so a _cf jar that fell back to nothing cannot pass)...
+EcaBootstrap.log:\[EcaCoreTransformer\] Installed protected containers=.* target=net/minecraft/server/level/ServerLevel
+# ...and installed all five base living hooks (the count a 26.2 boot logs) and the removal hook.
+EcaBootstrap.log:Installed base living hooks=5\b
+EcaBootstrap.log:Installed base removal hook

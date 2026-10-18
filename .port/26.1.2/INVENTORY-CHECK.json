@@ -106,10 +106,10 @@
    "file": "net/eca/blender/client/render/BlenderModelRenderer.java",
    "kind": "render-use",
    "key": "RenderType.entityTranslucent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different render-use",
+   "status": "changed",
+   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
    "now": "RenderTypes.entityTranslucent",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/render/BlenderModelRenderer.java#render-use:RenderType.entityCutoutNoCull",
@@ -117,10 +117,10 @@
    "file": "net/eca/blender/client/render/BlenderModelRenderer.java",
    "kind": "render-use",
    "key": "RenderType.entityCutoutNoCull",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different render-use",
+   "status": "changed",
+   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
    "now": "RenderTypes.entityCutout",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.create",
@@ -128,9 +128,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.CompositeState",
@@ -138,9 +138,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderStateShard.ShaderStateShard",
@@ -148,9 +148,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -158,9 +158,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.NO_CULL",
@@ -168,9 +168,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.LIGHTMAP",
@@ -178,9 +178,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.OVERLAY",
@@ -188,9 +188,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -198,9 +198,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -208,9 +208,9 @@
    "file": "net/eca/blender/client/runtime/BlendMaterialProgram.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/BossShowKeyBindings.java#event:@SubscribeEvent RegisterKeyMappingsEvent",
@@ -462,9 +462,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.create",
@@ -472,9 +472,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.CompositeState",
@@ -482,9 +482,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -492,9 +492,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -502,9 +502,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -512,9 +512,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -522,9 +522,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -532,9 +532,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -542,9 +542,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -552,9 +552,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -562,9 +562,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -572,9 +572,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -582,9 +582,9 @@
    "file": "net/eca/client/render/ArcaneRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -592,9 +592,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.create",
@@ -602,9 +602,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.CompositeState",
@@ -612,9 +612,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -622,9 +622,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -632,9 +632,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -642,9 +642,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -652,9 +652,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -662,9 +662,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -672,9 +672,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -682,9 +682,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -692,9 +692,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -702,9 +702,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -712,9 +712,9 @@
    "file": "net/eca/client/render/AuroraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -722,9 +722,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.create",
@@ -732,9 +732,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.CompositeState",
@@ -742,9 +742,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -752,9 +752,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -762,9 +762,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -772,9 +772,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -782,9 +782,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -792,9 +792,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -802,9 +802,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -812,9 +812,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -822,9 +822,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -832,9 +832,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -842,9 +842,9 @@
    "file": "net/eca/client/render/BlackHoleRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BlockExtensionRenderer.java#event:addListener ChunkEvent.Load",
@@ -870,10 +870,10 @@
    "file": "net/eca/client/render/BlockExtensionRenderer.java",
    "kind": "event",
    "key": "addListener RenderLevelStageEvent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different event",
+   "status": "changed",
+   "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
    "now": "addListener RenderLevelStageEvent.AfterTranslucentBlocks",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BossShowAnchorRenderer.java#event:@SubscribeEvent RenderLevelStageEvent",
@@ -881,10 +881,10 @@
    "file": "net/eca/client/render/BossShowAnchorRenderer.java",
    "kind": "event",
    "key": "@SubscribeEvent RenderLevelStageEvent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different event",
+   "status": "changed",
+   "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
    "now": "@SubscribeEvent RenderLevelStageEvent.AfterTranslucentBlocks",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BossShowAnchorRenderer.java#render-use:RenderType.lines",
@@ -892,10 +892,10 @@
    "file": "net/eca/client/render/BossShowAnchorRenderer.java",
    "kind": "render-use",
    "key": "RenderType.lines",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different render-use",
+   "status": "changed",
+   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
    "now": "RenderTypes.lines",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/BossShowAnchorRenderer.java#render-use:RenderType.entityTranslucent",
@@ -903,10 +903,10 @@
    "file": "net/eca/client/render/BossShowAnchorRenderer.java",
    "kind": "render-use",
    "key": "RenderType.entityTranslucent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different render-use",
+   "status": "changed",
+   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
    "now": "RenderTypes.entityTranslucent",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -914,9 +914,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.create",
@@ -924,9 +924,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.CompositeState",
@@ -934,9 +934,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -944,9 +944,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -954,9 +954,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -964,9 +964,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -974,9 +974,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -984,9 +984,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -994,9 +994,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -1004,9 +1004,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -1014,9 +1014,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -1024,9 +1024,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -1034,9 +1034,9 @@
    "file": "net/eca/client/render/CosmosRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -1044,9 +1044,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.create",
@@ -1054,9 +1054,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.CompositeState",
@@ -1064,9 +1064,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -1074,9 +1074,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -1084,9 +1084,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -1094,9 +1094,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -1104,9 +1104,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -1114,9 +1114,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -1124,9 +1124,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -1134,9 +1134,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -1144,9 +1144,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -1154,9 +1154,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -1164,9 +1164,9 @@
    "file": "net/eca/client/render/DreamSakuraRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderColor",
@@ -1174,9 +1174,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderColor",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShader",
@@ -1184,9 +1184,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShader",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionColorShader",
@@ -1194,9 +1194,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "GameRenderer.getPositionColorShader",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture",
@@ -1204,9 +1204,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderTexture",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionTexShader",
@@ -1214,9 +1214,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "GameRenderer.getPositionTexShader",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EntityExtensionLayer.java#render-class:class EntityExtensionLayer : RenderLayer",
@@ -1233,10 +1233,10 @@
    "file": "net/eca/client/render/EntityExtensionLayer.java",
    "kind": "render-use",
    "key": "RenderType.entityTranslucent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different render-use",
+   "status": "changed",
+   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
    "now": "RenderTypes.entityTranslucent",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -1244,9 +1244,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.create",
@@ -1254,9 +1254,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.CompositeState",
@@ -1264,9 +1264,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -1274,9 +1274,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -1284,9 +1284,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -1294,9 +1294,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -1304,9 +1304,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -1314,9 +1314,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -1324,9 +1324,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -1334,9 +1334,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -1344,9 +1344,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -1354,9 +1354,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -1364,9 +1364,9 @@
    "file": "net/eca/client/render/ForestRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/GeoBlockExtensionLayer.java#render-class:class GeoBlockExtensionLayer : GeoRenderLayer",
@@ -1392,10 +1392,10 @@
    "file": "net/eca/client/render/GeoEntityExtensionLayer.java",
    "kind": "render-use",
    "key": "RenderType.entityTranslucent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different render-use",
+   "status": "changed",
+   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
    "now": "RenderTypes.entityTranslucent",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -1403,9 +1403,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.create",
@@ -1413,9 +1413,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.CompositeState",
@@ -1423,9 +1423,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -1433,9 +1433,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -1443,9 +1443,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -1453,9 +1453,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -1463,9 +1463,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -1473,9 +1473,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -1483,9 +1483,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -1493,9 +1493,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -1503,9 +1503,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -1513,9 +1513,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -1523,9 +1523,9 @@
    "file": "net/eca/client/render/HackerRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -1533,9 +1533,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.create",
@@ -1543,9 +1543,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.CompositeState",
@@ -1553,9 +1553,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -1563,9 +1563,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -1573,9 +1573,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -1583,9 +1583,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -1593,9 +1593,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -1603,9 +1603,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -1613,9 +1613,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -1623,9 +1623,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -1633,9 +1633,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -1643,9 +1643,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -1653,9 +1653,9 @@
    "file": "net/eca/client/render/OceanRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -1663,9 +1663,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.create",
@@ -1673,9 +1673,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.CompositeState",
@@ -1683,9 +1683,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -1693,9 +1693,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -1703,9 +1703,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -1713,9 +1713,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -1723,9 +1723,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -1733,9 +1733,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -1743,9 +1743,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -1753,9 +1753,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -1763,9 +1763,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -1773,9 +1773,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -1783,9 +1783,9 @@
    "file": "net/eca/client/render/StarlightRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -1793,9 +1793,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.create",
@@ -1803,9 +1803,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.CompositeState",
@@ -1813,9 +1813,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -1823,9 +1823,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -1833,9 +1833,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -1843,9 +1843,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -1853,9 +1853,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -1863,9 +1863,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -1873,9 +1873,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -1883,9 +1883,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -1893,9 +1893,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -1903,9 +1903,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -1913,9 +1913,9 @@
    "file": "net/eca/client/render/StormRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -1923,9 +1923,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.create",
@@ -1933,9 +1933,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.CompositeState",
@@ -1943,9 +1943,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -1953,9 +1953,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -1963,9 +1963,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -1973,9 +1973,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -1983,9 +1983,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -1993,9 +1993,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -2003,9 +2003,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -2013,9 +2013,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -2023,9 +2023,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -2033,9 +2033,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -2043,9 +2043,9 @@
    "file": "net/eca/client/render/TheLastEndRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
@@ -2053,9 +2053,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.create",
@@ -2063,9 +2063,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.CompositeState",
@@ -2073,9 +2073,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -2083,9 +2083,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -2093,9 +2093,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -2103,9 +2103,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -2113,9 +2113,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -2123,9 +2123,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -2133,9 +2133,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -2143,9 +2143,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -2153,9 +2153,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -2163,9 +2163,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -2173,9 +2173,9 @@
    "file": "net/eca/client/render/VolcanoRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/GenericPresetShader.java#render-use:ShaderInstance",
@@ -2192,9 +2192,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.create",
@@ -2202,9 +2202,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.CompositeState",
@@ -2212,9 +2212,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -2222,9 +2222,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -2232,9 +2232,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.COLOR_WRITE",
@@ -2242,9 +2242,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.NO_CULL",
@@ -2252,9 +2252,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -2262,9 +2262,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -2272,9 +2272,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.OVERLAY",
@@ -2282,9 +2282,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderStateShard.EmptyTextureStateShard",
@@ -2292,9 +2292,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.EmptyTextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.POLYGON_OFFSET_LAYERING",
@@ -2302,9 +2302,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.POLYGON_OFFSET_LAYERING",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.LIGHTMAP",
@@ -2312,9 +2312,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.CULL",
@@ -2322,9 +2322,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
@@ -2332,9 +2332,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -2342,9 +2342,9 @@
    "file": "net/eca/client/render/preset/PresetRenderTypes.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/preset/ShaderPreset.java#render-use:RenderStateShard.ShaderStateShard",
@@ -2352,9 +2352,9 @@
    "file": "net/eca/client/render/preset/ShaderPreset.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader/ArcaneShader.java#render-use:ShaderInstance",
@@ -2434,10 +2434,10 @@
    "file": "net/eca/client/render/shader/FilterRenderer.java",
    "kind": "event",
    "key": "@SubscribeEvent RenderLevelStageEvent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different event",
+   "status": "changed",
+   "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
    "now": "@SubscribeEvent RenderLevelStageEvent.AfterLevel",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader/FilterRenderer.java#render-use:RenderSystem.setShader",
@@ -2445,9 +2445,9 @@
    "file": "net/eca/client/render/shader/FilterRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShader",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader/FilterRenderer.java#render-use:RenderSystem.setShaderTexture",
@@ -2455,9 +2455,9 @@
    "file": "net/eca/client/render/shader/FilterRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderTexture",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader/ForestShader.java#render-use:ShaderInstance",
@@ -2537,9 +2537,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderStateShard.ShaderStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.create",
@@ -2547,9 +2547,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.create",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.CompositeState",
@@ -2557,9 +2557,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.CompositeState",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderStateShard.TextureStateShard",
@@ -2567,9 +2567,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderStateShard.TextureStateShard",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
@@ -2577,9 +2577,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.TRANSLUCENT_TRANSPARENCY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.NO_DEPTH_TEST",
@@ -2587,9 +2587,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.NO_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.COLOR_WRITE",
@@ -2597,9 +2597,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
@@ -2607,9 +2607,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.BLOCK_SHEET_MIPPED",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
@@ -2617,9 +2617,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.LEQUAL_DEPTH_TEST",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.NO_CULL",
@@ -2627,9 +2627,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.NO_CULL",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.OVERLAY",
@@ -2637,9 +2637,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.OVERLAY",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.LIGHTMAP",
@@ -2647,9 +2647,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.LIGHTMAP",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.COLOR_DEPTH_WRITE",
@@ -2657,9 +2657,9 @@
    "file": "net/eca/client/render/shader_generator/GeneratedShaderPreview.java",
    "kind": "render-use",
    "key": "RenderType.COLOR_DEPTH_WRITE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/compat/GeckoLibCompat.java#event:addListener GeoRenderEvent.Entity.CompileRenderLayers",
@@ -2667,10 +2667,10 @@
    "file": "net/eca/compat/GeckoLibCompat.java",
    "kind": "event",
    "key": "addListener GeoRenderEvent.Entity.CompileRenderLayers",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different event",
+   "status": "changed",
+   "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
    "now": "addListener CompileEntityRenderLayersEvent",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/compat/GeckoLibCompat.java#event:addListener GeoRenderEvent.ReplacedEntity.CompileRenderLayers",
@@ -2678,10 +2678,10 @@
    "file": "net/eca/compat/GeckoLibCompat.java",
    "kind": "event",
    "key": "addListener GeoRenderEvent.ReplacedEntity.CompileRenderLayers",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different event",
+   "status": "changed",
+   "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
    "now": "addListener CompileReplacedEntityRenderLayersEvent",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/compat/GeckoLibCompat.java#event:addListener GeoRenderEvent.Block.CompileRenderLayers",
@@ -2689,10 +2689,10 @@
    "file": "net/eca/compat/GeckoLibCompat.java",
    "kind": "event",
    "key": "addListener GeoRenderEvent.Block.CompileRenderLayers",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different event",
+   "status": "changed",
+   "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
    "now": "addListener CompileBlockRenderLayersEvent",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/event/BossShowClientEvents.java#event:@SubscribeEvent ClientTickEvent.Post",
@@ -2799,10 +2799,10 @@
    "file": "net/eca/event/BossShowEditorClientEvents.java",
    "kind": "event",
    "key": "@SubscribeEvent RenderLevelStageEvent",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different event",
+   "status": "changed",
+   "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
    "now": "@SubscribeEvent RenderLevelStageEvent.AfterTranslucentBlocks",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/event/BossShowEditorClientEvents.java#render-use:RenderType.lines",
@@ -2810,10 +2810,10 @@
    "file": "net/eca/event/BossShowEditorClientEvents.java",
    "kind": "render-use",
    "key": "RenderType.lines",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different render-use",
+   "status": "changed",
+   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
    "now": "RenderTypes.lines",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/event/BossShowRecordingHud.java#event:@SubscribeEvent RenderGuiEvent.Post",
@@ -3001,10 +3001,10 @@
    "file": "net/eca/mixin/BossHealthOverlayMixin.java",
    "kind": "injection",
    "key": "@Inject method=drawBar(Lnet/minecraft/client/gui/GuiGraphics;IILnet/minecraft/world/BossEvent;)V @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=extractBar(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IILnet/minecraft/world/BossEvent;)V @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/BossShowCameraMixin.java#mixin:@Mixin Camera",
@@ -3021,9 +3021,9 @@
    "file": "net/eca/mixin/BossShowCameraMixin.java",
    "kind": "injection",
    "key": "@Inject method=setup @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ChunkMapMixin.java#injection:@Inject method=addEntity @At(value=\"HEAD\")",
@@ -3220,10 +3220,10 @@
    "file": "net/eca/mixin/DeathScreenMixin.java",
    "kind": "injection",
    "key": "@Inject method=render @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=extractRenderState @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/DistanceManagerMixin.java#injection:@Inject method=removePlayer @At(value=\"HEAD\")",
@@ -3447,10 +3447,10 @@
    "file": "net/eca/mixin/EntityMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/EntityMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
@@ -3458,10 +3458,10 @@
    "file": "net/eca/mixin/EntityMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/EntityRenderDispatcherMixin.java#injection:@Inject method=shouldRender @At(value=\"HEAD\")",
@@ -3577,10 +3577,10 @@
    "file": "net/eca/mixin/FallingBlockRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=render @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=submit @At(value=\"TAIL\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#mixin:@Mixin FogRenderer",
@@ -3768,10 +3768,10 @@
    "file": "net/eca/mixin/ItemRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=render @At(value=\"INVOKE\",target=\"Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V\",shift=At.Shift.BEFORE)",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=submit @At(value=\"INVOKE\",target=\"Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V\",shift=At.Shift.BEFORE)",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer",
@@ -3779,9 +3779,9 @@
    "file": "net/eca/mixin/ItemRendererMixin.java",
    "kind": "mixin",
    "key": "@Mixin ItemRenderer",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ItemStackClientMixin.java#injection:@Inject method=getHoverName @At(value=\"RETURN\")",
@@ -4083,10 +4083,10 @@
    "file": "net/eca/mixin/LivingEntityMixin.java",
    "kind": "injection",
    "key": "@Inject method=hurt @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=hurtServer @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityMixin.java#injection:@Inject method=hurt @At(value=\"RETURN\")",
@@ -4094,10 +4094,10 @@
    "file": "net/eca/mixin/LivingEntityMixin.java",
    "kind": "injection",
    "key": "@Inject method=hurt @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=hurtServer @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Inject method=<init> @At(value=\"RETURN\")",
@@ -4123,9 +4123,9 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=render @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
@@ -4133,9 +4133,9 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
@@ -4143,10 +4143,10 @@
    "file": "net/eca/mixin/LivingEntityRendererMixin.java",
    "kind": "injection",
    "key": "@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Redirect method=submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/EntityRenderState;FF)V\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/LocalPlayerMixin.java#injection:@Inject method=shouldShowDeathScreen @At(value=\"HEAD\")",
@@ -4379,9 +4379,9 @@
    "file": "net/eca/mixin/PlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=setItemSlot @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/RangedAttributeMixin.java#injection:@Inject method=sanitizeValue @At(value=\"HEAD\")",
@@ -4543,10 +4543,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer; @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
@@ -4554,10 +4554,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer; @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
@@ -4565,10 +4565,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z @At(value=\"HEAD\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")",
@@ -4576,10 +4576,10 @@
    "file": "net/eca/mixin/ServerPlayerMixin.java",
    "kind": "injection",
    "key": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z @At(value=\"RETURN\")",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/SoundManagerMixin.java#injection:@Inject method=play @At(value=\"HEAD\")",
@@ -4749,9 +4749,9 @@
    "file": "resources/assets/eca/shaders/core/arcane.json",
    "kind": "shader-uniform",
    "key": "eca:core/arcane Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane.json#shader-uniform:eca:core/arcane CameraYaw",
@@ -4867,9 +4867,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_block.json",
    "kind": "shader",
    "key": "eca:core/arcane_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_block.json#shader-uniform:eca:core/arcane_block ModelViewMat",
@@ -4913,9 +4913,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/arcane_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_block.json#shader-uniform:eca:core/arcane_block CameraYaw",
@@ -5031,9 +5031,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_entity.json",
    "kind": "shader",
    "key": "eca:core/arcane_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_entity.json#shader-uniform:eca:core/arcane_entity ModelViewMat",
@@ -5077,9 +5077,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/arcane_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_entity.json#shader-uniform:eca:core/arcane_entity CameraYaw",
@@ -5249,9 +5249,9 @@
    "file": "resources/assets/eca/shaders/core/aurora.json",
    "kind": "shader-uniform",
    "key": "eca:core/aurora Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora.json#shader-uniform:eca:core/aurora CameraYaw",
@@ -5367,9 +5367,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_block.json",
    "kind": "shader",
    "key": "eca:core/aurora_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_block.json#shader-uniform:eca:core/aurora_block ModelViewMat",
@@ -5413,9 +5413,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/aurora_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_block.json#shader-uniform:eca:core/aurora_block CameraYaw",
@@ -5531,9 +5531,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_entity.json",
    "kind": "shader",
    "key": "eca:core/aurora_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_entity.json#shader-uniform:eca:core/aurora_entity ModelViewMat",
@@ -5577,9 +5577,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/aurora_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_entity.json#shader-uniform:eca:core/aurora_entity CameraYaw",
@@ -5749,9 +5749,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole.json",
    "kind": "shader-uniform",
    "key": "eca:core/black_hole Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole.json#shader-uniform:eca:core/black_hole CameraYaw",
@@ -5867,9 +5867,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_block.json",
    "kind": "shader",
    "key": "eca:core/black_hole_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_block.json#shader-uniform:eca:core/black_hole_block ModelViewMat",
@@ -5913,9 +5913,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/black_hole_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_block.json#shader-uniform:eca:core/black_hole_block CameraYaw",
@@ -6031,9 +6031,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_entity.json",
    "kind": "shader",
    "key": "eca:core/black_hole_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader-uniform:eca:core/black_hole_entity ModelViewMat",
@@ -6077,9 +6077,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/black_hole_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader-uniform:eca:core/black_hole_entity CameraYaw",
@@ -6249,9 +6249,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos.json",
    "kind": "shader-uniform",
    "key": "eca:core/cosmos Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos.json#shader-uniform:eca:core/cosmos CameraYaw",
@@ -6367,9 +6367,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_block.json",
    "kind": "shader",
    "key": "eca:core/cosmos_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_block.json#shader-uniform:eca:core/cosmos_block ModelViewMat",
@@ -6413,9 +6413,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/cosmos_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_block.json#shader-uniform:eca:core/cosmos_block CameraYaw",
@@ -6531,9 +6531,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_entity.json",
    "kind": "shader",
    "key": "eca:core/cosmos_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader-uniform:eca:core/cosmos_entity ModelViewMat",
@@ -6577,9 +6577,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/cosmos_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader-uniform:eca:core/cosmos_entity CameraYaw",
@@ -6857,9 +6857,9 @@
    "file": "resources/assets/eca/shaders/core/dream_sakura_block.json",
    "kind": "shader",
    "key": "eca:core/dream_sakura_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/dream_sakura_block.json#shader-uniform:eca:core/dream_sakura_block ModelViewMat",
@@ -7011,9 +7011,9 @@
    "file": "resources/assets/eca/shaders/core/dream_sakura_entity.json",
    "kind": "shader",
    "key": "eca:core/dream_sakura_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/dream_sakura_entity.json#shader-uniform:eca:core/dream_sakura_entity ModelViewMat",
@@ -7543,9 +7543,9 @@
    "file": "resources/assets/eca/shaders/core/filters/cosmos.json",
    "kind": "shader-sampler",
    "key": "eca:core/filters/cosmos Sampler3",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/filters/cosmos.vsh#shader:eca:core/filters/cosmos.vsh",
@@ -8237,9 +8237,9 @@
    "file": "resources/assets/eca/shaders/core/forest.json",
    "kind": "shader-uniform",
    "key": "eca:core/forest Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest.json#shader-uniform:eca:core/forest CameraYaw",
@@ -8355,9 +8355,9 @@
    "file": "resources/assets/eca/shaders/core/forest_block.json",
    "kind": "shader",
    "key": "eca:core/forest_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_block.json#shader-uniform:eca:core/forest_block ModelViewMat",
@@ -8401,9 +8401,9 @@
    "file": "resources/assets/eca/shaders/core/forest_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/forest_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_block.json#shader-uniform:eca:core/forest_block CameraYaw",
@@ -8519,9 +8519,9 @@
    "file": "resources/assets/eca/shaders/core/forest_entity.json",
    "kind": "shader",
    "key": "eca:core/forest_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_entity.json#shader-uniform:eca:core/forest_entity ModelViewMat",
@@ -8565,9 +8565,9 @@
    "file": "resources/assets/eca/shaders/core/forest_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/forest_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_entity.json#shader-uniform:eca:core/forest_entity CameraYaw",
@@ -8737,9 +8737,9 @@
    "file": "resources/assets/eca/shaders/core/hacker.json",
    "kind": "shader-uniform",
    "key": "eca:core/hacker Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker.json#shader-uniform:eca:core/hacker CameraYaw",
@@ -8855,9 +8855,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_block.json",
    "kind": "shader",
    "key": "eca:core/hacker_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_block.json#shader-uniform:eca:core/hacker_block ModelViewMat",
@@ -8901,9 +8901,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/hacker_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_block.json#shader-uniform:eca:core/hacker_block CameraYaw",
@@ -9019,9 +9019,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_entity.json",
    "kind": "shader",
    "key": "eca:core/hacker_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_entity.json#shader-uniform:eca:core/hacker_entity ModelViewMat",
@@ -9065,9 +9065,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/hacker_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_entity.json#shader-uniform:eca:core/hacker_entity CameraYaw",
@@ -9345,9 +9345,9 @@
    "file": "resources/assets/eca/shaders/core/ocean_block.json",
    "kind": "shader",
    "key": "eca:core/ocean_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/ocean_block.json#shader-uniform:eca:core/ocean_block ModelViewMat",
@@ -9499,9 +9499,9 @@
    "file": "resources/assets/eca/shaders/core/ocean_entity.json",
    "kind": "shader",
    "key": "eca:core/ocean_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/ocean_entity.json#shader-uniform:eca:core/ocean_entity ModelViewMat",
@@ -9707,9 +9707,9 @@
    "file": "resources/assets/eca/shaders/core/starlight.json",
    "kind": "shader-uniform",
    "key": "eca:core/starlight Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight.json#shader-uniform:eca:core/starlight CameraYaw",
@@ -9825,9 +9825,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_block.json",
    "kind": "shader",
    "key": "eca:core/starlight_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_block.json#shader-uniform:eca:core/starlight_block ModelViewMat",
@@ -9871,9 +9871,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/starlight_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_block.json#shader-uniform:eca:core/starlight_block CameraYaw",
@@ -9989,9 +9989,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_entity.json",
    "kind": "shader",
    "key": "eca:core/starlight_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_entity.json#shader-uniform:eca:core/starlight_entity ModelViewMat",
@@ -10035,9 +10035,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/starlight_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_entity.json#shader-uniform:eca:core/starlight_entity CameraYaw",
@@ -10315,9 +10315,9 @@
    "file": "resources/assets/eca/shaders/core/storm_block.json",
    "kind": "shader",
    "key": "eca:core/storm_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/storm_block.json#shader-uniform:eca:core/storm_block ModelViewMat",
@@ -10469,9 +10469,9 @@
    "file": "resources/assets/eca/shaders/core/storm_entity.json",
    "kind": "shader",
    "key": "eca:core/storm_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/storm_entity.json#shader-uniform:eca:core/storm_entity ModelViewMat",
@@ -10677,9 +10677,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end.json",
    "kind": "shader-uniform",
    "key": "eca:core/the_last_end Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end.json#shader-uniform:eca:core/the_last_end CameraYaw",
@@ -10795,9 +10795,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_block.json",
    "kind": "shader",
    "key": "eca:core/the_last_end_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader-uniform:eca:core/the_last_end_block ModelViewMat",
@@ -10841,9 +10841,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/the_last_end_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader-uniform:eca:core/the_last_end_block CameraYaw",
@@ -10959,9 +10959,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_entity.json",
    "kind": "shader",
    "key": "eca:core/the_last_end_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader-uniform:eca:core/the_last_end_entity ModelViewMat",
@@ -11005,9 +11005,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/the_last_end_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader-uniform:eca:core/the_last_end_entity CameraYaw",
@@ -11285,9 +11285,9 @@
    "file": "resources/assets/eca/shaders/core/volcano_block.json",
    "kind": "shader",
    "key": "eca:core/volcano_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/volcano_block.json#shader-uniform:eca:core/volcano_block ModelViewMat",
@@ -11439,9 +11439,9 @@
    "file": "resources/assets/eca/shaders/core/volcano_entity.json",
    "kind": "shader",
    "key": "eca:core/volcano_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/volcano_entity.json#shader-uniform:eca:core/volcano_entity ModelViewMat",
@@ -11602,302 +11602,16 @@
    "file": "net/eca/pro/EcaProIntroRenderer.java",
    "kind": "render-use",
    "key": "RenderType.TEXTURE",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   }
  ],
- "unaccounted": [
-  "main:net/eca/blender/client/render/BlenderModelRenderer.java#render-use:RenderType.entityTranslucent",
-  "main:net/eca/blender/client/render/BlenderModelRenderer.java#render-use:RenderType.entityCutoutNoCull",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.create",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.CompositeState",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/AuroraRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/BlackHoleRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/BlockExtensionRenderer.java#event:addListener RenderLevelStageEvent",
-  "main:net/eca/client/render/BossShowAnchorRenderer.java#event:@SubscribeEvent RenderLevelStageEvent",
-  "main:net/eca/client/render/BossShowAnchorRenderer.java#render-use:RenderType.lines",
-  "main:net/eca/client/render/BossShowAnchorRenderer.java#render-use:RenderType.entityTranslucent",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/CosmosRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/DreamSakuraRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderColor",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShader",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionColorShader",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionTexShader",
-  "main:net/eca/client/render/EntityExtensionLayer.java#render-use:RenderType.entityTranslucent",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/GeoEntityExtensionLayer.java#render-use:RenderType.entityTranslucent",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/HackerRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/OceanRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/StarlightRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/StormRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/TheLastEndRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/VolcanoRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.create",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderStateShard.EmptyTextureStateShard",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.POLYGON_OFFSET_LAYERING",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.CULL",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/preset/PresetRenderTypes.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/client/render/preset/ShaderPreset.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/shader/FilterRenderer.java#event:@SubscribeEvent RenderLevelStageEvent",
-  "main:net/eca/client/render/shader/FilterRenderer.java#render-use:RenderSystem.setShader",
-  "main:net/eca/client/render/shader/FilterRenderer.java#render-use:RenderSystem.setShaderTexture",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderStateShard.ShaderStateShard",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.create",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.CompositeState",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderStateShard.TextureStateShard",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.TRANSLUCENT_TRANSPARENCY",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.NO_DEPTH_TEST",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.COLOR_WRITE",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.BLOCK_SHEET_MIPPED",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.LEQUAL_DEPTH_TEST",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.NO_CULL",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.OVERLAY",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.LIGHTMAP",
-  "main:net/eca/client/render/shader_generator/GeneratedShaderPreview.java#render-use:RenderType.COLOR_DEPTH_WRITE",
-  "main:net/eca/compat/GeckoLibCompat.java#event:addListener GeoRenderEvent.Entity.CompileRenderLayers",
-  "main:net/eca/compat/GeckoLibCompat.java#event:addListener GeoRenderEvent.ReplacedEntity.CompileRenderLayers",
-  "main:net/eca/compat/GeckoLibCompat.java#event:addListener GeoRenderEvent.Block.CompileRenderLayers",
-  "main:net/eca/event/BossShowEditorClientEvents.java#event:@SubscribeEvent RenderLevelStageEvent",
-  "main:net/eca/event/BossShowEditorClientEvents.java#render-use:RenderType.lines",
-  "main:net/eca/mixin/BossHealthOverlayMixin.java#injection:@Inject method=drawBar(Lnet/minecraft/client/gui/GuiGraphics;IILnet/minecraft/world/BossEvent;)V @At(value=\"HEAD\")",
-  "main:net/eca/mixin/BossShowCameraMixin.java#injection:@Inject method=setup @At(value=\"TAIL\")",
-  "main:net/eca/mixin/DeathScreenMixin.java#injection:@Inject method=render @At(value=\"HEAD\")",
-  "main:net/eca/mixin/EntityMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-  "main:net/eca/mixin/EntityMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-  "main:net/eca/mixin/FallingBlockRendererMixin.java#injection:@Inject method=render @At(value=\"TAIL\")",
-  "main:net/eca/mixin/ItemRendererMixin.java#injection:@Inject method=render @At(value=\"INVOKE\",target=\"Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V\",shift=At.Shift.BEFORE)",
-  "main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer",
-  "main:net/eca/mixin/LivingEntityMixin.java#injection:@Inject method=hurt @At(value=\"HEAD\")",
-  "main:net/eca/mixin/LivingEntityMixin.java#injection:@Inject method=hurt @At(value=\"RETURN\")",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Inject method=render @At(value=\"HEAD\")",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/model/EntityModel;renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V\")",
-  "main:net/eca/mixin/LivingEntityRendererMixin.java#injection:@Redirect method=render @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/entity/layers/RenderLayer;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/Entity;FFFFFF)V\")",
-  "main:net/eca/mixin/PlayerMixin.java#injection:@Inject method=setItemSlot @At(value=\"HEAD\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"HEAD\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value=\"RETURN\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"HEAD\")",
-  "main:net/eca/mixin/ServerPlayerMixin.java#injection:@Inject method=teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDFF)V @At(value=\"RETURN\")",
-  "main:resources/assets/eca/shaders/core/arcane.json#shader-uniform:eca:core/arcane Glow",
-  "main:resources/assets/eca/shaders/core/arcane_block.json#shader:eca:core/arcane_block.json",
-  "main:resources/assets/eca/shaders/core/arcane_block.json#shader-uniform:eca:core/arcane_block Glow",
-  "main:resources/assets/eca/shaders/core/arcane_entity.json#shader:eca:core/arcane_entity.json",
-  "main:resources/assets/eca/shaders/core/arcane_entity.json#shader-uniform:eca:core/arcane_entity Glow",
-  "main:resources/assets/eca/shaders/core/aurora.json#shader-uniform:eca:core/aurora Glow",
-  "main:resources/assets/eca/shaders/core/aurora_block.json#shader:eca:core/aurora_block.json",
-  "main:resources/assets/eca/shaders/core/aurora_block.json#shader-uniform:eca:core/aurora_block Glow",
-  "main:resources/assets/eca/shaders/core/aurora_entity.json#shader:eca:core/aurora_entity.json",
-  "main:resources/assets/eca/shaders/core/aurora_entity.json#shader-uniform:eca:core/aurora_entity Glow",
-  "main:resources/assets/eca/shaders/core/black_hole.json#shader-uniform:eca:core/black_hole Glow",
-  "main:resources/assets/eca/shaders/core/black_hole_block.json#shader:eca:core/black_hole_block.json",
-  "main:resources/assets/eca/shaders/core/black_hole_block.json#shader-uniform:eca:core/black_hole_block Glow",
-  "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader:eca:core/black_hole_entity.json",
-  "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader-uniform:eca:core/black_hole_entity Glow",
-  "main:resources/assets/eca/shaders/core/cosmos.json#shader-uniform:eca:core/cosmos Glow",
-  "main:resources/assets/eca/shaders/core/cosmos_block.json#shader:eca:core/cosmos_block.json",
-  "main:resources/assets/eca/shaders/core/cosmos_block.json#shader-uniform:eca:core/cosmos_block Glow",
-  "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader:eca:core/cosmos_entity.json",
-  "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader-uniform:eca:core/cosmos_entity Glow",
-  "main:resources/assets/eca/shaders/core/dream_sakura_block.json#shader:eca:core/dream_sakura_block.json",
-  "main:resources/assets/eca/shaders/core/dream_sakura_entity.json#shader:eca:core/dream_sakura_entity.json",
-  "main:resources/assets/eca/shaders/core/filters/cosmos.json#shader-sampler:eca:core/filters/cosmos Sampler3",
-  "main:resources/assets/eca/shaders/core/forest.json#shader-uniform:eca:core/forest Glow",
-  "main:resources/assets/eca/shaders/core/forest_block.json#shader:eca:core/forest_block.json",
-  "main:resources/assets/eca/shaders/core/forest_block.json#shader-uniform:eca:core/forest_block Glow",
-  "main:resources/assets/eca/shaders/core/forest_entity.json#shader:eca:core/forest_entity.json",
-  "main:resources/assets/eca/shaders/core/forest_entity.json#shader-uniform:eca:core/forest_entity Glow",
-  "main:resources/assets/eca/shaders/core/hacker.json#shader-uniform:eca:core/hacker Glow",
-  "main:resources/assets/eca/shaders/core/hacker_block.json#shader:eca:core/hacker_block.json",
-  "main:resources/assets/eca/shaders/core/hacker_block.json#shader-uniform:eca:core/hacker_block Glow",
-  "main:resources/assets/eca/shaders/core/hacker_entity.json#shader:eca:core/hacker_entity.json",
-  "main:resources/assets/eca/shaders/core/hacker_entity.json#shader-uniform:eca:core/hacker_entity Glow",
-  "main:resources/assets/eca/shaders/core/ocean_block.json#shader:eca:core/ocean_block.json",
-  "main:resources/assets/eca/shaders/core/ocean_entity.json#shader:eca:core/ocean_entity.json",
-  "main:resources/assets/eca/shaders/core/starlight.json#shader-uniform:eca:core/starlight Glow",
-  "main:resources/assets/eca/shaders/core/starlight_block.json#shader:eca:core/starlight_block.json",
-  "main:resources/assets/eca/shaders/core/starlight_block.json#shader-uniform:eca:core/starlight_block Glow",
-  "main:resources/assets/eca/shaders/core/starlight_entity.json#shader:eca:core/starlight_entity.json",
-  "main:resources/assets/eca/shaders/core/starlight_entity.json#shader-uniform:eca:core/starlight_entity Glow",
-  "main:resources/assets/eca/shaders/core/storm_block.json#shader:eca:core/storm_block.json",
-  "main:resources/assets/eca/shaders/core/storm_entity.json#shader:eca:core/storm_entity.json",
-  "main:resources/assets/eca/shaders/core/the_last_end.json#shader-uniform:eca:core/the_last_end Glow",
-  "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader:eca:core/the_last_end_block.json",
-  "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader-uniform:eca:core/the_last_end_block Glow",
-  "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader:eca:core/the_last_end_entity.json",
-  "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader-uniform:eca:core/the_last_end_entity Glow",
-  "main:resources/assets/eca/shaders/core/volcano_block.json#shader:eca:core/volcano_block.json",
-  "main:resources/assets/eca/shaders/core/volcano_entity.json#shader:eca:core/volcano_entity.json",
-  "pro:net/eca/pro/EcaProIntroRenderer.java#render-use:RenderType.TEXTURE"
- ],
+ "unaccounted": [],
  "counts": {
   "same": 950,
-  "unaccounted": 284,
-  "moved": 12,
-  "changed": 6
+  "changed": 33,
+  "moved": 269
  },
  "notes": []
 }
