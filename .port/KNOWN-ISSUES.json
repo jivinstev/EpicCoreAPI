@@ -709,6 +709,150 @@
         "26.3": "open"
       },
       "title": "Five more screens crash on open on 26.x: 'Can only blur once per frame' (extractRenderState calls extractBackground, which vanilla's extractRenderStateWithTooltipAndSubtitles already calls)"
+    },
+    {
+      "id": "ECA-025",
+      "lowest": "1.21.11",
+      "notes": "Found by the 2026-10-18 round's fresh reviewer of neoforge-1.21.11 (REVIEW.md changed rows EcaBossBarRenderer, ShaderPreviewRenderer; 5 item rows). Not fixed this round.",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.11": "open"
+      },
+      "title": "EcaBossBarRenderer and ShaderPreviewRenderer lost the parent's picture-in-picture path on 1.21.11 (GUI is deferred there); the boss bar also loses its alpha"
+    },
+    {
+      "id": "ECA-026",
+      "lowest": "1.21.11",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-1.21.11 (REVIEW.md rows FogRendererMixin, LevelRendererMixin, 4 item rows). Not fixed this round.",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.11": "open"
+      },
+      "title": "FogRendererMixin and LevelRendererMixin on 1.21.11 drop the fog-shape handling and force-loaded entity fog; the LevelRendererMixin STUBS text claims every removed handler is re-done"
+    },
+    {
+      "id": "ECA-027",
+      "lowest": "1.21.11",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-1.21.11. Small. Not fixed this round.",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.11": "open"
+      },
+      "title": "BossShowEditorClientEvents passes reach where 1.21.11 expects a squared distance"
+    },
+    {
+      "id": "ECA-028",
+      "lowest": "1.21.11",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-1.21.11. The MV-STAND-IN copy keeps this line (ECA-002 only removed the second background call). Small.",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "feature",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.11": "open"
+      },
+      "title": "ShaderSourceEditorScreen on 1.21.11 sets setCursorColor(0): the text cursor is transparent"
+    },
+    {
+      "id": "ECA-029",
+      "lowest": "26.2",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-26.2 (parent and 1.21.1 return to the editor). Small.",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": true
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "26.2": "open"
+      },
+      "title": "BossShowRangeTransformScreen.closePanel calls onClose(), closing to the game instead of returning to BossShowEditorScreen"
+    },
+    {
+      "id": "ECA-030",
+      "lowest": "26.2",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-26.2. Small.",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "feature",
+        "visibility": "rare",
+        "workaround": true
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "26.2": "open"
+      },
+      "title": "ShaderMcpScreen: the digits-only filter on the port field was deleted with no replacement (26.2)"
+    },
+    {
+      "id": "ECA-031",
+      "lowest": "26.2",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-26.2 (Arcane, Aurora, BlackHole, Cosmos, DreamSakura, Forest, Starlight, Storm, TheLastEnd, Volcano; HackerShader and OceanShader still use mainCamera()). Check 26.3 too.",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "26.2": "open"
+      },
+      "title": "GenericPresetShader and ten preset shaders read camera yaw/pitch from getCameraEntity().getYRot() instead of mainCamera().yRot() on 26.2: no frame interpolation, wrong in third-person-front and detached camera"
+    },
+    {
+      "id": "ECA-032",
+      "lowest": "26.3",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-26.3. NeoForge's own non-synced config type is LOCAL; the fix is LOCAL. Small.",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": true
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "26.3": "open"
+      },
+      "title": "ModConfigs: COMMON became STARTUP on 26.3 (FML 12 removed COMMON): eca.toml edits are no longer picked up at runtime"
     }
   ],
   "schema": 1
