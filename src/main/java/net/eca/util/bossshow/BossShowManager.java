@@ -89,12 +89,12 @@ public final class BossShowManager {
     // 在 mod 文件的内部根目录下解析路径，不存在则返回 null
     private static Path findModResource(net.neoforged.neoforgespi.locating.IModFile modFile, String... parts) {
         try {
-            java.util.Optional<java.net.URI> uri = modFile.getContents().findFile(String.join("/", parts));
-            if (uri.isEmpty()) {
-                return null;
+            for (Path contentRoot : modFile.getContents().getContentRoots()) {
+                Path p = contentRoot;
+                for (String part : parts) p = p.resolve(part);
+                if (Files.exists(p)) return p;
             }
-            Path p = Paths.get(uri.get());
-            return Files.exists(p) ? p : null;
+            return null;
         } catch (Exception e) {
             return null;
         }

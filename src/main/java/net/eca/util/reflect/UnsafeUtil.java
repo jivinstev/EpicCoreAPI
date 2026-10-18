@@ -131,7 +131,8 @@ public class UnsafeUtil {
             initLwjglUnsafe();
             initFieldOffsets();
             available = true;
-        } catch (Exception e) {
+        } catch (Exception | LinkageError e) {
+            // a dedicated server ships LWJGL without natives: MemoryUtil's static init throws UnsatisfiedLinkError
             available = false;
             EcaLogger.info("[UnsafeUtil] Failed to initialize LWJGL internal Unsafe instance: {}", e.getMessage());
         }

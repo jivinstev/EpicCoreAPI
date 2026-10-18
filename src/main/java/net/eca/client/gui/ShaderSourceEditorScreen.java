@@ -1,5 +1,5 @@
-// MV-STAND-IN: 1.21.11's prepared copy of the 1.21.10 ShaderSourceEditorScreen overlay as it was before 1.21.10's single renderBackground
-// MV-STAND-IN: (no second blur) and 1.21.1 cursor colour / editor background, unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
+// MV-STAND-IN: 1.21.11's prepared copy of the 1.21.10 ShaderSourceEditorScreen overlay: 1.21.1 cursor colour / editor background kept;
+// MV-STAND-IN: the single renderBackground of 1.21.10 is not carried (a second blur crashes on open, ECA-002).
 package net.eca.client.gui;
 
 import net.eca.client.render.shader_generator.GeneratedShaderPreview;
@@ -626,7 +626,6 @@ public final class ShaderSourceEditorScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.fill(0, 0, width, CONTENT_TOP - 2, 0xFF202225);
         graphics.fill(6, CONTENT_TOP - 2, editorRight, height - 6, 0xFF08090B);
         graphics.fill(previewLeft, CONTENT_TOP, width - 8, previewBottom, 0xFF08090B);
