@@ -22,15 +22,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@34a0c15",
+        "1.21.11": "fixed@34a0c15",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@34a0c15",
+        "26.2": "fixed@34a0c15",
+        "26.3": "fixed@34a0c15"
       },
       "title": "Five shader-generator screens crash on open: 'Can only blur once per frame' (render() calls renderBackground/extractBackground a second time)"
     },
@@ -53,14 +53,14 @@
       "status": {
         "1.21.1": "n/a",
         "1.21.10": "n/a",
-        "1.21.11": "open",
+        "1.21.11": "fixed@9780b9c",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@9780b9c",
+        "26.2": "fixed@9780b9c",
+        "26.3": "fixed@9780b9c"
       },
       "title": "ShaderSourceEditorScreen blurs twice and crashes on open on 1.21.11 and 26.x (1.21.11 MV-STAND-IN carries the pre-fix 1.21.10 overlay)"
     },
@@ -119,13 +119,13 @@
       "source": "gate",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@34a0c15",
+        "1.21.11": "fixed@34a0c15",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
+        "26.1.2": "fixed@34a0c15",
         "26.2": "n/a",
         "26.3": "n/a"
       },
@@ -150,15 +150,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@34a0c15",
+        "1.21.11": "fixed@34a0c15",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@34a0c15",
+        "26.2": "fixed@34a0c15",
+        "26.3": "fixed@34a0c15"
       },
       "title": "File-based shader presets and boss-show definitions never load on FML 10+: JarContents.findFile returns only regular files, never directories"
     },
@@ -210,15 +210,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@34a0c15",
+        "1.21.11": "fixed@34a0c15",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@34a0c15",
+        "26.2": "fixed@34a0c15",
+        "26.3": "fixed@34a0c15"
       },
       "title": "ShaderAiSettingsScreen shows the AI API key in plain text after a resize or GUI-scale change (mask installed once; init() rebuilds the field)"
     },
@@ -429,14 +429,14 @@
       "status": {
         "1.21.1": "n/a",
         "1.21.10": "n/a",
-        "1.21.11": "open",
+        "1.21.11": "fixed@9780b9c",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@9780b9c",
+        "26.2": "fixed@9780b9c",
+        "26.3": "fixed@9780b9c"
       },
       "title": "HealthDataflowAnalyzer on 1.21.11 and 26.x is an MV-STAND-IN with 1.21.1's hurt/actuallyHurt descriptors and getFloat NBT identity keys"
     },
@@ -704,9 +704,9 @@
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@be55fe2",
+        "26.2": "fixed@be55fe2",
+        "26.3": "fixed@be55fe2"
       },
       "title": "Five more screens crash on open on 26.x: 'Can only blur once per frame' (extractRenderState calls extractBackground, which vanilla's extractRenderStateWithTooltipAndSubtitles already calls)"
     },
