@@ -106,11 +106,15 @@ public final class ShaderPresetRegistry {
         });
     }
 
-    // 1.21.10: IModFile.findResource is gone; resolve through the mod file's contents, null when absent
+    // 1.21.10: IModFile.findResource is gone; JarContents.findFile skips directories, so walk the content roots, null when absent
     private static Path findModResource(net.neoforged.neoforgespi.locating.IModFile modFile, String... parts) {
         try {
-            java.util.Optional<java.net.URI> uri = modFile.getContents().findFile(String.join("/", parts));
-            return uri.isEmpty() ? null : Path.of(uri.get());
+            for (Path contentRoot : modFile.getContents().getContentRoots()) {
+                Path p = contentRoot;
+                for (String part : parts) p = p.resolve(part);
+                if (Files.exists(p)) return p;
+            }
+            return null;
         } catch (Exception e) {
             return null;
         }
