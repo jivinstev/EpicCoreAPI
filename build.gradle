@@ -151,10 +151,59 @@ tasks.named('jar') {
     }
 }
 
+// CF early coremod library (FML 10+). FML 10 loads ClassProcessorProvider services only from the launch class loader
+// chain, which holds the FML Plugins loader: every FMLModType: LIBRARY jar (top-level or jar-in-jar) is put on it before
+// the processor set is built (FMLLoader.loadPlugins -> createClassProcessorSet). A mod jar is game content and is never
+// on it, so the CF processor is shipped as a nested LIBRARY jar holding only the self-contained processor closure.
+tasks.register('cfCoremodJar', Jar) {
+    group = 'build'
+    description = 'Packages the CF ClassProcessorProvider as an FML LIBRARY jar for jar-in-jar.'
+    dependsOn tasks.named('classes'), tasks.named('cfClasses')
+    archiveFileName.set("eca-cf-coremod-${project.version}.jar")
+    destinationDirectory = layout.buildDirectory.dir('embedded-cf-coremod')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets.cf.output) {
+        include 'net/eca/coremod/EcaTransformationService*', 'net/eca/coremod/RuntimeExtensionBridge*'
+    }
+    from(sourceSets.main.output) {
+        include 'net/eca/coremod/EcaCoreTransformer*', 'net/eca/coremod/EcaClassProcessorProvider*'
+        include 'net/eca/coremod/EarlyLogWriter*'
+        include 'META-INF/services/net.neoforged.neoforgespi.transformation.ClassProcessorProvider'
+    }
+    manifest {
+        attributes('FMLModType': 'LIBRARY', 'Automatic-Module-Name': 'net.eca.cfcoremod',
+                'Implementation-Version': project.version)
+    }
+}
+
+tasks.register('cfJarJarMetadata') {
+    dependsOn tasks.named('jar')
+    // Everything doLast reads: the version (the nested library's name and range) and the base jar (its jarJar list).
+    // Without them Gradle keeps a stale metadata.json after a version change, which points at a jar that is not nested.
+    inputs.property('version', project.version.toString())
+    inputs.file(tasks.named('jar').flatMap { it.archiveFile })
+    def out = layout.buildDirectory.file('cf-jarjar/META-INF/jarjar/metadata.json')
+    outputs.file(out)
+    doLast {
+        def base = tasks.named('jar').get().archiveFile.get().asFile
+        def meta = [jars: []]
+        new java.util.zip.ZipFile(base).withCloseable { z ->
+            def e = z.getEntry('META-INF/jarjar/metadata.json')
+            if (e != null) meta = new groovy.json.JsonSlurper().parse(z.getInputStream(e))
+        }
+        meta.jars = (meta.jars as List) + [[identifier: [group: 'net.eca', artifact: 'eca-cf-coremod'],
+                version: [range: "[${project.version}]", artifactVersion: "${project.version}"],
+                path: "META-INF/jarjar/eca-cf-coremod-${project.version}.jar", isObfuscated: false]]
+        def f = out.get().asFile
+        f.parentFile.mkdirs()
+        f.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(meta))
+    }
+}
+
 tasks.register('cfJar', Jar) {
     group = 'build'
     description = 'Builds the CoreMod and Mixin variant without the optional runtime backends.'
-    dependsOn tasks.named('jar'), tasks.named('cfClasses')
+    dependsOn tasks.named('jar'), tasks.named('cfClasses'), tasks.named('cfCoremodJar'), tasks.named('cfJarJarMetadata')
     archiveFileName.set("${project.archives_name}-${project.version}_cf.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -166,8 +215,11 @@ tasks.register('cfJar', Jar) {
         exclude 'net/eca/EcaMod.class', 'net/eca/event/LoadCompleteHandler*'
         exclude 'net/eca/coremod/EcaTransformationService*', 'net/eca/coremod/EcaTransformerManager*'
         exclude 'net/eca/coremod/RuntimeBytecodeProvider*', 'net/eca/coremod/RuntimeExtensionBridge*'
+        exclude 'META-INF/jarjar/metadata.json'
     }
     from sourceSets.cf.output
+    from(tasks.named('cfCoremodJar').flatMap { it.archiveFile }) { into 'META-INF/jarjar' }
+    from(layout.buildDirectory.dir('cf-jarjar'))
     doFirst {
         def standardJar = tasks.named('jar').get().archiveFile.get().asFile
         new JarFile(standardJar).withCloseable { archive ->
