@@ -1,0 +1,14 @@
+[
+ {
+  "dependent": "jivinstev/TheLastSword",
+  "dependent_commit": "0ab9d8f3d521dcbb712e8e5ee72b167473d18b2c",
+  "gates_commit": "81e35c6",
+  "gate_c": "PASS",
+  "library": "net.eca:eca",
+  "library_tag": "eca-1.1.9-mc1.21.10",
+  "library_commit": "8c493e93c6a883a26b408f54f329f0835f721010",
+  "jar_sha256": "1bc46cd93ac350b23712c8a39109c94a3aea2fab184d9fe3ae0debd0be0f5058",
+  "recorded": "2026-10-18",
+  "note": "covers the eca-1.1.9-mc1.21.10 release's epic-core-api-1.1.9_mr.jar (this sha256) only; ECA-003 changes only the _cf jar, so a later pre-release carrying it needs its own record when the dependent is re-pinned to it"
+ }
+]
