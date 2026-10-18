@@ -70,7 +70,7 @@
       ],
       "id": "ECA-003",
       "lowest": "1.21.10",
-      "notes": "workaround=false: swapping to the _mr jar is not open to a CurseForge modpack user; with workaround=true the rubric gives S3. Evidence: Local ci-gates.py --shipped: _cf EcaBootstrap.log lacks the container-replacement line on 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3; _cf boots pass on 1.21.3-1.21.8. fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: large (needs a new loading route for CF (an early-service jar or the agent backend) on FML 10, 11 and 12, plus making the CI shipped-jar gate see it (ECA-N03)). Severity S2 not S1 because the boot itself completes on 1.21.11+ (only the transformation is missing) and a workaround exists; the 1.21.10 server crash is graded separately (ECA-004). Owner may raise to S1 if CF is the primary distribution. Not a regression of the migration: the _cf boot check postdates the layer's gate records. Sources: REVIEW.md neoforge-1.21.10 rows L24 (changed src/cf/.../EcaTransformationService.java) and L285 (stub); https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 8); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; scratchpad eca-branches-results.md (FINAL RESULTS: shipped _cf FAIL on 1.21.10..26.3)",
+      "notes": "workaround=false: swapping to the _mr jar is not open to a CurseForge modpack user; with workaround=true the rubric gives S3. Evidence: Local ci-gates.py --shipped: _cf EcaBootstrap.log lacks the container-replacement line on 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3; _cf boots pass on 1.21.3-1.21.8. fixable_from_1_21_8_up: true (every affected version is 1.21.10 or later). Effort: large (needs a new loading route for CF (an early-service jar or the agent backend) on FML 10, 11 and 12, plus making the CI shipped-jar gate see it (ECA-N03)). Severity S2 not S1 because the boot itself completes on 1.21.11+ (only the transformation is missing) and a workaround exists; the 1.21.10 server crash is graded separately (ECA-004). Owner may raise to S1 if CF is the primary distribution. Not a regression of the migration: the _cf boot check postdates the layer's gate records. Sources: REVIEW.md neoforge-1.21.10 rows L24 (changed src/cf/.../EcaTransformationService.java) and L285 (stub); https://github.com/jivinstev/EpicCoreAPI/issues/47 (Next step 8); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; scratchpad eca-branches-results.md (FINAL RESULTS: shipped _cf FAIL on 1.21.10..26.3) DESIGN (CF spike, 2026-10-17, proven on FML 10/11/12 = 1.21.10, 1.21.11, 26.3): FML 10+ finds a ClassProcessorProvider only in a jar of FMLModType LIBRARY on the launch layer, not in a mod jar. Fix: split the _cf transformer (EcaTransformationService and its ClassProcessorProvider service file) into its own small jar with manifest FMLModType: LIBRARY, nested in the _cf jar as jar-in-jar (META-INF/jarjar); the _cf mod jar is otherwise unchanged; 1.21.3-1.21.8 (FML 4-9) keep the current route. Gate: a shipped-expect-cf.txt line for the container-replacement log line, booted by the shipped-jar gate's --variant cf. Estimate 6-9 agent-hours.",
       "override": {
         "by": "owner-direction-2026-10-17",
         "reason": "the library's core patching is inactive in the CurseForge jar, the only channel open today; it must not ship there",
@@ -326,7 +326,7 @@
       ],
       "id": "ECA-011",
       "lowest": "1.21.8",
-      "notes": "reach=feature (editor tools only) gives S3; with reach=normal it would be S2. Evidence: Scan of drawString/drawCenteredString/text calls with a 6-hex-digit literal: 25 sites in 8 files on 1.21.8 and the same 25 on 26.3; 26.x GuiGraphicsExtractor.text skips ARGB.alpha(color)==0 (source). Computed colours were not scanned. fixable_from_1_21_8_up: true (lowest affected version is 1.21.8). Effort: small (one regex rename row (0xRRGGBB -> 0xFFRRGGBB) at 1.21.8 plus ARGB.opaque on any computed colour; cascades up). Graded S3 because every site is in a creator/editor tool, not normal play. The rubric's S2 example is 'invisible GUI text': if the owner counts the editors as core, this is S2. Either way it does not reopen done 1.21.8 under #135 \u00a72 (only an S1 does). Boss-bar value text and HUD named in #47 had no 6-digit literal hits; a computed-colour scan is still owed. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (Known issues: GUI text from 1.21.6, not yet checked); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; this triage's scan: scratchpad ledger-work/alpha.py over origin/neoforge-1.21.8 and 26.3",
+      "notes": "reach=feature (editor tools only) gives S3; with reach=normal it would be S2. Evidence: Scan of drawString/drawCenteredString/text calls with a 6-hex-digit literal: 25 sites in 8 files on 1.21.8 and the same 25 on 26.3; 26.x GuiGraphicsExtractor.text skips ARGB.alpha(color)==0 (source). Computed colours were not scanned. fixable_from_1_21_8_up: true (lowest affected version is 1.21.8). Effort: small (one regex rename row (0xRRGGBB -> 0xFFRRGGBB) at 1.21.8 plus ARGB.opaque on any computed colour; cascades up). Graded S3 because every site is in a creator/editor tool, not normal play. The rubric's S2 example is 'invisible GUI text': if the owner counts the editors as core, this is S2. Either way it does not reopen done 1.21.8 under #135 §2 (only an S1 does). Boss-bar value text and HUD named in #47 had no 6-digit literal hits; a computed-colour scan is still owed. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/47 (Known issues: GUI text from 1.21.6, not yet checked); https://github.com/jivinstev/EpicCoreAPI/issues/47#issuecomment-6228226503; this triage's scan: scratchpad ledger-work/alpha.py over origin/neoforge-1.21.8 and 26.3",
       "override": null,
       "rubric": {
         "failure": "functional",
@@ -675,6 +675,40 @@
         "26.3": "fixed@56a1448"
       },
       "title": "Pre-existing upstream: force-removal aborts half-way while chunks load entities (ImmutableList.remove in removeFromLoadingInbox); entity left half-removed"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/gui/BossShowEffectEditorScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderEffectSelectionScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderImportSelectionScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderOutputEffectDetailsScreen.java",
+        "src/main/java/net/eca/client/gui/ShaderProjectSelectionScreen.java"
+      ],
+      "id": "ECA-024",
+      "lowest": "26.1.2",
+      "notes": "Found by the first weekly-round dry run (2026-10-18). Evidence: each of the five files has one extractBackground/renderBackground call on 26.1.2, 26.2 and 26.3 and none on 1.21.10/1.21.11 (git show); 26.3 Screen.extractRenderStateWithTooltipAndSubtitles already calls extractBackground and GuiRenderState.blurBeforeThisStratum throws on a second blur (26.3 neoform source). The 1.21.6 strip row does not reach the 26.x copies. Same defect and fix as ECA-001 (delete one line per screen), different screens. Effort: small.",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "feature",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "review",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "n/a",
+        "1.21.11": "n/a",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Five more screens crash on open on 26.x: 'Can only blur once per frame' (extractRenderState calls extractBackground, which vanilla's extractRenderStateWithTooltipAndSubtitles already calls)"
     }
   ],
   "schema": 1
