@@ -28,6 +28,10 @@ public final class EarlyLogWriter {
      * Subsequent classloader instances will append to the same file.
      */
     public static synchronized void resetForNewSession() {
+        // Once per JVM: on FML 10+ the CF coremod library and the mod each hold a copy of this class (two class loaders),
+        // and the second copy must append, not delete what the processor already logged.
+        if (System.getProperty("net.eca.bootstrapLogReset") != null) return;
+        System.setProperty("net.eca.bootstrapLogReset", "true");
         try {
             Path logsDir = Paths.get("logs");
             if (!Files.exists(logsDir)) {
