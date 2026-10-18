@@ -6,7 +6,9 @@
 // META-INF/services is never seen. The AGENT backend does not need it: it self-attaches and retransforms, so it is enough
 // that the backend is selected before the first transformed class loads. This subscriber selects it, from mod construction,
 // through the same static initialiser the provider uses in dev (idempotent: a class initialises once).
-// With the COREMOD backend (no agent available) the shipped jar still has no processor; that is logged, not hidden.
+// The COREMOD backend (the _cf jar, which has no agent) gets its processor from a separate FMLModType: LIBRARY jar nested
+// in the _cf jar (jar-in-jar, build.gradle cfCoremodJar): FML puts every LIBRARY jar on its plugin loader before it builds
+// the class-processor set, so that copy of the provider is found. When it was not, that is logged, not hidden.
 package net.eca.mv;
 
 import net.eca.coremod.EcaTransformationService;
@@ -27,8 +29,8 @@ public final class ShippedBackendInit {
         EarlyLogWriter.info("[CoreMod] Mod construction selected backend " + backend);
         if (backend == EcaTransformationService.TransformationBackend.COREMOD
                 && !"true".equals(System.getProperty("net.eca.coremod.processorRegistered"))) {
-            EarlyLogWriter.info("[CoreMod] WARNING: COREMOD backend selected but its ClassProcessor is only registered on the "
-                    + "launch class loader; in a mods/ jar it is not installed");
+            EarlyLogWriter.info("[CoreMod] WARNING: COREMOD backend selected but no ClassProcessorProvider ran: the nested "
+                    + "FMLModType: LIBRARY coremod jar (META-INF/jarjar) was not loaded, so nothing is transformed");
         }
     }
 }
