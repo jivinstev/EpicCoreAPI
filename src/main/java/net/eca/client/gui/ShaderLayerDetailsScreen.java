@@ -136,7 +136,6 @@ public final class ShaderLayerDetailsScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        extractBackground(graphics, mouseX, mouseY, partialTick);
         int left = width / 2 - 150;
         int top = height / 2 - 86;
         graphics.centeredText(font, title, width / 2, top, 0xFFFFFFFF);
