@@ -89,15 +89,15 @@
       "source": "gate",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@7e5516e",
+        "1.21.11": "fixed@0c59b37",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@0b7f9e6",
+        "26.2": "fixed@8dbcdb8",
+        "26.3": "fixed@d4e320f"
       },
       "title": "_cf (CurseForge) jar has no transformer at all on FML 10+: ClassProcessorProvider is loaded only from the launch class loader, so the COREMOD backend never runs"
     },
