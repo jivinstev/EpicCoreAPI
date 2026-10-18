@@ -1,15 +1,34 @@
 {
+  "allow": [
+    "push-version-branches",
+    "pre-release",
+    "merge-fork-prs"
+  ],
   "budget": 3,
   "forks": [
     {
+      "automerge": true,
       "head": "neoforge-1.21.1",
+      "ledger_issues": [
+        1,
+        2,
+        3
+      ],
       "repo": "jivinstev/EpicCoreAPI",
       "role": "library",
       "upstream": "https://github.com/CJiangqiu/EpicCoreAPI",
       "upstream_branch": "master"
     },
     {
+      "automerge": true,
+      "depends_on": [
+        "jivinstev/EpicCoreAPI"
+      ],
       "head": "neoforge-1.21.1",
+      "ledger_issues": [
+        20,
+        22
+      ],
       "repo": "jivinstev/TheLastSword",
       "role": "dependent",
       "upstream": "https://github.com/CJiangqiu/TheLastSword",
