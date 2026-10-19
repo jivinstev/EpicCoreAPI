@@ -872,7 +872,7 @@
       "severity": "S1",
       "source": "gate",
       "status": {
-        "26.3": "open"
+        "26.3": "fixed@fe5ab2d"
       },
       "title": "26.3: client crash 'Cannot slice transient buffer' in LegacyGl.draw from ShaderMaskRenderQueue (afterTranslucentFeatures) when a dependent's entity with a shader-mask extension renders"
     }
