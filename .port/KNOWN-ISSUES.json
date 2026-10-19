@@ -853,6 +853,28 @@
         "26.3": "open"
       },
       "title": "ModConfigs: COMMON became STARTUP on 26.3 (FML 12 removed COMMON): eca.toml edits are no longer picked up at runtime"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/ShaderMaskRenderQueue.java",
+        "src/main/java/net/eca/mv/LegacyGl.java"
+      ],
+      "id": "ECA-033",
+      "lowest": "26.3",
+      "notes": "Found by TheLastSword 26.3's Gate C spawn against eca-1.1.9-mc26.3-r2 (weekly round, plan #61). ECA's own Gate C spawns no entity, so it never reached the path. Released column eca-1.1.9-mc26.3-r2 (pre-release) carries it.",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "gate",
+      "status": {
+        "26.3": "open"
+      },
+      "title": "26.3: client crash 'Cannot slice transient buffer' in LegacyGl.draw from ShaderMaskRenderQueue (afterTranslucentFeatures) when a dependent's entity with a shader-mask extension renders"
     }
   ],
   "schema": 1
