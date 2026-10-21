@@ -67,3 +67,13 @@ Models: Opus for the main work, Sonnet subagents for the GUI and texture overlay
 - ⚠ these sessions also touched other mods: {'c677f97b': {'226410': 2, '309927': 1, '111': 1, '333': 1}} -- the cost includes that work
 - attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 51 (≈ $5.04), other targets' 51, outside this checkout 197. Records of concurrent targets add up.
 - window: requests from 2026-10-16T08:36:55.715Z to 2026-10-16T10:16:26.128Z (requests before it are not in this record)
+
+## fork-port.py run since 2026-10-21T16:14:53+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $0.84** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.07 h active, 0.07 h wall (2026-10-21T18:47Z to 2026-10-21T18:51Z)
+- price tier: top (25 req); effort: medium 25
+- tokens: output 790 (thinking 137), input 50, cache read 1,371,428, cache write 109,418 (5m 107,433 / 1h 1,985)
+- size: 0 Java files, 0 mixin classes; target Minecraft ?
+- attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 27 (≈ $0.64), other targets' 0, outside this checkout 616. Records of concurrent targets add up.
+- window: requests from 2026-10-16T10:16:26.129Z to 2026-10-21T18:51:59.329Z (requests before it are not in this record)
