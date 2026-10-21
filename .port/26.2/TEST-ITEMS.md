@@ -59,8 +59,6 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - stub: `src/main/java/net/eca/mixin/FogRendererMixin.java` (mixin, client)
 - stub: `src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java` (mixin, client)
 - stub: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
-- behaviour: `main:net/eca/blender/client/render/BlenderModelRenderer.java#render-use:RenderType.entityTranslucent` (changed: the target's overlay has a different render-use; an ok row of REVIEW.md names it)
-- behaviour: `main:net/eca/blender/client/render/BlenderModelRenderer.java#render-use:RenderType.entityCutoutNoCull` (changed: the target's overlay has a different render-use; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.create` (moved: not in the target's file; reviewed in STUBS.json: Not a stub (#37): the one new empty body is the new record Uniforms(...) {} that keeps begin()'s per-draw unif)
 - behaviour: `main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.CompositeState` (moved: not in the target's file; reviewed in STUBS.json: Not a stub (#37): the one new empty body is the new record Uniforms(...) {} that keeps begin()'s per-draw unif)
 - behaviour: `main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderStateShard.ShaderStateShard` (moved: not in the target's file; reviewed in STUBS.json: Not a stub (#37): the one new empty body is the new record Uniforms(...) {} that keeps begin()'s per-draw unif)
