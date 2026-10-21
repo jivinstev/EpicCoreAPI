@@ -32,6 +32,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/event/BossShowEditorClientEvents.java` (client)
 - changed: `src/main/java/net/eca/event/BossShowRecordingHud.java` (client)
 - changed: `src/main/java/net/eca/mixin/EntityFactionGlowMixin.java` (mixin)
+- changed: `src/main/java/net/eca/mixin/FogRendererMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/ItemRendererMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
