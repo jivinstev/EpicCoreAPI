@@ -210,6 +210,7 @@
   "gui.eca.bossshow.selection.hint": "§7Right-click to select   ·   ESC to cancel",
   "gui.eca.bossshow.selection.targeted": "§a● Entity targeted",
   "key.categories.eca": "Epic Core API",
+  "key.category.eca.categories": "Epic Core API",
   "key.eca.bossshow.rec_pause": "BossShow: Pause recording",
   "key.eca.bossshow.rec_start": "BossShow: Start/Resume recording",
   "msg.eca.bossshow.delete_failed": "§cFailed to delete: %s",

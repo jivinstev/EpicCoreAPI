@@ -1381,12 +1381,9 @@ public class EntityUtil {
 
             Entity previousVehicle = detachFromVehicle(entity);
             if (previousVehicle != null) {
-                ClientboundSetPassengersPacket passengersPacket = new ClientboundSetPassengersPacket(previousVehicle);
-                for (ServerPlayer trackingPlayer : serverLevel.players()) {
-                    if (trackingPlayer.connection != null) {
-                        trackingPlayer.connection.send(passengersPacket);
-                    }
-                }
+                // 1.21.9+: ServerChunkCache.broadcast was renamed sendToTrackingPlayers (same recipients: the vehicle's trackers)
+                serverLevel.getChunkSource().sendToTrackingPlayers(
+                        previousVehicle, new ClientboundSetPassengersPacket(previousVehicle));
             }
             if (entity instanceof ServerPlayer player && player.isSleeping()) {
                 player.stopSleepInBed(true, true);

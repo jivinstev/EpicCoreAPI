@@ -527,8 +527,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-        int modifiers = event.modifiers();
-        boolean control = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean control = event.hasControlDown();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && openDropdown >= 0) {
             closeDropdown();
             return true;
