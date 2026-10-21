@@ -2,6 +2,8 @@
 // net.eca.mv.SubmitPhase) is drawn INSIDE the level's main pass, at AfterTranslucentFeatures (InLevelPass below): after
 // the entities, before translucent terrain, particles and weather, as 26.1.2's entity pass drew them. The after-level flushes
 // (GameRendererPostLevelMixin) still draw what is queued later (a first-person item) and, with Oculus shaders, everything.
+// Carried from 1.21.11/26.1.2: the 1.21.11 version of the authors' file (1.21.5's overlay, with 1.21.8's GpuBufferSlice projection).
+// In draw(): a vanilla RenderType in the queue is drawn with its own draw(mesh) (see the comment there), as on 1.21.5-1.21.10.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.PrimitiveTopology;
@@ -150,6 +152,15 @@ public final class ShaderMaskRenderQueue {
         EcaShaderInstance.setOpacity(pass.alpha());
         boolean stateActive = false;
         try {
+            if (!(pass.renderType() instanceof net.eca.mv.LegacyRenderType)) {
+                // [mv] 1.21.5+: a vanilla RenderType's set-up no longer sets its shader or its blend / depth / cull state
+                // (they are its RenderPipeline; on 1.21.11 it has no setupRenderState at all), so LegacyGl.drawWithShader
+                // would draw it with whatever shader was set last; its own draw(mesh) sets it up, draws with its pipeline
+                // and clears it, as 1.21.1's setupRenderState + BufferUploader.drawWithShader + clearRenderState did
+                // (26.2: RenderType.draw(MeshData) is gone; the shared helper draws it the way the frame's buffers do)
+                net.eca.mv.MultiBufferSource.draw(pass.renderType(), renderedBuffer);
+                return;
+            }
             net.eca.mv.LegacyGl.setupRenderState(pass.renderType());
             stateActive = true;
             net.eca.mv.LegacyGl.drawWithShader(renderedBuffer);

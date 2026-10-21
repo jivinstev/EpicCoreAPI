@@ -60,6 +60,15 @@ import java.util.function.Consumer;
 @EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public class FilterRenderer {
 
+    // 1.21.11 (as 1.21.8/1.21.10): the projectionMatrix LevelRenderer.renderLevel was given this frame (GameRenderer.renderLevel's
+    // level projection, the matrix the depth buffer is written with); set by LevelRendererMixin at renderLevel HEAD.
+    // 26.1.2: set by GameRendererPostLevelMixin where GameRenderer.renderLevel uploads that projection
+    private static final Matrix4f LEVEL_PROJECTION = new Matrix4f();
+
+    public static void captureLevelProjection(org.joml.Matrix4fc projection) {
+        LEVEL_PROJECTION.set(projection);
+    }
+
     private static ShaderInstance sketchShader;
     private static ShaderInstance spotlightShader;
     private static ShaderInstance matrixShader;
@@ -817,10 +826,10 @@ public class FilterRenderer {
         // 视图旋转改从 RenderSystem 的逆视图旋转矩阵还原，再与投影组合求逆
         Matrix3f viewRot = new Matrix3f().rotation(mc.gameRenderer.mainCamera().rotation()).invert();
         Matrix4f view = new Matrix4f().set(viewRot);
-        float eca$fov = (float) Math.toRadians(mc.options.fov().get());
-        float eca$far = Math.max(128.0f, mc.options.getEffectiveRenderDistance() * 16.0f * 4.0f);
-        Matrix4f eca$proj = new Matrix4f().perspective(eca$fov, (float) width / (float) height, 0.05f, eca$far);
-        Matrix4f invViewProj = new Matrix4f(eca$proj)
+        // 1.21.11 (as 1.21.8/1.21.10): AfterLevel carries no projection; 1.21.1's event.getProjectionMatrix() was GameRenderer's
+        // level projection (FOV modifiers, bobHurt/bobView, getDepthFar), which renderLevel still receives -- captured there
+        // (26.1.2: captured at GameRenderer.renderLevel's upload of it, see captureLevelProjection)
+        Matrix4f invViewProj = new Matrix4f(LEVEL_PROJECTION)
                 .mul(view)
                 .invert();
         Vec3 cam = mc.gameRenderer.mainCamera().position();
