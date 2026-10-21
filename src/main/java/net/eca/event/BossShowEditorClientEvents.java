@@ -216,8 +216,27 @@ public final class BossShowEditorClientEvents {
         Minecraft.getInstance().gui.setScreen(new BossShowEditorScreen());
     }
 
+    // 26.3 (ECA-019): whether this frame posted AfterTranslucentBlocks; cleared at AfterLevel
+    private static boolean outlinedInLevelPass;
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        outlinedInLevelPass = true;
+        submitHoverOutline();
+    }
+
+    // 26.3 (ECA-019): with improved transparency (Fabulous) no AfterTranslucentBlocks is posted; the outline is submitted
+    // at AfterLevel instead (still inside gameRenderer.render, where the Gizmos collector is live)
+    @SubscribeEvent
+    public static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
+        boolean outlined = outlinedInLevelPass;
+        outlinedInLevelPass = false;
+        if (!outlined) {
+            submitHoverOutline();
+        }
+    }
+
+    private static void submitHoverOutline() {
         if (!BossShowEditorState.isAnySelectionMode()) return;
         Entity target = cachedHovered;
         if (target == null || target.isRemoved()) return;
