@@ -81,7 +81,7 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
     }
 
     private void closePanel() {
-        this.onClose();
+        this.minecraft.gui.setScreen(new BossShowEditorScreen());
     }
 
     private void toggleMode() {
