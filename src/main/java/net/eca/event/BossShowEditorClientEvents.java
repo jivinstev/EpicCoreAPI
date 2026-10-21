@@ -346,7 +346,7 @@ public final class BossShowEditorClientEvents {
         if (mc.screen != null) return;
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        event.getGuiGraphics().drawCenteredString(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
+        event.getGuiGraphics().drawCenteredString(mc.font, toastText, w / 2, h - 60, 0xFFFFFFFF);
     }
 
     @SubscribeEvent
@@ -386,12 +386,12 @@ public final class BossShowEditorClientEvents {
                 : "gui.eca.bossshow.selection.hint");
 
         int y = h / 4;
-        g.drawCenteredString(mc.font, line1, w / 2, y, 0xFFFFFF);
+        g.drawCenteredString(mc.font, line1, w / 2, y, 0xFFFFFFFF);
         if (targeted && cachedHovered != null) {
             Component hint = Component.literal("§7").append(cachedHovered.getType().getDescription());
-            g.drawCenteredString(mc.font, hint, w / 2, y + 12, 0xCCCCCC);
+            g.drawCenteredString(mc.font, hint, w / 2, y + 12, 0xFFCCCCCC);
         }
-        g.drawCenteredString(mc.font, line2, w / 2, y + 26, 0xAAAAAA);
+        g.drawCenteredString(mc.font, line2, w / 2, y + 26, 0xFFAAAAAA);
     }
 
     private static EntityHitResult raycastEntity(LocalPlayer player, double reach) {

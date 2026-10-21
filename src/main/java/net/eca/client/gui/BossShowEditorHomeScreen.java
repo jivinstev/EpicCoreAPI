@@ -145,10 +145,10 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         //完全透明，世界透出来
 
-        g.drawCenteredString(this.font, this.title, this.width / 2, 14, 0xFFFFFF);
+        g.drawCenteredString(this.font, this.title, this.width / 2, 14, 0xFFFFFFFF);
         g.drawCenteredString(this.font,
             Component.translatable("gui.eca.bossshow.home.subtitle"),
-            this.width / 2, 30, 0xAAAAAA);
+            this.width / 2, 30, 0xFFAAAAAA);
 
         //创建按钮下方说明
         g.drawCenteredString(this.font,
@@ -222,8 +222,8 @@ public class BossShowEditorHomeScreen extends Screen implements BossShowEditorSe
                 String meta = (typeId != null ? typeId.toString() : "?")
                     + "    " + def.frames().size() + " frames    "
                     + contentCount + " content ticks    " + def.trigger().type();
-                g.drawString(Minecraft.getInstance().font, idLine, left + 4, top + 2, 0xFFFFFF, false);
-                g.drawString(Minecraft.getInstance().font, meta, left + 4, top + 12, 0xAAAAAA, false);
+                g.drawString(Minecraft.getInstance().font, idLine, left + 4, top + 2, 0xFFFFFFFF, false);
+                g.drawString(Minecraft.getInstance().font, meta, left + 4, top + 12, 0xFFAAAAAA, false);
 
                 //右侧按钮（从右到左）：删除 | 编辑 | 播放
                 deleteBtn.setX(left + width - 44);
