@@ -88,6 +88,10 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         boolean hasTexture = texture != null;
         boolean oculus = EcaShaderInstance.isOculusShadersActive();
         boolean deferred = oculus || net.eca.mv.SubmitPhase.levelSubmit;   // 26.3 (#33): the after-level queue
+        // 26.3 (ECA-020): a picture-in-picture entity (the inventory player, say) is submitted before vanilla opens the
+        // pass on its texture; the textured layer too is collected (ShaderMaskRenderQueue.enqueue hands it to
+        // GuiTexturePasses) and drawn into that pass, instead of waiting in the shared source for a main-target flush
+        deferred |= GuiTexturePasses.collecting();
 
         if (hasTexture) {
             RenderType texturedLayer = RenderTypes.entityTranslucent(texture);

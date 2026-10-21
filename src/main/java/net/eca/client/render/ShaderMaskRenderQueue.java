@@ -53,6 +53,11 @@ public final class ShaderMaskRenderQueue {
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
                                MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
+        if (GuiTexturePasses.collecting()) {
+            // 26.3 (ECA-020): submitted while a picture-in-picture (or GUI item) texture is drawn: into that texture
+            GuiTexturePasses.add(pass, builder, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
+            return;
+        }
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
         GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
@@ -67,6 +72,10 @@ public final class ShaderMaskRenderQueue {
      */
     public static void enqueueDraw(BufferBuilder builder, MeshData renderedBuffer,
                                    java.util.function.BiConsumer<MeshData, com.mojang.renderpearl.api.commands.RenderPass> draw) {
+        if (GuiTexturePasses.collecting()) {
+            GuiTexturePasses.addDraw(builder, renderedBuffer, draw);   // 26.3 (ECA-020): see enqueue
+            return;
+        }
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
         GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(null, builder, renderedBuffer, modelView, projection, MaskUvTransform.IDENTITY, draw));
@@ -88,6 +97,12 @@ public final class ShaderMaskRenderQueue {
     public static void drawNow(ShaderMaskPass pass, BufferBuilder builder,
                                MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
+        if (GuiTexturePasses.collecting()) {
+            // 26.3 (ECA-020): a picture-in-picture entity's pass, submitted before vanilla opens the texture's pass;
+            // drawn now it went to the main target
+            GuiTexturePasses.add(pass, builder, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
+            return;
+        }
         try {
             draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
         } finally {
@@ -103,6 +118,17 @@ public final class ShaderMaskRenderQueue {
                                 com.mojang.renderpearl.api.commands.RenderPass into) {
         try {
             draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform, into);
+        } finally {
+            recycle(builder);
+        }
+    }
+
+    /** 26.3 (ECA-020): a collected draw of the caller's own (see enqueueDraw) drawn INTO {@code into}, which stays open. */
+    public static void drawCustomInto(BufferBuilder builder, MeshData renderedBuffer,
+                                      java.util.function.BiConsumer<MeshData, com.mojang.renderpearl.api.commands.RenderPass> draw,
+                                      com.mojang.renderpearl.api.commands.RenderPass into) {
+        try {
+            draw.accept(renderedBuffer, into);
         } finally {
             recycle(builder);
         }
