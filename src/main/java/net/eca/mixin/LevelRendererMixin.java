@@ -98,6 +98,9 @@ public abstract class LevelRendererMixin {
                                          Matrix4f frustumMatrix, Matrix4f projectionMatrix, Matrix4f cullProjection,
                                          GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, CallbackInfo ci) {
         net.eca.mv.CloudGate.occlude = false;
+        // FilterRenderer's world-space pass inverts this frame's level projection (1.21.1: event.getProjectionMatrix());
+        // 1.21.11's GameRenderer.renderLevel still passes its level projection as renderLevel's second Matrix4f
+        net.eca.client.render.shader.FilterRenderer.captureLevelProjection(projectionMatrix);
     }
 
     /* shouldRender 每次进入都会登记当前实体，isChunkCompiled 是它在同一个判断表达式里的读取方。
