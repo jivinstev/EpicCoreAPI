@@ -1,6 +1,9 @@
 // OVERLAY-ONLY: shared fork-layer helper from mc-mod-version-upgrade templates/fork-layer/shared (not the authors' code).
-// MV-STAND-IN: shared/26.1.2's LegacyGl, unchanged. Only so the inherited targets/1.21.5/java/net/eca/mv/LegacyGl.java (the F1/F2 fix ahead of the
-// MV-STAND-IN: template, see that file) does not shadow this target's own shared copy. Delete when that 1.21.5 overlay is gone.
+// MV-AHEAD-OF-TEMPLATE: the migrator's shared/26.1.2 LegacyGl with 1.21.10's F1 fix ported (mc-mod-version-upgrade 3f4022c:
+// MV-AHEAD-OF-TEMPLATE: a set-up LegacyRenderType loads its key, shader and output target, see load/restore) and 1.21.5's
+// MV-AHEAD-OF-TEMPLATE: opacity rule in draw() (a COLOR_MODULATOR written inside apply() is not kept, as on 1.21.1), as the
+// MV-AHEAD-OF-TEMPLATE: 1.21.8-1.21.11 copies carry them (ECA-018; 26.1.2: a null Key.depth is "no depth test").
+// MV-AHEAD-OF-TEMPLATE: Delete once sync-shared brings both to shared/26.1.2.
 package net.eca.mv;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -83,6 +86,9 @@ public final class LegacyGl {
     private static boolean cull = true;
     private static Object shader;
     private static boolean warnedEquation;
+    // what a set-up LegacyRenderType adds (see load): its depth bias and its output target (null: the main target)
+    private static float biasScale, biasConstant;
+    private static RenderTarget target;
     private static float[] shaderColor = {1f, 1f, 1f, 1f};
 
     private LegacyGl() {}
@@ -173,9 +179,10 @@ public final class LegacyGl {
         if (type instanceof LegacyRenderType legacy) legacy.clearRenderState();
     }
 
-    /** BufferUploader.drawWithShader: the current shader and the state set above, into the main render target. */
+    /** BufferUploader.drawWithShader: the current shader and the state set above, into the main render target -- or,
+     *  while a {@link LegacyRenderType} is set up, with its shader and state into its output target (see {@link #load}). */
     public static void drawWithShader(MeshData mesh) {
-        draw(mesh, shader, current(), Minecraft.getInstance().getMainRenderTarget());
+        draw(mesh, shader, current(), target != null ? target : Minecraft.getInstance().getMainRenderTarget());
     }
 
     // ---- state as a value -------------------------------------------------------------------------------------
@@ -199,7 +206,52 @@ public final class LegacyGl {
 
     static Key current() {
         return new Key(blend ? blendFunction : null, depthTest ? depthFunction : null,
-                depthWrite, writeColor, writeAlpha, cull, 0, 0);
+                depthWrite, writeColor, writeAlpha, cull, biasScale, biasConstant);
+    }
+
+    /** The state {@link #load} replaced, put back by {@link #restore}. */
+    record Saved(boolean blend, BlendFunction blendFunction, boolean depthTest, CompareOp depthFunction,
+                 boolean depthWrite, boolean writeColor, boolean writeAlpha, boolean cull, float biasScale,
+                 float biasConstant, RenderTarget target) {}
+
+    /**
+     * 1.21.4's RenderType.setupRenderState() ran every shard of its CompositeState: the ShaderStateShard set the shader,
+     * and the transparency / depth-test / write-mask / cull / layering shards set GL state. 1.21.1-1.21.4 code that sets
+     * a type up and then draws with BufferUploader.drawWithShader (a mod's own render queue) drew with all of it.
+     * {@link LegacyRenderType#setupRenderState} loads the type's shader and state here so {@link #drawWithShader} does
+     * too, into the type's output target; {@link LegacyRenderType#clearRenderState} restores the state (the shader stays
+     * set, as 1.21.4's ShaderStateShard left it).
+     */
+    static Saved load(Key key, Object shaderObj, RenderTarget into) {
+        Saved s = new Saved(blend, blendFunction, depthTest, depthFunction, depthWrite, writeColor, writeAlpha, cull,
+                biasScale, biasConstant, target);
+        blend = key.blend() != null;
+        if (blend) blendFunction = key.blend();
+        depthTest = key.depth() != null;
+        if (depthTest) depthFunction = key.depth();
+        depthWrite = key.depthWrite();
+        writeColor = key.writeColor();
+        writeAlpha = key.writeAlpha();
+        cull = key.cull();
+        biasScale = key.biasScale();
+        biasConstant = key.biasConstant();
+        shader = shaderObj;
+        target = into;
+        return s;
+    }
+
+    static void restore(Saved s) {
+        blend = s.blend();
+        blendFunction = s.blendFunction();
+        depthTest = s.depthTest();
+        depthFunction = s.depthFunction();
+        depthWrite = s.depthWrite();
+        writeColor = s.writeColor();
+        writeAlpha = s.writeAlpha();
+        cull = s.cull();
+        biasScale = s.biasScale();
+        biasConstant = s.biasConstant();
+        target = s.target();
     }
 
     // ---- drawing ----------------------------------------------------------------------------------------------
@@ -236,15 +288,23 @@ public final class LegacyGl {
                 indexType = m.drawState().indexType();
             }
             // 1.21.1's BufferUploader/RenderType draws called shader.apply() right before drawing and shader.clear()
-            // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask, an opacity
-            // written into COLOR_MODULATOR after super.apply()), so it has to run here too
+            // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask's uniforms
+            // and sampler), so it has to run here too. A COLOR_MODULATOR write made inside apply() (an opacity, after
+            // super.apply()) is not kept: on 1.21.1 it came after apply()'s upload and the next draw's
+            // setDefaultUniforms overwrote it, so it never reached the GPU. A write made before the draw is kept.
             if (own != null) {
                 own.setDefaultUniforms();   // 1.21.1's VertexBuffer._drawWithShader ran this right before apply()
+                Uniform cm = own.COLOR_MODULATOR;
+                boolean wrote = cm != null && cm.touched();
+                float[] before = wrote && cm.floats() != null ? cm.floats().clone() : null;
                 own.apply();
+                if (cm != null) {
+                    if (before != null) cm.set(before);
+                    else if (!wrote) cm.consume();
+                }
             }
-            // 1.21.1's ShaderInstance.apply() uploaded RenderSystem's colour into COLOR_MODULATOR and a mod could
-            // overwrite it afterwards; 1.21.8 puts the colour in the DynamicTransforms block, so use the mod's value
-            // when it wrote one
+            // a COLOR_MODULATOR the mod wrote before the draw (kept above) replaces RenderSystem's colour; 1.21.8 puts
+            // the colour in the DynamicTransforms block
             boolean override = own != null && own.COLOR_MODULATOR != null && own.COLOR_MODULATOR.touched();
             float[] c = override ? own.COLOR_MODULATOR.floats() : shaderColor;
             GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(
