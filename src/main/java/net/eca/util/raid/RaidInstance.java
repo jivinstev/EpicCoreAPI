@@ -366,7 +366,7 @@ public class RaidInstance {
             BlockPos pos = bellPos.offset(random.nextInt(17) - 8, random.nextInt(9) - 4, random.nextInt(17) - 8);
             Vec3 target = Vec3.atBottomCenterOf(pos);
             AABB box = entity.getBoundingBox().move(target.subtract(entity.position()));
-            if (box.minY < level.getMinBuildHeight() || box.maxY > level.getMaxBuildHeight()
+            if (box.minY < level.getMinY() || box.maxY > level.getMaxY() + 1
                     || !level.getWorldBorder().isWithinBounds(box)) continue;
             // 路径类型查询会读取邻格，碰撞检查也会读取包围盒边缘，先验证整个范围已加载。
             if (!level.hasChunksAt(BlockPos.containing(box.minX, box.minY, box.minZ).offset(-1, -1, -1),
