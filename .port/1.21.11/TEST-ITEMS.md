@@ -43,7 +43,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/mixin/SoundManagerMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/util/bossshow/BossShowManager.java`
 - changed: `src/main/java/net/eca/util/entity_extension/GlobalEffectOverrideManager.java`
-- resources: `src/main/resources/META-INF/accesstransformer.cfg @adff056ff3a4`
+- resources: `src/main/resources/META-INF/accesstransformer.cfg @8376fdfd2b87`
 - stub: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
 - behaviour: `main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.create` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.CompositeState` (moved: not in the target's file; an ok row of REVIEW.md names it)
@@ -262,7 +262,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - behaviour: `main:net/eca/mixin/EntityMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value="HEAD")` (changed: the target's overlay has a different injection; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/EntityMixin.java#injection:@Inject method=changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity; @At(value="RETURN")` (changed: the target's overlay has a different injection; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/FallingBlockRendererMixin.java#injection:@Inject method=render @At(value="TAIL")` (changed: the target's overlay has a different injection; an ok row of REVIEW.md names it)
-- behaviour: `main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupColor @At(value="TAIL")` (unaccounted: the target's overlay has a different injection)
+- behaviour: `main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupColor @At(value="TAIL")` (unaccounted: not in the target's file)
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value="TAIL")` (changed: the target's overlay has a different injection; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart` (unaccounted: not in the target's file)
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd` (unaccounted: not in the target's file)

@@ -3591,9 +3591,8 @@
    "kind": "injection",
    "key": "@Inject method=setupColor @At(value=\"TAIL\")",
    "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
-   "now": "@ModifyVariable method=updateBuffer @At(value=\"HEAD\")",
-   "was": "changed"
+   "detail": "not in the target's file",
+   "was": "missing"
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value=\"TAIL\")",
