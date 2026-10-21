@@ -11312,5 +11312,7 @@
   "changed": 10,
   "moved": 10
  },
- "notes": []
+ "notes": [
+  "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"
+ ]
 }

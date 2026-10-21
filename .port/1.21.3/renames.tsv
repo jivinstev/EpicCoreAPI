@@ -15,3 +15,7 @@ re:graphics\.bufferSource\(\)	graphics.bufferSource
 re:new McMethod\("hurt", "hurt", "\(" \+ DAMAGE_SOURCE_DESC \+ "F\)Z"\)	new McMethod("hurtServer", "hurtServer", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)Z")
 re:new McMethod\("actuallyHurt", "actuallyHurt", "\(" \+ DAMAGE_SOURCE_DESC \+ "F\)V"\)	new McMethod("actuallyHurt", "actuallyHurt", "(Lnet/minecraft/server/level/ServerLevel;" + DAMAGE_SOURCE_DESC + "F)V")
 #!strict
+# RaidInstance.findBellLanding (authors' bell teleport): since 1.21.2 LevelHeightAccessor has getMinY() for
+# getMinBuildHeight() and getMaxY(), which is INCLUSIVE (1.21.1's getMaxBuildHeight() was exclusive), hence the + 1.
+re:level\.getMinBuildHeight\(\)	level.getMinY()
+re:level\.getMaxBuildHeight\(\)	level.getMaxY() + 1
