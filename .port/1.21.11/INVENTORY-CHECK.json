@@ -1172,9 +1172,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderColor",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShader",
@@ -1182,9 +1182,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShader",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionColorShader",
@@ -1192,9 +1192,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "GameRenderer.getPositionColorShader",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture",
@@ -1202,9 +1202,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderTexture",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionTexShader",
@@ -1212,9 +1212,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "GameRenderer.getPositionTexShader",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EntityExtensionLayer.java#render-class:class EntityExtensionLayer : RenderLayer",
@@ -3590,9 +3590,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=setupColor @At(value=\"TAIL\")",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupFog @At(value=\"TAIL\")",
@@ -3611,9 +3611,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogStart",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd",
@@ -3621,9 +3621,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogEnd",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape",
@@ -3631,9 +3631,9 @@
    "file": "net/eca/mixin/FogRendererMixin.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderFogShape",
-   "status": "unaccounted",
-   "detail": "not in the target's file",
-   "was": "missing"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/FrustumMixin.java#injection:@Inject method=offsetToFullyIncludeCameraCube @At(value=\"HEAD\")",
@@ -11600,22 +11600,13 @@
   }
  ],
  "unaccounted": [
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderColor",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShader",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionColorShader",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture",
-  "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionTexShader",
-  "main:net/eca/mixin/FogRendererMixin.java#injection:@Inject method=setupColor @At(value=\"TAIL\")",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd",
-  "main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape",
   "main:net/eca/mixin/ItemRendererMixin.java#injection:@Inject method=render @At(value=\"INVOKE\",target=\"Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V\",shift=At.Shift.BEFORE)"
  ],
  "counts": {
   "same": 956,
-  "moved": 258,
+  "moved": 267,
   "changed": 28,
-  "unaccounted": 10
+  "unaccounted": 1
  },
  "notes": [
   "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"
