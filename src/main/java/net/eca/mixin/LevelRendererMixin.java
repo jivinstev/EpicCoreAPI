@@ -78,11 +78,10 @@ public abstract class LevelRendererMixin {
     @Unique
     private boolean eca$forceLoadedFogActive;
 
+    /* 1.21.11 (as 1.21.10): force-loaded entities are submitted into this dispatcher's own storage and drawn at once, with
+       the no-fog slice (see eca$submitEntityWithForceLoadBracket); created on first use, kept for the session. */
     @Unique
-    private float eca$savedFogStart;
-
-    @Unique
-    private float eca$savedFogEnd;
+    private net.minecraft.client.renderer.feature.FeatureRenderDispatcher eca$forceLoadedFeatures;
 
     /* 本帧存在横跨云层平面的可见强加载实体。云层绘制在实体之后并吃雾色，
        远处的云挡住巨型模型时看起来不像云，而像模型被挖掉一块。 */
@@ -211,7 +210,14 @@ public abstract class LevelRendererMixin {
        注意：绘制发生在之后的 renderAllFeatures，所以“前后”只覆盖提交，不再覆盖绘制——
        云层遮挡标记（本帧的状态，云层之后才读）不受影响；雾标志在 1.21.6 之后本来就只是个标志
        （雾是整帧一份的 uniform，见 net.eca.mv.Mv.suspendFog），所以这里也没有损失。
-       原先在前后各做的 flushEntityBuffers 只是为了让“绘制”落在雾标志之内，提交阶段没有绘制，不再需要。 */
+       原先在前后各做的 flushEntityBuffers 只是为了让“绘制”落在雾标志之内，提交阶段没有绘制，不再需要。
+       [mv] 1.21.11 (port of 1.21.10's / 1.21.8's fix, ECA-026; the 1.21.11 shapes -- main pass lambda's setShaderFog,
+       FeatureRenderDispatcher's 7-argument constructor, FogRenderer.getBuffer(FogMode.NONE) -- checked in the 1.21.11 sources): a draw binds RenderSystem.getShaderFog() when it is flushed, and the level's
+       submits are drawn later by renderAllFeatures with the world fog slice, so a force-loaded entity (no fluid in the
+       camera) is submitted into eca$forceLoadedFeatures' own storage instead and drawn right here -- this is inside the
+       main pass (lambda$addMainPass$1, after its setShaderFog) -- with FogRenderer's FogMode.NONE slice, then the slice is
+       restored, as 1.21.1's setShaderFogStart/End(MAX_VALUE) around renderEntity did (1.21.8: flush, NONE, flush at
+       RETURN). Its outline (glowing) still goes to the outline buffer source vanilla flushes later. */
     @Redirect(method = "submitEntities",
               at = @At(value = "INVOKE",
                        target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;submit(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lnet/minecraft/client/renderer/state/CameraRenderState;DDDLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;)V"))
@@ -226,18 +232,43 @@ public abstract class LevelRendererMixin {
             eca$markCloudOcclusion(minecraft, entity, cameraPos.x, cameraPos.y, cameraPos.z);
             Camera camera = minecraft.gameRenderer.getMainCamera();
             if (camera != null && camera.getFluidInCamera() == FogType.NONE) {
-                net.eca.mv.Mv.suspendFog();
                 eca$forceLoadedFogActive = true;
             }
         }
-        try {
+        if (!eca$forceLoadedFogActive) {
             dispatcher.submit(state, cameraState, x, y, z, poseStack, collector);
-        } finally {
-            if (eca$forceLoadedFogActive) {
-                net.eca.mv.Mv.restoreFog();
-                eca$forceLoadedFogActive = false;
-            }
+            return;
         }
+        Minecraft minecraft = Minecraft.getInstance();
+        net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
+        net.minecraft.client.renderer.feature.FeatureRenderDispatcher features = eca$forceLoadedFeatures(minecraft);
+        buffers.endBatch();
+        GpuBufferSlice savedFog = RenderSystem.getShaderFog();
+        RenderSystem.setShaderFog(minecraft.gameRenderer.fogRenderer.getBuffer(net.minecraft.client.renderer.fog.FogRenderer.FogMode.NONE));
+        try {
+            dispatcher.submit(state, cameraState, x, y, z, poseStack, features.getSubmitNodeStorage());
+            features.renderAllFeatures();
+            buffers.endBatch();
+        } finally {
+            features.getSubmitNodeStorage().clear();
+            RenderSystem.setShaderFog(savedFog);
+            eca$forceLoadedFogActive = false;
+        }
+    }
+
+    @Unique
+    private net.minecraft.client.renderer.feature.FeatureRenderDispatcher eca$forceLoadedFeatures(Minecraft minecraft) {
+        if (eca$forceLoadedFeatures == null) {
+            eca$forceLoadedFeatures = new net.minecraft.client.renderer.feature.FeatureRenderDispatcher(
+                    new net.minecraft.client.renderer.SubmitNodeStorage(),
+                    minecraft.getBlockRenderer(),
+                    minecraft.renderBuffers().bufferSource(),
+                    minecraft.getAtlasManager(),
+                    minecraft.renderBuffers().outlineBufferSource(),
+                    minecraft.renderBuffers().crumblingBufferSource(),
+                    minecraft.font);
+        }
+        return eca$forceLoadedFeatures;
     }
 
     /* 强加载实体的 EntityRenderDispatcher.shouldRender 被改成了纯距离判断（绕过视锥），
