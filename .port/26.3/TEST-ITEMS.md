@@ -54,7 +54,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - deleted: `src/main/java/net/eca/mixin/GuiItemAtlasFeaturesMixin.java`
 - deleted: `src/main/java/net/eca/mixin/PictureInPictureFeaturesMixin.java`
 - resources: `src/main/resources/eca.mixins.dev.json @cae12c7f397d`
-- resources: `src/main/resources/eca.mixins.json @4aa49e9d5565`
+- resources: `src/main/resources/eca.mixins.json @e407cc814b0f`
 - stub: `src/main/java/net/eca/blender/client/runtime/BlendMaterialProgram.java` (client)
 - stub: `src/main/java/net/eca/client/render/ShaderMaskRenderQueue.java` (client)
 - stub: `src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java` (mixin, client)
