@@ -39,6 +39,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/client/render/shader/FilterRenderer.java` (client)
 - changed: `src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java` (client)
 - changed: `src/main/java/net/eca/compat/GeckoLibCompat.java`
+- changed: `src/main/java/net/eca/coremod/RuntimeExtensionBridge.java`
 - changed: `src/main/java/net/eca/event/BossShowClientEvents.java` (client)
 - changed: `src/main/java/net/eca/event/BossShowEditorClientEvents.java` (client)
 - changed: `src/main/java/net/eca/event/BossShowRecordingHud.java` (client)
