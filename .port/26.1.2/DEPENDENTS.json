@@ -1,0 +1,13 @@
+[
+ {
+  "dependent": "jivinstev/TheLastSword",
+  "dependent_commit": "7493b9970053630516d479032474b340bf63d313",
+  "gates_commit": "9c4f737",
+  "gate_c": "PASS",
+  "library": "net.eca:eca",
+  "library_tag": "eca-1.1.9-mc26.1.2-r2",
+  "library_commit": "0b7f9e676356c60f3393c61ca33541195aba03e2",
+  "jar_sha256": "eac190c3284b80de0dd0b4d7162df9f268bb20981d5b687b1112c7d0607fdd5e",
+  "recorded": "2026-10-19"
+ }
+]
