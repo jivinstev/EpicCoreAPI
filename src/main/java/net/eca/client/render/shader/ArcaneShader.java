@@ -6,7 +6,6 @@ import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.eca.mv.ShaderInstance;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.Entity;
 import net.eca.mv.RegisterShadersEvent;
 
 import java.io.IOException;
@@ -52,10 +51,9 @@ public class ArcaneShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                Entity camera = mc.getCameraEntity();
-                if (camera != null) {
-                    float yaw = (float) Math.toRadians(camera.getYRot());
-                    float pitch = (float) Math.toRadians(camera.getXRot());
+                if (mc.gameRenderer != null && mc.gameRenderer.mainCamera() != null) {
+                    float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().yRot());
+                    float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().xRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }
