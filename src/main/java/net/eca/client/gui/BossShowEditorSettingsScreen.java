@@ -140,11 +140,11 @@ final class BossShowEditorSettingsScreen extends Screen implements BossShowEdito
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+        g.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
         int x = this.width / 2 - 150;
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.target"), x, 63, 0xCCCCCC, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.trigger"), x, 87, 0xCCCCCC, false);
-        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.value"), x, 111, 0xCCCCCC, false);
+        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.target"), x, 63, 0xFFCCCCCC, false);
+        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.trigger"), x, 87, 0xFFCCCCCC, false);
+        g.drawString(this.font, Component.translatable("gui.eca.bossshow.editor.settings.value"), x, 111, 0xFFCCCCCC, false);
         super.render(g, mouseX, mouseY, partialTick);
     }
 }
