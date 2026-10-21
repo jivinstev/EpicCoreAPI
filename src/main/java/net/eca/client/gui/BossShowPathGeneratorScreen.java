@@ -510,16 +510,16 @@ final class BossShowPathGeneratorScreen extends Screen implements BossShowEditor
             double cursor = Math.min(preview.size() - 1, (System.nanoTime() - previewStarted) / 50000000.0);
             BossShowEditorState.setGeneratedPreview(preview, cursor);
         }
-        graphics.centeredText(this.font, this.title, this.width / 2, 7, 0xFFFFFF);
+        graphics.centeredText(this.font, this.title, this.width / 2, 7, 0xFFFFFFFF);
         for (Label label : labels) {
             if (label.y >= 48 && label.y + 10 <= this.height - 48) {
-                graphics.text(this.font, label.text, label.x, label.y, 0xCCCCCC, false);
+                graphics.text(this.font, label.text, label.x, label.y, 0xFFCCCCCC, false);
             }
         }
         Component status = error.getString().isEmpty() ? text("scroll_hint") : error;
         List<FormattedCharSequence> lines = this.font.split(status, panelWidth());
         for (int i = 0; i < Math.min(2, lines.size()); i++) {
-            graphics.centeredText(this.font, lines.get(i), this.width / 2, this.height - 46 + i * 10, 0xFFCC88);
+            graphics.centeredText(this.font, lines.get(i), this.width / 2, this.height - 46 + i * 10, 0xFFFFCC88);
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }

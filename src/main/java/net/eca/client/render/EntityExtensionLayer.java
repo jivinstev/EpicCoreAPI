@@ -1,9 +1,9 @@
 // Fork multi-version layer: 1.21.2 version of the authors' file (render state instead of entity).
+// 1.21.9+ (ECA-006): the layer only submits; the non-Oculus textured pass and shader passes are order-1 submits drawn after the body.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
@@ -11,8 +11,6 @@ import net.eca.util.entity_extension.EntityExtensionManager;
 import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.eca.blender.client.entity.BlenderEntityBindings;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -40,7 +38,6 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int packedLight, S state,
                        float netHeadYaw, float headPitch) {
-        MultiBufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
         if (!(EntityOf.get(state) instanceof LivingEntity entity)) {
             return;
@@ -89,27 +86,35 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
                 ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
                     builder, builder.buildOrThrow());
             } else {
-                VertexConsumer texConsumer = bufferSource.getBuffer(texturedLayer);
-                this.getParentModel().renderToBuffer(
-                    poseStack, texConsumer, light, overlay,
-                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
-                );
+                // order 1: drawn by the feature dispatch after every order-0 model (the body), like vanilla's own layers
+                collector.order(1).submitModel(this.getParentModel(), state, poseStack, texturedLayer, light, overlay,
+                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255), null, state.outlineColor, null);
             }
         }
 
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
-            this.getParentModel().renderToBuffer(
-                poseStack, builder, light, overlay, 0xFFFFFFFF
-            );
             if (oculus) {
+                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
+                this.getParentModel().renderToBuffer(
+                    poseStack, builder, light, overlay, 0xFFFFFFFF
+                );
                 ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
             } else {
-                if (bufferSource instanceof MultiBufferSource.BufferSource source) {
-                    source.endBatch();
-                }
-                ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
+                // 1.21.9+: the body is only submitted here and drawn later by the feature dispatch, so drawing the pass now
+                // (as 1.21.1's endBatch() + drawNow did) put it under the body. An order-1 task runs after every order-0
+                // model, inside whatever bracket dispatches the features (level, force-loaded fog, filter spotlight);
+                // it re-poses the shared model for this state (as vanilla's model feature does) and draws the pass at once.
+                // It does not end the dispatcher's batch: the pass is drawn from the mod's own builder.
+                collector.order(1).submitCustomGeometry(poseStack, pass.renderType(), (pose, ignored) -> {
+                    M model = this.getParentModel();
+                    model.setupAnim(state);
+                    PoseStack stack = new PoseStack();
+                    stack.last().set(pose);
+                    BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
+                    model.renderToBuffer(stack, builder, light, overlay, 0xFFFFFFFF);
+                    ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
+                });
             }
         }
     }

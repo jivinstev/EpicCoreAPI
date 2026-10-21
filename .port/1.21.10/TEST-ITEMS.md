@@ -54,6 +54,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java`
 - resources: `src/main/resources/META-INF/accesstransformer.cfg @5ace9471d103`
 - resources: `src/main/resources/META-INF/services/net.neoforged.neoforgespi.transformation.ClassProcessorProvider @138dd0f67cef`
+- resources: `src/main/resources/assets/eca/lang @8eda32af1725`
 - stub: `src/cf/java/net/eca/coremod/EcaTransformationService.java`
 - stub: `src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java` (client)
 - stub: `src/main/java/net/eca/coremod/EcaCoreTransformer.java`
