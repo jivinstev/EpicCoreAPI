@@ -1,20 +1,3 @@
 {
- "conflicts": [
-  {
-   "overlay": "src/main/java/net/eca/util/health/health_lock/HealthLockManager.java",
-   "digest": "fb361203eebc69097f20352241dc964e846f617241f19c33c8d6f7bf8e713a26",
-   "reason": "a conflict with 26.2's own change: kept as 26.2 had it, a default decision",
-   "since": "be5d8908e9e0..7347edc7cc5f",
-   "from": "be5d8908e9e05d70f658c646220c33acc9125f89",
-   "to": "7347edc7cc5f44b51a1bca7f71b5e6d98e482dac",
-   "diff": "diff --git a/src/main/java/net/eca/util/health/health_lock/HealthLockManager.java b/src/main/java/net/eca/util/health/health_lock/HealthLockManager.java\nindex fdd2456..6e75bd4 100644\n--- a/src/main/java/net/eca/util/health/health_lock/HealthLockManager.java\n+++ b/src/main/java/net/eca/util/health/health_lock/HealthLockManager.java\n@@ -471,6 +471,8 @@ public class HealthLockManager {\n         if (EntityUtil.HEALTH_LOCK_VALUE != null\n                 && EntityUtil.HEALTH_LOCK_KEY != null\n                 && EntityUtil.HEALTH_LOCK_CHECK != null) {\n+            if (entity.getEntityData() instanceof HealthLockPresence presence\n+                    && !presence.eca$mayHaveHealthLock()) return null;\n             return readPresentation(entity,\n                     EntityUtil.HEALTH_LOCK_VALUE, EntityUtil.HEALTH_LOCK_KEY, EntityUtil.HEALTH_LOCK_CHECK);\n         }\n@@ -532,6 +534,8 @@ public class HealthLockManager {\n         if (EntityUtil.MAX_HEALTH_LOCK_VALUE != null\n                 && EntityUtil.MAX_HEALTH_LOCK_KEY != null\n                 && EntityUtil.MAX_HEALTH_LOCK_CHECK != null) {\n+            if (entity.getEntityData() instanceof HealthLockPresence presence\n+                    && !presence.eca$mayHaveMaxHealthLock()) return null;\n             return readPresentation(entity,\n                     EntityUtil.MAX_HEALTH_LOCK_VALUE, EntityUtil.MAX_HEALTH_LOCK_KEY,\n                     EntityUtil.MAX_HEALTH_LOCK_CHECK);\n@@ -569,6 +573,7 @@ public class HealthLockManager {\n \n     public static Float getHealBan(LivingEntity entity) {\n         if (entity == null) return null;\n+        if (HEAL_BAN_IDS.isEmpty()) return null;\n         if (!HEAL_BAN_IDS.contains(entity.getId())) return null;\n         String encrypted;\n         if (EntityUtil.HEAL_BAN_VALUE != null) {\n",
-   "id": "b5f6bc8b342f",
-   "class": "authors-fix",
-   "escalate": false,
-   "default": "take the authors' change through the rows, our change re-applied around it",
-   "choice": "patch",
-   "reasoning": "their fix, adapted through the rows (the authors' design intent)",
-   "source": "authors"
-  }
- ]
+ "conflicts": []
 }
