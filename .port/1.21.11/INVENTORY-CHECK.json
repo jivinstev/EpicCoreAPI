@@ -3760,10 +3760,10 @@
    "file": "net/eca/mixin/ItemRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=render @At(value=\"INVOKE\",target=\"Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V\",shift=At.Shift.BEFORE)",
-   "status": "unaccounted",
-   "detail": "the target's overlay has a different injection",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
    "now": "@Inject method=submit @At(value=\"INVOKE\",target=\"Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V\",shift=At.Shift.BEFORE)",
-   "was": "changed"
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer",
@@ -11599,14 +11599,11 @@
    "accounted": true
   }
  ],
- "unaccounted": [
-  "main:net/eca/mixin/ItemRendererMixin.java#injection:@Inject method=render @At(value=\"INVOKE\",target=\"Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V\",shift=At.Shift.BEFORE)"
- ],
+ "unaccounted": [],
  "counts": {
   "same": 956,
   "moved": 267,
-  "changed": 28,
-  "unaccounted": 1
+  "changed": 29
  },
  "notes": [
   "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"
