@@ -115,8 +115,6 @@ public final class ShaderSourceEditorScreen extends Screen {
             .setPlaceholder(Component.translatable("gui.eca.shader_generator.source_editor.placeholder"))
             .setTextColor(0xFFE0E0E0)
             .setTextShadow(true)
-            .setCursorColor(0)
-            .setShowBackground(false)
             .setShowDecorations(true)
             .build(
                 font, editorRight - 12, contentBottom - CONTENT_TOP,
