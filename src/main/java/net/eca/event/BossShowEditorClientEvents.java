@@ -347,7 +347,7 @@ public final class BossShowEditorClientEvents {
         if (mc.screen != null) return;
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        event.getGuiGraphics().drawCenteredString(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
+        event.getGuiGraphics().drawCenteredString(mc.font, toastText, w / 2, h - 60, 0xFFFFFFFF);
     }
 
     @SubscribeEvent
@@ -387,12 +387,12 @@ public final class BossShowEditorClientEvents {
                 : "gui.eca.bossshow.selection.hint");
 
         int y = h / 4;
-        g.drawCenteredString(mc.font, line1, w / 2, y, 0xFFFFFF);
+        g.drawCenteredString(mc.font, line1, w / 2, y, 0xFFFFFFFF);
         if (targeted && cachedHovered != null) {
             Component hint = Component.literal("§7").append(cachedHovered.getType().getDescription());
-            g.drawCenteredString(mc.font, hint, w / 2, y + 12, 0xCCCCCC);
+            g.drawCenteredString(mc.font, hint, w / 2, y + 12, 0xFFCCCCCC);
         }
-        g.drawCenteredString(mc.font, line2, w / 2, y + 26, 0xAAAAAA);
+        g.drawCenteredString(mc.font, line2, w / 2, y + 26, 0xFFAAAAAA);
     }
 
     private static EntityHitResult raycastEntity(LocalPlayer player, double reach) {
@@ -400,13 +400,17 @@ public final class BossShowEditorClientEvents {
         Vec3 look = player.getViewVector(1.0f);
         Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
         AABB scanBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0, 1.0, 1.0);
+        // 1.21.11 (as 1.21.8/1.21.10): the (Level, Entity, from, to, box, filter, float margin) overload is 1.21.1's 6-argument one
+        // (margin 0.3, no distance limit); the (Entity, ..., double) overload takes the maximum distance SQUARED and
+        // getPickRadius margins
         return ProjectileUtil.getEntityHitResult(
+            player.level(),
             player,
             eye,
             end,
             scanBox,
             e -> e instanceof LivingEntity && e.isAlive() && e != player,
-            reach
+            0.3F
         );
     }
 }
