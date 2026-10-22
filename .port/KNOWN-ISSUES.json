@@ -846,7 +846,8 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "26.2": "open"
+        "26.2": "fixed@5fea6f1",
+        "26.3": "fixed@5fea6f1"
       },
       "title": "GenericPresetShader and ten preset shaders read camera yaw/pitch from getCameraEntity().getYRot() instead of mainCamera().yRot() on 26.2: no frame interpolation, wrong in third-person-front and detached camera"
     },
