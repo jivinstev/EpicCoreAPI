@@ -936,6 +936,28 @@
         "26.3": "open"
       },
       "title": "26.2+: GameRendererPostLevelMixin's post-level skybox and EcaBossBarRenderer's textured shader pass dispatch only on ECA's own LegacyRenderType: a dependent's copy is drawn with the wrong shader or skipped"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java"
+      ],
+      "id": "ECA-036",
+      "lowest": "26.2",
+      "notes": "Found in the 2026-10-21 round (plan #63). 26.2 renders with reverse Z; the preview's ortho matrix was not flipped, so the depth test rejects the preview. Fixed at 26.3 @ad8f2b0; open at 26.2.",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "26.2": "open",
+        "26.3": "fixed@ad8f2b0"
+      },
+      "title": "26.2: ShaderPreviewRenderer / GuiPipRenderer use a forward-Z ortho projection on reverse-Z 26.2: item and entity previews in the shader generator are missing"
     }
   ],
   "schema": 1
