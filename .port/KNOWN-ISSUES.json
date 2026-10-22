@@ -986,6 +986,36 @@
         "26.3": "open"
       },
       "title": "net.eca.mv.ItemStacks javadoc still says the stack is recorded at appendItemLayers (it is now recorded at updateForTopItem)"
+    },
+    {
+      "files": [
+        "build.gradle",
+        "gradle.properties"
+      ],
+      "id": "ECA-038",
+      "lowest": "1.21.3",
+      "notes": "2026-10-21 round (plan #63). build.gradle's archiveFileName/archivesName and gradle.properties' mod_version are the authors' (1.21.1-only) and are carried to every version branch; checked against the releases: no port release from eca-1.1.9-mc1.21.3 (2026-10-17) to eca-1.1.9-fix-mc26.3 ever had the Minecraft version in the jar name (now epic-core-api-1.1.9-fix_mr.jar on every version), so this is not a regression of this round's head cascade. 1.21.1 (the authors' only version) is not affected. Visibility rare: only someone keeping jars of several versions in one place meets the clash. Workaround: the release tag names the version. Fix: add the Minecraft version to archiveFileName on the version branches (or a per-branch mod_version suffix).",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "rare",
+        "workaround": true
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "open",
+        "1.21.4": "open",
+        "1.21.5": "open",
+        "1.21.8": "open",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Shipped jar names carry no Minecraft version: every version's release ships epic-core-api-<mod_version>_mr/_cf/_dev.jar, so jars of different versions share a name"
     }
   ],
   "schema": 1
