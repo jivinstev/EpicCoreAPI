@@ -585,7 +585,7 @@
         "1.21.8": "n/a",
         "26.1.2": "n/a",
         "26.2": "n/a",
-        "26.3": "open"
+        "26.3": "fixed@5e06572"
       },
       "title": "26.3 under Fabulous graphics: AfterTranslucentBlocks never fires, so the boss-show anchor and block extensions are not drawn at all"
     },
