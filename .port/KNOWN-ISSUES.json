@@ -301,15 +301,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@803a97d",
+        "1.21.11": "fixed@803a97d",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@803a97d",
+        "26.2": "fixed@803a97d",
+        "26.3": "fixed@803a97d"
       },
       "title": "Boss-show editor and shader source editor shortcuts do not work with Cmd on macOS (overlay tests GLFW_MOD_CONTROL; authors used hasControlDown)"
     },
