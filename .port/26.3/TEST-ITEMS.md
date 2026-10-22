@@ -37,6 +37,8 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/client/render/VolcanoRenderTypes.java` (client)
 - changed: `src/main/java/net/eca/client/render/shader/FilterRenderer.java` (client)
 - changed: `src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java` (client)
+- changed: `src/main/java/net/eca/coremod/LoadingScreenTransformer.java`
+- changed: `src/main/java/net/eca/coremod/RuntimeExtensionBridge.java`
 - changed: `src/main/java/net/eca/event/BossShowEditorClientEvents.java` (client)
 - changed: `src/main/java/net/eca/init/ModConfigs.java`
 - changed: `src/main/java/net/eca/mixin/EntityLookupMixin.java` (mixin)
