@@ -555,9 +555,13 @@ public final class ShaderPreviewRenderer {
             // pass (GuiTexturePasses, drawn after renderToTexture returns and the model-view is popped) lands in place too;
             // the painter's draws go to this renderer's texture through the fork layer's output override
             // (PictureInPictureRendererMixin, net.eca.mv.LegacyGl.setOutput), as 26.2's RenderSystem override did
+            // 26.2+/26.3 depth is reverse-Z: as vanilla's Projection.getMatrix, the ortho is built with near and far swapped
+            // (setOrtho(..., zFar, zNear, device.isZZeroToOne())); a forward ortho clipped or back-to-front sorted the item
+            // and entity previews (z 180-220). The 1.21.1 GUI range -10000..10000 is kept.
+            boolean zeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
             RenderSystem.setProjectionMatrix(
                 projection.getBuffer(new Matrix4f().setOrtho(state.x0(), state.x0() + width, state.y0() + height, state.y0(),
-                    -10000.0F, 10000.0F)),
+                    10000.0F, -10000.0F, zeroToOne)),
                 com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC
             );
             Matrix4fStack modelView = RenderSystem.getModelViewStack();
