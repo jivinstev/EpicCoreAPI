@@ -1,6 +1,3 @@
-// MV-STAND-IN: 26.3 kept this stand-in over 26.2's FML 10/11 port (cascade 2026-10-21): FML earlydisplay 12.0.12's
-// MV-STAND-IN: LoadingScreenRenderer.renderToFramebuffer(RenderContext) only renders the elements (no activate/glClear/deactivate;
-// MV-STAND-IN: a backend abstraction), so that port has nothing to edit here (ECA-015).
 // MV-STAND-IN: 1.21.11's prepared copy of the authors' RuntimeExtensionBridge as it was before 1.21.10 took 1.21.8's overlay
 // MV-STAND-IN: (EARLY_DISPLAY_TARGET = LoadingScreenRenderer), unchanged; only so that 1.21.10 fix does not reach 1.21.11 (and 26.x, which inherit it) unported and ungated.
 // MV-STAND-IN: 1.21.10's prepared copy of the authors' RuntimeExtensionBridge, unchanged, as it was before the 1.21.8 overlay for
