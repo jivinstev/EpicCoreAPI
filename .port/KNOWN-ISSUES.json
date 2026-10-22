@@ -808,7 +808,8 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "26.2": "open"
+        "26.2": "fixed@d41285f",
+        "26.3": "fixed@d41285f"
       },
       "title": "BossShowRangeTransformScreen.closePanel calls onClose(), closing to the game instead of returning to BossShowEditorScreen"
     },
