@@ -827,7 +827,8 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "26.2": "open"
+        "26.2": "fixed@b0b9978",
+        "26.3": "fixed@b0b9978"
       },
       "title": "ShaderMcpScreen: the digits-only filter on the port field was deleted with no replacement (26.2)"
     },
