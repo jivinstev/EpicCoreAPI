@@ -958,6 +958,34 @@
         "26.3": "fixed@ad8f2b0"
       },
       "title": "26.2: ShaderPreviewRenderer / GuiPipRenderer use a forward-Z ortho projection on reverse-Z 26.2: item and entity previews in the shader generator are missing"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/mv/ItemStacks.java"
+      ],
+      "id": "ECA-037",
+      "lowest": "1.21.4",
+      "notes": "Comment only (2026-10-21 round, plan #63); the javadoc names appendItemLayers on every branch from 1.21.4 to 26.3.",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "normal",
+        "visibility": "invisible",
+        "workaround": true
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.4": "open",
+        "1.21.5": "open",
+        "1.21.8": "open",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "net.eca.mv.ItemStacks javadoc still says the stack is recorded at appendItemLayers (it is now recorded at updateForTopItem)"
     }
   ],
   "schema": 1
