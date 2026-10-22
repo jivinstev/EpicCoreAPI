@@ -240,15 +240,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@c80f9b6",
+        "1.21.11": "fixed@c80f9b6",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@c80f9b6",
+        "26.2": "fixed@c80f9b6",
+        "26.3": "fixed@c80f9b6"
       },
       "title": "Controls screen shows the raw key-category id key.category.eca.categories (1.21.9 KeyMapping.Category label key missing from en_us/zh_cn)"
     },
