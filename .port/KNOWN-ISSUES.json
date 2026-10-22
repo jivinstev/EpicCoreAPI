@@ -890,6 +890,29 @@
         "26.3": "fixed@fe5ab2d"
       },
       "title": "26.3: client crash 'Cannot slice transient buffer' in LegacyGl.draw from ShaderMaskRenderQueue (afterTranslucentFeatures) when a dependent's entity with a shader-mask extension renders"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/ShaderMaskRenderQueue.java",
+        "src/main/java/net/eca/mv/MultiBufferSource.java"
+      ],
+      "id": "ECA-034",
+      "lowest": "26.2",
+      "notes": "Found by TheLastSword's Gate C at 26.2 (2026-10-21 round, plan #63): a dependent shading its own copy of LegacyRenderType had its buffers drawn through vanilla's pipeline without the copy's uniforms. Fixed at 26.2 @b85a201 (PR #72, released eca-1.1.9-fix-mc26.2-r2) and 26.3 @c5c609d: MultiBufferSource.drawOwn dispatches ours or a dependent's copy to its own draw.",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "gate",
+      "status": {
+        "26.2": "fixed@b85a201",
+        "26.3": "fixed@c5c609d"
+      },
+      "title": "26.2+: ECA's MultiBufferSource / ShaderMaskRenderQueue dispatched a dependent's own LegacyRenderType copy to vanilla prepare().drawFromBuffer: client crash 'Missing uniform MV_LocalUvMin'"
     }
   ],
   "schema": 1
