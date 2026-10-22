@@ -368,15 +368,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@2da136f",
+        "1.21.11": "fixed@2da136f",
         "1.21.3": "n/a",
-        "1.21.4": "open",
-        "1.21.5": "open",
-        "1.21.8": "open",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "1.21.4": "fixed@2da136f",
+        "1.21.5": "fixed@2da136f",
+        "1.21.8": "fixed@2da136f",
+        "26.1.2": "fixed@2da136f",
+        "26.2": "fixed@2da136f",
+        "26.3": "fixed@2da136f"
       },
       "title": "Open bundle: the selected item's extension effect can draw over the bundle tooltip (stack recorded at appendItemLayers, not updateForTopItem)"
     },
