@@ -724,7 +724,10 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "1.21.11": "open"
+        "1.21.11": "fixed@204106f",
+        "26.1.2": "fixed@204106f",
+        "26.2": "fixed@204106f",
+        "26.3": "fixed@204106f"
       },
       "title": "EcaBossBarRenderer and ShaderPreviewRenderer lost the parent's picture-in-picture path on 1.21.11 (GUI is deferred there); the boss bar also loses its alpha"
     },
