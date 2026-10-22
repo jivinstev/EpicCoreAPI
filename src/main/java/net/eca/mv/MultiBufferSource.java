@@ -32,7 +32,8 @@ import java.util.SequencedMap;
  * 26.2 and 26.3 have no {@code MultiBufferSource} (geometry is recorded into the frame's staged buffer, CATALOG §V100). This is
  * the 1.21 shape for fork code that still asks a buffer source for a {@link VertexConsumer} per render type and ends
  * the batch itself: the vertices are collected in {@link ByteBufferBuilder}s and each type's mesh is drawn on
- * {@code endBatch} -- a fork-layer {@link LegacyRenderType} through its own draw (into its own output target), a
+ * {@code endBatch} -- a fork-layer {@link LegacyRenderType} (or a dependent's relocated copy, see {@link #drawOwn}) through
+ * its own draw (into its own output target), a
  * vanilla type through {@code prepare().drawFromBuffer(info, pass)} in a pass this opens (26.3 copy, §V101: a vanilla
  * type names no target and there is no output override any more, so the pass goes, as {@code LegacyGl.draw}'s does,
  * to the main target's own views, with no depth view when it has no depth). {@link #main()} stands in for
@@ -72,6 +73,114 @@ public interface MultiBufferSource {
      *  is not null. */
     static void draw(RenderType type, MeshData mesh, RenderPass into) {
         BufferSource.draw(type, mesh, into);
+    }
+
+    /** As {@link #drawOwn(RenderType, MeshData, RenderPass)} with no open pass. */
+    static boolean drawOwn(RenderType type, MeshData mesh) {
+        return drawOwn(type, mesh, null);
+    }
+
+    /**
+     * Draws {@code mesh} through {@code type}'s own draw when its class has one outside net.minecraft (closing the mesh)
+     * and returns true; false (mesh untouched) otherwise. With {@code into} null that is its public {@code draw(MeshData)}
+     * (a pass of its own, into its own output target); with an open pass it is its public
+     * {@code draw(MeshData, RenderPass)} (the pass stays open), and false when the class has none -- a caller with an
+     * open pass asks {@link #ownDrawsInto} first and defers a type that cannot draw into it. 26.2 removed vanilla's
+     * {@code RenderType.draw(MeshData)}, so a dependent's own relocated copy of this helper's {@link LegacyRenderType}
+     * (e.g. {@code net.the_last_sword.mv.LegacyRenderType}) is no {@code instanceof} of this one and would otherwise be
+     * drawn through vanilla's {@code prepare().drawFromBuffer}, which binds none of its shader's own uniforms.
+     */
+    static boolean drawOwn(RenderType type, MeshData mesh, RenderPass into) {
+        if (type instanceof LegacyRenderType legacy) {   // ECA's own: no reflection
+            if (into == null) {
+                legacy.draw(mesh);   // closes the mesh
+            } else {
+                legacy.draw(mesh, into);
+            }
+            return true;
+        }
+        OwnDraw own = OwnDraw.OF.get(type.getClass());
+        java.lang.reflect.Method m = into == null ? own.draw : own.drawInto;
+        if (m == null) {
+            return false;
+        }
+        if (into == null) {
+            OwnDraw.call(m, type, mesh);   // closes the mesh
+        } else {
+            OwnDraw.call(m, type, mesh, into);
+        }
+        return true;
+    }
+
+    /** Whether {@code type} has a draw of its own (ours or a dependent's copy, see {@link #drawOwn}). */
+    static boolean hasOwnDraw(RenderType type) {
+        return type instanceof LegacyRenderType || OwnDraw.OF.get(type.getClass()).draw != null;
+    }
+
+    /** For a type with a draw of its own: whether it can draw into an open pass of the main target -- it has
+     *  {@code draw(MeshData, RenderPass)} and no output target of its own ({@code drawsIntoMainTarget()}, true when the
+     *  class does not say). A type that cannot is deferred to a pass of its own. */
+    static boolean ownDrawsInto(RenderType type) {
+        if (type instanceof LegacyRenderType legacy) {
+            return legacy.drawsIntoMainTarget();
+        }
+        OwnDraw own = OwnDraw.OF.get(type.getClass());
+        if (own.drawInto == null) {
+            return false;
+        }
+        return own.drawsIntoMainTarget == null || (Boolean) OwnDraw.call(own.drawsIntoMainTarget, type);
+    }
+
+    /** Per render-type class: its public non-vanilla {@code draw(MeshData)}, {@code draw(MeshData, RenderPass)} and
+     *  {@code drawsIntoMainTarget()} (each null when it has none), looked up once. */
+    final class OwnDraw {
+        static final ClassValue<OwnDraw> OF = new ClassValue<>() {
+            @Override
+            protected OwnDraw computeValue(Class<?> type) {
+                return new OwnDraw(own(type, "draw", void.class, MeshData.class),
+                        own(type, "draw", void.class, MeshData.class, RenderPass.class),
+                        own(type, "drawsIntoMainTarget", boolean.class));
+            }
+        };
+
+        final java.lang.reflect.Method draw;
+        final java.lang.reflect.Method drawInto;
+        final java.lang.reflect.Method drawsIntoMainTarget;
+
+        private OwnDraw(java.lang.reflect.Method draw, java.lang.reflect.Method drawInto,
+                        java.lang.reflect.Method drawsIntoMainTarget) {
+            this.draw = draw;
+            // only a type that draws on its own at all draws into a pass on its own
+            this.drawInto = draw == null ? null : drawInto;
+            this.drawsIntoMainTarget = draw == null ? null : drawsIntoMainTarget;
+        }
+
+        private static java.lang.reflect.Method own(Class<?> type, String name, Class<?> returns, Class<?>... params) {
+            try {
+                java.lang.reflect.Method m = type.getMethod(name, params);
+                if (m.getDeclaringClass().getName().startsWith("net.minecraft.")
+                        || m.getReturnType() != returns
+                        || java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
+                    return null;
+                }
+                m.trySetAccessible();
+                return m;
+            } catch (NoSuchMethodException | SecurityException e) {
+                return null;
+            }
+        }
+
+        static Object call(java.lang.reflect.Method m, Object target, Object... args) {
+            try {
+                return m.invoke(target, args);
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                if (e.getCause() instanceof RuntimeException r) throw r;
+                if (e.getCause() instanceof Error err) throw err;
+                throw new IllegalStateException(e.getCause());
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException(e);
+            }
+        }
     }
 
     /** The client-wide source ({@code renderBuffers().bufferSource()} on 1.21). */
@@ -225,16 +334,11 @@ public interface MultiBufferSource {
             if (mesh == null) {
                 return;
             }
-            if (into == null ? LegacyGl.inRenderPass() : type instanceof LegacyRenderType l && !l.drawsIntoMainTarget()) {
+            if (into == null ? LegacyGl.inRenderPass() : hasOwnDraw(type) && !ownDrawsInto(type)) {
                 Deferred.add(type, mesh);
                 return;
             }
-            if (type instanceof LegacyRenderType legacy) {
-                if (into == null) {
-                    legacy.draw(mesh);   // closes the mesh
-                } else {
-                    legacy.draw(mesh, into);
-                }
+            if (MultiBufferSource.drawOwn(type, mesh, into)) {   // ours or a dependent's copy: its own draw closes the mesh
                 return;
             }
             if (into != null) {
