@@ -763,7 +763,10 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "1.21.11": "open"
+        "1.21.11": "fixed@3b3476e",
+        "26.1.2": "fixed@3b3476e",
+        "26.2": "fixed@3b3476e",
+        "26.3": "fixed@3b3476e"
       },
       "title": "BossShowEditorClientEvents passes reach where 1.21.11 expects a squared distance"
     },
