@@ -63,6 +63,7 @@ final class ShaderMcpScreen extends Screen {
             Component.translatable("gui.eca.shader_generator.mcp.port")
         );
         portField.setMaxLength(5);
+        net.eca.mv.EditBoxes.setFilter(portField, value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         portField.setValue(Integer.toString(settings.port()));
         portField.setEditable(!projectScreen.isMcpRunning());
         addRenderableWidget(portField);

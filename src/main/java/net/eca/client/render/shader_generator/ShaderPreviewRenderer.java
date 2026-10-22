@@ -15,6 +15,15 @@ import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.model.Model;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent;
+import org.joml.Matrix3x2f;
+import javax.annotation.Nullable;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -74,60 +83,68 @@ public final class ShaderPreviewRenderer {
             return;
         }
 
-        net.eca.mv.MultiBufferSource.main().endBatch();
-        graphics.enableScissor(left, top, right, bottom);
-        try {
-            switch (target) {
-                case PLANE -> renderBlockSurface(
-                    source.skybox(),
-                    left + 16,
-                    top + 16,
-                    right - 16,
-                    bottom - 16
-                );
-                case SKYBOX -> renderBlockSurface(
-                    source.skybox(), left, top, right, bottom
-                );
-                case BOSS_BAR -> {
-                    int width = Math.max(80, Math.min(right - left - 40, 360));
-                    int height = Math.max(16, Math.min(42, (bottom - top) / 5));
-                    int centerX = (left + right) / 2;
-                    int centerY = (top + bottom) / 2;
-                    renderBlockSurface(
-                        source.bossBar(),
-                        centerX - width / 2,
-                        centerY - height / 2,
-                        centerX + width / 2,
-                        centerY + height / 2
+        // 1.21.6+: GuiGraphics only records a GuiRenderState that GuiRenderer draws after the screen; an immediate draw
+        // here would land under the hand's perspective projection and under the panel fills. The preview is drawn
+        // into a picture-in-picture texture of exactly this rectangle when GuiRenderer prepares the frame, and that
+        // texture is blitted in GUI order (above the fills submitted before it), clipped like 1.21.1's enableScissor.
+        submit(graphics, left, top, right, bottom, (x0, y0, x1, y1) -> {
+            try {
+                switch (target) {
+                    case PLANE -> renderBlockSurface(
+                        source.skybox(),
+                        left + 16,
+                        top + 16,
+                        right - 16,
+                        bottom - 16,
+                        x0, y0, x1, y1
+                    );
+                    case SKYBOX -> renderBlockSurface(
+                        source.skybox(), left, top, right, bottom, x0, y0, x1, y1
+                    );
+                    case BOSS_BAR -> {
+                        int width = Math.max(80, Math.min(right - left - 40, 360));
+                        int height = Math.max(16, Math.min(42, (bottom - top) / 5));
+                        int centerX = (left + right) / 2;
+                        int centerY = (top + bottom) / 2;
+                        renderBlockSurface(
+                            source.bossBar(),
+                            centerX - width / 2,
+                            centerY - height / 2,
+                            centerX + width / 2,
+                            centerY + height / 2,
+                            x0, y0, x1, y1
+                        );
+                    }
+                    case ITEM -> renderItem(source, left, top, right, bottom);
+                    case ENTITY -> renderEntity(
+                        source,
+                        left,
+                        top,
+                        right,
+                        bottom,
+                        mouseX,
+                        mouseY,
+                        partialTick
                     );
                 }
-                case ITEM -> renderItem(graphics, source, left, top, right, bottom);
-                case ENTITY -> renderEntity(
-                    graphics,
-                    source,
-                    left,
-                    top,
-                    right,
-                    bottom,
-                    mouseX,
-                    mouseY,
-                    partialTick
-                );
+            } finally {
+                Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D);
             }
-        } finally {
-            graphics.disableScissor();
-            Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D);
-        }
+        });
     }
 
+    // x0..y1: the picture-in-picture area (its texture is the viewport), where 1.21.1 mapped onto the whole GUI
     private static void renderBlockSurface(
         RenderType renderType,
         int left,
         int top,
         int right,
-        int bottom
+        int bottom,
+        int x0,
+        int y0,
+        int x1,
+        int y1
     ) {
-        Minecraft minecraft = Minecraft.getInstance();
         GpuBufferSlice savedProjection = RenderSystem.getProjectionMatrixBuffer();
         Matrix4fStack modelView = RenderSystem.getModelViewStack();
         modelView.pushMatrix();
@@ -135,10 +152,12 @@ public final class ShaderPreviewRenderer {
         try (ByteBufferBuilder buffer = new ByteBufferBuilder(DefaultVertexFormat.BLOCK.getVertexSize() * 8)) {
             modelView.identity();
 
-            float centerX = ((left + right) / (float) minecraft.getWindow().getGuiScaledWidth()) - 1.0F;
-            float centerY = 1.0F - ((top + bottom) / (float) minecraft.getWindow().getGuiScaledHeight());
-            float scaleX = (right - left) / (float) minecraft.getWindow().getGuiScaledWidth();
-            float scaleY = (bottom - top) / (float) minecraft.getWindow().getGuiScaledHeight();
+            float areaWidth = x1 - x0;
+            float areaHeight = y1 - y0;
+            float centerX = ((left + right - 2.0F * x0) / areaWidth) - 1.0F;
+            float centerY = 1.0F - ((top + bottom - 2.0F * y0) / areaHeight);
+            float scaleX = (right - left) / areaWidth;
+            float scaleY = (bottom - top) / areaHeight;
             Matrix4f projection = new Matrix4f()
                 .translation(centerX, centerY, 0.0F)
                 .scale(scaleX, scaleY, 1.0F);
@@ -180,7 +199,6 @@ public final class ShaderPreviewRenderer {
     }
 
     private static void renderItem(
-        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         int left,
         int top,
@@ -200,6 +218,7 @@ public final class ShaderPreviewRenderer {
         PoseStack pose = new PoseStack();
         pose.pushPose();
         try {
+            minecraft.gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D); // 1.21.1's GUI default
             float[] bounds = computeUvBounds(quads);
             EcaShaderInstance.setLocalUvBounds(
                 bounds[0],
@@ -221,7 +240,6 @@ public final class ShaderPreviewRenderer {
     }
 
     private static void renderEntity(
-        GuiGraphicsExtractor graphics,
         ShaderPreviewSource source,
         int left,
         int top,
@@ -271,14 +289,14 @@ public final class ShaderPreviewRenderer {
         }
     }
 
-    // 26.3: the dispatcher prepares a frame from the storage and draws it in a render pass on the main target
+    // 26.3: the dispatcher prepares a frame from the storage and draws it in a render pass on the main target -- or, inside
+    // GuiPipRenderer, on its picture-in-picture texture (the fork layer's output override, net.eca.mv.LegacyGl.setOutput)
     private static void renderFeatures(FeatureRenderDispatcher features, SubmitNodeStorage submits) {
-        RenderTarget target = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         try (
             FeatureRenderDispatcher.PreparedFrame frame = features.prepareFrame(submits);
             RenderPass renderPass = RenderSystem.getDevice()
                 .createCommandEncoder()
-                .createRenderPass(() -> "ECA shader preview", target.getColorTextureView(), Optional.empty(), target.getDepthTextureView(), OptionalDouble.empty())
+                .createRenderPass(() -> "ECA shader preview", net.eca.mv.LegacyGl.mainColorView(), Optional.empty(), net.eca.mv.LegacyGl.mainDepthView(), OptionalDouble.empty())
         ) {
             RenderSystem.bindDefaultUniforms(renderPass);
             FeatureRenderDispatcher.renderAllFeatures(renderPass, frame);
@@ -451,6 +469,8 @@ public final class ShaderPreviewRenderer {
         float uMax,
         float vMax
     ) {
+        // 1.21.11: BakedQuad keeps each vertex's UV packed (packedUV), not in an int[] vertex array
+        // 26.1.2: one packedUV0..3 accessor per vertex
         for (BakedQuad quad : quads) {
             for (int vertex = 0; vertex < 4; vertex++) {
                 long packedUv = switch (vertex) {
@@ -468,6 +488,108 @@ public final class ShaderPreviewRenderer {
             }
         }
         return new float[]{uMin, vMin, uMax, vMax};
+    }
+
+    // ==================== 1.21.8: deferred GUI drawing (picture in picture) ====================
+
+    /** Draws immediate content (its own shaders, render types, GL state) in the GUI coordinates of [x0, x1) x [y0, y1),
+     *  which is the whole viewport while it runs; the GUI pose and scissor of the submitting call apply to the result. */
+    @FunctionalInterface
+    public interface GuiPainter {
+        void paint(int x0, int y0, int x1, int y1);
+    }
+
+    /**
+     * Records `painter` for the rectangle [x0, x1) x [y0, y1) of the current GUI pose. When GuiRenderer prepares the
+     * frame, {@link GuiPipRenderer} runs it into a texture of the rectangle's size (times the GUI scale), cleared to
+     * transparent, with an orthographic projection over the rectangle in GUI units (z -10000..10000, as the 1.21.1 GUI)
+     * and the model-view moved by (-x0, -y0); the texture is then blitted (premultiplied alpha) into the GUI render
+     * state at this call's place in the GUI order, with this call's pose and scissor -- above what was submitted
+     * before it over the same pixels, below what comes after.
+     */
+    public static void submit(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1, GuiPainter painter) {
+        if (x1 <= x0 || y1 <= y0) {
+            return;
+        }
+        Matrix3x2f pose = new Matrix3x2f(graphics.pose());
+        ScreenRectangle scissor = graphics.peekScissorStack();
+        ScreenRectangle area = new ScreenRectangle(x0, y0, x1 - x0, y1 - y0).transformMaxBounds(pose);
+        ScreenRectangle bounds = scissor != null ? scissor.intersection(area) : area;
+        graphics.submitPictureInPictureRenderState(new GuiPip(painter, x0, y0, x1, y1, pose, scissor, bounds));
+    }
+
+    public record GuiPip(
+        GuiPainter painter,
+        int x0,
+        int y0,
+        int x1,
+        int y1,
+        Matrix3x2f pose,
+        @Nullable ScreenRectangle scissorArea,
+        @Nullable ScreenRectangle bounds
+    ) implements PictureInPictureRenderState {
+        @Override
+        public float scale() {
+            return 1.0F;
+        }
+    }
+
+    public static final class GuiPipRenderer extends PictureInPictureRenderer<GuiPip> {
+        private final ProjectionMatrixBuffer projection = new ProjectionMatrixBuffer("eca_gui_pip");
+
+        // 26.2: a picture-in-picture renderer has no buffer source of its own (its features go through the dispatcher)
+        public GuiPipRenderer() {
+            super();
+        }
+
+        @Override
+        public Class<GuiPip> getRenderStateClass() {
+            return GuiPip.class;
+        }
+
+        @Override
+        protected void renderToTexture(GuiPip state, PoseStack unused, SubmitNodeCollector unusedSubmits) {
+            int width = state.x1() - state.x0();
+            int height = state.y1() - state.y0();
+            // 26.3: the rectangle's offset is in the projection (not the model-view), so what is collected for this texture's
+            // pass (GuiTexturePasses, drawn after renderToTexture returns and the model-view is popped) lands in place too;
+            // the painter's draws go to this renderer's texture through the fork layer's output override
+            // (PictureInPictureRendererMixin, net.eca.mv.LegacyGl.setOutput), as 26.2's RenderSystem override did
+            RenderSystem.setProjectionMatrix(
+                projection.getBuffer(new Matrix4f().setOrtho(state.x0(), state.x0() + width, state.y0() + height, state.y0(),
+                    -10000.0F, 10000.0F)),
+                com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC
+            );
+            Matrix4fStack modelView = RenderSystem.getModelViewStack();
+            modelView.pushMatrix();
+            try {
+                modelView.identity();
+                state.painter().paint(state.x0(), state.y0(), state.x1(), state.y1());
+            } finally {
+                modelView.popMatrix();
+            }
+        }
+
+        @Override
+        protected String getTextureLabel() {
+            return "eca_gui_pip";
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            projection.close();
+        }
+    }
+
+    @EventBusSubscriber(modid = "eca", value = Dist.CLIENT)
+    public static final class GuiPipRegistration {
+        @SubscribeEvent
+        public static void register(RegisterPictureInPictureRenderersEvent event) {
+            event.register(GuiPip.class, GuiPipRenderer::new);
+        }
+
+        private GuiPipRegistration() {}
     }
 
     private ShaderPreviewRenderer() {}

@@ -6,7 +6,6 @@ import net.eca.client.render.preset.ShaderPresetResourceProvider;
 import net.minecraft.client.Minecraft;
 import net.eca.mv.ShaderInstance;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.Entity;
 import net.eca.mv.RegisterShadersEvent;
 
 import java.io.IOException;
@@ -53,10 +52,9 @@ public class StarlightShader {
             }
             if (cameraYawUniform != null || cameraPitchUniform != null) {
                 Minecraft mc = Minecraft.getInstance();
-                Entity camEntity = mc.getCameraEntity();
-                if (camEntity != null) {
-                    float yaw = (float) Math.toRadians(camEntity.getYRot());
-                    float pitch = (float) Math.toRadians(camEntity.getXRot());
+                if (mc.gameRenderer != null && mc.gameRenderer.mainCamera() != null) {
+                    float yaw = (float) Math.toRadians(mc.gameRenderer.mainCamera().yRot());
+                    float pitch = (float) Math.toRadians(mc.gameRenderer.mainCamera().xRot());
                     if (cameraYawUniform != null) {
                         cameraYawUniform.set(yaw);
                     }

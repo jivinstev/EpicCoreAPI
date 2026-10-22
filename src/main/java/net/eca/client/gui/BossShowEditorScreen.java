@@ -508,8 +508,6 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-
-        int modifiers = event.modifiers();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && contextMenuOpen) { closeContextMenu(); return true; }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && openDropdown >= 0) { closeDropdown(); return true; }
         if (this.getFocused() instanceof EditBox editBox) {
@@ -520,7 +518,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
             }
             return super.keyPressed(event);
         }
-        if ((modifiers & GLFW.GLFW_MOD_CONTROL) != 0) {
+        if (event.hasControlDown()) {
             if (keyCode == GLFW.GLFW_KEY_Z) { undo(); return true; }
             if (keyCode == GLFW.GLFW_KEY_Y) { redo(); return true; }
             if (keyCode == GLFW.GLFW_KEY_C) { BossShowEditorState.copyRange(); closeContextMenu(); return true; }
@@ -531,7 +529,7 @@ public final class BossShowEditorScreen extends Screen implements BossShowEditor
                 if (BossShowEditorState.pasteAtPlayhead()) syncFromState(); closeContextMenu(); return true;
             }
         } else {
-            int step = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0 ? 10 : 1;
+            int step = event.hasShiftDown() ? 10 : 1;
             if (keyCode == GLFW.GLFW_KEY_SPACE) { togglePreviewFromShortcut(); return true; }
             if (keyCode == GLFW.GLFW_KEY_LEFT) { BossShowEditorState.movePlayheadBy(-step); syncFromState(); return true; }
             if (keyCode == GLFW.GLFW_KEY_RIGHT) { BossShowEditorState.movePlayheadBy(step); syncFromState(); return true; }

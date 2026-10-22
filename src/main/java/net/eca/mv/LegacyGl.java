@@ -3,6 +3,10 @@
 // MV-STAND-IN: slice as it is (26.3's transient buffer refuses slice(); see Uploaded.inPass). Kept so the inherited
 // MV-STAND-IN: targets/1.21.5/java/net/eca/mv/LegacyGl.java (the F1/F2 fix ahead of the template, see that file) does not
 // MV-STAND-IN: shadow this target's copy. Delete when that 1.21.5 overlay is gone and the template carries this fix.
+// MV-AHEAD-OF-TEMPLATE: also 1.21.10's F1 fix (mc-mod-version-upgrade 3f4022c: a set-up LegacyRenderType loads its key,
+// MV-AHEAD-OF-TEMPLATE: shader and output target, see load/restore) and 1.21.5's opacity rule in draw() (a COLOR_MODULATOR
+// MV-AHEAD-OF-TEMPLATE: written inside apply() is not kept, as on 1.21.1), carried from 26.2 (ECA-018; a null Key.depth is
+// MV-AHEAD-OF-TEMPLATE: "no depth test"). Delete once sync-shared brings both to shared/26.3.
 package net.eca.mv;
 
 import com.mojang.renderpearl.api.pipeline.IndexType;
@@ -148,6 +152,9 @@ public final class LegacyGl {
     private static boolean cull = true;
     private static Object shader;
     private static boolean warnedEquation;
+    // what a set-up LegacyRenderType adds (see load): its depth bias and its output target (null: the main target)
+    private static float biasScale, biasConstant;
+    private static RenderTarget target;
     private static float[] shaderColor = {1f, 1f, 1f, 1f};
 
     private LegacyGl() {}
@@ -239,9 +246,35 @@ public final class LegacyGl {
         if (type instanceof LegacyRenderType legacy) legacy.clearRenderState();
     }
 
-    /** BufferUploader.drawWithShader: the current shader and the state set above, into the main render target. */
+    /** BufferUploader.drawWithShader: the current shader and the state set above, into the main render target -- or,
+     *  while a {@link LegacyRenderType} is set up, with its shader and state into its output target (see {@link #load}). */
     public static void drawWithShader(MeshData mesh) {
-        draw(mesh, shader, current(), Minecraft.getInstance().gameRenderer.mainRenderTarget());
+        draw(mesh, shader, current(), target != null ? target : Minecraft.getInstance().gameRenderer.mainRenderTarget());
+    }
+
+    // ---- output override -----------------------------------------------------------------------------------------
+    // 26.3 removed RenderSystem.outputColorTextureOverride / outputDepthTextureOverride, which 1.21.6-26.2's
+    // PictureInPictureRenderer.prepare set around renderToTexture so immediate draws landed in its texture. The fork layer
+    // keeps its own: while set (PictureInPictureRendererMixin, around renderToTexture), a draw this layer would make into
+    // the main target goes to these views instead.
+    private static GpuTextureView outputColor, outputDepth;
+
+    /** Sets the output override (null colour: none); returns the previous one, {colour, depth}, for {@link #setOutput}. */
+    public static GpuTextureView[] setOutput(GpuTextureView colour, GpuTextureView depth) {
+        GpuTextureView[] prior = {outputColor, outputDepth};
+        outputColor = colour;
+        outputDepth = colour == null ? null : depth;
+        return prior;
+    }
+
+    /** The colour view a draw into the main target uses now (the override when set). */
+    public static GpuTextureView mainColorView() {
+        return outputColor != null ? outputColor : Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView();
+    }
+
+    /** The depth view a draw into the main target uses now (the override's when set; null: no depth). */
+    public static GpuTextureView mainDepthView() {
+        return outputColor != null ? outputDepth : Minecraft.getInstance().gameRenderer.mainRenderTarget().getDepthTextureView();
     }
 
     /**
@@ -315,7 +348,52 @@ public final class LegacyGl {
 
     static Key current() {
         return new Key(blend ? blendFunction : null, depthTest ? depthFunction : null,
-                depthWrite, writeColor, writeAlpha, cull, 0, 0);
+                depthWrite, writeColor, writeAlpha, cull, biasScale, biasConstant);
+    }
+
+    /** The state {@link #load} replaced, put back by {@link #restore}. */
+    record Saved(boolean blend, BlendFunction blendFunction, boolean depthTest, CompareOp depthFunction,
+                 boolean depthWrite, boolean writeColor, boolean writeAlpha, boolean cull, float biasScale,
+                 float biasConstant, RenderTarget target) {}
+
+    /**
+     * 1.21.4's RenderType.setupRenderState() ran every shard of its CompositeState: the ShaderStateShard set the shader,
+     * and the transparency / depth-test / write-mask / cull / layering shards set GL state. 1.21.1-1.21.4 code that sets
+     * a type up and then draws with BufferUploader.drawWithShader (a mod's own render queue) drew with all of it.
+     * {@link LegacyRenderType#setupRenderState} loads the type's shader and state here so {@link #drawWithShader} does
+     * too, into the type's output target; {@link LegacyRenderType#clearRenderState} restores the state (the shader stays
+     * set, as 1.21.4's ShaderStateShard left it).
+     */
+    static Saved load(Key key, Object shaderObj, RenderTarget into) {
+        Saved s = new Saved(blend, blendFunction, depthTest, depthFunction, depthWrite, writeColor, writeAlpha, cull,
+                biasScale, biasConstant, target);
+        blend = key.blend() != null;
+        if (blend) blendFunction = key.blend();
+        depthTest = key.depth() != null;
+        if (depthTest) depthFunction = key.depth();
+        depthWrite = key.depthWrite();
+        writeColor = key.writeColor();
+        writeAlpha = key.writeAlpha();
+        cull = key.cull();
+        biasScale = key.biasScale();
+        biasConstant = key.biasConstant();
+        shader = shaderObj;
+        target = into;
+        return s;
+    }
+
+    static void restore(Saved s) {
+        blend = s.blend();
+        blendFunction = s.blendFunction();
+        depthTest = s.depthTest();
+        depthFunction = s.depthFunction();
+        depthWrite = s.depthWrite();
+        writeColor = s.writeColor();
+        writeAlpha = s.writeAlpha();
+        cull = s.cull();
+        biasScale = s.biasScale();
+        biasConstant = s.biasConstant();
+        target = s.target();
     }
 
     // ---- drawing ----------------------------------------------------------------------------------------------
@@ -488,7 +566,12 @@ public final class LegacyGl {
             mesh.close();
             return;
         }
-        // 26.3 has no output override: the target's own views (no depth view when it has no depth)
+        // 26.3 has no vanilla output override: the target's own views (no depth view when it has no depth), or the fork
+        // layer's override for the main target (see setOutput)
+        if (outputColor != null && target == Minecraft.getInstance().gameRenderer.mainRenderTarget()) {
+            draw(mesh, shaderObj, key, outputColor, outputDepth, null, outputColor.texture().getFormat());
+            return;
+        }
         draw(mesh, shaderObj, key, target.getColorTextureView(), target.getDepthTextureView(), null, colorTexture.getFormat());
     }
 
@@ -512,12 +595,23 @@ public final class LegacyGl {
             if (compiled == null) return;   // logged (or, for a vanilla shader, by the device)
             Uploaded up = into == null ? Uploaded.of(m) : Uploaded.inPass(m);
             // 1.21.1's BufferUploader/RenderType draws called shader.apply() right before drawing and shader.clear()
-            // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask, an opacity
-            // written into COLOR_MODULATOR after super.apply()), so it has to run here too
+            // after; a mod's ShaderInstance subclass overrides apply() to push its per-draw state (a mask's uniforms
+            // and sampler), so it has to run here too. A COLOR_MODULATOR write made inside apply() (an opacity, after
+            // super.apply()) is not kept: on 1.21.1 it came after apply()'s upload and the next draw's
+            // setDefaultUniforms overwrote it, so it never reached the GPU. A write made before the draw is kept.
             if (own != null) {
                 own.setDefaultUniforms();   // 1.21.1's VertexBuffer._drawWithShader ran this right before apply()
+                Uniform cm = own.COLOR_MODULATOR;
+                boolean wrote = cm != null && cm.touched();
+                float[] before = wrote && cm.floats() != null ? cm.floats().clone() : null;
                 own.apply();
+                if (cm != null) {
+                    if (before != null) cm.set(before);
+                    else if (!wrote) cm.consume();
+                }
             }
+            // a COLOR_MODULATOR the mod wrote before the draw (kept above) replaces RenderSystem's colour; 1.21.8 puts
+            // the colour in the DynamicTransforms block
             boolean override = own != null && own.COLOR_MODULATOR != null && own.COLOR_MODULATOR.touched();
             GpuBufferSlice transforms = transforms(own);
             java.util.List<GpuBuffer> temps = new java.util.ArrayList<>();

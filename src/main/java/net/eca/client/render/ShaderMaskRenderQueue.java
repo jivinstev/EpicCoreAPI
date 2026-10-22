@@ -3,6 +3,8 @@
 // below) -- on 26.3 INTO that event's render pass, which is open there (net.eca.mv.RenderPasses). The after-level flushes
 // (GameRendererPostLevelMixin) still draw, in a pass of their own, what is queued later (a first-person item, the block
 // extension passes with Oculus) and everything under improved transparency, where 26.3 posts no AfterTranslucentFeatures.
+// Carried from 1.21.11/26.1.2/26.2: in draw(), a vanilla RenderType in the queue is drawn with its own pipeline through the
+// shared helper (see the comment there) -- on 26.3 into the open pass when there is one (MultiBufferSource.draw(type, mesh, into)).
 package net.eca.client.render;
 
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
@@ -212,6 +214,16 @@ public final class ShaderMaskRenderQueue {
         EcaShaderInstance.setOpacity(pass.alpha());
         boolean stateActive = false;
         try {
+            if (!(pass.renderType() instanceof net.eca.mv.LegacyRenderType)) {
+                // [mv] 1.21.5+: a vanilla RenderType's set-up no longer sets its shader or its blend / depth / cull state
+                // (they are its RenderPipeline; on 1.21.11 it has no setupRenderState at all), so LegacyGl.drawWithShader
+                // would draw it with whatever shader was set last; its own draw(mesh) sets it up, draws with its pipeline
+                // and clears it, as 1.21.1's setupRenderState + BufferUploader.drawWithShader + clearRenderState did
+                // (26.2: RenderType.draw(MeshData) is gone; the shared helper draws it the way the frame's buffers do;
+                // 26.3: into the open pass when given, e.g. a picture-in-picture texture's (ECA-020), else a pass of its own)
+                net.eca.mv.MultiBufferSource.draw(pass.renderType(), renderedBuffer, into);
+                return;
+            }
             net.eca.mv.LegacyGl.setupRenderState(pass.renderType());
             stateActive = true;
             if (into == null) {

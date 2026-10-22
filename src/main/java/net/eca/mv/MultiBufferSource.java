@@ -68,6 +68,12 @@ public interface MultiBufferSource {
         BufferSource.draw(type, mesh);
     }
 
+    /** As {@link #draw(RenderType, MeshData)}, into {@code into} (a render pass already open, which stays open) when it
+     *  is not null. */
+    static void draw(RenderType type, MeshData mesh, RenderPass into) {
+        BufferSource.draw(type, mesh, into);
+    }
+
     /** The client-wide source ({@code renderBuffers().bufferSource()} on 1.21). */
     static BufferSource main() {
         return Main.INSTANCE;
@@ -243,12 +249,12 @@ public interface MultiBufferSource {
                 return;
             }
             try (MeshData m = mesh) {
-                RenderTarget target = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-                GpuTextureView colorView = target.getColorTextureView();
+                // the main target, or the fork layer's output override (a picture-in-picture texture, see LegacyGl.setOutput)
+                GpuTextureView colorView = LegacyGl.mainColorView();
                 if (colorView == null) {
                     return;
                 }
-                GpuTextureView depthView = target.getDepthTextureView();   // null: the target has no depth
+                GpuTextureView depthView = LegacyGl.mainDepthView();   // null: the target has no depth
                 LegacyGl.Uploaded up = LegacyGl.Uploaded.of(m);
                 StagedVertexBuffer.ExecuteInfo info = new StagedVertexBuffer.ExecuteInfo(up.vertices().buffer(), up.indices(),
                         up.indexType(), 0, 0, up.indexCount(), m.drawState().primitiveTopology());

@@ -106,10 +106,9 @@
    "file": "net/eca/blender/client/render/BlenderModelRenderer.java",
    "kind": "render-use",
    "key": "RenderType.entityTranslucent",
-   "status": "changed",
-   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
-   "now": "RenderTypes.entityTranslucent",
-   "accounted": true
+   "status": "same",
+   "detail": "through the rename tables",
+   "now": "RenderTypes.entityTranslucent"
   },
   {
    "id": "main:net/eca/blender/client/render/BlenderModelRenderer.java#render-use:RenderType.entityCutoutNoCull",
@@ -117,10 +116,9 @@
    "file": "net/eca/blender/client/render/BlenderModelRenderer.java",
    "kind": "render-use",
    "key": "RenderType.entityCutoutNoCull",
-   "status": "changed",
-   "detail": "the target's overlay has a different render-use; an ok row of REVIEW.md names it",
-   "now": "RenderTypes.entityCutout",
-   "accounted": true
+   "status": "same",
+   "detail": "through the rename tables",
+   "now": "RenderTypes.entityCutout"
   },
   {
    "id": "main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.create",
@@ -11612,9 +11610,11 @@
  ],
  "unaccounted": [],
  "counts": {
-  "same": 947,
-  "changed": 33,
-  "moved": 272
+  "same": 949,
+  "moved": 272,
+  "changed": 31
  },
- "notes": []
+ "notes": [
+  "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"
+ ]
 }

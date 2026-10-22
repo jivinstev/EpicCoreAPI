@@ -115,8 +115,6 @@ public final class ShaderSourceEditorScreen extends Screen {
             .setPlaceholder(Component.translatable("gui.eca.shader_generator.source_editor.placeholder"))
             .setTextColor(0xFFE0E0E0)
             .setTextShadow(true)
-            .setCursorColor(0)
-            .setShowBackground(false)
             .setShowDecorations(true)
             .build(
                 font, editorRight - 12, contentBottom - CONTENT_TOP,
@@ -531,8 +529,7 @@ public final class ShaderSourceEditorScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int keyCode = event.key();
-        int modifiers = event.modifiers();
-        boolean control = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean control = event.hasControlDown();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && openDropdown >= 0) {
             closeDropdown();
             return true;
