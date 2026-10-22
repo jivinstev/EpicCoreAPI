@@ -913,6 +913,29 @@
         "26.3": "fixed@c5c609d"
       },
       "title": "26.2+: ECA's MultiBufferSource / ShaderMaskRenderQueue dispatched a dependent's own LegacyRenderType copy to vanilla prepare().drawFromBuffer: client crash 'Missing uniform MV_LocalUvMin'"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/EcaBossBarRenderer.java",
+        "src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java"
+      ],
+      "id": "ECA-035",
+      "lowest": "26.2",
+      "notes": "Found in the 2026-10-21 round (plan #63) beside ECA-034's fix: both paths go through LegacyGl.setupRenderState/drawWithShader, which know only ECA's own LegacyRenderType; same code at 26.2 and 26.3. Visibility invisible: no known dependent passes its own LegacyRenderType copy as a skybox or boss-bar shader type (TheLastSword's Gate C passes). Fix: call MultiBufferSource.drawOwn first, as GlobalSkyboxHook does.",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "feature",
+        "visibility": "invisible",
+        "workaround": false
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "26.2+: GameRendererPostLevelMixin's post-level skybox and EcaBossBarRenderer's textured shader pass dispatch only on ECA's own LegacyRenderType: a dependent's copy is drawn with the wrong shader or skipped"
     }
   ],
   "schema": 1
