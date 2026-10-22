@@ -612,7 +612,7 @@
         "1.21.8": "n/a",
         "26.1.2": "n/a",
         "26.2": "n/a",
-        "26.3": "open"
+        "26.3": "fixed@edb7615"
       },
       "title": "26.3: world-context passes and blend materials inside a picture-in-picture still draw on the main target"
     },
