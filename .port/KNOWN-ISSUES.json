@@ -398,15 +398,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@43b398f",
+        "1.21.11": "fixed@43b398f",
         "1.21.3": "n/a",
-        "1.21.4": "open",
-        "1.21.5": "open",
-        "1.21.8": "open",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "1.21.4": "fixed@43b398f",
+        "1.21.5": "fixed@43b398f",
+        "1.21.8": "fixed@43b398f",
+        "26.1.2": "fixed@43b398f",
+        "26.2": "fixed@43b398f",
+        "26.3": "fixed@43b398f"
       },
       "title": "Stale header comment on ItemStackRenderStateLayersAccessor: says 1.21.4-only, but 1.21.5 and later use it"
     },
