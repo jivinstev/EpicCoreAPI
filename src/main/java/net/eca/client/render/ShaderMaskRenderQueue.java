@@ -157,7 +157,9 @@ public final class ShaderMaskRenderQueue {
                 // (they are its RenderPipeline; on 1.21.11 it has no setupRenderState at all), so LegacyGl.drawWithShader
                 // would draw it with whatever shader was set last; its own draw(mesh) sets it up, draws with its pipeline
                 // and clears it, as 1.21.1's setupRenderState + BufferUploader.drawWithShader + clearRenderState did
-                // (26.2: RenderType.draw(MeshData) is gone; the shared helper draws it the way the frame's buffers do)
+                // (26.2: RenderType.draw(MeshData) is gone; the shared helper draws it through the type's own
+                // draw(MeshData) when it has one -- a dependent's relocated LegacyRenderType copy binds its shader's
+                // own uniforms there -- else the way the frame's buffers do)
                 net.eca.mv.MultiBufferSource.draw(pass.renderType(), renderedBuffer);
                 return;
             }

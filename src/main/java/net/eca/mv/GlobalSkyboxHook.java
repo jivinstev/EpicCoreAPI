@@ -178,9 +178,7 @@ public final class GlobalSkyboxHook {
             // 1.21.5: a RenderType carries its own pipeline state, so it draws the mesh itself (setup, draw, clear);
             // 26.2's RenderType has no draw(MeshData), so the layer's LegacyRenderType draws it
             MeshData mesh = bufferBuilder.buildOrThrow();
-            if (renderType instanceof LegacyRenderType legacy) {
-                legacy.draw(mesh);
-            } else {
+            if (!MultiBufferSource.drawOwn(renderType, mesh)) {   // ours or a dependent's LegacyRenderType copy
                 LegacyGl.setupRenderState(renderType);
                 LegacyGl.drawWithShader(mesh);
                 LegacyGl.clearRenderState(renderType);
