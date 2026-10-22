@@ -69,9 +69,17 @@ public class FilterRenderer {
         LEVEL_PROJECTION.set(projection);
     }
 
+    // 26.2: the main camera's depthFar (max(RD x 64, cloud range x 16), raised by CameraDepthFarMixin to the force-load
+    // distance + 32), the far plane the level projection and its depth buffer use; set by CameraDepthFarMixin
+    private static float levelDepthFar;
+
+    public static void captureDepthFar(float depthFar) {
+        levelDepthFar = depthFar;
+    }
+
     /* 26.2: the captured level projection is REVERSE-Z (Projection.getMatrix: setPerspective(fov, aspect, zFar, zNear, ...)),
        while filters/cosmos.fsh flips the sampled depth back to forward-Z and rebuilds NDC (depth * 2 - 1) against a forward
-       JOML perspective (near 0.05, far max(128, 4 x render distance), as this pass used before the 26.1.2 carry). So the
+       JOML perspective (near 0.05, far the camera's depthFar, see captureDepthFar). So the
        captured matrix keeps its x / y / w rows -- FOV modifiers, aspect, bobHurt/bobView and the portal warp, which are
        affine view-space transforms B on its right (P = Persp * B) -- and gets the forward perspective's z row:
        row2(Persp_fwd * B) = a * row2(B) + b * row3(B) = -a * row3(P) + b * (0, 0, 0, 1), since row3(Persp) = (0, 0, -1, 0)
@@ -79,7 +87,10 @@ public class FilterRenderer {
     private static Matrix4f eca$forwardLevelProjection(int width, int height) {
         Minecraft mc = Minecraft.getInstance();
         float near = 0.05f;
-        float far = Math.max(128.0f, mc.options.getEffectiveRenderDistance() * 16.0f * 4.0f);
+        // 26.2: the camera's real far plane (CameraDepthFarMixin), so the forward depth matches what the depth buffer holds;
+        // the old estimate only before the first camera update
+        float far = levelDepthFar > near ? levelDepthFar
+                : Math.max(128.0f, mc.options.getEffectiveRenderDistance() * 16.0f * 4.0f);
         org.joml.Vector4f w = LEVEL_PROJECTION.getRow(3, new org.joml.Vector4f());
         if (Math.abs(w.z) < 1.0e-6f) {
             float fov = (float) Math.toRadians(mc.options.fov().get());

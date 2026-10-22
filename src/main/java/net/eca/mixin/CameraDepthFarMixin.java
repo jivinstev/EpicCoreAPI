@@ -26,5 +26,9 @@ public class CameraDepthFarMixin {
         if (this.depthFar < forceLoadedFar) {
             this.depthFar = forceLoadedFar;
         }
+        // 26.2: FilterRenderer's forward-Z rebuild of the level projection needs this frame's far plane (the main camera's)
+        if ((Object) this == net.minecraft.client.Minecraft.getInstance().gameRenderer.mainCamera()) {
+            net.eca.client.render.shader.FilterRenderer.captureDepthFar(this.depthFar);
+        }
     }
 }
