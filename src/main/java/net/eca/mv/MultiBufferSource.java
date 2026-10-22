@@ -24,7 +24,7 @@ import java.util.SequencedMap;
  * 26.2 has no {@code MultiBufferSource} (geometry is recorded into the frame's staged buffer, CATALOG §V100). This is
  * the 1.21 shape for fork code that still asks a buffer source for a {@link VertexConsumer} per render type and ends
  * the batch itself: the vertices are collected in {@link ByteBufferBuilder}s and each type's mesh is drawn on
- * {@code endBatch} -- a fork-layer {@link LegacyRenderType} through its own draw, a vanilla type through
+ * {@code endBatch} -- a fork-layer {@link LegacyRenderType} (or a dependent's relocated copy) through its own draw, a vanilla type through
  * {@code prepare().drawFromBuffer(...)}, which draws into the type's output target (or the output override) itself.
  * {@link #main()} stands in for {@code renderBuffers().bufferSource()} and is flushed by {@link Flush}.
  */
@@ -46,6 +46,58 @@ public interface MultiBufferSource {
     /** Draws one finished mesh of {@code type} now (the mesh is closed afterwards). */
     static void draw(RenderType type, MeshData mesh) {
         BufferSource.draw(type, mesh);
+    }
+
+    /**
+     * Draws {@code mesh} through {@code type}'s own public {@code draw(MeshData)} when its class has one outside
+     * net.minecraft (closing the mesh) and returns true; false (mesh untouched) otherwise. 26.2 removed vanilla's
+     * {@code RenderType.draw(MeshData)}, so a dependent's own relocated copy of this helper's {@link LegacyRenderType}
+     * (e.g. {@code net.the_last_sword.mv.LegacyRenderType}) is no {@code instanceof} of this one and would otherwise be
+     * drawn through vanilla's {@code prepare().drawFromBuffer}, which binds none of its shader's own uniforms.
+     */
+    static boolean drawOwn(RenderType type, MeshData mesh) {
+        if (type instanceof LegacyRenderType legacy) {
+            legacy.draw(mesh);   // closes the mesh
+            return true;
+        }
+        java.lang.reflect.Method own = OwnDraw.METHOD.get(type.getClass()).orElse(null);
+        if (own == null) {
+            return false;
+        }
+        try {
+            own.invoke(type, mesh);   // closes the mesh
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            if (e.getCause() instanceof RuntimeException r) throw r;
+            if (e.getCause() instanceof Error err) throw err;
+            throw new IllegalStateException(e.getCause());
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+        return true;
+    }
+
+    /** Per render-type class: its public non-vanilla {@code draw(MeshData)}, looked up once. */
+    final class OwnDraw {
+        static final ClassValue<java.util.Optional<java.lang.reflect.Method>> METHOD = new ClassValue<>() {
+            @Override
+            protected java.util.Optional<java.lang.reflect.Method> computeValue(Class<?> type) {
+                try {
+                    java.lang.reflect.Method m = type.getMethod("draw", MeshData.class);
+                    if (m.getDeclaringClass().getName().startsWith("net.minecraft.")
+                            || m.getReturnType() != void.class
+                            || java.lang.reflect.Modifier.isStatic(m.getModifiers())) {
+                        return java.util.Optional.empty();
+                    }
+                    m.trySetAccessible();
+                    return java.util.Optional.of(m);
+                } catch (NoSuchMethodException | SecurityException e) {
+                    return java.util.Optional.empty();
+                }
+            }
+        };
+
+        private OwnDraw() {
+        }
     }
 
     /** The client-wide source ({@code renderBuffers().bufferSource()} on 1.21). */
@@ -147,8 +199,7 @@ public interface MultiBufferSource {
             if (mesh == null) {
                 return;
             }
-            if (type instanceof LegacyRenderType legacy) {
-                legacy.draw(mesh);   // closes the mesh
+            if (MultiBufferSource.drawOwn(type, mesh)) {   // ours or a dependent's copy: its own draw closes the mesh
                 return;
             }
             try (MeshData m = mesh) {
