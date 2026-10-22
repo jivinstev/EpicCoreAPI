@@ -734,7 +734,7 @@
     {
       "id": "ECA-026",
       "lowest": "1.21.11",
-      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-1.21.11 (REVIEW.md rows FogRendererMixin, LevelRendererMixin, 4 item rows). Not fixed this round.",
+      "notes": "Found by the 2026-10-18 round's reviewer of neoforge-1.21.11 (REVIEW.md rows FogRendererMixin, LevelRendererMixin, 4 item rows). Not fixed this round. Fixed at 1.21.11 and 26.1.2 (@88c8fdc, 2026-10-21 round, plan #63). Still open at 26.2 and 26.3: the force-loaded entity fog part -- on 26.2+ entities are submitted before the frame clear, so the 1.21.11 no-fog draw is not carried; needs a redesign (FogRenderer.getBuffer(FogMode.NONE) exists on 26.2+).",
       "override": null,
       "rubric": {
         "failure": "cosmetic",
@@ -745,7 +745,10 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "1.21.11": "open"
+        "1.21.11": "fixed@88c8fdc",
+        "26.1.2": "fixed@88c8fdc",
+        "26.2": "open",
+        "26.3": "open"
       },
       "title": "FogRendererMixin and LevelRendererMixin on 1.21.11 drop the fog-shape handling and force-loaded entity fog; the LevelRendererMixin STUBS text claims every removed handler is re-done"
     },
