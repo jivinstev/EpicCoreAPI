@@ -42,6 +42,12 @@ public class GameRendererPostLevelMixin {
     @Final
     private Camera mainCamera;
 
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    private void eca$discardAbortedLayers(float partialTick, long nanoTime, PoseStack poseStack, CallbackInfo ci) {
+        // 上一帧若在队列刷新前中断，不能把旧几何和借出的缓冲留到下一帧。
+        ShaderMaskRenderQueue.discardPending();
+    }
+
     @Inject(method = "getDepthFar", at = @At("RETURN"), cancellable = true)
     private void eca$extendForceLoadedDepthFar(CallbackInfoReturnable<Float> cir) {
         float forceLoadedFar = EcaConfiguration.getForceLoadingMaxRenderDistanceSafely() + 32.0f;

@@ -53,6 +53,8 @@ public final class TransformerWhitelist {
 
     // 只跳过 AllReturn（内置）
     private static final Set<String> FRIENDLY = Set.of(
+        // 地图的资源申请与归还必须成对执行。
+        "xaero.", "xaeroplus.", "journeymap.", "com.mamiyaotaru.voxelmap.", "hunternif.mc.atlas.",
         "mezz.jei.", "snownee.jade.", "software.bernie.", "com.github.alexthe666.citadel.",
         "me.jellysquid.mods.sodium.", "com.supermartijn642.fusion.", "com.supermartijn642.core.",
         "dev.architectury.", "dev.kosmx.playerAnim.", "dev.tr7zw.entityculling.",

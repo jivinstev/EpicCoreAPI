@@ -3,30 +3,57 @@ package net.eca.client.render;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexSorting;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
+import java.util.function.Consumer;
 
 @OnlyIn(Dist.CLIENT)
 public final class ShaderMaskRenderQueue {
 
-    private static final int MAX_POOL_SIZE = 64;
     private static final List<QueuedPass> QUEUE = new ArrayList<>();
-    private static final Deque<BufferBuilder> BUILDER_POOL = new ArrayDeque<>();
+    private static final RenderBufferPool BUILDER_POOL = new RenderBufferPool();
 
     private ShaderMaskRenderQueue() {
     }
 
     public static BufferBuilder acquireBuilder() {
-        BufferBuilder builder = BUILDER_POOL.pollFirst();
-        return builder == null ? new BufferBuilder(262144) : builder;
+        return BUILDER_POOL.acquire();
+    }
+
+    public static void releaseBuilder(BufferBuilder builder) {
+        BUILDER_POOL.release(builder);
+    }
+
+    public static void discardPending() {
+        QUEUE.clear();
+        BUILDER_POOL.releaseAll();
+    }
+
+    public static void render(ShaderMaskPass pass, boolean queued, Consumer<BufferBuilder> writer) {
+        BufferBuilder builder = acquireBuilder();
+        boolean submitted = false;
+        try {
+            builder.begin(VertexFormat.Mode.QUADS, pass.renderType().format());
+            writer.accept(builder);
+            BufferBuilder.RenderedBuffer renderedBuffer = builder.end();
+            if (queued) {
+                enqueue(pass, builder, renderedBuffer);
+            } else {
+                drawNow(pass, builder, renderedBuffer);
+            }
+            submitted = true;
+        } finally {
+            if (!submitted) {
+                recycle(builder);
+            }
+        }
     }
 
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
@@ -37,10 +64,18 @@ public final class ShaderMaskRenderQueue {
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
                                BufferBuilder.RenderedBuffer renderedBuffer,
                                MaskUvTransform uvTransform) {
-        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix());
-        Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
-        QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
-            uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform));
+        boolean queued = false;
+        try {
+            Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix());
+            Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
+            QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
+                uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform));
+            queued = true;
+        } finally {
+            if (!queued) {
+                recycle(builder);
+            }
+        }
     }
 
     public static void drawNow(ShaderMaskPass pass, BufferBuilder builder,
@@ -86,11 +121,17 @@ public final class ShaderMaskRenderQueue {
                 } finally {
                     RenderSystem.getModelViewStack().popPose();
                     RenderSystem.applyModelViewMatrix();
-                    recycle(entry.builder());
                 }
             }
         } finally {
-            RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.DISTANCE_TO_ORIGIN);
+            try {
+                RenderSystem.setProjectionMatrix(savedProjection, VertexSorting.DISTANCE_TO_ORIGIN);
+            } finally {
+                // 绘制中断时，尚未上传的批次也必须归还。
+                for (QueuedPass entry : entries) {
+                    recycle(entry.builder());
+                }
+            }
         }
     }
 
@@ -106,13 +147,16 @@ public final class ShaderMaskRenderQueue {
             stateActive = true;
             BufferUploader.drawWithShader(renderedBuffer);
         } finally {
-            if (stateActive) {
-                pass.renderType().clearRenderState();
+            try {
+                if (stateActive) {
+                    pass.renderType().clearRenderState();
+                }
+            } finally {
+                EcaShaderInstance.clearColorKey();
+                EcaShaderInstance.clearShaderMask();
+                EcaShaderInstance.clearLocalUvBounds();
+                EcaShaderInstance.clearOpacity();
             }
-            EcaShaderInstance.clearColorKey();
-            EcaShaderInstance.clearShaderMask();
-            EcaShaderInstance.clearLocalUvBounds();
-            EcaShaderInstance.clearOpacity();
         }
     }
 
@@ -134,9 +178,7 @@ public final class ShaderMaskRenderQueue {
     }
 
     private static void recycle(BufferBuilder builder) {
-        if (builder != null && BUILDER_POOL.size() < MAX_POOL_SIZE) {
-            BUILDER_POOL.addLast(builder);
-        }
+        BUILDER_POOL.release(builder);
     }
 
     private record QueuedPass(

@@ -127,8 +127,10 @@ public class EcaConfiguration {
             .define("Unlock Attribute Limits", true);
 
         ENABLE_CUSTOM_LOADING_BACKGROUND = BUILDER
-            .comment("Enable custom loading background rendered by agent transform",
-                     "启用由 agent transform 渲染的自定义加载背景")
+            .comment("Enable early loading screen transformation, including the custom background and intro callback. Requires a game restart.",
+                     "启用启动加载界面转换，包括自定义背景和开场回调。修改后需要重启游戏。",
+                     "When disabled, the entire loading screen transformation is skipped.",
+                     "关闭后跳过整个加载界面转换。")
             .define("Enable Custom Loading Background", true);
 
         FORCE_LOADING_MAX_RENDER_DISTANCE = BUILDER

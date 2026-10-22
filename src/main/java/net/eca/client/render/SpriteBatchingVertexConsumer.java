@@ -11,11 +11,12 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Consumer;
 
 @OnlyIn(Dist.CLIENT)
-public final class SpriteBatchingVertexConsumer implements VertexConsumer {
+public final class SpriteBatchingVertexConsumer implements VertexConsumer, AutoCloseable {
 
     // 烘焙方块的光照只经 putBulkData 的 lightmap 数组进入缓冲，没有独立的 packedLight 形参，
     // 所以发光只能在这里替换该数组。VertexConsumer 的默认实现只读不写，共享常量数组安全。
@@ -39,12 +40,43 @@ public final class SpriteBatchingVertexConsumer implements VertexConsumer {
     }
 
     public void finish(Consumer<SpriteBatch> consumer) {
-        builders.forEach((sprite, builder) ->
-            consumer.accept(new SpriteBatch(builder, MaskUvTransform.fromSprite(sprite))));
-        if (fallback != null) {
-            consumer.accept(new SpriteBatch(fallback, MaskUvTransform.IDENTITY));
+        try {
+            Iterator<Map.Entry<TextureAtlasSprite, BufferBuilder>> iterator = builders.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<TextureAtlasSprite, BufferBuilder> entry = iterator.next();
+                BufferBuilder builder = entry.getValue();
+                MaskUvTransform uvTransform = MaskUvTransform.fromSprite(entry.getKey());
+                iterator.remove();
+                submit(consumer, builder, uvTransform);
+            }
+            if (fallback != null) {
+                BufferBuilder builder = fallback;
+                fallback = null;
+                submit(consumer, builder, MaskUvTransform.IDENTITY);
+            }
+        } finally {
+            close();
         }
+    }
+
+    private static void submit(Consumer<SpriteBatch> consumer, BufferBuilder builder,
+                               MaskUvTransform uvTransform) {
+        boolean submitted = false;
+        try {
+            consumer.accept(new SpriteBatch(builder, uvTransform));
+            submitted = true;
+        } finally {
+            if (!submitted) {
+                ShaderMaskRenderQueue.releaseBuilder(builder);
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        builders.values().forEach(ShaderMaskRenderQueue::releaseBuilder);
         builders.clear();
+        ShaderMaskRenderQueue.releaseBuilder(fallback);
         fallback = null;
     }
 
