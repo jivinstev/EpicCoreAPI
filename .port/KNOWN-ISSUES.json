@@ -784,7 +784,10 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "1.21.11": "open"
+        "1.21.11": "fixed@4ba46fd",
+        "26.1.2": "fixed@4ba46fd",
+        "26.2": "fixed@4ba46fd",
+        "26.3": "fixed@4ba46fd"
       },
       "title": "ShaderSourceEditorScreen on 1.21.11 sets setCursorColor(0): the text cursor is transparent"
     },
