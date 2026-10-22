@@ -81,7 +81,7 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
     }
 
     private void closePanel() {
-        this.onClose();
+        this.minecraft.gui.setScreen(new BossShowEditorScreen());
     }
 
     private void toggleMode() {
@@ -112,24 +112,24 @@ public final class BossShowRangeTransformScreen extends Screen implements BossSh
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
-        g.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
+        g.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
         g.centeredText(this.font,
             Component.translatable("gui.eca.bossshow.editor.range_offset.range",
                 BossShowEditorState.getInPoint(), BossShowEditorState.getOutPoint()),
-            this.width / 2, 38, 0xAAAAAA);
+            this.width / 2, 38, 0xFFAAAAAA);
         String[] labels = {"dx", "dy", "dz", "yaw", "pitch"};
         int x = this.width / 2 - 72;
         for (int i = 0; i < labels.length; i++) {
-            g.text(this.font, Component.literal(labels[i]), x, 63 + i * 24, 0xCCCCCC, false);
+            g.text(this.font, Component.literal(labels[i]), x, 63 + i * 24, 0xFFCCCCCC, false);
         }
         if (rampMode) {
             g.text(this.font, Component.translatable("gui.eca.bossshow.editor.range_offset.start"),
-                this.width / 2 - 42, 46, 0xAAAAAA, false);
+                this.width / 2 - 42, 46, 0xFFAAAAAA, false);
             g.text(this.font, Component.translatable("gui.eca.bossshow.editor.range_offset.end"),
-                this.width / 2 + 58, 46, 0xAAAAAA, false);
+                this.width / 2 + 58, 46, 0xFFAAAAAA, false);
         }
         if (!error.getString().isEmpty()) {
-            g.centeredText(this.font, error, this.width / 2, this.height - 72, 0xFF5555);
+            g.centeredText(this.font, error, this.width / 2, this.height - 72, 0xFFFF5555);
         }
         super.extractRenderState(g, mouseX, mouseY, partialTick);
     }

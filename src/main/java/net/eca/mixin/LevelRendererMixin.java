@@ -104,6 +104,9 @@ public abstract class LevelRendererMixin {
                                          net.minecraft.client.renderer.state.level.CameraRenderState cameraState,
                                          GpuBufferSlice fogBuffer, Vector4f fogColor, boolean renderSky, boolean consistentDepth, CallbackInfo ci) {
         net.eca.mv.CloudGate.occlude = false;
+        // FilterRenderer's world-space pass inverts this frame's level projection (1.21.1: event.getProjectionMatrix()).
+        // 26.1.2: renderLevel no longer receives it (cameraState.projectionMatrix lacks bobHurt/bobView); it is captured
+        // where GameRenderer.renderLevel uploads it, in GameRendererPostLevelMixin.eca$captureLevelProjection
     }
 
     /* shouldRender 每次进入都会登记当前实体，isChunkCompiled 是它在同一个判断表达式里的读取方。
@@ -239,7 +242,11 @@ public abstract class LevelRendererMixin {
        注意：绘制发生在之后的 renderAllFeatures，所以“前后”只覆盖提交，不再覆盖绘制——
        云层遮挡标记（本帧的状态，云层之后才读）不受影响；雾标志在 1.21.6 之后本来就只是个标志
        （雾是整帧一份的 uniform，见 net.eca.mv.Mv.suspendFog），所以这里也没有损失。
-       原先在前后各做的 flushEntityBuffers 只是为了让“绘制”落在雾标志之内，提交阶段没有绘制，不再需要。 */
+       原先在前后各做的 flushEntityBuffers 只是为了让“绘制”落在雾标志之内，提交阶段没有绘制，不再需要。
+       26.2: 1.21.10-26.1.2's ECA-026 bracket (submit a force-loaded entity into its own feature dispatcher and draw it at once
+       with FogRenderer's FogMode.NONE slice) is not carried here: 26.2 submits the level's entities before the frame graph
+       and its clear pass run (see EntityExtensionLayer, net.eca.mv.SubmitPhase), so a draw made at submit would be erased,
+       and 26.2 has no MultiBufferSource.BufferSource / 8-argument FeatureRenderDispatcher to draw it with. The flag stays. */
     @Redirect(method = "submitEntities",
               at = @At(value = "INVOKE",
                        target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;submit(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lnet/minecraft/client/renderer/state/level/CameraRenderState;DDDLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;)V"))

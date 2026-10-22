@@ -872,7 +872,7 @@
    "key": "addListener RenderLevelStageEvent",
    "status": "changed",
    "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
-   "now": "addListener RenderLevelStageEvent.AfterTranslucentBlocks",
+   "now": "addListener RenderLevelStageEvent.AfterLevel",
    "accounted": true
   },
   {
@@ -883,7 +883,7 @@
    "key": "@SubscribeEvent RenderLevelStageEvent",
    "status": "changed",
    "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
-   "now": "@SubscribeEvent RenderLevelStageEvent.AfterTranslucentBlocks",
+   "now": "@SubscribeEvent RenderLevelStageEvent.AfterLevel",
    "accounted": true
   },
   {
@@ -2801,7 +2801,7 @@
    "key": "@SubscribeEvent RenderLevelStageEvent",
    "status": "changed",
    "detail": "the target's overlay has a different event; an ok row of REVIEW.md names it",
-   "now": "@SubscribeEvent RenderLevelStageEvent.AfterTranslucentBlocks",
+   "now": "@SubscribeEvent RenderLevelStageEvent.AfterLevel",
    "accounted": true
   },
   {
@@ -11619,5 +11619,7 @@
   "changed": 34,
   "moved": 273
  },
- "notes": []
+ "notes": [
+  "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"
+ ]
 }

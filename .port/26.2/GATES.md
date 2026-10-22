@@ -1,18 +1,18 @@
-Gates for `eca` at `3c1cc21` for Minecraft 26.2 (full environment) -- run by CI with no model and no fixes applied:
+Gates for `eca` at `d666492` for Minecraft 26.2 (full environment) -- run by CI with no model and no fixes applied:
 
 | check | result | detail |
 |---|---|---|
-| author's own build (`build agentJar cfCoremodJar cfJar devJar jvmtiBackendJar mrJar proAgentJar proJar`) | PASS | epic-core-api-1.1.9_cf.jar, epic-core-api-1.1.9_dev.jar, epic-core-api-1.1.9_mr.jar, epic-core-api-1.1.9_pro.jar |
+| author's own build (`build agentJar cfCoremodJar cfJar devJar jvmtiBackendJar mrJar proAgentJar proJar`) | PASS | epic-core-api-1.1.9-fix_cf.jar, epic-core-api-1.1.9-fix_dev.jar, epic-core-api-1.1.9-fix_mr.jar, epic-core-api-1.1.9-fix_pro.jar |
 | Gate A -- mixin-config integrity | PASS | 2 test(s) |
 | Data -- nothing NeoForge would silently ignore | PASS | 1.21-clean |
-| Payloads -- every StreamCodec.unit payload has equal instances | PASS | audit-unit-codecs: checked 470 file(s), 0 finding(s) |
+| Payloads -- every StreamCodec.unit payload has equal instances | PASS | audit-unit-codecs: checked 475 file(s), 0 finding(s) |
 | Gate C -- real client, `spawn` | skipped | a library: no entity of its own to spawn; proven by a dependent's Gate C against this jar (tools/fork-branches.py library-record) |
 | Gate C -- real client, `battle` | skipped | a library: no entity of its own to spawn; proven by a dependent's Gate C against this jar (tools/fork-branches.py library-record) |
 | Data loads -- the server rejected none of the mod's data files | PASS | no rejection logged |
 | Gate B -- headless server loads the mod, GameTests | PASS | 6 required test(s) passed |
 | Gate C -- real client, `launch` | PASS | PASS — reached title screen, client loaded without crashing |
 | Gate C -- real client, `gauntlet` | PASS | PASS — gauntlet ran 10 item/block/use/effect steps with no crash |
-| Shipped jar -- the built jar boots in a real server, the mod's own logs show its subsystems ran | PASS | epic-core-api-1.1.9_mr.jar: 3 check(s) green |
-| Shipped jar -- the built jar boots in a real server, the mod's own logs show its subsystems ran (epic-core-api-1.1.9_cf.jar) | PASS | epic-core-api-1.1.9_cf.jar: 5 check(s) green |
+| Shipped jar -- the built jar boots in a real server, the mod's own logs show its subsystems ran | PASS | epic-core-api-1.1.9-fix_mr.jar: 3 check(s) green |
+| Shipped jar -- the built jar boots in a real server, the mod's own logs show its subsystems ran (epic-core-api-1.1.9-fix_cf.jar) | PASS | epic-core-api-1.1.9-fix_cf.jar: 5 check(s) green |
 
 Not covered by any automated gate: gameplay by a person.

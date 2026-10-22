@@ -31,7 +31,7 @@ public final class BossShowRecordingHud {
             GuiGraphicsExtractor g = event.getGuiGraphics();
             g.centeredText(mc.font,
                 Component.translatable("gui.eca.bossshow.editor.pose_capture.hint"),
-                w / 2, h / 4, 0xFFFFFF);
+                w / 2, h / 4, 0xFFFFFFFF);
             return;
         }
         if (!BossShowEditorState.isRecordingMode()) return;
@@ -80,7 +80,7 @@ public final class BossShowRecordingHud {
             recDot, formatTime(elapsedSec), frameCount);
         Component line2 = Component.translatable("gui.eca.bossshow.recording.line2");
         int cy = h / 4;
-        g.centeredText(font, line1, w / 2, cy, 0xFFFFFF);
+        g.centeredText(font, line1, w / 2, cy, 0xFFFFFFFF);
         g.centeredText(font, line2, w / 2, cy + 14, 0xFFAAAAAA);
     }
 

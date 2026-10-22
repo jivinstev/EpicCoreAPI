@@ -192,7 +192,9 @@ public final class BlendMaterialProgram implements AutoCloseable {
         for (int i = 0; i < positions.length; i++) { min[i % 3] = Math.min(min[i % 3], positions[i]); max[i % 3] = Math.max(max[i % 3], positions[i]); }
         if (positions.length == 0) { min = new float[3]; max = new float[3]; }
         Uniforms uniforms = new Uniforms(driverValues, inverse, min, new float[] {max[0] - min[0], max[1] - min[1], max[2] - min[2]});
-        if (net.eca.mv.SubmitPhase.levelSubmit) {
+        // 26.3 (ECA-020): likewise inside a picture-in-picture texture (submitted before vanilla opens the pass on it):
+        // the deferred draw goes into that texture's pass (GuiTexturePasses) instead of onto the main target
+        if (net.eca.mv.SubmitPhase.levelSubmit || net.eca.client.render.GuiTexturePasses.collecting()) {
             // 26.3 (#37): submitted with the level (LevelRenderer.render: submitFeatures, then the frame graph, whose
             // "clear" pass clears the main target's colour and depth before "main" runs). Drawn now, through its own
             // pass on the main target, the material would be erased. Its geometry goes into a builder of its own and is

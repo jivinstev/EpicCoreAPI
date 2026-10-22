@@ -216,8 +216,27 @@ public final class BossShowEditorClientEvents {
         Minecraft.getInstance().gui.setScreen(new BossShowEditorScreen());
     }
 
+    // 26.3 (ECA-019): whether this frame posted AfterTranslucentBlocks; cleared at AfterLevel
+    private static boolean outlinedInLevelPass;
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        outlinedInLevelPass = true;
+        submitHoverOutline();
+    }
+
+    // 26.3 (ECA-019): with improved transparency (Fabulous) no AfterTranslucentBlocks is posted; the outline is submitted
+    // at AfterLevel instead (still inside gameRenderer.render, where the Gizmos collector is live)
+    @SubscribeEvent
+    public static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
+        boolean outlined = outlinedInLevelPass;
+        outlinedInLevelPass = false;
+        if (!outlined) {
+            submitHoverOutline();
+        }
+    }
+
+    private static void submitHoverOutline() {
         if (!BossShowEditorState.isAnySelectionMode()) return;
         Entity target = cachedHovered;
         if (target == null || target.isRemoved()) return;
@@ -335,7 +354,7 @@ public final class BossShowEditorClientEvents {
         if (mc.gui.screen() != null) return;
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        event.getGuiGraphics().centeredText(mc.font, toastText, w / 2, h - 60, 0xFFFFFF);
+        event.getGuiGraphics().centeredText(mc.font, toastText, w / 2, h - 60, 0xFFFFFFFF);
     }
 
     @SubscribeEvent
@@ -375,12 +394,12 @@ public final class BossShowEditorClientEvents {
                 : "gui.eca.bossshow.selection.hint");
 
         int y = h / 4;
-        g.centeredText(mc.font, line1, w / 2, y, 0xFFFFFF);
+        g.centeredText(mc.font, line1, w / 2, y, 0xFFFFFFFF);
         if (targeted && cachedHovered != null) {
             Component hint = Component.literal("§7").append(cachedHovered.getType().getDescription());
-            g.centeredText(mc.font, hint, w / 2, y + 12, 0xCCCCCC);
+            g.centeredText(mc.font, hint, w / 2, y + 12, 0xFFCCCCCC);
         }
-        g.centeredText(mc.font, line2, w / 2, y + 26, 0xAAAAAA);
+        g.centeredText(mc.font, line2, w / 2, y + 26, 0xFFAAAAAA);
     }
 
     private static EntityHitResult raycastEntity(LocalPlayer player, double reach) {
@@ -388,13 +407,17 @@ public final class BossShowEditorClientEvents {
         Vec3 look = player.getViewVector(1.0f);
         Vec3 end = eye.add(look.x * reach, look.y * reach, look.z * reach);
         AABB scanBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(1.0, 1.0, 1.0);
+        // 1.21.11 (as 1.21.8/1.21.10): the (Level, Entity, from, to, box, filter, float margin) overload is 1.21.1's 6-argument one
+        // (margin 0.3, no distance limit); the (Entity, ..., double) overload takes the maximum distance SQUARED and
+        // getPickRadius margins
         return ProjectileUtil.getEntityHitResult(
+            player.level(),
             player,
             eye,
             end,
             scanBox,
             e -> e instanceof LivingEntity && e.isAlive() && e != player,
-            reach
+            0.3F
         );
     }
 }

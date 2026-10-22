@@ -3,6 +3,8 @@
 // below) -- on 26.3 INTO that event's render pass, which is open there (net.eca.mv.RenderPasses). The after-level flushes
 // (GameRendererPostLevelMixin) still draw, in a pass of their own, what is queued later (a first-person item, the block
 // extension passes with Oculus) and everything under improved transparency, where 26.3 posts no AfterTranslucentFeatures.
+// Carried from 1.21.11/26.1.2/26.2: in draw(), a vanilla RenderType in the queue is drawn with its own pipeline through the
+// shared helper (see the comment there) -- on 26.3 into the open pass when there is one (MultiBufferSource.draw(type, mesh, into)).
 package net.eca.client.render;
 
 import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
@@ -53,6 +55,11 @@ public final class ShaderMaskRenderQueue {
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
                                MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
+        if (GuiTexturePasses.collecting()) {
+            // 26.3 (ECA-020): submitted while a picture-in-picture (or GUI item) texture is drawn: into that texture
+            GuiTexturePasses.add(pass, builder, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
+            return;
+        }
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
         GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
@@ -67,6 +74,10 @@ public final class ShaderMaskRenderQueue {
      */
     public static void enqueueDraw(BufferBuilder builder, MeshData renderedBuffer,
                                    java.util.function.BiConsumer<MeshData, com.mojang.renderpearl.api.commands.RenderPass> draw) {
+        if (GuiTexturePasses.collecting()) {
+            GuiTexturePasses.addDraw(builder, renderedBuffer, draw);   // 26.3 (ECA-020): see enqueue
+            return;
+        }
         Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
         GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
         QUEUE.add(new QueuedPass(null, builder, renderedBuffer, modelView, projection, MaskUvTransform.IDENTITY, draw));
@@ -88,6 +99,12 @@ public final class ShaderMaskRenderQueue {
     public static void drawNow(ShaderMaskPass pass, BufferBuilder builder,
                                MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
+        if (GuiTexturePasses.collecting()) {
+            // 26.3 (ECA-020): a picture-in-picture entity's pass, submitted before vanilla opens the texture's pass;
+            // drawn now it went to the main target
+            GuiTexturePasses.add(pass, builder, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
+            return;
+        }
         try {
             draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
         } finally {
@@ -103,6 +120,17 @@ public final class ShaderMaskRenderQueue {
                                 com.mojang.renderpearl.api.commands.RenderPass into) {
         try {
             draw(pass, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform, into);
+        } finally {
+            recycle(builder);
+        }
+    }
+
+    /** 26.3 (ECA-020): a collected draw of the caller's own (see enqueueDraw) drawn INTO {@code into}, which stays open. */
+    public static void drawCustomInto(BufferBuilder builder, MeshData renderedBuffer,
+                                      java.util.function.BiConsumer<MeshData, com.mojang.renderpearl.api.commands.RenderPass> draw,
+                                      com.mojang.renderpearl.api.commands.RenderPass into) {
+        try {
+            draw.accept(renderedBuffer, into);
         } finally {
             recycle(builder);
         }
@@ -186,6 +214,19 @@ public final class ShaderMaskRenderQueue {
         EcaShaderInstance.setOpacity(pass.alpha());
         boolean stateActive = false;
         try {
+            if (!(pass.renderType() instanceof net.eca.mv.LegacyRenderType)) {
+                // [mv] 1.21.5+: a vanilla RenderType's set-up no longer sets its shader or its blend / depth / cull state
+                // (they are its RenderPipeline; on 1.21.11 it has no setupRenderState at all), so LegacyGl.drawWithShader
+                // would draw it with whatever shader was set last; its own draw(mesh) sets it up, draws with its pipeline
+                // and clears it, as 1.21.1's setupRenderState + BufferUploader.drawWithShader + clearRenderState did
+                // (26.2: RenderType.draw(MeshData) is gone; the shared helper draws it through the type's own
+                // draw(MeshData) when it has one -- a dependent's relocated LegacyRenderType copy binds its shader's
+                // own uniforms there -- else the way the frame's buffers do;
+                // 26.3: into the open pass when given, e.g. a picture-in-picture texture's (ECA-020) -- a copy's own
+                // draw(MeshData, RenderPass) -- else a pass of its own)
+                net.eca.mv.MultiBufferSource.draw(pass.renderType(), renderedBuffer, into);
+                return;
+            }
             net.eca.mv.LegacyGl.setupRenderState(pass.renderType());
             stateActive = true;
             if (into == null) {

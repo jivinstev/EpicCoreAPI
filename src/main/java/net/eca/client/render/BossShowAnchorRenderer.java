@@ -52,8 +52,12 @@ public final class BossShowAnchorRenderer {
 
     private BossShowAnchorRenderer() {}
 
+    // 26.3 (ECA-019): whether this frame posted AfterTranslucentBlocks; cleared at AfterLevel
+    private static boolean drawnInLevelPass;
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        drawnInLevelPass = true;
         if (!BossShowEditorState.isActive()) return;
         if (!BossShowEditorState.hasAnchor()) return;
 
@@ -66,12 +70,42 @@ public final class BossShowAnchorRenderer {
         // -- its own endBatch calls and each switch between the lines, head and label types -- is drawn INTO that pass
         // (with the view rotation still on the model-view stack) instead of being deferred to AfterLevel.
         try (MultiBufferSource.BufferSource.Scope inPass = buffer.drawingInto(event.getRenderPass())) {
-            render(event, mc, buffer);
+            render(event.getPoseStack(), mc, buffer);
         }
     }
 
-    private static void render(RenderLevelStageEvent.AfterTranslucentBlocks event, Minecraft mc,
-                               MultiBufferSource.BufferSource buffer) {
+    /**
+     * 26.3 (ECA-019): with improved transparency (Fabulous) LevelRenderer runs executeOit instead of
+     * executeClassicTransparency and posts no AfterTranslucentBlocks, so the editor's anchor was not drawn at all. A frame
+     * that did not post it draws the anchor here: no pass is open at AfterLevel, so every batch is drawn at once on the
+     * main target, with the view rotation pushed again (LevelRenderer.render popped it) under the level's projection,
+     * before the hand clears the depth. What other code left in the shared source is drawn first, outside that push.
+     */
+    @SubscribeEvent
+    public static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
+        boolean drawn = drawnInLevelPass;
+        drawnInLevelPass = false;
+        if (drawn) return;
+        if (!BossShowEditorState.isActive()) return;
+        if (!BossShowEditorState.hasAnchor()) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+
+        MultiBufferSource.BufferSource buffer = net.eca.mv.MultiBufferSource.main();
+        buffer.endBatch();
+        org.joml.Matrix4fStack modelView = com.mojang.blaze3d.systems.RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
+        try {
+            modelView.mul(event.getModelViewMatrix());
+            render(event.getPoseStack(), mc, buffer);
+            buffer.endBatch();
+        } finally {
+            modelView.popMatrix();
+        }
+    }
+
+    private static void render(PoseStack pose, Minecraft mc, MultiBufferSource.BufferSource buffer) {
         double ax = BossShowEditorState.getAnchorX();
         double ay = BossShowEditorState.getAnchorY();
         double az = BossShowEditorState.getAnchorZ();
@@ -79,7 +113,6 @@ public final class BossShowAnchorRenderer {
 
         Camera cam = mc.gameRenderer.mainCamera();
         Vec3 camPos = cam.position();
-        PoseStack pose = event.getPoseStack();
 
         pose.pushPose();
         pose.translate(-camPos.x, -camPos.y, -camPos.z);

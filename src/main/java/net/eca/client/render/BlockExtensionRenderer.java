@@ -3,6 +3,11 @@
 // the particles, clouds and weather drawn into the same pass. The block passes are drawn INTO that pass
 // (ShaderMaskRenderQueue.drawInto, under the stage's model-view and projection) instead of going to the after-level queue,
 // which drew them over the particles and the weather. With Oculus shaders they still go to that queue.
+// 26.3 (ECA-019): with improved transparency (Fabulous) LevelRenderer runs executeOit instead of
+// executeClassicTransparency and posts no AfterTranslucentBlocks, so nothing was drawn. A frame that did not post it draws
+// the passes at AfterLevel instead: no pass is open there, so each one is drawn at once in a pass of its own on the main
+// target, with the view rotation pushed again (LevelRenderer.render popped it) under the level's projection, before the
+// hand clears the depth.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -41,6 +46,8 @@ public final class BlockExtensionRenderer {
 
     private static final double MAX_RENDER_DISTANCE_SQR = 256.0 * 256.0;
     private static final Map<Long, Set<BlockPos>> SECTION_BLOCKS = new HashMap<>();
+    // 26.3 (ECA-019): whether this frame posted AfterTranslucentBlocks (not with improved transparency); cleared at AfterLevel
+    private static boolean drawnInLevelPass;
 
     private BlockExtensionRenderer() {
     }
@@ -49,6 +56,7 @@ public final class BlockExtensionRenderer {
         NeoForge.EVENT_BUS.addListener(BlockExtensionRenderer::onChunkLoad);
         NeoForge.EVENT_BUS.addListener(BlockExtensionRenderer::onChunkUnload);
         NeoForge.EVENT_BUS.addListener(BlockExtensionRenderer::onRenderLevel);
+        NeoForge.EVENT_BUS.addListener(BlockExtensionRenderer::onAfterLevel);
     }
 
     public static void onBlockChanged(ClientLevel level, BlockPos pos, BlockState state) {
@@ -114,13 +122,37 @@ public final class BlockExtensionRenderer {
     }
 
     private static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+        drawnInLevelPass = true;
+        com.mojang.renderpearl.api.commands.RenderPass into =
+            net.eca.client.render.shader.EcaShaderInstance.isOculusShadersActive() ? null : event.getRenderPass();
+        render(event.getPoseStack(), event.getLevelRenderState().cameraRenderState.pos, into, false);
+    }
+
+    // 26.3 (ECA-019): improved transparency posts no AfterTranslucentBlocks; draw at AfterLevel instead (see the header)
+    private static void onAfterLevel(RenderLevelStageEvent.AfterLevel event) {
+        boolean drawn = drawnInLevelPass;
+        drawnInLevelPass = false;
+        if (drawn || SECTION_BLOCKS.isEmpty() || Minecraft.getInstance().level == null) {
+            return;
+        }
+        org.joml.Matrix4fStack modelView = com.mojang.blaze3d.systems.RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
+        try {
+            modelView.mul(event.getModelViewMatrix());
+            render(event.getPoseStack(), event.getLevelRenderState().cameraRenderState.pos, null, true);
+        } finally {
+            modelView.popMatrix();
+        }
+    }
+
+    private static void render(PoseStack poseStack, Vec3 camPos, com.mojang.renderpearl.api.commands.RenderPass into,
+                               boolean drawNow) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
         if (level == null || SECTION_BLOCKS.isEmpty()) {
             return;
         }
 
-        Vec3 camPos = event.getLevelRenderState().cameraRenderState.pos;
         Map<BatchKey, SpriteBatchingVertexConsumer> batches = new LinkedHashMap<>();
         Map<BlockExtension, List<ShaderMaskPass>> passCache = new HashMap<>();
         List<BlockPos> stale = new ArrayList<>();
@@ -148,16 +180,14 @@ public final class BlockExtensionRenderer {
                     BatchKey key = new BatchKey(pass, fullBright);
                     SpriteBatchingVertexConsumer batch = batches.computeIfAbsent(key,
                         ignored -> new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright));
-                    renderBlock(level, event.getPoseStack(), camPos, pos, state, batch);
+                    renderBlock(level, poseStack, camPos, pos, state, batch);
                 }
             }
         }
         for (BlockPos pos : stale) {
             onBlockChanged(level, pos, level.getBlockState(pos));
         }
-        com.mojang.renderpearl.api.commands.RenderPass into =
-            net.eca.client.render.shader.EcaShaderInstance.isOculusShadersActive() ? null : event.getRenderPass();
-        batches.forEach((key, batch) -> enqueue(key.pass(), batch, into));
+        batches.forEach((key, batch) -> enqueue(key.pass(), batch, into, drawNow));
     }
 
     private static void renderBlock(ClientLevel level, PoseStack poseStack, Vec3 camPos, BlockPos pos,
@@ -180,11 +210,14 @@ public final class BlockExtensionRenderer {
     }
 
     private static void enqueue(ShaderMaskPass pass, SpriteBatchingVertexConsumer batch,
-                                com.mojang.renderpearl.api.commands.RenderPass into) {
+                                com.mojang.renderpearl.api.commands.RenderPass into, boolean drawNow) {
         batch.finish(spriteBatch -> {
             if (into != null) {
                 ShaderMaskRenderQueue.drawInto(pass, spriteBatch.builder(), spriteBatch.builder().buildOrThrow(),
                     spriteBatch.uvTransform(), into);
+            } else if (drawNow) {
+                ShaderMaskRenderQueue.drawNow(pass, spriteBatch.builder(), spriteBatch.builder().buildOrThrow(),
+                    spriteBatch.uvTransform());
             } else {
                 ShaderMaskRenderQueue.enqueue(pass, spriteBatch.builder(), spriteBatch.builder().buildOrThrow(),
                     spriteBatch.uvTransform());
