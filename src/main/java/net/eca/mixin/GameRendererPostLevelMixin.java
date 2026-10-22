@@ -30,6 +30,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -79,6 +80,17 @@ public class GameRendererPostLevelMixin {
         if (!EcaShaderInstance.isOculusShadersActive()) {
             ShaderMaskRenderQueue.flush();
         }
+    }
+
+    // 26.1.2 (FilterRenderer's world-space pass, as 1.21.8-1.21.11's capture of LevelRenderer.renderLevel's projectionMatrix,
+    // which renderLevel no longer receives): GameRenderer.renderLevel's level projection -- CameraRenderState.projectionMatrix
+    // (FOV modifiers, depthFar) with bobHurt/bobView and the portal/nausea warp -- is its one getBuffer(Matrix4f) upload
+    @ModifyArg(method = "renderLevel",
+               at = @At(value = "INVOKE",
+                        target = "Lnet/minecraft/client/renderer/ProjectionMatrixBuffer;getBuffer(Lorg/joml/Matrix4f;)Lcom/mojang/blaze3d/buffers/GpuBufferSlice;"))
+    private Matrix4f eca$captureLevelProjection(Matrix4f projection) {
+        net.eca.client.render.shader.FilterRenderer.captureLevelProjection(projection);
+        return projection;
     }
 
     private void renderPostSkybox(PoseStack poseStack) {

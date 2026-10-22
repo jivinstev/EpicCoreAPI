@@ -26,7 +26,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import net.minecraft.client.DeltaTracker;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.joml.Vector4f;
 
 @Mixin(FogRenderer.class)
@@ -36,7 +35,7 @@ public class FogRendererMixin {
     // both the clear colour (FogData.color is LevelRenderer.renderLevel's fogColor) and what updateBuffer(FogData) uploads to
     // the fog uniform block. So the 1.21.8-1.21.11 pair -- the clear colour at setupFog's RETURN plus @ModifyVariable on
     // the private updateBuffer's arguments (now an overload, so the name-only target matched nothing) -- becomes one edit
-    // of the returned FogData: the colour blended once (not twice) and the same five distances.
+    // of the returned FogData: the colour blended once (not twice) and the distances per the extension's shape (ECA-026).
     @Inject(method = "setupFog", at = @At("RETURN"))
     private void eca$applyGlobalFog(Camera camera, int renderDistanceChunks, DeltaTracker deltaTracker,
                                     float darkenWorldAmount, ClientLevel level,
@@ -46,16 +45,57 @@ public class FogRendererMixin {
             return;
         }
         float[] strengthHolder = new float[]{0.0f};
-        // the colour is blended in any medium, as 1.21.1's setupColor TAIL did; the distances only in air (eca$distance)
-        GlobalFogExtension fog = eca$resolveFogContext(level, camera, strengthHolder);
-        if (fog != null) {
-            data.color = eca$blendColor(data.color, fog, strengthHolder[0]);
+        // 26.2: the fog-suspended flag (net.eca.mv.Mv.suspendFog) pushed every distance out, as 1.21.1's MAX_VALUE did
+        boolean suspended = net.eca.mv.Mv.isFogSuspended();
+        if (suspended) {
+            data.environmentalStart = Float.MAX_VALUE;
+            data.environmentalEnd = Float.MAX_VALUE;
+            data.renderDistanceStart = Float.MAX_VALUE;
+            data.renderDistanceEnd = Float.MAX_VALUE;
+            data.skyEnd = Float.MAX_VALUE;
         }
-        data.environmentalStart = eca$distance(data.environmentalStart, 0);
-        data.environmentalEnd = eca$distance(data.environmentalEnd, 1);
-        data.renderDistanceStart = eca$distance(data.renderDistanceStart, 0);
-        data.renderDistanceEnd = eca$distance(data.renderDistanceEnd, 1);
-        data.skyEnd = eca$distance(data.skyEnd, 2);
+        GlobalFogExtension fog = eca$resolveFogContext(level, camera, strengthHolder);
+        if (fog == null) {
+            return;
+        }
+        float strength = strengthHolder[0];
+        // the colour is blended in any medium, as 1.21.1's setupColor TAIL did; the distances only in air (setupFog TAIL)
+        data.color = eca$blendColor(data.color, fog, strength);
+        if (!suspended && camera.getFluidInCamera() == FogType.NONE) {
+            // 26.1.2 (ECA-026, as 1.21.8-1.21.11's WrapOperation on updateBuffer's arguments, here on the FogData fields
+            // updateBuffer(FogData) uploads): fog.glsl takes the max of a spherical (environmental) and a cylindrical
+            // (render-distance) fog, so the extension's shape is which pair of fields gets the custom start/end; the other
+            // pair is lerped (by strength, from vanilla's) to a finite distance where it is never the nearer fog, so s=0 is
+            // vanilla and s=1 1.21.1's shape (1.21.1 forced FogShape.CYLINDER unless the extension asked otherwise at full
+            // strength).
+            float renderDistance = Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0f;
+            float customStart = fog.terrainFogStart(renderDistance);
+            float customEnd = fog.terrainFogEnd(renderDistance);
+            GlobalFogExtension.Shape shape = strength >= 0.999f ? fog.fogShape() : null;
+            if (shape == GlobalFogExtension.Shape.SPHERE) {
+                float start = Mth.lerp(strength, data.environmentalStart, customStart);
+                float end = Mth.lerp(strength, data.environmentalEnd, customEnd);
+                data.environmentalStart = start;
+                data.environmentalEnd = end <= start ? start + 1.0f : end;
+                // the cylindrical distance is at most the spherical one, so a render-distance fog that starts at the
+                // custom end can never be the nearer of the two (fog.glsl total_fog_value takes the max)
+                data.renderDistanceStart = Mth.lerp(strength, data.renderDistanceStart, data.environmentalEnd);
+                data.renderDistanceEnd = Mth.lerp(strength, data.renderDistanceEnd, data.environmentalEnd + 1.0f);
+            } else {
+                float start = Mth.lerp(strength, data.renderDistanceStart, customStart);
+                float end = Mth.lerp(strength, data.renderDistanceEnd, customEnd);
+                data.renderDistanceStart = start;
+                data.renderDistanceEnd = end <= start ? start + 1.0f : end;
+                // the spherical distance is at most sqrt(2) times the cylindrical one (length(pos) against
+                // max(length(pos.xz), abs(pos.y))), so an environmental fog that starts at sqrt(2) x the custom end can
+                // never be the nearer of the two; lerped from vanilla's, so the fog fades in with strength as on 1.21.1
+                float pushed = data.renderDistanceEnd * Mth.SQRT_OF_TWO;
+                data.environmentalStart = Mth.lerp(strength, data.environmentalStart, pushed);
+                data.environmentalEnd = Mth.lerp(strength, data.environmentalEnd, pushed + 1.0f);
+            }
+            // the sky shader fogs from 0 to FogSkyEnd (1.21.1's FOG_SKY start has no field)
+            data.skyEnd = Mth.lerp(strength, data.skyEnd, fog.skyFogEnd(renderDistance));
+        }
     }
 
     @Unique
@@ -65,37 +105,6 @@ public class FogRendererMixin {
                 Mth.lerp(strength, base.y, eca$clampColor(fog.fogGreen())),
                 Mth.lerp(strength, base.z, eca$clampColor(fog.fogBlue())),
                 base.w);
-    }
-
-    @Unique
-    private static GlobalFogExtension eca$currentFog(float[] strengthHolder) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.level == null) {
-            return null;
-        }
-        Camera camera = minecraft.gameRenderer.mainCamera();
-        if (camera == null || camera.getFluidInCamera() != FogType.NONE) {
-            return null;
-        }
-        return eca$resolveFogContext(minecraft.level, camera, strengthHolder);
-    }
-
-    // kind: 0 terrain start, 1 terrain end, 2 sky end
-    @Unique
-    private static float eca$distance(float original, int kind) {
-        if (net.eca.mv.Mv.isFogSuspended()) {
-            return Float.MAX_VALUE;
-        }
-        float[] strengthHolder = new float[]{0.0f};
-        GlobalFogExtension fog = eca$currentFog(strengthHolder);
-        if (fog == null) {
-            return original;
-        }
-        float renderDistance = Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0f;
-        float custom = kind == 0 ? fog.terrainFogStart(renderDistance)
-                : kind == 1 ? fog.terrainFogEnd(renderDistance)
-                : fog.skyFogEnd(renderDistance);
-        return Mth.lerp(strengthHolder[0], original, custom);
     }
 
     @Unique

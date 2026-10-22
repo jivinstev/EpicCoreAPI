@@ -60,6 +60,47 @@ import java.util.function.Consumer;
 @EventBusSubscriber(modid = EcaMod.MOD_ID, value = Dist.CLIENT)
 public class FilterRenderer {
 
+    // 1.21.11 (as 1.21.8/1.21.10): the projectionMatrix LevelRenderer.renderLevel was given this frame (GameRenderer.renderLevel's
+    // level projection, the matrix the depth buffer is written with); set by LevelRendererMixin at renderLevel HEAD.
+    // 26.1.2: set by GameRendererPostLevelMixin where GameRenderer.renderLevel uploads that projection
+    private static final Matrix4f LEVEL_PROJECTION = new Matrix4f();
+
+    public static void captureLevelProjection(org.joml.Matrix4fc projection) {
+        LEVEL_PROJECTION.set(projection);
+    }
+
+    // 26.2: the main camera's depthFar (max(RD x 64, cloud range x 16), raised by CameraDepthFarMixin to the force-load
+    // distance + 32), the far plane the level projection and its depth buffer use; set by CameraDepthFarMixin
+    private static float levelDepthFar;
+
+    public static void captureDepthFar(float depthFar) {
+        levelDepthFar = depthFar;
+    }
+
+    /* 26.2: the captured level projection is REVERSE-Z (Projection.getMatrix: setPerspective(fov, aspect, zFar, zNear, ...)),
+       while filters/cosmos.fsh flips the sampled depth back to forward-Z and rebuilds NDC (depth * 2 - 1) against a forward
+       JOML perspective (near 0.05, far the camera's depthFar, see captureDepthFar). So the
+       captured matrix keeps its x / y / w rows -- FOV modifiers, aspect, bobHurt/bobView and the portal warp, which are
+       affine view-space transforms B on its right (P = Persp * B) -- and gets the forward perspective's z row:
+       row2(Persp_fwd * B) = a * row2(B) + b * row3(B) = -a * row3(P) + b * (0, 0, 0, 1), since row3(Persp) = (0, 0, -1, 0)
+       and row3(B) = (0, 0, 0, 1). Before the first capture it is the old forward perspective. */
+    private static Matrix4f eca$forwardLevelProjection(int width, int height) {
+        Minecraft mc = Minecraft.getInstance();
+        float near = 0.05f;
+        // 26.2: the camera's real far plane (CameraDepthFarMixin), so the forward depth matches what the depth buffer holds;
+        // the old estimate only before the first camera update
+        float far = levelDepthFar > near ? levelDepthFar
+                : Math.max(128.0f, mc.options.getEffectiveRenderDistance() * 16.0f * 4.0f);
+        org.joml.Vector4f w = LEVEL_PROJECTION.getRow(3, new org.joml.Vector4f());
+        if (Math.abs(w.z) < 1.0e-6f) {
+            float fov = (float) Math.toRadians(mc.options.fov().get());
+            return new Matrix4f().perspective(fov, (float) width / (float) height, near, far);
+        }
+        float a = -(far + near) / (far - near);
+        float b = -2.0f * far * near / (far - near);
+        return new Matrix4f(LEVEL_PROJECTION).setRow(2, new org.joml.Vector4f(-a * w.x, -a * w.y, -a * w.z, -a * w.w + b));
+    }
+
     private static ShaderInstance sketchShader;
     private static ShaderInstance spotlightShader;
     private static ShaderInstance matrixShader;
@@ -817,10 +858,11 @@ public class FilterRenderer {
         // 视图旋转改从 RenderSystem 的逆视图旋转矩阵还原，再与投影组合求逆
         Matrix3f viewRot = new Matrix3f().rotation(mc.gameRenderer.mainCamera().rotation()).invert();
         Matrix4f view = new Matrix4f().set(viewRot);
-        float eca$fov = (float) Math.toRadians(mc.options.fov().get());
-        float eca$far = Math.max(128.0f, mc.options.getEffectiveRenderDistance() * 16.0f * 4.0f);
-        Matrix4f eca$proj = new Matrix4f().perspective(eca$fov, (float) width / (float) height, 0.05f, eca$far);
-        Matrix4f invViewProj = new Matrix4f(eca$proj)
+        // 1.21.11 (as 1.21.8/1.21.10): AfterLevel carries no projection; 1.21.1's event.getProjectionMatrix() was GameRenderer's
+        // level projection (FOV modifiers, bobHurt/bobView, getDepthFar), which renderLevel still receives -- captured there
+        // (26.1.2: captured at GameRenderer.renderLevel's upload of it, see captureLevelProjection; 26.2: reverse-Z, given a
+        // forward-Z depth row for cosmos.fsh, see eca$forwardLevelProjection)
+        Matrix4f invViewProj = eca$forwardLevelProjection(width, height)
                 .mul(view)
                 .invert();
         Vec3 cam = mc.gameRenderer.mainCamera().position();

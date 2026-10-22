@@ -210,6 +210,7 @@
   "gui.eca.bossshow.selection.hint": "§7右键确定 · ESC 取消",
   "gui.eca.bossshow.selection.targeted": "§a● 已锁定实体",
   "key.categories.eca": "Epic Core API",
+  "key.category.eca.categories": "Epic Core API",
   "key.eca.bossshow.rec_pause": "BossShow：暂停录制",
   "key.eca.bossshow.rec_start": "BossShow：开始/继续录制",
   "msg.eca.bossshow.delete_failed": "§c删除失败：%s",

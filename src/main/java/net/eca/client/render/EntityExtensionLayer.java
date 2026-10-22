@@ -3,13 +3,14 @@
 // once from a level submit was erased. With the level (net.eca.mv.SubmitPhase.levelSubmit) the pass now goes to the
 // level's queue, as the Oculus path already did, drawn through LegacyGl with the pass shader's own uniform blocks inside the
 // level's main pass at AfterTranslucentFeatures (#37; ShaderMaskRenderQueue.InLevelPass); the
-// textured layer stays in the shared buffer source, which is drawn after the translucent features. Outside the level (a
-// GUI entity) it still draws at once.
+// textured layer is an order-1 model submit (ECA-006 below). Outside the level (a GUI entity) the pass is drawn after the
+// body (ECA-006 below).
+// 1.21.9+ (ECA-006, carried from 26.1.2): the non-Oculus textured pass is an order-1 model submit drawn after the body; outside the
+// level (26.2: levelSubmit false) a GUI entity's shader pass is drawn after the body through GuiTexturePasses, not at once.
 package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
@@ -17,8 +18,6 @@ import net.eca.util.entity_extension.EntityExtensionManager;
 import net.eca.util.entity_extension.EntityExtensionSafeAccess;
 import net.eca.util.entity_extension.EntityLayerExtension;
 import net.eca.blender.client.entity.BlenderEntityBindings;
-import net.minecraft.client.Minecraft;
-import net.eca.mv.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -46,7 +45,6 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int packedLight, S state,
                        float netHeadYaw, float headPitch) {
-        MultiBufferSource bufferSource = net.eca.mv.MultiBufferSource.main();
         // fork layer (1.21.2 render state): the entity is parked on the state by net.eca.mv.EntityOf
         if (!(EntityOf.get(state) instanceof LivingEntity entity)) {
             return;
@@ -95,27 +93,38 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
                 ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
                     builder, builder.buildOrThrow());
             } else {
-                VertexConsumer texConsumer = bufferSource.getBuffer(texturedLayer);
-                this.getParentModel().renderToBuffer(
-                    poseStack, texConsumer, light, overlay,
-                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
-                );
+                // order 1: drawn by the feature dispatch after every order-0 model (the body), like vanilla's own layers
+                collector.order(1).submitModel(this.getParentModel(), state, poseStack, texturedLayer, light, overlay,
+                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255), null, state.outlineColor, null);
             }
         }
 
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, pass.renderType().format());
-            this.getParentModel().renderToBuffer(
-                poseStack, builder, light, overlay, 0xFFFFFFFF
-            );
             if (oculus || net.eca.mv.SubmitPhase.levelSubmit) {
+                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, pass.renderType().format());
+                this.getParentModel().renderToBuffer(
+                    poseStack, builder, light, overlay, 0xFFFFFFFF
+                );
                 ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
             } else {
-                if (bufferSource instanceof MultiBufferSource.BufferSource source) {
-                    source.endBatch();
+                // 1.21.9+ (ECA-006): the body is only submitted here and drawn later by the feature dispatch, so drawing the
+                // pass now (as 1.21.1's endBatch() + drawNow did) put it under the body. 26.1.2 drew it from an order-1
+                // custom-geometry submit; 26.2 runs those callbacks while renderAllFeatures PREPARES the storage (before
+                // the body is drawn) and puts the pass's LegacyRenderType on vanilla's feature path, which draws nothing
+                // (see ItemRendererMixin). A GUI entity is submitted inside a picture-in-picture renderer's prepare, so the
+                // pass is collected and drawn right after that renderer's renderAllFeatures, over the body, into its
+                // texture (GuiTexturePasses, PictureInPictureFeaturesMixin); anything else still draws at once.
+                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, pass.renderType().format());
+                this.getParentModel().renderToBuffer(
+                    poseStack, builder, light, overlay, 0xFFFFFFFF
+                );
+                if (GuiTexturePasses.collecting()) {
+                    GuiTexturePasses.add(pass, builder, builder.buildOrThrow(), MaskUvTransform.IDENTITY);
+                } else {
+                    net.eca.mv.MultiBufferSource.main().endBatch();
+                    ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
                 }
-                ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
             }
         }
     }

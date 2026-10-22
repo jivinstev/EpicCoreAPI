@@ -472,6 +472,8 @@ public class HealthLockManager {
         if (EntityUtil.HEALTH_LOCK_VALUE != null
                 && EntityUtil.HEALTH_LOCK_KEY != null
                 && EntityUtil.HEALTH_LOCK_CHECK != null) {
+            if (entity.getEntityData() instanceof HealthLockPresence presence
+                    && !presence.eca$mayHaveHealthLock()) return null;
             return readPresentation(entity,
                     EntityUtil.HEALTH_LOCK_VALUE, EntityUtil.HEALTH_LOCK_KEY, EntityUtil.HEALTH_LOCK_CHECK);
         }
@@ -533,6 +535,8 @@ public class HealthLockManager {
         if (EntityUtil.MAX_HEALTH_LOCK_VALUE != null
                 && EntityUtil.MAX_HEALTH_LOCK_KEY != null
                 && EntityUtil.MAX_HEALTH_LOCK_CHECK != null) {
+            if (entity.getEntityData() instanceof HealthLockPresence presence
+                    && !presence.eca$mayHaveMaxHealthLock()) return null;
             return readPresentation(entity,
                     EntityUtil.MAX_HEALTH_LOCK_VALUE, EntityUtil.MAX_HEALTH_LOCK_KEY,
                     EntityUtil.MAX_HEALTH_LOCK_CHECK);
@@ -570,6 +574,7 @@ public class HealthLockManager {
 
     public static Float getHealBan(LivingEntity entity) {
         if (entity == null) return null;
+        if (HEAL_BAN_IDS.isEmpty()) return null;
         if (!HEAL_BAN_IDS.contains(net.eca.mv.EntityIds.peek(entity))) return null;
         String encrypted;
         if (EntityUtil.HEAL_BAN_VALUE != null) {
