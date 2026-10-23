@@ -36,7 +36,7 @@
     }
   ],
   "migrator_repo": "jivinstev/mc-mod-version-upgrade",
-  "migrator_sha": "15c7ec89eadc1a55af8a0f2e561557a216715c24",
+  "migrator_sha": "713dff52f262d124923605b529d255a58d60357e",
   "plan_owner": "jivinstev",
   "round": {
     "cron": "CRON_TZ=America/Los_Angeles 26 8 * * 3",
