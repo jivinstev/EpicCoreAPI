@@ -93,7 +93,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: jivinstev/mc-mod-version-upgrade
-          ref: ec8466092a40886c9044a510920c79b194c43c3a
+          ref: d32e54f7c9fcfa742bad0308de3b11eb170656c3
           path: mmvu
           persist-credentials: false
       - name: 1. Fetch the authors' upstream
