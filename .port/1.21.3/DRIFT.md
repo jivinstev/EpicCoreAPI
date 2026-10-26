@@ -1,0 +1,1 @@
+- 2026-10-26 1.21.3: left out on purpose by the frozen plan /home/user/round/frozen.json (plan issue #75): take_authors false for jivinstev/EpicCoreAPI: the authors' authors/master has 2 commit(s) since the freeze that this checkout does not carry (buildout frozen at 483c78e2ac75, authors/master now at abf76702b29f)
