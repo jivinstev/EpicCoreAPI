@@ -1,10 +1,11 @@
-Gates for `eca` at `5df22fb` for Minecraft 1.21.8 (full environment) -- run by CI with no model and no fixes applied:
+Gates for `eca` at `4f16d0d` for Minecraft 1.21.8 (full environment) -- run by CI with no model and no fixes applied:
 
 | check | result | detail |
 |---|---|---|
 | author's own build (`build agentJar cfJar devJar jvmtiBackendJar mrJar proAgentJar proJar`) | PASS | epic-core-api-1.1.9-fix_cf.jar, epic-core-api-1.1.9-fix_dev.jar, epic-core-api-1.1.9-fix_mr.jar, epic-core-api-1.1.9-fix_pro.jar |
 | Gate A -- mixin-config integrity | PASS | 2 test(s) |
 | Data -- nothing NeoForge would silently ignore | PASS | 1.21-clean |
+| Descriptors -- vanilla names in strings outside the mixins (report) | REPORT | 8 to read: src/cf/java/net/eca/coremod/EcaTransformationService.java:156: "net.neoforged.fml.loading.ModDirTransformerDiscoverer": class net.neoforged.fml.loading.ModDirTransformerDiscoverer is not in this version; src/cf/java/net/eca/coremod/RuntimeExtensionBridge.java:5: "net/neoforged/fml/earlydisplay/DisplayWindow": class net.neoforged.fml.earlydisplay.DisplayWindow is not in this version; src/main/java/net/eca/coremod/EcaTransformationService.java:197: "net.neoforged.fml.loading.ModDirTransformerDiscoverer": class net.neoforged.fml.loading.ModDirTransformerDiscoverer is not in this version; src/main |
 | Payloads -- every StreamCodec.unit payload has equal instances | PASS | audit-unit-codecs: checked 461 file(s), 0 finding(s) |
 | Gate C -- real client, `spawn` | skipped | a library: no entity of its own to spawn; proven by a dependent's Gate C against this jar (tools/fork-branches.py library-record) |
 | Gate C -- real client, `battle` | skipped | a library: no entity of its own to spawn; proven by a dependent's Gate C against this jar (tools/fork-branches.py library-record) |

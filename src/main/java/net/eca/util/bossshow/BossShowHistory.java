@@ -43,7 +43,7 @@ public final class BossShowHistory {
             ListTag uuids = seenMap.getListOrEmpty(cutsceneId.toString());
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {
-                if (pidStr.equals(uuids.getString(i))) return true;
+                if (pidStr.equals(uuids.getStringOr(i, ""))) return true;
             }
             return false;
         } else {
@@ -52,7 +52,7 @@ public final class BossShowHistory {
             ListTag seen = root.getListOrEmpty(PLAYER_SEEN);
             String cid = cutsceneId.toString();
             for (int i = 0; i < seen.size(); i++) {
-                if (cid.equals(seen.getString(i))) return true;
+                if (cid.equals(seen.getStringOr(i, ""))) return true;
             }
             return false;
         }
@@ -73,7 +73,7 @@ public final class BossShowHistory {
 
             String pidStr = player.getUUID().toString();
             for (int i = 0; i < uuids.size(); i++) {
-                if (pidStr.equals(uuids.getString(i))) return;
+                if (pidStr.equals(uuids.getStringOr(i, ""))) return;
             }
             uuids.add(StringTag.valueOf(pidStr));
 
@@ -87,7 +87,7 @@ public final class BossShowHistory {
 
             String cid = cutsceneId.toString();
             for (int i = 0; i < seen.size(); i++) {
-                if (cid.equals(seen.getString(i))) return;
+                if (cid.equals(seen.getStringOr(i, ""))) return;
             }
             seen.add(StringTag.valueOf(cid));
 
