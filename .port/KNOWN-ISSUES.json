@@ -1016,6 +1016,68 @@
         "26.3": "open"
       },
       "title": "Shipped jar names carry no Minecraft version: every version's release ships epic-core-api-<mod_version>_mr/_cf/_dev.jar, so jars of different versions share a name"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/util/bossshow/BossShowManager.java"
+      ],
+      "id": "ECA-039",
+      "lowest": "1.21.10",
+      "notes": "2026-10-25, found by MMVU playtests (real client, released jars, every installed version). 1.21.1-1.21.8 log 'Loaded 2 BossShow definition(s) from mod data' and '... from JSON'; 1.21.10, 1.21.11, 26.1.2, 26.2 and 26.3 log only 'Loaded 1 BossShow definition(s) from JSON' and never 'from mod data'. A dependent mod's range-triggered boss show (the_last_sword's queen) then never starts, so the boss never activates and refuses all damage: the fight and the quest step after it cannot be done (the playtest matrix: 7 of 7 queen runs on these versions). Suspected cause: the 1.21.10 port replaced FML's removed modFile.findResource with findModResource(), a walk over modFile.getContents().getContentRoots() that finds nothing inside a jar, and its catch-all returns null without a log, so loadModDataDefinitions() silently loads nothing. Fix: list the jar's data/<modid>/bossshow and data/<modid>/eca/bossshow through the 1.21.10+ FML content API (or the server ResourceManager's listResources), and log a failure instead of swallowing it. Verify with the playtest's queen steps on 1.21.10..26.3.",
+      "override": null,
+      "pattern": "getContentRoots",
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S2",
+      "source": "player",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "n/a",
+        "1.21.8": "n/a",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "Boss shows in mod data never load on 1.21.10 and later: a mod's bosses never start their show (and never wake)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/util/bossshow/BossShowHistory.java"
+      ],
+      "id": "ECA-040",
+      "lowest": "1.21.5",
+      "notes": "2026-10-25, found by MMVU playtests. CAUSE: Minecraft 1.21.5 made ListTag.getString(int) return Optional<String> (javap on the 1.21.10..26.3 clients: 'public java.util.Optional<java.lang.String> getString(int)'). BossShowHistory still does pidStr.equals(uuids.getString(i)) and cid.equals(seen.getString(i)) (4 places: hasSeen and markSeen, both modes), which compiles but compares a String with an Optional: always false. So hasSeen never returns true, and markSeen appends a duplicate each time. A show with allow_repeat true and a range trigger (the_last_sword's queen: effect_radius 4) restarts whenever the range scan finds the player inside it again: the boss's activation lines arrive in chat, the cinematic (letterbox, first subtitle) is back within about a second, and melee hits do nothing while it runs. Intermittent because it is a race with that scan: 1.21.8 every queen fight (4 of 4), 1.21.5 3 of 5; 1.21.1 and 1.21.4 never (5 of 5 each: getString returns String there). Not a game freeze: the client keeps running. 1.21.10..26.3 cannot show it yet (ECA-039 stops their shows loading) but carry the same code. With allow_repeat false, the same bug replays a once-only show to the same player every time. FIX: compare against the value, e.g. uuids.getString(i).orElse(\"\") or uuids.getStringOr(i, \"\") on 1.21.5+ (the 1.21.1/1.21.4 text is right as it is). Verify with the TLS playtests' queen steps on 1.21.5 and 1.21.8.",
+      "override": null,
+      "pattern": "\\.equals\\((uuids|seen)\\.getString\\(i\\)\\)",
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S2",
+      "source": "player",
+      "status": {
+        "1.21.1": "n/a",
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.3": "n/a",
+        "1.21.4": "n/a",
+        "1.21.5": "open",
+        "1.21.8": "open",
+        "26.1.2": "open",
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "1.21.5 and later: a player who has seen a boss show is never recorded as having seen it, so a repeatable show restarts while they stay in range and the boss cannot be fought"
     }
   ],
   "schema": 1
