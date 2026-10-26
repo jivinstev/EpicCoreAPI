@@ -24,12 +24,6 @@
 # in the GitHub UI publishes too, and publish = <tag> publishes one by hand. publish_setup = true creates the
 # Modrinth draft project once. Publishing refuses a pre-release, a build with an open S1 in its fix ledger, and
 # a dependency not yet published; it never runs on a pull request.
-#
-# Layer branch: when the fork has a multi-version layer branch (.multiversion/, templates/fork-layer), this SAME
-# file is installed on both branches -- the layer branch may differ from the port branch only inside .multiversion/
-# and one commented line in build.gradle, so it cannot carry a workflow of its own. The layer-* jobs at the end run
-# only on the layer branch (and only where .multiversion/ exists): isolation, inertness, a compile-only pass of
-# every middle target, and the full gates on the newest target (tools/layer-ci.py, tools/port-ci.py --layer-branch).
 name: Port CI (NeoForge 21.4.158 (Minecraft 1.21.4))
 
 on:
@@ -91,11 +85,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # the author's branch is needed: mixins they left unlisted stay exempt
-      - name: Port CI kit v41 (pinned by sha256)
+      - name: Port CI kit v56 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v41/port-ci-kit-v41.tar.gz"
-          echo "a58786776acd406c13c25dfa416280849cb326b2c3461a606c5be76dcd2c88b1  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v56/port-ci-kit-v56.tar.gz"
+          echo "d391fb86ec565c770d5bdaa547916c9a0ad2666d4862bcd8e89fb5673e2b76fe  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -135,8 +129,8 @@ jobs:
     # none of them proves a jar a player downloads. This job runs the author's build once, then for each variant glob
     # requires exactly one built jar in build/libs and boots it ALONE (plus the pinned dependency jars) in a real
     # NeoForge server (tools/shipped-gate.py, from the Port CI kit), checking the fork's own log expectations for that
-    # variant when it has them (.port/<mc>/shipped-expect-<variant>.txt, else .port/<mc>/shipped-expect.txt, else the
-    # layer's .multiversion/shipped-expect.txt; the variant is the glob's suffix, cf for '*_cf.jar'). A failing variant
+    # variant when it has them (.port/<mc>/shipped-expect-<variant>.txt, else .port/<mc>/shipped-expect.txt; the
+    # variant is the glob's suffix, cf for '*_cf.jar'). A failing variant
     # fails the job, and the release needs it as it needs the gates. The globs reach the script only through env,
     # never spliced into it.
     name: shipped jars
@@ -145,11 +139,11 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: Port CI kit v41 (pinned by sha256)
+      - name: Port CI kit v56 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v41/port-ci-kit-v41.tar.gz"
-          echo "a58786776acd406c13c25dfa416280849cb326b2c3461a606c5be76dcd2c88b1  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v56/port-ci-kit-v56.tar.gz"
+          echo "d391fb86ec565c770d5bdaa547916c9a0ad2666d4862bcd8e89fb5673e2b76fe  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - uses: actions/setup-java@v4
         with:
@@ -337,15 +331,15 @@ jobs:
           echo "Promoted $TAG (played by @$WHO)" >> "$GITHUB_STEP_SUMMARY"
       # The install manifest (.github/port-install.json, what install-port.py installs) then names the promoted jar and
       # the sibling jars this workflow pins: tools/port-manifest.py refresh, committed as data ([skip ci]) to the port
-      # branch only -- never the layer branch -- and only where the branch has a manifest. The commit sits on top of the
+      # branch only, and only where the branch has a manifest. The commit sits on top of the
       # tag, so publish (needs: promote) still finds the tag in the branch's history. A failure here is reported and
       # never stops publish.
-      - name: Port CI kit v41 (pinned by sha256)
+      - name: Port CI kit v56 (pinned by sha256)
         if: ${{ github.ref_name == 'neoforge-1.21.4' && hashFiles('.github/port-install.json') != '' }}
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v41/port-ci-kit-v41.tar.gz"
-          echo "a58786776acd406c13c25dfa416280849cb326b2c3461a606c5be76dcd2c88b1  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v56/port-ci-kit-v56.tar.gz"
+          echo "d391fb86ec565c770d5bdaa547916c9a0ad2666d4862bcd8e89fb5673e2b76fe  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Refresh the install manifest
         if: ${{ github.ref_name == 'neoforge-1.21.4' && hashFiles('.github/port-install.json') != '' }}
@@ -357,7 +351,7 @@ jobs:
           set -euo pipefail
           if ! printf '%s' "$TAG" | grep -Eq '^[A-Za-z0-9._+-]+$'; then echo "::error::not a release tag: $TAG"; exit 1; fi
           if [ ! -f .port-tools/tools/port-manifest.py ]; then
-            echo "::warning::Port CI kit v41 has no port-manifest.py: regenerate this workflow with a newer kit"; exit 0
+            echo "::warning::Port CI kit v56 has no port-manifest.py: regenerate this workflow with a newer kit"; exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -386,11 +380,11 @@ jobs:
         with:
           ref: "neoforge-1.21.4"
           fetch-depth: 0          # tags and history, to prove the tag was built from this branch
-      - name: Port CI kit v41 (pinned by sha256)
+      - name: Port CI kit v56 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v41/port-ci-kit-v41.tar.gz"
-          echo "a58786776acd406c13c25dfa416280849cb326b2c3461a606c5be76dcd2c88b1  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v56/port-ci-kit-v56.tar.gz"
+          echo "d391fb86ec565c770d5bdaa547916c9a0ad2666d4862bcd8e89fb5673e2b76fe  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Publish to Modrinth and CurseForge
         env:
@@ -411,11 +405,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: "neoforge-1.21.4"
-      - name: Port CI kit v41 (pinned by sha256)
+      - name: Port CI kit v56 (pinned by sha256)
         run: |
           curl -fsSL -o "$RUNNER_TEMP/kit.tar.gz" \
-            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v41/port-ci-kit-v41.tar.gz"
-          echo "a58786776acd406c13c25dfa416280849cb326b2c3461a606c5be76dcd2c88b1  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
+            "https://github.com/jivinstev/mc-mod-version-upgrade/releases/download/port-ci-kit-v56/port-ci-kit-v56.tar.gz"
+          echo "d391fb86ec565c770d5bdaa547916c9a0ad2666d4862bcd8e89fb5673e2b76fe  $RUNNER_TEMP/kit.tar.gz" | sha256sum -c -
           mkdir -p .port-tools && tar -xzf "$RUNNER_TEMP/kit.tar.gz" -C .port-tools
       - name: Create the Modrinth draft project
         env:
