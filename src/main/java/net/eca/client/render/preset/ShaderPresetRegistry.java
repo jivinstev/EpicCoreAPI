@@ -94,63 +94,39 @@ public final class ShaderPresetRegistry {
     }
 
     /* 新目录优先注册；旧 shaders/core 仅在没有同 id 新资源时提供兼容。 */
+    // 1.21.10+: IModFile.findResource is gone and a jar's content root is the jar file itself, so
+    // list the files through JarContents.visitContent (jars and folders alike), as BossShowManager does
     private static void scanModPresets() {
         ModList.get().forEachModFile(modFile -> {
             for (var modInfo : modFile.getModInfos()) {
                 String modid = modInfo.getModId();
-                Path canonical = findModResource(modFile, "assets", modid, "eca", "shader_presets");
-                scanModPresetDirectory(canonical, canonical, modid);
-                Path legacy = findModResource(modFile, "assets", modid, "shaders", "core");
-                scanModPresetDirectory(legacy, legacy, modid);
+                scanModPresetPrefix(modFile, "assets/" + modid + "/eca/shader_presets/", modid);
+                scanModPresetPrefix(modFile, "assets/" + modid + "/shaders/core/", modid);
             }
         });
     }
 
-    // 1.21.10: IModFile.findResource is gone; JarContents.findFile skips directories, so walk the content roots, null when absent
-    private static Path findModResource(net.neoforged.neoforgespi.locating.IModFile modFile, String... parts) {
+    private static void scanModPresetPrefix(net.neoforged.neoforgespi.locating.IModFile modFile, String prefix, String namespace) {
         try {
-            for (Path contentRoot : modFile.getContents().getContentRoots()) {
-                Path p = contentRoot;
-                for (String part : parts) p = p.resolve(part);
-                if (Files.exists(p)) return p;
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private static void scanModPresetDirectory(Path root, Path current, String namespace) {
-        if (root == null || current == null || !Files.isDirectory(current)) return;
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(current)) {
-            for (Path file : files) {
-                if (Files.isDirectory(file)) {
-                    scanModPresetDirectory(root, file, namespace);
-                    continue;
+            var contents = modFile.getContents();
+            contents.visitContent(prefix, (relativePath, resource) -> {
+                if (!relativePath.startsWith(prefix) || !relativePath.endsWith(".fsh")) return;
+                String base = relativePath.substring(0, relativePath.length() - 4);
+                if (!contents.containsFile(base + "_block.vsh")
+                        || !contents.containsFile(base + "_block.json")
+                        || !contents.containsFile(base + "_entity.vsh")
+                        || !contents.containsFile(base + "_entity.json")) {
+                    return;
                 }
-                String fileName = file.getFileName().toString();
-                if (!fileName.endsWith(".fsh")) continue;
-                String name = fileName.substring(0, fileName.length() - 4);
-                if (!hasPresetFiles(current, name)) continue;
-                String relative = normalizeResourcePath(root.relativize(current.resolve(name)));
-                ResourceLocation id = ResourceLocation.tryParse(namespace + ":" + relative);
+                ResourceLocation id = ResourceLocation.tryParse(namespace + ":" + base.substring(prefix.length()));
                 if (id != null) {
                     register(id);
                 }
-            }
-        } catch (IOException | RuntimeException e) {
-            EcaLogger.info("Shader preset scan skipped mod {} directory {}: {}",
-                    namespace, current, e.toString());
+            });
+        } catch (RuntimeException e) {
+            EcaLogger.info("Shader preset scan skipped mod {} directory {} in {}: {}",
+                    namespace, prefix, modFile.getFileName(), e.toString());
         }
-    }
-
-    private static String normalizeResourcePath(Path path) {
-        StringBuilder value = new StringBuilder();
-        for (Path part : path) {
-            if (!value.isEmpty()) value.append('/');
-            value.append(part);
-        }
-        return value.toString();
     }
 
     private static boolean hasPresetFiles(Path dir, String name) {
