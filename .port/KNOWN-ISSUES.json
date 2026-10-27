@@ -747,8 +747,8 @@
       "status": {
         "1.21.11": "fixed@88c8fdc",
         "26.1.2": "fixed@88c8fdc",
-        "26.2": "open",
-        "26.3": "open"
+        "26.2": "fixed@39be453",
+        "26.3": "fixed@39be453"
       },
       "title": "FogRendererMixin and LevelRendererMixin on 1.21.11 drop the fog-shape handling and force-loaded entity fog; the LevelRendererMixin STUBS text claims every removed handler is re-done"
     },
@@ -1036,15 +1036,15 @@
       "source": "player",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@5226e7e",
+        "1.21.11": "fixed@5226e7e",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@5226e7e",
+        "26.2": "fixed@5226e7e",
+        "26.3": "fixed@5226e7e"
       },
       "title": "Boss shows in mod data never load on 1.21.10 and later: a mod's bosses never start their show (and never wake)"
     },
@@ -1067,17 +1067,76 @@
       "source": "player",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@a8c9995",
+        "1.21.11": "fixed@a8c9995",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
-        "1.21.5": "open",
-        "1.21.8": "open",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "1.21.5": "fixed@a8c9995",
+        "1.21.8": "fixed@a8c9995",
+        "26.1.2": "fixed@a8c9995",
+        "26.2": "fixed@a8c9995",
+        "26.3": "fixed@a8c9995"
       },
       "title": "1.21.5 and later: a player who has seen a boss show is never recorded as having seen it, so a repeatable show restarts while they stay in range and the boss cannot be fought"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/preset/ShaderPresetRegistry.java"
+      ],
+      "id": "ECA-041",
+      "lowest": "1.21.10",
+      "notes": "Found by the 2026-10-26 fix round's review (plan #75), fixed at 1.21.10 (4204192) and carried up to 26.3. ECA's own built-in presets are registered in code, so only a mod's file-based presets were lost.",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "review",
+      "status": {
+        "1.21.10": "fixed@4204192",
+        "1.21.11": "fixed@4204192",
+        "26.1.2": "fixed@4204192",
+        "26.2": "fixed@4204192",
+        "26.3": "fixed@4204192"
+      },
+      "title": "Shader presets shipped as files in a mod jar never register on 1.21.10 and later (only presets registered in code load)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/agent/AgentLoader.java"
+      ],
+      "id": "ECA-042",
+      "lowest": "1.21.1",
+      "notes": "Found by the 2026-10-26 fix round (plan #75). enableSelfAttach stores the low byte of Boolean.TRUE's compressed pointer into a one-byte boolean, so self-attach fails ('Can not attach to current VM') whenever that byte is 0x00, which depends on the JVM's command line (about 1 in 8). Also the cause of the intermittent shipped-jar gate failure. Fixed at 1.21.10 with putBoolean (47ee440); 1.21.1-1.21.8 still carry the author's code. Fix: take 47ee440's one-line change at 1.21.1 and cascade.",
+      "override": {
+        "by": "owner (delegated to Claude, 2026-10-27)",
+        "reason": "the rubric gives S3 (rare), but a silent loss of the library's runtime transforms breaks every dependent on the affected command lines with nothing logged; the fix is a one-line change already on 1.21.10",
+        "severity": "S2"
+      },
+      "rubric": {
+        "failure": "functional",
+        "reach": "normal",
+        "visibility": "rare",
+        "workaround": false
+      },
+      "severity": "S2",
+      "source": "review",
+      "status": {
+        "1.21.1": "open",
+        "1.21.10": "fixed@47ee440",
+        "1.21.11": "fixed@47ee440",
+        "1.21.3": "open",
+        "1.21.4": "open",
+        "1.21.5": "open",
+        "1.21.8": "open",
+        "26.1.2": "fixed@47ee440",
+        "26.2": "fixed@47ee440",
+        "26.3": "fixed@47ee440"
+      },
+      "title": "AgentLoader self-attach fails on some JVM command lines (putObject(Boolean.TRUE) into the primitive ALLOW_ATTACH_SELF): the agent backend is silently off and its runtime transforms do not apply"
     }
   ],
   "schema": 1
