@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -86,34 +87,16 @@ public final class BossShowManager {
         autoGenerateMissingTemplates();
     }
 
-    // 在 mod 文件的内部根目录下解析路径，不存在则返回 null
-    private static Path findModResource(net.neoforged.neoforgespi.locating.IModFile modFile, String... parts) {
-        try {
-            for (Path contentRoot : modFile.getContents().getContentRoots()) {
-                Path p = contentRoot;
-                for (String part : parts) p = p.resolve(part);
-                if (Files.exists(p)) return p;
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     // 从全部 mod 加载定义：新 eca/bossshow 路径覆盖旧 bossshow 路径
+    // 1.21.10+: IModFile.findResource is gone and a jar's content root is the jar file itself, so
+    // list the files through JarContents.visitContent (jars and folders alike) and log what fails
     private static void loadModDataDefinitions() {
         int[] count = {0};
         ModList.get().forEachModFile(modFile -> {
             for (IModInfo modInfo : modFile.getModInfos()) {
                 String modid = modInfo.getModId();
-                Path legacyDir = findModResource(modFile, "data", modid, "bossshow");
-                if (legacyDir != null && Files.isDirectory(legacyDir)) {
-                    count[0] += scanModDataDirectory(legacyDir, legacyDir, modid);
-                }
-                Path canonicalDir = findModResource(modFile, "data", modid, "eca", "bossshow");
-                if (canonicalDir != null && Files.isDirectory(canonicalDir)) {
-                    count[0] += scanModDataDirectory(canonicalDir, canonicalDir, modid);
-                }
+                count[0] += loadModDataPrefix(modFile, "data/" + modid + "/bossshow/", modid);
+                count[0] += loadModDataPrefix(modFile, "data/" + modid + "/eca/bossshow/", modid);
             }
         });
         if (count[0] > 0) {
@@ -121,48 +104,47 @@ public final class BossShowManager {
         }
     }
 
-    private static int scanModDataDirectory(Path root, Path current, String namespace) {
-        int count = 0;
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(current)) {
-            for (Path path : stream) {
-                if (Files.isDirectory(path)) {
-                    count += scanModDataDirectory(root, path, namespace);
-                } else if (path.getFileName().toString().toLowerCase().endsWith(".json")) {
-                    if (loadModDataFile(root, path, namespace)) count++;
+    private static int loadModDataPrefix(net.neoforged.neoforgespi.locating.IModFile modFile, String prefix, String namespace) {
+        int[] count = {0};
+        try {
+            modFile.getContents().visitContent(prefix, (relativePath, resource) -> {
+                if (!relativePath.startsWith(prefix)
+                        || !relativePath.toLowerCase(Locale.ROOT).endsWith(".json")) {
+                    return;
                 }
-            }
-        } catch (IOException e) {
-            EcaLogger.error("Failed to list mod BossShow directory {}: {}", current, e.getMessage());
+                String name = relativePath.substring(prefix.length(), relativePath.length() - 5);
+                try {
+                    String content = new String(resource.readAllBytes(), StandardCharsets.UTF_8);
+                    if (loadModDataFile(name, content, namespace, modFile.getFileName() + "!/" + relativePath)) {
+                        count[0]++;
+                    }
+                } catch (IOException e) {
+                    EcaLogger.error("Failed to read mod BossShow file {}!/{}: {}",
+                        modFile.getFileName(), relativePath, e.getMessage());
+                }
+            });
+        } catch (RuntimeException e) {
+            EcaLogger.error("Failed to list mod BossShow directory {} in {}: {}",
+                prefix, modFile.getFileName(), e.toString());
         }
-        return count;
+        return count[0];
     }
 
-    private static boolean loadModDataFile(Path root, Path file, String namespace) {
+    private static boolean loadModDataFile(String name, String content, String namespace, String source) {
         try {
-            Path rel = root.relativize(file);
-            StringBuilder pathBuilder = new StringBuilder();
-            for (int i = 0; i < rel.getNameCount(); i++) {
-                if (i > 0) pathBuilder.append('/');
-                String seg = rel.getName(i).toString();
-                if (i == rel.getNameCount() - 1 && seg.toLowerCase().endsWith(".json")) {
-                    seg = seg.substring(0, seg.length() - 5);
-                }
-                pathBuilder.append(seg);
-            }
-            ResourceLocation id = ResourceLocation.tryParse(namespace + ":" + pathBuilder);
+            ResourceLocation id = ResourceLocation.tryParse(namespace + ":" + name);
             if (id == null) {
-                EcaLogger.error("Mod BossShow file {} produced invalid ResourceLocation", file);
+                EcaLogger.error("Mod BossShow file {} produced invalid ResourceLocation", source);
                 return false;
             }
 
-            String content = Files.readString(file, StandardCharsets.UTF_8);
             BossShowDefinition def = BossShowJsonCodec.parse(content, id, BossShowDefinition.Source.MOD);
             if (def != null) {
                 DEFINITIONS.put(id, def);
                 return true;
             }
         } catch (Throwable t) {
-            EcaLogger.error("Failed to load mod BossShow file {}: {}", file, t.getMessage());
+            EcaLogger.error("Failed to load mod BossShow file {}: {}", source, t.getMessage());
         }
         return false;
     }
