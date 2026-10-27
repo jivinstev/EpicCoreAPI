@@ -16,6 +16,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/mixin/ItemRendererMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/PlayerMixin.java` (mixin)
+- changed: `src/main/java/net/eca/util/bossshow/BossShowHistory.java`
 - changed: `src/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java`
 - resources: `src/main/resources/META-INF/accesstransformer.cfg @65a2f0e2d0ee`
 - stub: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)

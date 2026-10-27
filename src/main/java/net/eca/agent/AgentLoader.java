@@ -1,5 +1,8 @@
-// 1.21.10 overlay: identical to the author's AgentLoader except that a failed attach logs its whole cause chain
-// (the original logs only "InvocationTargetException: null"). Added to diagnose an intermittent self-attach failure.
+// 1.21.10 overlay: the author's AgentLoader, except that a failed attach logs its whole cause chain (the original
+// logs only "InvocationTargetException: null"), and enableSelfAttach writes ALLOW_ATTACH_SELF as the primitive
+// boolean it is. The author's putObject(Boolean.TRUE) stored the low byte of Boolean.TRUE's compressed pointer
+// into that one-byte field, so self-attach failed ("Can not attach to current VM") whenever that byte was 0x00,
+// which depends on the JVM's command line: the intermittent shipped-jar failure.
 package net.eca.agent;
 
 import sun.misc.Unsafe;
@@ -35,7 +38,10 @@ public final class AgentLoader {
 
             Object base = unsafe.staticFieldBase(allowField);
             long offset = unsafe.staticFieldOffset(allowField);
-            unsafe.putObject(base, offset, Boolean.TRUE);
+            unsafe.putBoolean(base, offset, true);
+            if (!unsafe.getBoolean(base, offset)) {
+                throw new IllegalStateException("ALLOW_ATTACH_SELF did not take");
+            }
 
             AgentLogWriter.info("[AgentLoader] Self-attach enabled via Unsafe");
         } catch (Throwable t) {
