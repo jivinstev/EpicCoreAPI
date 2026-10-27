@@ -4,7 +4,7 @@ src/main/java/net/eca/mv/EntityIds.java f40de49b76a01489235dc93db0499306f38c877a
 src/main/java/net/eca/mv/EntityOf.java 4a6e6dc6f75fc11a642cbfffb13ceda8e1e57296
 src/main/java/net/eca/mv/Fonts.java ac49ae1a910599c0a6d337e569328ff4a8a15572
 src/main/java/net/eca/mv/ItemModels.java 223560876c0ab8a30a1eec913bb109f77d52a170
-src/main/java/net/eca/mv/ItemStacks.java a7605a518dd1f1d16d53b5c0976fe6a9a05ffc5b
+src/main/java/net/eca/mv/ItemStacks.java 784d61a2a985931c2bcf6adef925e1e3659eec3d
 src/main/java/net/eca/mv/LegacyTargets.java 8c4c2335ffb7781892ef3327ac9a3e79717c5294
 src/main/java/net/eca/mv/MultiBufferSource.java e2d4d54d8d4ac0c3c7a5f7612558ae3da65d5d1c
 src/main/java/net/eca/mv/Mv.java 16623191ee84da48519a3a988a2a9e009cd1df2a
