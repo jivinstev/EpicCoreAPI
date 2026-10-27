@@ -4776,9 +4776,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_block.json",
    "kind": "shader",
    "key": "eca:core/arcane_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_block.json#shader-uniform:eca:core/arcane_block ModelViewMat",
@@ -4822,9 +4822,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/arcane_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_block.json#shader-uniform:eca:core/arcane_block CameraYaw",
@@ -4940,9 +4940,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_entity.json",
    "kind": "shader",
    "key": "eca:core/arcane_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_entity.json#shader-uniform:eca:core/arcane_entity ModelViewMat",
@@ -4986,9 +4986,9 @@
    "file": "resources/assets/eca/shaders/core/arcane_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/arcane_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/arcane_entity.json#shader-uniform:eca:core/arcane_entity CameraYaw",
@@ -5276,9 +5276,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_block.json",
    "kind": "shader",
    "key": "eca:core/aurora_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_block.json#shader-uniform:eca:core/aurora_block ModelViewMat",
@@ -5322,9 +5322,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/aurora_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_block.json#shader-uniform:eca:core/aurora_block CameraYaw",
@@ -5440,9 +5440,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_entity.json",
    "kind": "shader",
    "key": "eca:core/aurora_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_entity.json#shader-uniform:eca:core/aurora_entity ModelViewMat",
@@ -5486,9 +5486,9 @@
    "file": "resources/assets/eca/shaders/core/aurora_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/aurora_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/aurora_entity.json#shader-uniform:eca:core/aurora_entity CameraYaw",
@@ -5776,9 +5776,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_block.json",
    "kind": "shader",
    "key": "eca:core/black_hole_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_block.json#shader-uniform:eca:core/black_hole_block ModelViewMat",
@@ -5822,9 +5822,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/black_hole_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_block.json#shader-uniform:eca:core/black_hole_block CameraYaw",
@@ -5940,9 +5940,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_entity.json",
    "kind": "shader",
    "key": "eca:core/black_hole_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader-uniform:eca:core/black_hole_entity ModelViewMat",
@@ -5986,9 +5986,9 @@
    "file": "resources/assets/eca/shaders/core/black_hole_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/black_hole_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader-uniform:eca:core/black_hole_entity CameraYaw",
@@ -6276,9 +6276,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_block.json",
    "kind": "shader",
    "key": "eca:core/cosmos_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_block.json#shader-uniform:eca:core/cosmos_block ModelViewMat",
@@ -6322,9 +6322,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/cosmos_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_block.json#shader-uniform:eca:core/cosmos_block CameraYaw",
@@ -6440,9 +6440,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_entity.json",
    "kind": "shader",
    "key": "eca:core/cosmos_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader-uniform:eca:core/cosmos_entity ModelViewMat",
@@ -6486,9 +6486,9 @@
    "file": "resources/assets/eca/shaders/core/cosmos_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/cosmos_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader-uniform:eca:core/cosmos_entity CameraYaw",
@@ -6766,9 +6766,9 @@
    "file": "resources/assets/eca/shaders/core/dream_sakura_block.json",
    "kind": "shader",
    "key": "eca:core/dream_sakura_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/dream_sakura_block.json#shader-uniform:eca:core/dream_sakura_block ModelViewMat",
@@ -6920,9 +6920,9 @@
    "file": "resources/assets/eca/shaders/core/dream_sakura_entity.json",
    "kind": "shader",
    "key": "eca:core/dream_sakura_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/dream_sakura_entity.json#shader-uniform:eca:core/dream_sakura_entity ModelViewMat",
@@ -8264,9 +8264,9 @@
    "file": "resources/assets/eca/shaders/core/forest_block.json",
    "kind": "shader",
    "key": "eca:core/forest_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_block.json#shader-uniform:eca:core/forest_block ModelViewMat",
@@ -8310,9 +8310,9 @@
    "file": "resources/assets/eca/shaders/core/forest_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/forest_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_block.json#shader-uniform:eca:core/forest_block CameraYaw",
@@ -8428,9 +8428,9 @@
    "file": "resources/assets/eca/shaders/core/forest_entity.json",
    "kind": "shader",
    "key": "eca:core/forest_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_entity.json#shader-uniform:eca:core/forest_entity ModelViewMat",
@@ -8474,9 +8474,9 @@
    "file": "resources/assets/eca/shaders/core/forest_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/forest_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/forest_entity.json#shader-uniform:eca:core/forest_entity CameraYaw",
@@ -8764,9 +8764,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_block.json",
    "kind": "shader",
    "key": "eca:core/hacker_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_block.json#shader-uniform:eca:core/hacker_block ModelViewMat",
@@ -8810,9 +8810,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/hacker_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_block.json#shader-uniform:eca:core/hacker_block CameraYaw",
@@ -8928,9 +8928,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_entity.json",
    "kind": "shader",
    "key": "eca:core/hacker_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_entity.json#shader-uniform:eca:core/hacker_entity ModelViewMat",
@@ -8974,9 +8974,9 @@
    "file": "resources/assets/eca/shaders/core/hacker_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/hacker_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/hacker_entity.json#shader-uniform:eca:core/hacker_entity CameraYaw",
@@ -9254,9 +9254,9 @@
    "file": "resources/assets/eca/shaders/core/ocean_block.json",
    "kind": "shader",
    "key": "eca:core/ocean_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/ocean_block.json#shader-uniform:eca:core/ocean_block ModelViewMat",
@@ -9408,9 +9408,9 @@
    "file": "resources/assets/eca/shaders/core/ocean_entity.json",
    "kind": "shader",
    "key": "eca:core/ocean_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/ocean_entity.json#shader-uniform:eca:core/ocean_entity ModelViewMat",
@@ -9734,9 +9734,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_block.json",
    "kind": "shader",
    "key": "eca:core/starlight_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_block.json#shader-uniform:eca:core/starlight_block ModelViewMat",
@@ -9780,9 +9780,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/starlight_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_block.json#shader-uniform:eca:core/starlight_block CameraYaw",
@@ -9898,9 +9898,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_entity.json",
    "kind": "shader",
    "key": "eca:core/starlight_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_entity.json#shader-uniform:eca:core/starlight_entity ModelViewMat",
@@ -9944,9 +9944,9 @@
    "file": "resources/assets/eca/shaders/core/starlight_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/starlight_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/starlight_entity.json#shader-uniform:eca:core/starlight_entity CameraYaw",
@@ -10224,9 +10224,9 @@
    "file": "resources/assets/eca/shaders/core/storm_block.json",
    "kind": "shader",
    "key": "eca:core/storm_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/storm_block.json#shader-uniform:eca:core/storm_block ModelViewMat",
@@ -10378,9 +10378,9 @@
    "file": "resources/assets/eca/shaders/core/storm_entity.json",
    "kind": "shader",
    "key": "eca:core/storm_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/storm_entity.json#shader-uniform:eca:core/storm_entity ModelViewMat",
@@ -10704,9 +10704,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_block.json",
    "kind": "shader",
    "key": "eca:core/the_last_end_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader-uniform:eca:core/the_last_end_block ModelViewMat",
@@ -10750,9 +10750,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_block.json",
    "kind": "shader-uniform",
    "key": "eca:core/the_last_end_block Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader-uniform:eca:core/the_last_end_block CameraYaw",
@@ -10868,9 +10868,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_entity.json",
    "kind": "shader",
    "key": "eca:core/the_last_end_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader-uniform:eca:core/the_last_end_entity ModelViewMat",
@@ -10914,9 +10914,9 @@
    "file": "resources/assets/eca/shaders/core/the_last_end_entity.json",
    "kind": "shader-uniform",
    "key": "eca:core/the_last_end_entity Glow",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 the json is not read, and no prepared Java (its RenderPipeline) names it; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader-uniform:eca:core/the_last_end_entity CameraYaw",
@@ -11194,9 +11194,9 @@
    "file": "resources/assets/eca/shaders/core/volcano_block.json",
    "kind": "shader",
    "key": "eca:core/volcano_block.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/volcano_block.json#shader-uniform:eca:core/volcano_block ModelViewMat",
@@ -11348,9 +11348,9 @@
    "file": "resources/assets/eca/shaders/core/volcano_entity.json",
    "kind": "shader",
    "key": "eca:core/volcano_entity.json",
-   "status": "unaccounted",
-   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader",
-   "was": "missing"
+   "status": "moved",
+   "detail": "from 1.21.5 a core shader json is not read, and no prepared Java names the shader; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:resources/assets/eca/shaders/core/volcano_entity.json#shader-uniform:eca:core/volcano_entity ModelViewMat",
@@ -11516,53 +11516,11 @@
    "accounted": true
   }
  ],
- "unaccounted": [
-  "main:resources/assets/eca/shaders/core/arcane_block.json#shader:eca:core/arcane_block.json",
-  "main:resources/assets/eca/shaders/core/arcane_block.json#shader-uniform:eca:core/arcane_block Glow",
-  "main:resources/assets/eca/shaders/core/arcane_entity.json#shader:eca:core/arcane_entity.json",
-  "main:resources/assets/eca/shaders/core/arcane_entity.json#shader-uniform:eca:core/arcane_entity Glow",
-  "main:resources/assets/eca/shaders/core/aurora_block.json#shader:eca:core/aurora_block.json",
-  "main:resources/assets/eca/shaders/core/aurora_block.json#shader-uniform:eca:core/aurora_block Glow",
-  "main:resources/assets/eca/shaders/core/aurora_entity.json#shader:eca:core/aurora_entity.json",
-  "main:resources/assets/eca/shaders/core/aurora_entity.json#shader-uniform:eca:core/aurora_entity Glow",
-  "main:resources/assets/eca/shaders/core/black_hole_block.json#shader:eca:core/black_hole_block.json",
-  "main:resources/assets/eca/shaders/core/black_hole_block.json#shader-uniform:eca:core/black_hole_block Glow",
-  "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader:eca:core/black_hole_entity.json",
-  "main:resources/assets/eca/shaders/core/black_hole_entity.json#shader-uniform:eca:core/black_hole_entity Glow",
-  "main:resources/assets/eca/shaders/core/cosmos_block.json#shader:eca:core/cosmos_block.json",
-  "main:resources/assets/eca/shaders/core/cosmos_block.json#shader-uniform:eca:core/cosmos_block Glow",
-  "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader:eca:core/cosmos_entity.json",
-  "main:resources/assets/eca/shaders/core/cosmos_entity.json#shader-uniform:eca:core/cosmos_entity Glow",
-  "main:resources/assets/eca/shaders/core/dream_sakura_block.json#shader:eca:core/dream_sakura_block.json",
-  "main:resources/assets/eca/shaders/core/dream_sakura_entity.json#shader:eca:core/dream_sakura_entity.json",
-  "main:resources/assets/eca/shaders/core/forest_block.json#shader:eca:core/forest_block.json",
-  "main:resources/assets/eca/shaders/core/forest_block.json#shader-uniform:eca:core/forest_block Glow",
-  "main:resources/assets/eca/shaders/core/forest_entity.json#shader:eca:core/forest_entity.json",
-  "main:resources/assets/eca/shaders/core/forest_entity.json#shader-uniform:eca:core/forest_entity Glow",
-  "main:resources/assets/eca/shaders/core/hacker_block.json#shader:eca:core/hacker_block.json",
-  "main:resources/assets/eca/shaders/core/hacker_block.json#shader-uniform:eca:core/hacker_block Glow",
-  "main:resources/assets/eca/shaders/core/hacker_entity.json#shader:eca:core/hacker_entity.json",
-  "main:resources/assets/eca/shaders/core/hacker_entity.json#shader-uniform:eca:core/hacker_entity Glow",
-  "main:resources/assets/eca/shaders/core/ocean_block.json#shader:eca:core/ocean_block.json",
-  "main:resources/assets/eca/shaders/core/ocean_entity.json#shader:eca:core/ocean_entity.json",
-  "main:resources/assets/eca/shaders/core/starlight_block.json#shader:eca:core/starlight_block.json",
-  "main:resources/assets/eca/shaders/core/starlight_block.json#shader-uniform:eca:core/starlight_block Glow",
-  "main:resources/assets/eca/shaders/core/starlight_entity.json#shader:eca:core/starlight_entity.json",
-  "main:resources/assets/eca/shaders/core/starlight_entity.json#shader-uniform:eca:core/starlight_entity Glow",
-  "main:resources/assets/eca/shaders/core/storm_block.json#shader:eca:core/storm_block.json",
-  "main:resources/assets/eca/shaders/core/storm_entity.json#shader:eca:core/storm_entity.json",
-  "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader:eca:core/the_last_end_block.json",
-  "main:resources/assets/eca/shaders/core/the_last_end_block.json#shader-uniform:eca:core/the_last_end_block Glow",
-  "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader:eca:core/the_last_end_entity.json",
-  "main:resources/assets/eca/shaders/core/the_last_end_entity.json#shader-uniform:eca:core/the_last_end_entity Glow",
-  "main:resources/assets/eca/shaders/core/volcano_block.json#shader:eca:core/volcano_block.json",
-  "main:resources/assets/eca/shaders/core/volcano_entity.json#shader:eca:core/volcano_entity.json"
- ],
+ "unaccounted": [],
  "counts": {
   "same": 1030,
-  "moved": 161,
-  "changed": 21,
-  "unaccounted": 40
+  "moved": 201,
+  "changed": 21
  },
  "notes": [
   "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"
