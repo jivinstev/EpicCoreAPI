@@ -104,3 +104,13 @@ Models: Opus for the main work, Sonnet subagents for the GUI and texture overlay
 - size: 477 Java files, 49 mixin classes; target Minecraft 1.21.4
 - attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 3 (≈ $0.08), other targets' 3, outside this checkout 315. Records of concurrent targets add up.
 - window: requests from 2026-10-21T19:35:19.038Z to 2026-10-26T20:19:36.634Z (requests before it are not in this record)
+
+## fork-port.py run since 2026-10-27T20:15:28+00:00
+
+## Cost (recorded by tools/port-cost.py -- do not edit by hand)
+- **≈ $0.32** (estimated from tokens at list prices as of 2026-09-25) over 1 session(s): 0.04 h active, 0.04 h wall (2026-10-27T20:24Z to 2026-10-27T20:27Z)
+- price tier: top (11 req); effort: medium 11
+- tokens: output 4,707 (thinking 797), input 22, cache read 553,292, cache write 23,332 (5m 23,332 / 1h 0)
+- size: 477 Java files, 49 mixin classes; target Minecraft 1.21.4
+- attribution: each request is charged to one target at most, by the paths and target its own tool calls name (a request naming none keeps the label of the one before it in the same transcript; a subagent or loop worker starts from its prompt). Not in the total above: this checkout's shared/orchestration requests 0 (unpriced), other targets' 4, outside this checkout 205. Records of concurrent targets add up.
+- window: requests from 2026-10-26T20:19:36.635Z to 2026-10-27T20:27:07.474Z (requests before it are not in this record)
