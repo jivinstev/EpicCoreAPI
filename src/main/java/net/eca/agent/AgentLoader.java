@@ -33,7 +33,12 @@ public final class AgentLoader {
 
             Object base = unsafe.staticFieldBase(allowField);
             long offset = unsafe.staticFieldOffset(allowField);
-            unsafe.putObject(base, offset, Boolean.TRUE);
+            // ALLOW_ATTACH_SELF is a primitive boolean: putObject(Boolean.TRUE) stored the low byte of Boolean.TRUE's
+            // compressed pointer, which is 0x00 on some JVM command lines (self-attach then fails). ECA-042.
+            unsafe.putBoolean(base, offset, true);
+            if (!unsafe.getBoolean(base, offset)) {
+                throw new IllegalStateException("ALLOW_ATTACH_SELF did not take");
+            }
 
             AgentLogWriter.info("[AgentLoader] Self-attach enabled via Unsafe");
         } catch (Throwable t) {
