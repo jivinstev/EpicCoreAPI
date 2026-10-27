@@ -122,7 +122,6 @@ public class GameRendererPostLevelMixin {
 
         // 26.2: Tesselator is gone; a local ByteBufferBuilder backs each face's BufferBuilder
         try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(DefaultVertexFormat.BLOCK.getVertexSize() * 4)) {
-        net.eca.mv.LegacyGl.setupRenderState(renderType);
 
         for (int i = 0; i < 6; ++i) {
             poseStack.pushPose();
@@ -133,11 +132,16 @@ public class GameRendererPostLevelMixin {
             bufferBuilder.addVertex(matrix, -size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
-            net.eca.mv.LegacyGl.drawWithShader(bufferBuilder.buildOrThrow());
+            // 26.2: per face, the type draws itself when it can -- ours or a dependent's own LegacyRenderType copy, whose
+            // set-up loads only ITS OWN LegacyGl -- as GlobalSkyboxHook does; anything else keeps this mod's LegacyGl path
+            com.mojang.blaze3d.vertex.MeshData mesh = bufferBuilder.buildOrThrow();
+            if (!net.eca.mv.MultiBufferSource.drawOwn(renderType, mesh)) {
+                net.eca.mv.LegacyGl.setupRenderState(renderType);
+                net.eca.mv.LegacyGl.drawWithShader(mesh);
+                net.eca.mv.LegacyGl.clearRenderState(renderType);
+            }
             poseStack.popPose();
         }
-
-        net.eca.mv.LegacyGl.clearRenderState(renderType);
         }
     }
 
