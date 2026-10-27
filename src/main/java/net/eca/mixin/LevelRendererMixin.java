@@ -240,13 +240,15 @@ public abstract class LevelRendererMixin {
     /* 1.21.9 之前这一对是 renderEntity 的 HEAD / RETURN；现在 submitEntities 逐个把渲染状态交给
        EntityRenderDispatcher.submit，这里把同样的前后处理包在那次调用外面。
        注意：绘制发生在之后的 renderAllFeatures，所以“前后”只覆盖提交，不再覆盖绘制——
-       云层遮挡标记（本帧的状态，云层之后才读）不受影响；雾标志在 1.21.6 之后本来就只是个标志
-       （雾是整帧一份的 uniform，见 net.eca.mv.Mv.suspendFog），所以这里也没有损失。
-       原先在前后各做的 flushEntityBuffers 只是为了让“绘制”落在雾标志之内，提交阶段没有绘制，不再需要。
-       26.2: 1.21.10-26.1.2's ECA-026 bracket (submit a force-loaded entity into its own feature dispatcher and draw it at once
-       with FogRenderer's FogMode.NONE slice) is not carried here: 26.2 submits the level's entities before the frame graph
-       and its clear pass run (see EntityExtensionLayer, net.eca.mv.SubmitPhase), so a draw made at submit would be erased,
-       and 26.2 has no MultiBufferSource.BufferSource / 8-argument FeatureRenderDispatcher to draw it with. The flag stays. */
+       云层遮挡标记（本帧的状态，云层之后才读）不受影响。
+       26.2 (ECA-026, as 1.21.10-26.1.2's bracket): a force-loaded entity seen from outside fluid is drawn without world fog.
+       26.2 submits the level's entities before the frame graph and its clear pass run, so the entity cannot be drawn at
+       submit as 26.1.2 did; it is submitted into a SubmitNodeStorage of its own instead and drawn inside the main pass,
+       right after the solid features (eca$drawForceLoadedWithoutFog), by a FeatureRenderDispatcher of its own with
+       FogRenderer's FogMode.NONE slice. That dispatcher has RenderBuffers of its own: the main dispatcher's
+       StagedVertexBuffer is already uploaded for the frame then and takes no more draws.
+       26.3: submitEntities runs inside render() again, before vanilla prepares its frame; the force-loaded frame is
+       prepared right after it (eca$prepareForceLoadedWithoutFog) and drawn into the open solid pass. */
     @Redirect(method = "submitEntities",
               at = @At(value = "INVOKE",
                        target = "Lnet/minecraft/client/renderer/entity/EntityRenderDispatcher;submit(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;Lnet/minecraft/client/renderer/state/level/CameraRenderState;DDDLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;)V"))
@@ -261,18 +263,119 @@ public abstract class LevelRendererMixin {
             eca$markCloudOcclusion(minecraft, entity, cameraPos.x, cameraPos.y, cameraPos.z);
             Camera camera = minecraft.gameRenderer.mainCamera();
             if (camera != null && camera.getFluidInCamera() == FogType.NONE) {
-                net.eca.mv.Mv.suspendFog();
                 eca$forceLoadedFogActive = true;
             }
         }
-        try {
+        if (!eca$forceLoadedFogActive) {
             dispatcher.submit(state, cameraState, x, y, z, poseStack, collector);
+            return;
+        }
+        try {
+            dispatcher.submit(state, cameraState, x, y, z, poseStack, eca$forceLoadedNodes);
+            eca$forceLoadedPending = true;
         } finally {
-            if (eca$forceLoadedFogActive) {
-                net.eca.mv.Mv.restoreFog();
-                eca$forceLoadedFogActive = false;
+            eca$forceLoadedFogActive = false;
+        }
+    }
+
+    /* This frame's force-loaded no-fog submits (see eca$submitEntityWithForceLoadBracket); dropped at render() HEAD if a
+       frame never reached the main pass. */
+    @Unique
+    private final net.minecraft.client.renderer.SubmitNodeStorage eca$forceLoadedNodes = new net.minecraft.client.renderer.SubmitNodeStorage();
+
+    @Unique
+    private boolean eca$forceLoadedPending;
+
+    /* 26.3: this frame's prepared force-loaded submits (prepared, and their staged vertices uploaded, right after vanilla
+       prepares its own -- outside any render pass -- drawn in the main pass, closed at render()'s end). */
+    @Unique
+    private net.minecraft.client.renderer.feature.FeatureRenderDispatcher.PreparedFrame eca$forceLoadedFrame;
+
+    /* Created on first use, kept for the session: the dispatcher and its own RenderBuffers (one section pack, the
+       staging buffer). */
+    @Unique
+    private net.minecraft.client.renderer.RenderBuffers eca$forceLoadedBuffers;
+
+    @Unique
+    private net.minecraft.client.renderer.feature.FeatureRenderDispatcher eca$forceLoadedFeatures;
+
+    @Inject(method = "render", at = @At("HEAD"), require = 1)
+    private void eca$resetForceLoadedNodes(CallbackInfo ci) {
+        eca$closeForceLoadedFrame();
+        if (eca$forceLoadedPending) {
+            eca$forceLoadedNodes.getSubmitsPerOrder().clear();
+            eca$forceLoadedPending = false;
+        }
+    }
+
+    /* 26.3: FeatureRenderDispatcher prepares a frame (sorts the submits, uploads its staged vertex buffer) apart from
+       executing it in a pass, and no upload can be made inside the main pass; so the force-loaded submits are prepared
+       here, where vanilla prepares the level's own. */
+    @Inject(method = "render",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;prepareFrame(Lnet/minecraft/client/renderer/SubmitNodeStorage;)Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;",
+                     shift = At.Shift.AFTER),
+            require = 1)
+    private void eca$prepareForceLoadedWithoutFog(CallbackInfo ci) {
+        if (!eca$forceLoadedPending) {
+            return;
+        }
+        eca$forceLoadedPending = false;
+        eca$forceLoadedFrame = eca$forceLoadedFeatures(Minecraft.getInstance()).prepareFrame(eca$forceLoadedNodes);
+    }
+
+    /* In the main pass after the solid features (terrain and the level's opaque entities are in the depth buffer, the
+       level lighting is set up): the force-loaded entities, all their phases, with the NONE fog slice. 26.3 binds the
+       Fog uniform into the pass once (RenderSystem.bindDefaultUniforms), so the slice is set on the pass and the
+       pass's terrainFog (RenderSystem's shader fog, set at the pass's start) is put back for the rest of it. */
+    @Inject(method = "executeSolid",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;executeSolid(Lcom/mojang/renderpearl/api/commands/RenderPass;)V",
+                     shift = At.Shift.AFTER),
+            require = 1)
+    private void eca$drawForceLoadedWithoutFog(net.minecraft.client.renderer.chunk.ChunkSectionsToRender chunkSectionsToRender,
+                                               net.minecraft.client.renderer.feature.FeatureRenderDispatcher.PreparedFrame featureFrame,
+                                               com.mojang.renderpearl.api.commands.RenderPass renderPass, CallbackInfo ci) {
+        if (eca$forceLoadedFrame == null) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        renderPass.setUniform("Fog", minecraft.gameRenderer.fogRenderer.getBuffer(net.minecraft.client.renderer.fog.FogRenderer.FogMode.NONE));
+        try {
+            net.minecraft.client.renderer.feature.FeatureRenderDispatcher.renderAllFeatures(renderPass, eca$forceLoadedFrame);
+        } finally {
+            GpuBufferSlice terrainFog = RenderSystem.getShaderFog();
+            if (terrainFog != null) {
+                renderPass.setUniform("Fog", terrainFog);
             }
         }
+    }
+
+    @Inject(method = "render", at = @At("RETURN"), require = 1)
+    private void eca$endForceLoadedFrame(CallbackInfo ci) {
+        eca$closeForceLoadedFrame();
+    }
+
+    @Unique
+    private void eca$closeForceLoadedFrame() {
+        if (eca$forceLoadedFrame == null) {
+            return;
+        }
+        try {
+            eca$forceLoadedFrame.close();
+        } finally {
+            eca$forceLoadedFrame = null;
+            eca$forceLoadedNodes.getSubmitsPerOrder().clear();
+            eca$forceLoadedBuffers.endFrame();
+        }
+    }
+
+    @Unique
+    private net.minecraft.client.renderer.feature.FeatureRenderDispatcher eca$forceLoadedFeatures(Minecraft minecraft) {
+        if (eca$forceLoadedFeatures == null) {
+            eca$forceLoadedBuffers = new net.minecraft.client.renderer.RenderBuffers(1);
+            eca$forceLoadedFeatures = new net.minecraft.client.renderer.feature.FeatureRenderDispatcher(eca$forceLoadedBuffers,
+                    minecraft.getModelManager(), minecraft.getAtlasManager(), minecraft.font, minecraft.gameRenderer.gameRenderState());
+        }
+        return eca$forceLoadedFeatures;
     }
 
     /* 强加载实体的 EntityRenderDispatcher.shouldRender 被改成了纯距离判断（绕过视锥），

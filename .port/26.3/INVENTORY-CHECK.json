@@ -3876,8 +3876,9 @@
    "file": "net/eca/mixin/LevelRendererMixin.java",
    "kind": "injection",
    "key": "@Inject method=renderEntity @At(value=\"RETURN\")",
-   "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: (26.3, re-derived from the 26.3 sources and javap -p -c, not inherited; #32) Each handler the authors had has a 26.3 home with 1.21.1's effect. renderClouds HEAD: 26.3 has no clouds pass; executeClassicTransparency (CustomCloudsRenderer.renderClouds, else CloudRenderer.render) and executeOit (render",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; reviewed in STUBS.json: (26.3, re-derived from the 26.3 sources and javap -p -c, not inherited; #32) Each handler the authors had has a 26.3 home with 1.21.1's effect. renderClouds HEAD: 26.3 has no clouds pass; executeClassicTransparency (CustomCloudsRenderer.renderClouds, else CloudRenderer.render) and executeOit (render",
+   "now": "@Inject method=render @At(value=\"RETURN\")",
    "accounted": true
   },
   {
@@ -11616,8 +11617,8 @@
  "unaccounted": [],
  "counts": {
   "same": 945,
-  "changed": 34,
-  "moved": 273
+  "changed": 35,
+  "moved": 272
  },
  "notes": [
   "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"

@@ -1,7 +1,7 @@
 # shared-library helpers as installed (path blob): tools/fork-branches.py
 src/main/java/net/eca/mv/EntityOf.java 4a6e6dc6f75fc11a642cbfffb13ceda8e1e57296
 src/main/java/net/eca/mv/ItemModels.java 223560876c0ab8a30a1eec913bb109f77d52a170
-src/main/java/net/eca/mv/ItemStacks.java a7605a518dd1f1d16d53b5c0976fe6a9a05ffc5b
+src/main/java/net/eca/mv/ItemStacks.java 784d61a2a985931c2bcf6adef925e1e3659eec3d
 src/main/java/net/eca/mv/LegacyTargets.java a3dea94aa6f2468b4899df8c945a9e7e35d4933b
 src/main/java/net/eca/mv/Mv.java 16623191ee84da48519a3a988a2a9e009cd1df2a
 src/main/java/net/eca/mv/Nbt.java 3b2003bf9e1ef13b3991d8462918ffe15ad4ab8f

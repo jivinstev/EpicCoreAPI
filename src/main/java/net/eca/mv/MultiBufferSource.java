@@ -32,7 +32,7 @@ import java.util.SequencedMap;
  * 26.2 and 26.3 have no {@code MultiBufferSource} (geometry is recorded into the frame's staged buffer, CATALOG §V100). This is
  * the 1.21 shape for fork code that still asks a buffer source for a {@link VertexConsumer} per render type and ends
  * the batch itself: the vertices are collected in {@link ByteBufferBuilder}s and each type's mesh is drawn on
- * {@code endBatch} -- a fork-layer {@link LegacyRenderType} (or a dependent's relocated copy, see {@link #drawOwn}) through
+ * {@code endBatch} -- a fork-layer {@link LegacyRenderType} (this mod's or another mod's relocated copy, CATALOG V117, see {@link #drawOwn}) through
  * its own draw (into its own output target), a
  * vanilla type through {@code prepare().drawFromBuffer(info, pass)} in a pass this opens (26.3 copy, §V101: a vanilla
  * type names no target and there is no output override any more, so the pass goes, as {@code LegacyGl.draw}'s does,
