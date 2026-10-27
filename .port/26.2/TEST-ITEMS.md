@@ -20,6 +20,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/client/gui/ShaderProjectDetailsScreen.java` (client)
 - changed: `src/main/java/net/eca/client/render/BlockExtensionRenderer.java` (client)
 - changed: `src/main/java/net/eca/client/render/BossShowAnchorRenderer.java` (client)
+- changed: `src/main/java/net/eca/client/render/EcaBossBarRenderer.java` (client)
 - changed: `src/main/java/net/eca/client/render/EntityExtensionLayer.java` (client)
 - changed: `src/main/java/net/eca/client/render/ForestRenderTypes.java` (client)
 - changed: `src/main/java/net/eca/client/render/GeoEntityExtensionLayer.java` (client)
