@@ -13,9 +13,10 @@ reviewer may add `missing` (a file that should exist) and `shared` (a shared hel
 the reviewing agent, distinct from the fixer; `commit` is the commit reviewed (`git rev-parse --short HEAD`).
 tools/fork-port.py adds a `?` row for every item it finds unreviewed; it never changes a verdict.
 
-- reviewer: fresh agent session_01VJgb4LVyGz8nnExPrEfzbZ (subagent, keep-current round 2026-10-27, 26.1.2 review); changed rows re-checked by a fresh re-checker subagent (keep-current round 2026-10-27, 26.1.2 recheck), neither the reviewer nor the fixer
-- date: 2026-10-27
-- commit: e89b3f5
+- reviewer: fresh agent session_01Cvm3m6SAgwsKPw2mAYeD4t (subagent, keep-current round 2026-10-28, 26.1.2 review of the ECA-042 cascade 453c99b), neither the fixer nor an earlier reviewer; earlier: session_01VJgb4LVyGz8nnExPrEfzbZ (2026-10-27 review) and a fresh re-checker (2026-10-27 recheck)
+- date: 2026-10-28
+- commit: 453c99b
+- re-review 2026-10-28 at 453c99b (e89b3f5..453c99b): the only source change is src/main/java/net/eca/agent/AgentLoader.java, +2 comment lines over the putBoolean fix already here (ECA-042, cascaded from neoforge-1.21.1 7ca21b8); the file now equals neoforge-1.21.11's (no diff at merge-base b53c3a2), so it needs no row. port-ci.yml changes only kit v56->v58 with its pinned sha256 (no gate weakened); the rest are records. No row's verdict changes: every row ok, none `?`.
 
 | kind | file | verdict | note |
 |---|---|---|---|
