@@ -9,7 +9,7 @@ import net.neoforged.fml.config.ModConfig;
 public class ModConfigs {
     public static void register() {
         ModLoadingContext.get().getActiveContainer().registerConfig(
-            ModConfig.Type.STARTUP,
+            ModConfig.Type.LOCAL, // FML 12 removed COMMON; LOCAL is its non-synced successor (STARTUP never reloads)
             EcaConfiguration.SPEC,
             "eca.toml"
         );
