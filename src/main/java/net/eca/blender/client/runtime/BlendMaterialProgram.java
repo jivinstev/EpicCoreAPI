@@ -9,6 +9,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.blender.client.runtime.BlendNodeGraph.Expr;
 import net.eca.blender.client.runtime.BlendNodeGraph.Input;
 import net.eca.blender.client.runtime.BlendNodeGraph.Value;
+import net.eca.client.render.RenderBufferPool;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -38,6 +39,7 @@ import static net.eca.blender.client.runtime.BlendFile.require;
 
 @SuppressWarnings("removal")
 public final class BlendMaterialProgram implements AutoCloseable {
+    private static final RenderBufferPool MATERIAL_BUFFERS = new RenderBufferPool();
     interface ImageResolver { ResourceLocation resolve(BlendFile.View image) throws IOException; }
     private final ResourceLocation id;
     private final ResourceProvider provider;
@@ -152,6 +154,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
     }
 
     public void load() throws IOException {
+        close();
         shader = new EcaShaderInstance(provider, id, DefaultVertexFormat.NEW_ENTITY);
         int activeImages = 0;
         for (int i = 0; i < textures.size(); i++) {
@@ -173,8 +176,7 @@ public final class BlendMaterialProgram implements AutoCloseable {
                 .setLightmapState(RenderType.LIGHTMAP).setOverlayState(RenderType.OVERLAY)
                 .setDepthTestState(RenderType.LEQUAL_DEPTH_TEST).setWriteMaskState(RenderType.COLOR_DEPTH_WRITE)
                 .createCompositeState(true));
-        if (byteBuffer != null) byteBuffer.close();
-        byteBuffer = new ByteBufferBuilder(256);
+        byteBuffer = MATERIAL_BUFFERS.acquireBuffer();
         buffers = MultiBufferSource.immediate(byteBuffer);
     }
 
@@ -198,12 +200,15 @@ public final class BlendMaterialProgram implements AutoCloseable {
 
     @Override
     public void close() {
-        if (shader != null) shader.close();
-        shader = null;
-        type = null;
-        buffers = null;
-        if (byteBuffer != null) byteBuffer.close();
-        byteBuffer = null;
+        try {
+            if (shader != null) shader.close();
+        } finally {
+            MATERIAL_BUFFERS.release(byteBuffer);
+            shader = null;
+            type = null;
+            buffers = null;
+            byteBuffer = null;
+        }
     }
 
     private static String json(ResourceLocation id, int imageCount, int driverCount) {
