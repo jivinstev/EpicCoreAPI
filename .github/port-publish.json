@@ -13,12 +13,7 @@
     "utility"
   ],
   "additional_categories": [],
-  "ledger_issues": [
-    "jivinstev/EpicCoreAPI#1",
-    "jivinstev/EpicCoreAPI#2",
-    "jivinstev/EpicCoreAPI#3",
-    "jivinstev/EpicCoreAPI#21"
-  ],
+  "ledger_issues": [],
   "differences": [],
   "original_name": "Epic Core API",
   "dependencies": [],
