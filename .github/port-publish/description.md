@@ -1,4 +1,4 @@
-# Epic Core API - Community Port (1.21.1+)
+# Epic Core API - Community Port (NeoForge)
 
 **The original:** Epic Core API by CJiangqiu -- [Modrinth](https://modrinth.com/mod/epic-core-api) · [CurseForge](https://www.curseforge.com/minecraft/mc-mods/epic-core-api) · [source](https://github.com/CJiangqiu/EpicCoreAPI)
 
@@ -21,6 +21,10 @@ Published with the original author's permission (https://github.com/CJiangqiu/Ep
 ## Requirements
 
 - Nothing beyond NeoForge for your Minecraft version.
+
+## Known issues
+
+None that stop a feature from working. Smaller known issues: [Known issues](https://github.com/jivinstev/EpicCoreAPI/issues/112).
 
 ## How releases are made
 
