@@ -9,11 +9,7 @@
     {
       "automerge": true,
       "head": "neoforge-1.21.1",
-      "ledger_issues": [
-        1,
-        2,
-        3
-      ],
+      "ledger_issues": [],
       "repo": "jivinstev/EpicCoreAPI",
       "role": "library",
       "upstream": "https://github.com/CJiangqiu/EpicCoreAPI",
@@ -25,10 +21,7 @@
         "jivinstev/EpicCoreAPI"
       ],
       "head": "neoforge-1.21.1",
-      "ledger_issues": [
-        20,
-        22
-      ],
+      "ledger_issues": [],
       "repo": "jivinstev/TheLastSword",
       "role": "dependent",
       "upstream": "https://github.com/CJiangqiu/TheLastSword",
