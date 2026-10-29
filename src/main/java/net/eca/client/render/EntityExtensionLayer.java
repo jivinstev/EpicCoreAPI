@@ -1,9 +1,7 @@
 package net.eca.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
@@ -72,13 +70,10 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
         if (hasTexture) {
             RenderType texturedLayer = RenderType.entityTranslucent(texture);
             if (oculus) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
-                this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay,
-                    FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)
-                );
-                ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
-                    builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(ShaderMaskPass.unmasked(texturedLayer, 1.0f), true,
+                    builder -> this.getParentModel().renderToBuffer(
+                        poseStack, builder, light, overlay,
+                        FastColor.ARGB32.color((int) (alpha * 255.0f), 255, 255, 255)));
             } else {
                 VertexConsumer texConsumer = bufferSource.getBuffer(texturedLayer);
                 this.getParentModel().renderToBuffer(
@@ -90,18 +85,13 @@ public class EntityExtensionLayer<T extends LivingEntity, M extends net.minecraf
 
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
-            this.getParentModel().renderToBuffer(
-                poseStack, builder, light, overlay, 0xFFFFFFFF
-            );
-            if (oculus) {
-                ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
-            } else {
-                if (bufferSource instanceof MultiBufferSource.BufferSource source) {
+            ShaderMaskRenderQueue.render(pass, oculus, builder -> {
+                this.getParentModel().renderToBuffer(
+                    poseStack, builder, light, overlay, 0xFFFFFFFF);
+                if (!oculus && bufferSource instanceof MultiBufferSource.BufferSource source) {
                     source.endBatch();
                 }
-                ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
-            }
+            });
         }
     }
 
