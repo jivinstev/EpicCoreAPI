@@ -1186,6 +1186,28 @@
         "26.3": "wontfix:the original's design (owner, 2026-10-28)"
       },
       "title": "Radical Logic is forced on whenever a friend mod (The Last Sword) is installed, ignoring the config setting"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/SpriteBatchingVertexConsumer.java",
+        "src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java"
+      ],
+      "id": "ECA-045",
+      "lowest": "1.21.1",
+      "notes": "found by the round at 1.21.1 (authors)",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "feature",
+        "visibility": "common",
+        "workaround": false
+      },
+      "severity": "S1",
+      "source": "review",
+      "status": {
+        "1.21.1": "open"
+      },
+      "title": "Extension shader batches and the shader-generator preview leak native memory every frame (a new ByteBufferBuilder per sprite batch / per preview frame, never closed)"
     }
   ],
   "schema": 1
