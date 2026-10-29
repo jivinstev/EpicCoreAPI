@@ -1159,6 +1159,33 @@
         "26.3": "open"
       },
       "title": "26.3 under Fabulous graphics, and 26.2/26.3 with Oculus shaders: entity extension layers are still drawn after the level (no blend through glass or water; rain and particles drawn under them)"
+    },
+    {
+      "id": "ECA-044",
+      "lowest": "1.21.1",
+      "notes": "Fix ledger #2, mode radical-forced (S2 there). The original's design: ECA enables Radical Logic for its friend mods. Every harmful mode it enabled is fixed (#2's S1s, #3's hang-load, verified 2026-10-28 over 200+ real-client launches). Won't fix (owner, 2026-10-28).",
+      "override": null,
+      "rubric": {
+        "failure": "functional",
+        "reach": "feature",
+        "visibility": "rare",
+        "workaround": false
+      },
+      "severity": "S3",
+      "source": "authors",
+      "status": {
+        "1.21.1": "wontfix:the original's design (owner, 2026-10-28)",
+        "1.21.10": "wontfix:the original's design (owner, 2026-10-28)",
+        "1.21.11": "wontfix:the original's design (owner, 2026-10-28)",
+        "1.21.3": "wontfix:the original's design (owner, 2026-10-28)",
+        "1.21.4": "wontfix:the original's design (owner, 2026-10-28)",
+        "1.21.5": "wontfix:the original's design (owner, 2026-10-28)",
+        "1.21.8": "wontfix:the original's design (owner, 2026-10-28)",
+        "26.1.2": "wontfix:the original's design (owner, 2026-10-28)",
+        "26.2": "wontfix:the original's design (owner, 2026-10-28)",
+        "26.3": "wontfix:the original's design (owner, 2026-10-28)"
+      },
+      "title": "Radical Logic is forced on whenever a friend mod (The Last Sword) is installed, ignoring the config setting"
     }
   ],
   "schema": 1
