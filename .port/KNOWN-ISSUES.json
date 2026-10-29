@@ -622,7 +622,7 @@
       ],
       "id": "ECA-022",
       "lowest": "1.21.1",
-      "notes": "Evidence: 748f563 (warmDispatch) is an ancestor of every version branch and neoforge-1.21.1 (git merge-base); warmDispatch present on 1.21.3..26.3. fixable_from_1_21_8_up: true (already fixed on every version). Migrated from the #3 fix ledger. 'hang-load' stays fixed-unconfirmed until a person re-tests on a Mac. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/3",
+      "notes": "Evidence: 748f563 (warmDispatch) is an ancestor of every version branch and neoforge-1.21.1 (git merge-base); warmDispatch present on 1.21.3..26.3. fixable_from_1_21_8_up: true (already fixed on every version). Migrated from the #3 fix ledger. 'hang-load' stays fixed-unconfirmed until a person re-tests on a Mac. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/3 Reconcile 2026-10-29 (keep-current/2026-10-29, merge 26bba65 of authors abf7670): decision keep ours at 1.21.1 (fixed@748f563 unchanged). Evidence: the authors' 1.1.9-fix-fix (56da255, abf7670) touches none of 748f563 (src/jvmti/.../JvmTiBackend.java): fix-ledger worksheet 'the authors changed 0 of them', and git diff 4979c6f..26bba65 over that file is empty; the incoming change is extension-render buffer pooling, the loading-screen switch and the transformer whitelist, none on this defect's path. No A/B (keep needs none).",
       "override": null,
       "rubric": {
         "failure": "hang",
@@ -652,7 +652,7 @@
       ],
       "id": "ECA-023",
       "lowest": "1.21.1",
-      "notes": "Evidence: 56a1448 is an ancestor of every version branch and neoforge-1.21.1; the unsafe-inbox copy is fixed by the authors' 1.1.9 (95a740b), the stack's upstream. fixable_from_1_21_8_up: true (already fixed on every version). Grade kept from the #1 ledger (S1, data). Its own impact note says 'low but real; no crash'; owner may regrade to S3. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/1",
+      "notes": "Evidence: 56a1448 is an ancestor of every version branch and neoforge-1.21.1; the unsafe-inbox copy is fixed by the authors' 1.1.9 (95a740b), the stack's upstream. fixable_from_1_21_8_up: true (already fixed on every version). Grade kept from the #1 ledger (S1, data). Its own impact note says 'low but real; no crash'; owner may regrade to S3. Sources: https://github.com/jivinstev/EpicCoreAPI/issues/1 Reconcile 2026-10-29 (keep-current/2026-10-29, merge 26bba65 of authors abf7670): decision keep ours at 1.21.1 (fixed@56a1448 unchanged). Evidence: the authors' 1.1.9-fix-fix (56da255, abf7670) touches none of 56a1448 (src/main/.../util/EntityUtil.java): fix-ledger worksheet 'the authors changed 0 of them', and git diff 4979c6f..26bba65 over that file is empty; the incoming change is extension-render buffer pooling, the loading-screen switch and the transformer whitelist, none on this defect's path. No A/B (keep needs none).",
       "override": null,
       "rubric": {
         "failure": "data",
@@ -1110,7 +1110,7 @@
       ],
       "id": "ECA-042",
       "lowest": "1.21.1",
-      "notes": "Found by the 2026-10-26 fix round (plan #75). enableSelfAttach stores the low byte of Boolean.TRUE's compressed pointer into a one-byte boolean, so self-attach fails ('Can not attach to current VM') whenever that byte is 0x00, which depends on the JVM's command line (about 1 in 8). Also the cause of the intermittent shipped-jar gate failure. Fixed at 1.21.10 with putBoolean (47ee440); 1.21.1-1.21.8 still carry the author's code. Fix: take 47ee440's one-line change at 1.21.1 and cascade.",
+      "notes": "Found by the 2026-10-26 fix round (plan #75). enableSelfAttach stores the low byte of Boolean.TRUE's compressed pointer into a one-byte boolean, so self-attach fails ('Can not attach to current VM') whenever that byte is 0x00, which depends on the JVM's command line (about 1 in 8). Also the cause of the intermittent shipped-jar gate failure. Fixed at 1.21.10 with putBoolean (47ee440); 1.21.1-1.21.8 still carry the author's code. Fix: take 47ee440's one-line change at 1.21.1 and cascade. Reconcile 2026-10-29 (keep-current/2026-10-29, merge 26bba65 of authors abf7670): decision keep ours at 1.21.1 (fixed@7ca21b8 unchanged). Evidence: the authors' 1.1.9-fix-fix (56da255, abf7670) touches none of 7ca21b8 (src/main/.../agent/AgentLoader.java): fix-ledger worksheet 'the authors changed 0 of them', and git diff 4979c6f..26bba65 over that file is empty; the incoming change is extension-render buffer pooling, the loading-screen switch and the transformer whitelist, none on this defect's path. No A/B (keep needs none).",
       "override": {
         "by": "owner (delegated to Claude, 2026-10-27)",
         "reason": "the rubric gives S3 (rare), but a silent loss of the library's runtime transforms breaks every dependent on the affected command lines with nothing logged; the fix is a one-line change already on 1.21.10",
