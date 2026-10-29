@@ -1137,6 +1137,28 @@
         "26.3": "fixed@47ee440"
       },
       "title": "AgentLoader self-attach fails on some JVM command lines (putObject(Boolean.TRUE) into the primitive ALLOW_ATTACH_SELF): the agent backend is silently off and its runtime transforms do not apply"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/ShaderMaskRenderQueue.java"
+      ],
+      "id": "ECA-043",
+      "lowest": "26.2",
+      "notes": "The residual of #37's 'entity extension layers drawn after the whole level' (fixed for Fast/Fancy by e41f48d on 26.2 and 2aa3b32 on 26.3, PRs #39/#40: drawn at AfterTranslucentFeatures inside the main pass). 26.3 under Fabulous posts no AfterTranslucentFeatures (ShaderMaskRenderQueue header), and the Oculus path uses the after-level queue on both. Whether 26.2 under Fabulous posts the event is not known from code. Workaround: Fast or Fancy graphics. Checked 2026-10-28 when closing #33 and #37.",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "unusual",
+        "visibility": "common",
+        "workaround": true
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "26.2": "open",
+        "26.3": "open"
+      },
+      "title": "26.3 under Fabulous graphics, and 26.2/26.3 with Oculus shaders: entity extension layers are still drawn after the level (no blend through glass or water; rain and particles drawn under them)"
     }
   ],
   "schema": 1
