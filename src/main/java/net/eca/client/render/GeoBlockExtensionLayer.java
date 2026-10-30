@@ -1,9 +1,7 @@
 package net.eca.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
@@ -76,16 +74,12 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable> exten
                             ShaderMaskPass pass, boolean queued) {
         if (pass == null || pass.alpha() <= 0.0f) return;
         RenderType renderType = pass.renderType();
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, renderType.format());
-        renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, renderType, builder,
-            partialTick, light, OverlayTexture.NO_OVERLAY, -1);
-        if (queued) {
-            ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
-        } else {
-            if (bufferSource instanceof MultiBufferSource.BufferSource source) {
+        ShaderMaskRenderQueue.render(pass, queued, builder -> {
+            renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, renderType, builder,
+                partialTick, light, OverlayTexture.NO_OVERLAY, -1);
+            if (!queued && bufferSource instanceof MultiBufferSource.BufferSource source) {
                 source.endBatch();
             }
-            ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
-        }
+        });
     }
 }

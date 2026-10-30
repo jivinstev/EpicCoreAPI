@@ -4,6 +4,7 @@ The original intent of this mod is to provide developers with simplified entity 
 
 This mod also provides an [MCreator plugin](https://mcreator.net/plugin/121284/20244epic-core-api-plugin) for MCreator users to conveniently use the APIs in this mod.
 
+Community Edition (If you want to play on newer Minecraft versions):https://www.curseforge.com/minecraft/mc-mods/epic-core-api-community-port-neoforge
 ## Usage for Players
 
 Players can use the following `/eca` commands (requires permission level ≥ 2):

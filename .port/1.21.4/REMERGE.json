@@ -1,0 +1,36 @@
+{
+ "conflicts": [
+  {
+   "overlay": ".github/port-publish/description.md",
+   "digest": "4c3103c42a6cfaf7d39ea3138d66483446861c7c872954e3e73001b4ee2000e7",
+   "reason": "a conflict with 1.21.4's own change: kept as 1.21.4 had it, a default decision",
+   "since": "7ca21b84bcc1..8f66d4445407",
+   "from": "7ca21b84bcc1eb48634ec2a636b881bf3f83bbab",
+   "to": "8f66d44454071bb80bf6f80d2e9c4454e0df2ea6",
+   "diff": "diff --git a/.github/port-publish/description.md b/.github/port-publish/description.md\nindex c99d7ea..13ef763 100644\n--- a/.github/port-publish/description.md\n+++ b/.github/port-publish/description.md\n@@ -1,10 +1,10 @@\n-# Epic Core API - Community Port (1.21.1+)\n+# Epic Core API - Community Port (NeoForge)\n \n **The original:** Epic Core API by CJiangqiu -- [Modrinth](https://modrinth.com/mod/epic-core-api) · [CurseForge](https://www.curseforge.com/minecraft/mc-mods/epic-core-api) · [source](https://github.com/CJiangqiu/EpicCoreAPI)\n \n-**Unofficial.** A community-maintained port of **Epic Core API** by **CJiangqiu** to NeoForge 1.21.1. It is not made or supported by CJiangqiu: please report problems with this port [on its own issue tracker](https://github.com/jivinstev/EpicCoreAPI/issues), not to the original author.\n+**Unofficial.** A community-maintained port of **Epic Core API** by **CJiangqiu** to newer versions of NeoForge. It is not made or supported by CJiangqiu: please report problems with this port [on its own issue tracker](https://github.com/jivinstev/EpicCoreAPI/issues), not to the original author.\n \n-**Scope:** NeoForge, Minecraft 1.21.1 and newer. Builds are published for Minecraft 1.21.1.\n+**Scope:** NeoForge, Minecraft 1.21.1 and newer. Builds are published for Minecraft 1.21.1, 1.21.4, 1.21.5, 1.21.8, 1.21.10, 1.21.11, 26.1.2, 26.2 and 26.3: pick the file for your version.\n \n Published with the original author's permission (https://github.com/CJiangqiu/EpicCoreAPI/issues/9), under the original MIT licence with its copyright notice kept.\n \n@@ -15,11 +15,16 @@ Published with the original author's permission (https://github.com/CJiangqiu/Ep\n \n ## How it differs from the original\n \n-- Runs on **NeoForge 1.21.1**.\n+- Runs on **NeoForge**, one build per Minecraft version from 1.21.1 to 26.3.\n+- The CurseForge build doesn't include the original's Java agent.\n \n ## Requirements\n \n-- Nothing beyond NeoForge 1.21.1.\n+- Nothing beyond NeoForge for your Minecraft version.\n+\n+## Known issues\n+\n+None that stop a feature from working. Smaller known issues: [Known issues](https://github.com/jivinstev/EpicCoreAPI/issues/112).\n \n ## How releases are made\n \n",
+   "id": "857a3dbf02d6",
+   "class": "authors-fix",
+   "escalate": false,
+   "default": "take the authors' change through the rows, our change re-applied around it",
+   "choice": "patch",
+   "reasoning": "their fix, adapted through the rows (the authors' design intent)",
+   "source": "authors"
+  },
+  {
+   "overlay": "src/main/java/net/eca/mixin/ItemRendererMixin.java",
+   "digest": "62ca9e5fa3ece2da74b2b5377e4de65c62a355409ec3ac604e29fb31d053d512",
+   "reason": "a conflict with 1.21.4's own change: kept as 1.21.4 had it, a default decision",
+   "since": "7ca21b84bcc1..8f66d4445407",
+   "from": "7ca21b84bcc1eb48634ec2a636b881bf3f83bbab",
+   "to": "8f66d44454071bb80bf6f80d2e9c4454e0df2ea6",
+   "diff": "diff --git a/src/main/java/net/eca/mixin/ItemRendererMixin.java b/src/main/java/net/eca/mixin/ItemRendererMixin.java\nindex 173b8ca..2e3f52d 100644\n--- a/src/main/java/net/eca/mixin/ItemRendererMixin.java\n+++ b/src/main/java/net/eca/mixin/ItemRendererMixin.java\n@@ -46,17 +46,18 @@ public abstract class ItemRendererMixin {\n         boolean queued = eca$isWorldContext(displayContext);\n         for (ShaderMaskPass pass : passes) {\n             if (pass == null || pass.alpha() <= 0.0f) continue;\n-            SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());\n-            renderer.renderModelLists(model, stack, combinedLight, combinedOverlay, poseStack, consumer);\n-            consumer.finish(batch -> {\n-                if (queued) {\n-                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),\n-                        batch.uvTransform());\n-                } else {\n-                    ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),\n-                        batch.uvTransform());\n-                }\n-            });\n+            try (SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format())) {\n+                renderer.renderModelLists(model, stack, combinedLight, combinedOverlay, poseStack, consumer);\n+                consumer.finish(batch -> {\n+                    if (queued) {\n+                        ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),\n+                            batch.uvTransform());\n+                    } else {\n+                        ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),\n+                            batch.uvTransform());\n+                    }\n+                });\n+            }\n         }\n     }\n \n",
+   "id": "4120ff0ffe6a",
+   "class": "authors-fix",
+   "escalate": false,
+   "default": "take the authors' change through the rows, our change re-applied around it",
+   "choice": "patch",
+   "reasoning": "their fix, adapted through the rows (the authors' design intent)",
+   "source": "authors"
+  }
+ ]
+}
