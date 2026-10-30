@@ -58,19 +58,23 @@ public class FallingBlockRendererMixin {
         boolean fullBright = BlockExtensionSafeAccess.isGlow(extension);
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            SpriteBatchingVertexConsumer consumer =
-                new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright);
-            poseStack.pushPose();
-            poseStack.translate(-0.5, 0.0, -0.5);
-            blockRenderer.tesselateBlock((x, y, z, quad, instance) -> {
+            try (SpriteBatchingVertexConsumer consumer =
+                     new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright)) {
                 poseStack.pushPose();
-                poseStack.translate(x, y, z);
-                consumer.putBakedQuad(poseStack.last(), quad, instance);
-                poseStack.popPose();
-            }, 0.0F, 0.0F, 0.0F, tintLevel, renderPos, state, model, seed);
-            poseStack.popPose();
-            consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(),
-                batch.builder().buildOrThrow(), batch.uvTransform()));
+                try {
+                    poseStack.translate(-0.5, 0.0, -0.5);
+                    blockRenderer.tesselateBlock((x, y, z, quad, instance) -> {
+                        poseStack.pushPose();
+                        poseStack.translate(x, y, z);
+                        consumer.putBakedQuad(poseStack.last(), quad, instance);
+                        poseStack.popPose();
+                    }, 0.0F, 0.0F, 0.0F, tintLevel, renderPos, state, model, seed);
+                } finally {
+                    poseStack.popPose();
+                }
+                consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(),
+                    batch.builder().buildOrThrow(), batch.uvTransform()));
+            }
         }
     }
 }

@@ -80,6 +80,8 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {
     }
 
     public static byte[] transform(byte[] classfileBuffer) {
+        if (!BACKGROUND_ENABLED) return null;
+
         try {
             ClassReader cr = new ClassReader(classfileBuffer);
             ClassWriter cw = new SafeWriter(cr, ClassWriter.COMPUTE_FRAMES);
@@ -155,12 +157,7 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {
                 if (tail != null) {
                     emitIntroCallback(replacement, tail);
                 }
-                if (BACKGROUND_ENABLED) {
-                    emitGradient(replacement);
-                } else {
-                    replacement.add(new IntInsnNode(Opcodes.SIPUSH, CLEAR_BITS));
-                    replacement.add(new MethodInsnNode(Opcodes.INVOKESTATIC, GL, "glClear", "(I)V", false));
-                }
+                emitGradient(replacement);
                 instructions.insertBefore(clearPush, replacement);
                 instructions.remove(clearPush);
                 instructions.remove(clearCall);

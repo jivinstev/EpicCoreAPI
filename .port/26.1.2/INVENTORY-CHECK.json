@@ -3691,8 +3691,9 @@
    "file": "net/eca/mixin/GameRendererPostLevelMixin.java",
    "kind": "injection",
    "key": "@Inject method=getDepthFar @At(value=\"RETURN\")",
-   "status": "moved",
-   "detail": "not in the target's file; reviewed in STUBS.json: 26.1 removed GameRenderer.getDepthFar, so the force-loaded far-plane extension moved to CameraDepthFarMixin, which raises Camera.depthFar right after Camera.update stores it (before the culling projection and perspective use it) and is added by mixin_add.",
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; reviewed in STUBS.json: 26.1 removed GameRenderer.getDepthFar, so the force-loaded far-plane extension moved to CameraDepthFarMixin, which raises Camera.depthFar right after Camera.update stores it (before the culling projection and perspective use it) and is added by mixin_add.",
+   "now": "@Inject method=renderLevel @At(value=\"HEAD\")",
    "accounted": true
   },
   {
@@ -11608,8 +11609,8 @@
  "unaccounted": [],
  "counts": {
   "same": 952,
-  "moved": 269,
-  "changed": 31
+  "moved": 268,
+  "changed": 32
  },
  "notes": [
   "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"

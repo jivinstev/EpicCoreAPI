@@ -31,5 +31,16 @@
   "library_commit": "c6dce23f99150478028aacb4f28148d3ccd892a4",
   "jar_sha256": "f806037a0787f7071fa515eebac446f79ca04448b73c7d92986d4f779ee4414f",
   "recorded": "2026-10-27"
+ },
+ {
+  "dependent": "jivinstev/TheLastSword",
+  "dependent_commit": "d45104105c6a350d2352f1d476de5996928d75ea",
+  "gates_commit": "5a17792",
+  "gate_c": "PASS",
+  "library": "net.eca:eca",
+  "library_tag": "eca-1.1.9-fix-mc1.21.11-r3",
+  "library_commit": "b53c3a2b6d22219daa0c4d99328fd4d9ddc9ea24",
+  "jar_sha256": "0c38d3085fd27fbf2cdceb492110113b6b66857f66a444fbb093d51bf52bcd98",
+  "recorded": "2026-10-28"
  }
 ]
