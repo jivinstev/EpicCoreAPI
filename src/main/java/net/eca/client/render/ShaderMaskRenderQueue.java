@@ -20,31 +20,63 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public final class ShaderMaskRenderQueue {
 
-    private static final int MAX_POOL_SIZE = 64;
     private static final List<QueuedPass> QUEUE = new ArrayList<>();
-    private static final Deque<ByteBufferBuilder> BUILDER_POOL = new ArrayDeque<>();
+    private static final RenderBufferPool BUILDER_POOL = new RenderBufferPool();
+    // [mv] 26.2+: sortQuads needs each builder's ByteBufferBuilder, so the queue takes bare buffers from the pool
+    // (acquireBuffer) and keeps the builder -> buffer map itself
     private static final Map<BufferBuilder, ByteBufferBuilder> BUILDER_BACKING = new IdentityHashMap<>();
 
     private ShaderMaskRenderQueue() {
     }
 
     public static BufferBuilder acquireBuilder(PrimitiveTopology mode, VertexFormat format) {
-        ByteBufferBuilder backing = BUILDER_POOL.pollFirst();
-        if (backing == null) {
-            backing = new ByteBufferBuilder(262144);
-        }
+        ByteBufferBuilder backing = BUILDER_POOL.acquireBuffer();
         BufferBuilder builder = new BufferBuilder(backing, mode, format);
         BUILDER_BACKING.put(builder, backing);
         return builder;
+    }
+
+    public static void releaseBuilder(BufferBuilder builder) {
+        if (builder == null) {
+            return;
+        }
+        BUILDER_POOL.release(BUILDER_BACKING.remove(builder));
+    }
+
+    public static void discardPending() {
+        QUEUE.clear();
+        BUILDER_BACKING.clear();
+        BUILDER_POOL.releaseAll();
+    }
+
+    public static void render(ShaderMaskPass pass, boolean queued, Consumer<BufferBuilder> writer) {
+        BufferBuilder builder = acquireBuilder(PrimitiveTopology.QUADS, pass.renderType().format());
+        boolean submitted = false;
+        try {
+            writer.accept(builder);
+            // 1.21: build() 在没有顶点时返回 null（1.20 的 end() 返回空缓冲），此时不提交。
+            MeshData renderedBuffer = builder.build();
+            if (renderedBuffer != null) {
+                if (queued) {
+                    enqueue(pass, builder, renderedBuffer);
+                } else {
+                    drawNow(pass, builder, renderedBuffer);
+                }
+                submitted = true;
+            }
+        } finally {
+            if (!submitted) {
+                recycle(builder);
+            }
+        }
     }
 
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
@@ -55,15 +87,24 @@ public final class ShaderMaskRenderQueue {
     public static void enqueue(ShaderMaskPass pass, BufferBuilder builder,
                                MeshData renderedBuffer,
                                MaskUvTransform uvTransform) {
-        if (GuiTexturePasses.collecting()) {
-            // 26.3 (ECA-020): submitted while a picture-in-picture (or GUI item) texture is drawn: into that texture
-            GuiTexturePasses.add(pass, builder, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
-            return;
+        boolean queued = false;
+        try {
+            if (GuiTexturePasses.collecting()) {
+                // 26.3 (ECA-020): submitted while a picture-in-picture (or GUI item) texture is drawn: into that texture
+                GuiTexturePasses.add(pass, builder, renderedBuffer, uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform);
+                queued = true;
+                return;
+            }
+            Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
+            GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
+            QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
+                uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform, null));
+            queued = true;
+        } finally {
+            if (!queued) {
+                recycle(builder);
+            }
         }
-        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
-        GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
-        QUEUE.add(new QueuedPass(pass, builder, renderedBuffer, modelView, projection,
-            uvTransform == null ? MaskUvTransform.IDENTITY : uvTransform, null));
     }
 
     /**
@@ -74,13 +115,22 @@ public final class ShaderMaskRenderQueue {
      */
     public static void enqueueDraw(BufferBuilder builder, MeshData renderedBuffer,
                                    java.util.function.BiConsumer<MeshData, com.mojang.renderpearl.api.commands.RenderPass> draw) {
-        if (GuiTexturePasses.collecting()) {
-            GuiTexturePasses.addDraw(builder, renderedBuffer, draw);   // 26.3 (ECA-020): see enqueue
-            return;
+        boolean queued = false;
+        try {
+            if (GuiTexturePasses.collecting()) {
+                GuiTexturePasses.addDraw(builder, renderedBuffer, draw);   // 26.3 (ECA-020): see enqueue
+                queued = true;
+                return;
+            }
+            Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
+            GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
+            QUEUE.add(new QueuedPass(null, builder, renderedBuffer, modelView, projection, MaskUvTransform.IDENTITY, draw));
+            queued = true;
+        } finally {
+            if (!queued) {
+                recycle(builder);
+            }
         }
-        Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewStack());
-        GpuBufferSlice projection = RenderSystem.getProjectionMatrixBuffer();
-        QUEUE.add(new QueuedPass(null, builder, renderedBuffer, modelView, projection, MaskUvTransform.IDENTITY, draw));
     }
 
     /** Order a translucent mesh built in {@link #acquireBuilder}'s builder back to front for the current projection. */
@@ -191,11 +241,17 @@ public final class ShaderMaskRenderQueue {
                     }
                 } finally {
                     RenderSystem.getModelViewStack().popMatrix();
-                    recycle(entry.builder());
                 }
             }
         } finally {
-            RenderSystem.setProjectionMatrix(savedProjection, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
+            try {
+                RenderSystem.setProjectionMatrix(savedProjection, com.mojang.blaze3d.ProjectionType.PERSPECTIVE);
+            } finally {
+                // 绘制中断时，尚未上传的批次也必须归还。
+                for (QueuedPass entry : entries) {
+                    recycle(entry.builder());
+                }
+            }
         }
     }
 
@@ -235,13 +291,16 @@ public final class ShaderMaskRenderQueue {
                 net.eca.mv.LegacyGl.draw(renderedBuffer, into);
             }
         } finally {
-            if (stateActive) {
-                net.eca.mv.LegacyGl.clearRenderState(pass.renderType());
+            try {
+                if (stateActive) {
+                    net.eca.mv.LegacyGl.clearRenderState(pass.renderType());
+                }
+            } finally {
+                EcaShaderInstance.clearColorKey();
+                EcaShaderInstance.clearShaderMask();
+                EcaShaderInstance.clearLocalUvBounds();
+                EcaShaderInstance.clearOpacity();
             }
-            EcaShaderInstance.clearColorKey();
-            EcaShaderInstance.clearShaderMask();
-            EcaShaderInstance.clearLocalUvBounds();
-            EcaShaderInstance.clearOpacity();
         }
     }
 
@@ -263,17 +322,7 @@ public final class ShaderMaskRenderQueue {
     }
 
     private static void recycle(BufferBuilder builder) {
-        if (builder == null) {
-            return;
-        }
-        ByteBufferBuilder backing = BUILDER_BACKING.remove(builder);
-        if (backing != null) {
-            if (BUILDER_POOL.size() < MAX_POOL_SIZE) {
-                BUILDER_POOL.addLast(backing);
-            } else {
-                backing.close();
-            }
-        }
+        releaseBuilder(builder);
     }
 
     private record QueuedPass(

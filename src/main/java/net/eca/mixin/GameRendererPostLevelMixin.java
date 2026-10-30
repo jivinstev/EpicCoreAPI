@@ -49,7 +49,8 @@ public class GameRendererPostLevelMixin {
     // extension of it moved to CameraDepthFarMixin (added for this target by target.properties mixin_add).
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void eca$discardAbortedLayers(DeltaTracker deltaTracker, CallbackInfo ci) {
+    // 26.3: renderLevel() takes no DeltaTracker
+    private void eca$discardAbortedLayers(CallbackInfo ci) {
         // 上一帧若在队列刷新前中断，不能把旧几何和借出的缓冲留到下一帧。
         ShaderMaskRenderQueue.discardPending();
     }

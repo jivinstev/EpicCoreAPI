@@ -63,7 +63,10 @@ public final class ShaderPreviewRenderer {
     /** 26.3 (#33): where the forced preview geometry is collected; drawn by endBatch through the shared helper, so a
      *  LegacyRenderType draws with its shader's own uniform blocks bound (vanilla's feature path binds only its own).
      *  A vanilla type drawn this way goes to the main target (26.3 has no per-type output target), which is where
-     *  renderFeatures draws the rest of the preview too. */
+     *  renderFeatures draws the rest of the preview too.
+     *  The authors' RenderBufferPool for the preview (their fix for a native ByteBufferBuilder allocated per frame and
+     *  never closed) has nothing to do here: since 26.2 the preview draws through this one buffer, allocated once and
+     *  reused every frame, and its block quad's buffer is closed by try-with-resources. */
     private static final net.eca.mv.MultiBufferSource.BufferSource PREVIEW_BUFFERS =
         net.eca.mv.MultiBufferSource.immediate(new ByteBufferBuilder(262144));
 

@@ -111,21 +111,23 @@ public abstract class ItemRendererMixin {
             }
             for (ShaderMaskPass pass : passes) {
                 if (pass == null || pass.alpha() <= 0.0f) continue;
-                SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
-                ItemStacks.renderModelLists(quads.all(), tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
-                consumer.finish(batch -> net.eca.client.render.GuiTexturePasses.add(pass, batch.builder(),
-                    batch.builder().buildOrThrow(), batch.uvTransform()));
+                try (SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format())) {
+                    ItemStacks.renderModelLists(quads.all(), tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
+                    consumer.finish(batch -> net.eca.client.render.GuiTexturePasses.add(pass, batch.builder(),
+                        batch.builder().buildOrThrow(), batch.uvTransform()));
+                }
             }
             return;
         }
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
-            ItemStacks.renderModelLists(quads.all(), tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
-            // a world context, or (26.3, #33) any context submitted with the level (an item display, say), which is
-            // submitted before the level's clear pass: the after-level queue draws it in the frame
-            consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
-                batch.uvTransform()));
+            try (SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format())) {
+                ItemStacks.renderModelLists(quads.all(), tintLayers == null ? new int[0] : tintLayers.toIntArray(), combinedLight, combinedOverlay, poseStack, consumer);
+                // a world context, or (26.3, #33) any context submitted with the level (an item display, say), which is
+                // submitted before the level's clear pass: the after-level queue draws it in the frame
+                consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
+                    batch.uvTransform()));
+            }
         }
     }
 
