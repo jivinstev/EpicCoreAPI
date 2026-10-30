@@ -2,9 +2,7 @@
 // 1.21.9+ (ECA-006): the layer only submits; the non-Oculus textured pass and shader passes are order-1 submits drawn after the body.
 package net.eca.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
@@ -77,13 +75,10 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         if (hasTexture) {
             RenderType texturedLayer = RenderType.entityTranslucent(texture);
             if (oculus) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedLayer.format());
-                this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay,
-                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
-                );
-                ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
-                    builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(ShaderMaskPass.unmasked(texturedLayer, 1.0f), true,
+                    builder -> this.getParentModel().renderToBuffer(
+                        poseStack, builder, light, overlay,
+                        ARGB.color((int) (alpha * 255.0f), 255, 255, 255)));
             } else {
                 // order 1: drawn by the feature dispatch after every order-0 model (the body), like vanilla's own layers
                 collector.order(1).submitModel(this.getParentModel(), state, poseStack, texturedLayer, light, overlay,
@@ -94,11 +89,8 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
             if (oculus) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
-                this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay, 0xFFFFFFFF
-                );
-                ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(pass, true, builder -> this.getParentModel().renderToBuffer(
+                    poseStack, builder, light, overlay, 0xFFFFFFFF));
             } else {
                 // 1.21.9+: the body is only submitted here and drawn later by the feature dispatch, so drawing the pass now
                 // (as 1.21.1's endBatch() + drawNow did) put it under the body. An order-1 task runs after every order-0
@@ -110,9 +102,8 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
                     model.setupAnim(state);
                     PoseStack stack = new PoseStack();
                     stack.last().set(pose);
-                    BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
-                    model.renderToBuffer(stack, builder, light, overlay, 0xFFFFFFFF);
-                    ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
+                    ShaderMaskRenderQueue.render(pass, false,
+                        builder -> model.renderToBuffer(stack, builder, light, overlay, 0xFFFFFFFF));
                 });
             }
         }

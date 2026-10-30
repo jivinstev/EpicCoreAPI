@@ -4,10 +4,8 @@
 // tasks around GeckoLib's own model task and why the shader-mask passes are always queued instead of drawn at once.
 package net.eca.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.util.block_extension.BlockExtension;
 import net.eca.util.block_extension.BlockExtensionManager;
 import net.eca.util.block_extension.BlockExtensionSafeAccess;
@@ -104,16 +102,16 @@ public class GeoBlockExtensionLayer<T extends BlockEntity & GeoAnimatable, R ext
                             int light, ShaderMaskPass pass) {
         if (pass == null || pass.alpha() <= 0.0f) return;
         RenderType renderType = pass.renderType();
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, renderType.format());
         // GeckoLib's draw callback for one model: the bones, from the pose the task was submitted with, into our buffer.
         // Always queued (flushed after the level): drawing at once would have to endBatch() the buffer the feature renderer
         // is writing into at this very moment.
-        PoseStack stack = new PoseStack();
-        stack.last().set(pose);
-        VertexConsumer consumer = builder;
-        for (GeoBone bone : bakedModel.topLevelBones()) {
-            this.renderer.renderBone(renderState, stack, bone, consumer, cameraState, light, OverlayTexture.NO_OVERLAY, -1);
-        }
-        ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
+        ShaderMaskRenderQueue.render(pass, true, builder -> {
+            PoseStack stack = new PoseStack();
+            stack.last().set(pose);
+            VertexConsumer consumer = builder;
+            for (GeoBone bone : bakedModel.topLevelBones()) {
+                this.renderer.renderBone(renderState, stack, bone, consumer, cameraState, light, OverlayTexture.NO_OVERLAY, -1);
+            }
+        });
     }
 }
