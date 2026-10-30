@@ -1,9 +1,7 @@
 package net.eca.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
@@ -101,10 +99,10 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
                                    float alpha, RenderType type, boolean oculus) {
         if (type == null) return;
         if (oculus) {
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
-            this.renderer.reRender(bakedModel, poseStack, rt -> builder, animatable, type, builder,
-                    partialTick, light, overlay, ARGB.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
-            ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(type, 1.0f), builder, builder.buildOrThrow());
+            ShaderMaskRenderQueue.render(ShaderMaskPass.unmasked(type, 1.0f), true,
+                builder -> this.renderer.reRender(bakedModel, poseStack, rt -> builder, animatable,
+                    type, builder, partialTick, light, overlay,
+                    ARGB.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f)));
         } else {
             this.renderer.reRender(bakedModel, poseStack, bufferSource, animatable, type,
                     bufferSource.getBuffer(type), partialTick, light, overlay, ARGB.colorFromFloat(alpha, 1.0f, 1.0f, 1.0f));
@@ -116,16 +114,12 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable> extends GeoRenderL
                                   ShaderMaskPass pass, boolean oculus) {
         if (pass == null || pass.alpha() <= 0.0f) return;
         RenderType type = pass.renderType();
-        BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, type.format());
-        this.renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, type, builder,
-            partialTick, light, overlay, -1);
-        if (oculus) {
-            ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
-        } else {
-            if (bufferSource instanceof MultiBufferSource.BufferSource source) {
+        ShaderMaskRenderQueue.render(pass, oculus, builder -> {
+            this.renderer.reRender(bakedModel, poseStack, ignored -> builder, animatable, type, builder,
+                partialTick, light, overlay, -1);
+            if (!oculus && bufferSource instanceof MultiBufferSource.BufferSource source) {
                 source.endBatch();
             }
-            ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
-        }
+        });
     }
 }
