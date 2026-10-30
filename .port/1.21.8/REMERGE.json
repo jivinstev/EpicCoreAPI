@@ -1,22 +1,6 @@
 {
  "conflicts": [
   {
-   "overlay": ".github/port-publish/description.md",
-   "digest": "4c3103c42a6cfaf7d39ea3138d66483446861c7c872954e3e73001b4ee2000e7",
-   "reason": "a conflict with 1.21.8's own change: kept as 1.21.8 had it, a default decision",
-   "since": "7ca21b84bcc1..34fd5a9154b7",
-   "from": "7ca21b84bcc1eb48634ec2a636b881bf3f83bbab",
-   "to": "34fd5a9154b720b5cd4de8a0eb2a1f452766765f",
-   "diff": "diff --git a/.github/port-publish/description.md b/.github/port-publish/description.md\nindex c99d7ea..13ef763 100644\n--- a/.github/port-publish/description.md\n+++ b/.github/port-publish/description.md\n@@ -1,10 +1,10 @@\n-# Epic Core API - Community Port (1.21.1+)\n+# Epic Core API - Community Port (NeoForge)\n \n **The original:** Epic Core API by CJiangqiu -- [Modrinth](https://modrinth.com/mod/epic-core-api) · [CurseForge](https://www.curseforge.com/minecraft/mc-mods/epic-core-api) · [source](https://github.com/CJiangqiu/EpicCoreAPI)\n \n-**Unofficial.** A community-maintained port of **Epic Core API** by **CJiangqiu** to NeoForge 1.21.1. It is not made or supported by CJiangqiu: please report problems with this port [on its own issue tracker](https://github.com/jivinstev/EpicCoreAPI/issues), not to the original author.\n+**Unofficial.** A community-maintained port of **Epic Core API** by **CJiangqiu** to newer versions of NeoForge. It is not made or supported by CJiangqiu: please report problems with this port [on its own issue tracker](https://github.com/jivinstev/EpicCoreAPI/issues), not to the original author.\n \n-**Scope:** NeoForge, Minecraft 1.21.1 and newer. Builds are published for Minecraft 1.21.1.\n+**Scope:** NeoForge, Minecraft 1.21.1 and newer. Builds are published for Minecraft 1.21.1, 1.21.4, 1.21.5, 1.21.8, 1.21.10, 1.21.11, 26.1.2, 26.2 and 26.3: pick the file for your version.\n \n Published with the original author's permission (https://github.com/CJiangqiu/EpicCoreAPI/issues/9), under the original MIT licence with its copyright notice kept.\n \n@@ -15,11 +15,16 @@ Published with the original author's permission (https://github.com/CJiangqiu/Ep\n \n ## How it differs from the original\n \n-- Runs on **NeoForge 1.21.1**.\n+- Runs on **NeoForge**, one build per Minecraft version from 1.21.1 to 26.3.\n+- The CurseForge build doesn't include the original's Java agent.\n \n ## Requirements\n \n-- Nothing beyond NeoForge 1.21.1.\n+- Nothing beyond NeoForge for your Minecraft version.\n+\n+## Known issues\n+\n+None that stop a feature from working. Smaller known issues: [Known issues](https://github.com/jivinstev/EpicCoreAPI/issues/112).\n \n ## How releases are made\n \n",
-   "id": "857a3dbf02d6",
-   "class": "authors-fix",
-   "escalate": false,
-   "default": "take the authors' change through the rows, our change re-applied around it",
-   "choice": "patch",
-   "reasoning": "their fix, adapted through the rows (the authors' design intent)",
-   "source": "authors"
-  },
-  {
    "overlay": "src/main/java/net/eca/client/render/ShaderMaskRenderQueue.java",
    "digest": "538d47c9504d0097fd2bdf6f892780542b7631cfdbabc4c0921ff382f72801c2",
    "reason": "a conflict with 1.21.8's own change: kept as 1.21.8 had it, a decision for the owner",
@@ -30,38 +14,6 @@
    "default": "",
    "choice": "patch",
    "reasoning": "the authors' change is 100 changed lines, over the budget of 80 (--budget-lines): adapting it around our change costs more than a default decision may",
-   "source": "authors"
-  },
-  {
-   "overlay": "src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java",
-   "digest": "fe4c254cc01d166c565f3a0c2b9d2b6009918ddccfd8fccec5cb79c152aaed83",
-   "reason": "a conflict with 1.21.8's own change: kept as 1.21.8 had it, a default decision",
-   "since": "7ca21b84bcc1..34fd5a9154b7",
-   "from": "7ca21b84bcc1eb48634ec2a636b881bf3f83bbab",
-   "to": "34fd5a9154b720b5cd4de8a0eb2a1f452766765f",
-   "diff": "diff --git a/src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java b/src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java\nindex 439d506..7debebb 100644\n--- a/src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java\n+++ b/src/main/java/net/eca/client/render/shader_generator/ShaderPreviewRenderer.java\n@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.ByteBufferBuilder;\n import com.mojang.blaze3d.vertex.DefaultVertexFormat;\n import com.mojang.blaze3d.vertex.Tesselator;\n import com.mojang.blaze3d.vertex.VertexSorting;\n+import net.eca.client.render.RenderBufferPool;\n import net.eca.client.render.shader.EcaShaderInstance;\n import net.minecraft.client.Minecraft;\n import net.minecraft.client.gui.GuiGraphics;\n@@ -32,6 +33,7 @@ import java.util.List;\n public final class ShaderPreviewRenderer {\n \n     private static final ItemStack PREVIEW_ITEM = createPreviewItem();\n+    private static final RenderBufferPool PREVIEW_BUFFERS = new RenderBufferPool();\n \n     public static void render(\n         GuiGraphics graphics,\n@@ -162,7 +164,8 @@ public final class ShaderPreviewRenderer {\n         ItemRenderer itemRenderer = minecraft.getItemRenderer();\n         Level level = minecraft.level;\n         BakedModel model = itemRenderer.getModel(PREVIEW_ITEM, level, minecraft.player, 0);\n-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));\n+        ByteBufferBuilder buffer = PREVIEW_BUFFERS.acquireBuffer();\n+        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(buffer);\n \n         int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);\n         graphics.pose().pushPose();\n@@ -190,8 +193,12 @@ public final class ShaderPreviewRenderer {\n             );\n             delegate.endBatch();\n         } finally {\n-            EcaShaderInstance.clearLocalUvBounds();\n-            graphics.pose().popPose();\n+            try {\n+                PREVIEW_BUFFERS.release(buffer);\n+            } finally {\n+                EcaShaderInstance.clearLocalUvBounds();\n+                graphics.pose().popPose();\n+            }\n         }\n     }\n \n@@ -212,7 +219,8 @@ public final class ShaderPreviewRenderer {\n         }\n \n         RenderType entityType = source.entity(minecraft.player.getSkin().texture());\n-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(8192));\n+        ByteBufferBuilder buffer = PREVIEW_BUFFERS.acquireBuffer();\n+        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(buffer);\n         MultiBufferSource forced = ignored -> delegate.getBuffer(entityType);\n         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();\n         int size = Math.max(24, Math.min(right - left, bottom - top) / 3);\n@@ -244,8 +252,12 @@ public final class ShaderPreviewRenderer {\n             ));\n             delegate.endBatch();\n         } finally {\n-            dispatcher.setRenderShadow(true);\n-            graphics.pose().popPose();\n+            try {\n+                PREVIEW_BUFFERS.release(buffer);\n+            } finally {\n+                dispatcher.setRenderShadow(true);\n+                graphics.pose().popPose();\n+            }\n         }\n     }\n \n",
-   "id": "3f0d22c54dd2",
-   "class": "authors-fix",
-   "escalate": false,
-   "default": "take the authors' change through the rows, our change re-applied around it",
-   "choice": "patch",
-   "reasoning": "their fix, adapted through the rows (the authors' design intent)",
-   "source": "authors"
-  },
-  {
-   "overlay": "src/main/java/net/eca/coremod/LoadingScreenTransformer.java",
-   "digest": "0083ff5f1862291b4fc67329d6e0e8d2e875f5c0e3f852ab540a96bff7654e9c",
-   "reason": "a conflict with 1.21.8's own change: kept as 1.21.8 had it, a default decision",
-   "since": "7ca21b84bcc1..34fd5a9154b7",
-   "from": "7ca21b84bcc1eb48634ec2a636b881bf3f83bbab",
-   "to": "34fd5a9154b720b5cd4de8a0eb2a1f452766765f",
-   "diff": "diff --git a/src/main/java/net/eca/coremod/LoadingScreenTransformer.java b/src/main/java/net/eca/coremod/LoadingScreenTransformer.java\nindex 3caf743..0c153f6 100644\n--- a/src/main/java/net/eca/coremod/LoadingScreenTransformer.java\n+++ b/src/main/java/net/eca/coremod/LoadingScreenTransformer.java\n@@ -50,6 +50,8 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {\n     }\n \n     public static byte[] transform(byte[] classfileBuffer) {\n+        if (!BACKGROUND_ENABLED) return null;\n+\n         try {\n             ClassReader cr = new ClassReader(classfileBuffer);\n             ClassWriter cw = new SafeWriter(cr, ClassWriter.COMPUTE_FRAMES);\n@@ -137,7 +139,7 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {\n         @Override\n         public void visitIntInsn(int opcode, int operand) {\n             flush();\n-            if (BACKGROUND_ENABLED && !replaced && opcode == Opcodes.SIPUSH && operand == CLEAR_BITS) {\n+            if (!replaced && opcode == Opcodes.SIPUSH && operand == CLEAR_BITS) {\n                 holdingSipush = true;\n                 return;\n             }\n",
-   "id": "12e3075730c9",
-   "class": "authors-fix",
-   "escalate": false,
-   "default": "take the authors' change through the rows, our change re-applied around it",
-   "choice": "patch",
-   "reasoning": "their fix, adapted through the rows (the authors' design intent)",
    "source": "authors"
   },
   {
