@@ -50,6 +50,8 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {
     }
 
     public static byte[] transform(byte[] classfileBuffer) {
+        if (!BACKGROUND_ENABLED) return null;
+
         try {
             ClassReader cr = new ClassReader(classfileBuffer);
             ClassWriter cw = new SafeWriter(cr, ClassWriter.COMPUTE_FRAMES);
@@ -137,7 +139,7 @@ public final class LoadingScreenTransformer implements ClassFileTransformer {
         @Override
         public void visitIntInsn(int opcode, int operand) {
             flush();
-            if (BACKGROUND_ENABLED && !replaced && opcode == Opcodes.SIPUSH && operand == CLEAR_BITS) {
+            if (!replaced && opcode == Opcodes.SIPUSH && operand == CLEAR_BITS) {
                 holdingSipush = true;
                 return;
             }
