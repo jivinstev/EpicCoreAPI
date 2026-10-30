@@ -17,10 +17,8 @@
 //    feature renderer's own batch would close the buffer it is still writing into.
 package net.eca.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
@@ -109,15 +107,13 @@ public class GeoEntityExtensionLayer<T extends GeoAnimatable, O, R extends GeoRe
         // everything that draws into the mod's own builder runs behind the model's task in the model's own list
         renderTasks.submitCustomGeometry(renderPassInfo.poseStack(), modelType, (pose, ignored) -> {
             if (texturedType != null && oculus) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, texturedType.format());
-                drawModel(renderPassInfo, extension, pose, builder, light, overlay, alphaColor);
-                ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedType, 1.0f), builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(ShaderMaskPass.unmasked(texturedType, 1.0f), true,
+                    builder -> drawModel(renderPassInfo, extension, pose, builder, light, overlay, alphaColor));
             }
             for (ShaderMaskPass pass : passes) {
                 if (pass == null || pass.alpha() <= 0.0f) continue;
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(VertexFormat.Mode.QUADS, pass.renderType().format());
-                drawModel(renderPassInfo, extension, pose, builder, light, overlay, -1);
-                ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(pass, true,
+                    builder -> drawModel(renderPassInfo, extension, pose, builder, light, overlay, -1));
             }
         });
     }
