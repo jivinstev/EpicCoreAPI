@@ -80,17 +80,18 @@ public abstract class ItemRendererMixin {
         boolean queued = eca$isWorldContext(displayContext);
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
-            ItemStacks.renderModelLists(model, tintLayers, combinedLight, combinedOverlay, poseStack, consumer);
-            consumer.finish(batch -> {
-                if (queued) {
-                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
-                        batch.uvTransform());
-                } else {
-                    ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
-                        batch.uvTransform());
-                }
-            });
+            try (SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format())) {
+                ItemStacks.renderModelLists(model, tintLayers, combinedLight, combinedOverlay, poseStack, consumer);
+                consumer.finish(batch -> {
+                    if (queued) {
+                        ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
+                            batch.uvTransform());
+                    } else {
+                        ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
+                            batch.uvTransform());
+                    }
+                });
+            }
         }
     }
 
