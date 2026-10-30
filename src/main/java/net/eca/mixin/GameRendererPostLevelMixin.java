@@ -48,6 +48,13 @@ public class GameRendererPostLevelMixin {
     // 26.1: GameRenderer.getDepthFar is gone; the far plane is Camera.depthFar, set in Camera.update. The force-loaded
     // extension of it moved to CameraDepthFarMixin (added for this target by target.properties mixin_add).
 
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    // 26.3: renderLevel() takes no DeltaTracker
+    private void eca$discardAbortedLayers(CallbackInfo ci) {
+        // 上一帧若在队列刷新前中断，不能把旧几何和借出的缓冲留到下一帧。
+        ShaderMaskRenderQueue.discardPending();
+    }
+
     // 在renderLevel()返回后注入，此时Oculus延迟渲染管线已完成合成，主帧缓冲区活跃
     @Inject(method = "renderLevel", at = @At("RETURN"))
     // 26.3: renderLevel() takes no DeltaTracker

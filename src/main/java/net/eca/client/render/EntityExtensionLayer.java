@@ -13,10 +13,7 @@
 // after the body; a shader pass there still draws at once.
 package net.eca.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.renderpearl.api.vertex.VertexFormat;
-import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
@@ -95,13 +92,10 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         if (hasTexture) {
             RenderType texturedLayer = RenderTypes.entityTranslucent(texture);
             if (deferred) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(PrimitiveTopology.QUADS, texturedLayer.format());
-                this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay,
-                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
-                );
-                ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
-                    builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(ShaderMaskPass.unmasked(texturedLayer, 1.0f), true,
+                    builder -> this.getParentModel().renderToBuffer(
+                        poseStack, builder, light, overlay,
+                        ARGB.color((int) (alpha * 255.0f), 255, 255, 255)));
             } else {
                 // order 1: drawn by the feature dispatch after every order-0 model (the body), like vanilla's own layers
                 // (26.3: submitModel(model, state, pose, type, light, overlay, color, UvMapping, outlineColor), no crumbling)
@@ -110,21 +104,19 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
             }
         }
 
+        boolean queued = deferred;
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(PrimitiveTopology.QUADS, pass.renderType().format());
-            this.getParentModel().renderToBuffer(
-                poseStack, builder, light, overlay, 0xFFFFFFFF
-            );
-            if (deferred) {
-                ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
-            } else {
-                // 1.21.9+ (ECA-006): the body is only submitted here and drawn later by the feature dispatch. On 26.3 a
-                // picture-in-picture entity is already routed through GuiTexturePasses above (deferred, ECA-020), so
-                // only a non-level, non-GUI-texture submit gets here; it still draws at once.
-                net.eca.mv.MultiBufferSource.main().endBatch();
-                ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
-            }
+            ShaderMaskRenderQueue.render(pass, queued, builder -> {
+                this.getParentModel().renderToBuffer(
+                    poseStack, builder, light, overlay, 0xFFFFFFFF);
+                if (!queued) {
+                    // 1.21.9+ (ECA-006): the body is only submitted here and drawn later by the feature dispatch. On 26.3 a
+                    // picture-in-picture entity is already routed through GuiTexturePasses above (deferred, ECA-020), so
+                    // only a non-level, non-GUI-texture submit gets here; it still draws at once.
+                    net.eca.mv.MultiBufferSource.main().endBatch();
+                }
+            });
         }
     }
 
