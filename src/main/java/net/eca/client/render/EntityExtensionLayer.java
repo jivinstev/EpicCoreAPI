@@ -11,7 +11,6 @@ package net.eca.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.eca.util.entity_extension.EntityExtension;
 import net.eca.util.entity_extension.EntityExtensionManager;
@@ -85,13 +84,10 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         if (hasTexture) {
             RenderType texturedLayer = RenderTypes.entityTranslucent(texture);
             if (oculus) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, texturedLayer.format());
-                this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay,
-                    ARGB.color((int) (alpha * 255.0f), 255, 255, 255)
-                );
-                ShaderMaskRenderQueue.enqueue(ShaderMaskPass.unmasked(texturedLayer, 1.0f),
-                    builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(ShaderMaskPass.unmasked(texturedLayer, 1.0f), true,
+                    builder -> this.getParentModel().renderToBuffer(
+                        poseStack, builder, light, overlay,
+                        ARGB.color((int) (alpha * 255.0f), 255, 255, 255)));
             } else {
                 // order 1: drawn by the feature dispatch after every order-0 model (the body), like vanilla's own layers
                 collector.order(1).submitModel(this.getParentModel(), state, poseStack, texturedLayer, light, overlay,
@@ -102,11 +98,8 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
         for (ShaderMaskPass pass : shaderPasses) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
             if (oculus || net.eca.mv.SubmitPhase.levelSubmit) {
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, pass.renderType().format());
-                this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay, 0xFFFFFFFF
-                );
-                ShaderMaskRenderQueue.enqueue(pass, builder, builder.buildOrThrow());
+                ShaderMaskRenderQueue.render(pass, true, builder -> this.getParentModel().renderToBuffer(
+                    poseStack, builder, light, overlay, 0xFFFFFFFF));
             } else {
                 // 1.21.9+ (ECA-006): the body is only submitted here and drawn later by the feature dispatch, so drawing the
                 // pass now (as 1.21.1's endBatch() + drawNow did) put it under the body. 26.1.2 drew it from an order-1
@@ -115,15 +108,31 @@ public class EntityExtensionLayer<S extends LivingEntityRenderState, M extends n
                 // (see ItemRendererMixin). A GUI entity is submitted inside a picture-in-picture renderer's prepare, so the
                 // pass is collected and drawn right after that renderer's renderAllFeatures, over the body, into its
                 // texture (GuiTexturePasses, PictureInPictureFeaturesMixin); anything else still draws at once.
-                BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, pass.renderType().format());
-                this.getParentModel().renderToBuffer(
-                    poseStack, builder, light, overlay, 0xFFFFFFFF
-                );
                 if (GuiTexturePasses.collecting()) {
-                    GuiTexturePasses.add(pass, builder, builder.buildOrThrow(), MaskUvTransform.IDENTITY);
+                    // the authors' release-on-failure (ShaderMaskRenderQueue.render) for the collected pass: a builder
+                    // that is not handed to GuiTexturePasses goes back to the pool
+                    BufferBuilder builder = ShaderMaskRenderQueue.acquireBuilder(com.mojang.blaze3d.PrimitiveTopology.QUADS, pass.renderType().format());
+                    boolean submitted = false;
+                    try {
+                        this.getParentModel().renderToBuffer(
+                            poseStack, builder, light, overlay, 0xFFFFFFFF
+                        );
+                        com.mojang.blaze3d.vertex.MeshData mesh = builder.build();
+                        if (mesh != null) {
+                            GuiTexturePasses.add(pass, builder, mesh, MaskUvTransform.IDENTITY);
+                            submitted = true;
+                        }
+                    } finally {
+                        if (!submitted) {
+                            ShaderMaskRenderQueue.releaseBuilder(builder);
+                        }
+                    }
                 } else {
-                    net.eca.mv.MultiBufferSource.main().endBatch();
-                    ShaderMaskRenderQueue.drawNow(pass, builder, builder.buildOrThrow());
+                    ShaderMaskRenderQueue.render(pass, false, builder -> {
+                        this.getParentModel().renderToBuffer(
+                            poseStack, builder, light, overlay, 0xFFFFFFFF);
+                        net.eca.mv.MultiBufferSource.main().endBatch();
+                    });
                 }
             }
         }
