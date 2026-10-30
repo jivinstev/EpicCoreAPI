@@ -87,23 +87,24 @@ public abstract class ItemRendererMixin {
         boolean queued = eca$isWorldContext(displayContext);
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format());
-            ItemStacks.renderModelLists(quads, tintLayers, combinedLight, combinedOverlay, poseStack, consumer);
-            consumer.finish(batch -> {
-                if (queued) {
-                    ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
-                        batch.uvTransform());
-                } else {
-                    // after the item: the collector runs order 1 behind order 0. The item went into the shared buffer source,
-                    // so end its batch first (the task's own buffer, for pass.renderType(), is never written to, so ending
-                    // the batch under it is harmless).
-                    collector.order(1).submitCustomGeometry(poseStack, pass.renderType(), (pose, ignored) -> {
-                        Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
-                        ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
+            try (SpriteBatchingVertexConsumer consumer = new SpriteBatchingVertexConsumer(pass.renderType().format())) {
+                ItemStacks.renderModelLists(quads, tintLayers, combinedLight, combinedOverlay, poseStack, consumer);
+                consumer.finish(batch -> {
+                    if (queued) {
+                        ShaderMaskRenderQueue.enqueue(pass, batch.builder(), batch.builder().buildOrThrow(),
                             batch.uvTransform());
-                    });
-                }
-            });
+                    } else {
+                        // after the item: the collector runs order 1 behind order 0. The item went into the shared buffer source,
+                        // so end its batch first (the task's own buffer, for pass.renderType(), is never written to, so ending
+                        // the batch under it is harmless).
+                        collector.order(1).submitCustomGeometry(poseStack, pass.renderType(), (pose, ignored) -> {
+                            Minecraft.getInstance().renderBuffers().bufferSource().endBatch();
+                            ShaderMaskRenderQueue.drawNow(pass, batch.builder(), batch.builder().buildOrThrow(),
+                                batch.uvTransform());
+                        });
+                    }
+                });
+            }
         }
     }
 
