@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexSorting;
+import net.eca.client.render.RenderBufferPool;
 import net.eca.client.render.shader.EcaShaderInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -43,6 +44,7 @@ import java.util.List;
 public final class ShaderPreviewRenderer {
 
     private static final ItemStack PREVIEW_ITEM = createPreviewItem();
+    private static final RenderBufferPool PREVIEW_BUFFERS = new RenderBufferPool();
     private static final PerspectiveProjectionMatrixBuffer PREVIEW_PROJECTION = new PerspectiveProjectionMatrixBuffer("eca_shader_preview");
 
     public static void render(
@@ -181,7 +183,8 @@ public final class ShaderPreviewRenderer {
         ItemRenderer itemRenderer = minecraft.getItemRenderer();
         Level level = minecraft.level;
         List<BakedQuad> quads = net.eca.mv.ItemModels.quads(PREVIEW_ITEM, level, minecraft.player, 0);
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(4096));
+        ByteBufferBuilder buffer = PREVIEW_BUFFERS.acquireBuffer();
+        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(buffer);
 
         int size = Math.max(40, Math.min(right - left, bottom - top) * 2 / 5);
         PoseStack pose = new PoseStack();
@@ -202,8 +205,12 @@ public final class ShaderPreviewRenderer {
             itemRenderer.renderStatic(PREVIEW_ITEM, ItemDisplayContext.GUI, 0xF000F0, OverlayTexture.NO_OVERLAY, pose, forced, level, 0);
             delegate.endBatch();
         } finally {
-            EcaShaderInstance.clearLocalUvBounds();
-            pose.popPose();
+            try {
+                PREVIEW_BUFFERS.release(buffer);
+            } finally {
+                EcaShaderInstance.clearLocalUvBounds();
+                pose.popPose();
+            }
         }
     }
 
@@ -223,7 +230,8 @@ public final class ShaderPreviewRenderer {
         }
 
         RenderType entityType = source.entity(minecraft.player.getSkin().texture());
-        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(new ByteBufferBuilder(8192));
+        ByteBufferBuilder buffer = PREVIEW_BUFFERS.acquireBuffer();
+        MultiBufferSource.BufferSource delegate = MultiBufferSource.immediate(buffer);
         MultiBufferSource forced = ignored -> delegate.getBuffer(entityType);
         EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
         int size = Math.max(24, Math.min(right - left, bottom - top) / 3);
@@ -255,8 +263,12 @@ public final class ShaderPreviewRenderer {
             ));
             delegate.endBatch();
         } finally {
-            dispatcher.setRenderShadow(true);
-            pose.popPose();
+            try {
+                PREVIEW_BUFFERS.release(buffer);
+            } finally {
+                dispatcher.setRenderShadow(true);
+                pose.popPose();
+            }
         }
     }
 

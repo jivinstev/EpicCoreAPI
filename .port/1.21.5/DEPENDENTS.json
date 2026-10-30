@@ -31,5 +31,27 @@
   "library_commit": "647910174f28c72cadaf077bf6b453a4047d1b3c",
   "jar_sha256": "bd934b7cc63771e6f3be757a1dd88e66dcbf0d174f66f1a669422f3616cda09b",
   "recorded": "2026-10-27"
+ },
+ {
+  "dependent": "jivinstev/TheLastSword",
+  "dependent_commit": "df188b769ed844fc7e9a807f611f1b251c7f1fa3",
+  "gates_commit": "150afe5",
+  "gate_c": "PASS",
+  "library": "net.eca:eca",
+  "library_tag": "eca-1.1.9-fix-mc1.21.5-r3",
+  "library_commit": "8b4e93bbb7a237cd463a795321dc6d8640eb5816",
+  "jar_sha256": "8295696fd6f633873d3966bd3e90aaee5720cc476fdb7b5b98262d4f71b6c1f5",
+  "recorded": "2026-10-28"
+ },
+ {
+  "dependent": "jivinstev/TheLastSword",
+  "dependent_commit": "e7e0283000b8d9138d2ab162c67416d5d0872a41",
+  "gates_commit": "e7e0283000b8d9138d2ab162c67416d5d0872a41",
+  "gate_c": "PASS",
+  "library": "net.eca:eca",
+  "library_tag": "eca-1.1.9-fix-fix-mc1.21.5",
+  "library_commit": "e0833c78f391b577f26fadc51c14a8eef21651bd",
+  "jar_sha256": "4e7b9a3ec3cecae20e42b220a8d80a048cfdaf8663ba064a46720c136ae90173",
+  "recorded": "2026-10-30"
  }
 ]
