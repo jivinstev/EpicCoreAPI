@@ -121,38 +121,42 @@ public final class BlockExtensionRenderer {
         Map<BatchKey, SpriteBatchingVertexConsumer> batches = new LinkedHashMap<>();
         Map<BlockExtension, List<ShaderMaskPass>> passCache = new HashMap<>();
         List<BlockPos> stale = new ArrayList<>();
-        for (Set<BlockPos> section : SECTION_BLOCKS.values()) {
-            for (BlockPos pos : section) {
-                if (pos.distToCenterSqr(camPos) > MAX_RENDER_DISTANCE_SQR) {
-                    continue;
-                }
-                BlockState state = level.getBlockState(pos);
-                BlockExtension extension = BlockExtensionManager.getExtension(state.getBlock());
-                if (extension == null) {
-                    stale.add(pos);
-                    continue;
-                }
-                if (state.getRenderShape() != RenderShape.MODEL
-                    || !BlockExtensionSafeAccess.shouldRender(extension, state, level, pos)) {
-                    continue;
-                }
-                List<ShaderMaskPass> passes = passCache.computeIfAbsent(extension,
-                    ignored -> extension.getBlockShaderPasses());
-                if (passes == null) continue;
-                boolean fullBright = BlockExtensionSafeAccess.isGlow(extension);
-                for (ShaderMaskPass pass : passes) {
-                    if (pass == null || pass.alpha() <= 0.0f) continue;
-                    BatchKey key = new BatchKey(pass, fullBright);
-                    SpriteBatchingVertexConsumer batch = batches.computeIfAbsent(key,
-                        ignored -> new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright));
-                    renderBlock(level, event.getPoseStack(), camPos, pos, state, batch);
+        try {
+            for (Set<BlockPos> section : SECTION_BLOCKS.values()) {
+                for (BlockPos pos : section) {
+                    if (pos.distToCenterSqr(camPos) > MAX_RENDER_DISTANCE_SQR) {
+                        continue;
+                    }
+                    BlockState state = level.getBlockState(pos);
+                    BlockExtension extension = BlockExtensionManager.getExtension(state.getBlock());
+                    if (extension == null) {
+                        stale.add(pos);
+                        continue;
+                    }
+                    if (state.getRenderShape() != RenderShape.MODEL
+                        || !BlockExtensionSafeAccess.shouldRender(extension, state, level, pos)) {
+                        continue;
+                    }
+                    List<ShaderMaskPass> passes = passCache.computeIfAbsent(extension,
+                        ignored -> extension.getBlockShaderPasses());
+                    if (passes == null) continue;
+                    boolean fullBright = BlockExtensionSafeAccess.isGlow(extension);
+                    for (ShaderMaskPass pass : passes) {
+                        if (pass == null || pass.alpha() <= 0.0f) continue;
+                        BatchKey key = new BatchKey(pass, fullBright);
+                        SpriteBatchingVertexConsumer batch = batches.computeIfAbsent(key,
+                            ignored -> new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright));
+                        renderBlock(level, event.getPoseStack(), camPos, pos, state, batch);
+                    }
                 }
             }
+            for (BlockPos pos : stale) {
+                onBlockChanged(level, pos, level.getBlockState(pos));
+            }
+            batches.forEach((key, batch) -> enqueue(key.pass(), batch));
+        } finally {
+            batches.values().forEach(SpriteBatchingVertexConsumer::close);
         }
-        for (BlockPos pos : stale) {
-            onBlockChanged(level, pos, level.getBlockState(pos));
-        }
-        batches.forEach((key, batch) -> enqueue(key.pass(), batch));
     }
 
     private static void renderBlock(ClientLevel level, PoseStack poseStack, Vec3 camPos, BlockPos pos,
@@ -163,11 +167,14 @@ public final class BlockExtensionRenderer {
         BlockStateModel model = minecraft.getBlockRenderer().getBlockModel(state);
         java.util.List<BlockModelPart> parts = model.collectParts(level, pos, state, RandomSource.create(state.getSeed(pos)));
         poseStack.pushPose();
-        // RenderLevelStageEvent 的 PoseStack 只含摄像机旋转，世界坐标须自行减去摄像机位置
-        poseStack.translate(pos.getX() - camPos.x, pos.getY() - camPos.y, pos.getZ() - camPos.z);
-        minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(level, parts, state, pos, poseStack,
-            consumer, true, 0);
-        poseStack.popPose();
+        try {
+            // RenderLevelStageEvent 的 PoseStack 只含摄像机旋转，世界坐标须自行减去摄像机位置
+            poseStack.translate(pos.getX() - camPos.x, pos.getY() - camPos.y, pos.getZ() - camPos.z);
+            minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(level, parts, state, pos, poseStack,
+                consumer, true, 0);
+        } finally {
+            poseStack.popPose();
+        }
     }
 
     private static void enqueue(ShaderMaskPass pass, SpriteBatchingVertexConsumer batch) {

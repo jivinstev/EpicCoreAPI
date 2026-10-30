@@ -56,15 +56,19 @@ public class FallingBlockRendererMixin {
         boolean fullBright = BlockExtensionSafeAccess.isGlow(extension);
         for (ShaderMaskPass pass : passes) {
             if (pass == null || pass.alpha() <= 0.0f) continue;
-            SpriteBatchingVertexConsumer consumer =
-                new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright);
-            poseStack.pushPose();
-            poseStack.translate(-0.5, 0.0, -0.5);
-            minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(entity.level(), parts, state, renderPos,
-                poseStack, consumer, false, 0);
-            poseStack.popPose();
-            consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(),
-                batch.builder().buildOrThrow(), batch.uvTransform()));
+            try (SpriteBatchingVertexConsumer consumer =
+                     new SpriteBatchingVertexConsumer(pass.renderType().format(), fullBright)) {
+                poseStack.pushPose();
+                try {
+                    poseStack.translate(-0.5, 0.0, -0.5);
+                    minecraft.getBlockRenderer().getModelRenderer().tesselateBlock(entity.level(), parts, state, renderPos,
+                        poseStack, consumer, false, 0);
+                } finally {
+                    poseStack.popPose();
+                }
+                consumer.finish(batch -> ShaderMaskRenderQueue.enqueue(pass, batch.builder(),
+                    batch.builder().buildOrThrow(), batch.uvTransform()));
+            }
         }
     }
 }
