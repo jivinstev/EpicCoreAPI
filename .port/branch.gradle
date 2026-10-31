@@ -10,7 +10,8 @@
 //   substitute.<g\:a>=<g:a:v>    a dependency's build for this Minecraft (tools/layer-deps.py writes these)
 //   exclude.<g\:a>=<reason>      a dependency with no build for this Minecraft that the port does not require
 // and runs the client in build/mc<version>/run, so one version's mod configs never reach another's client when one
-// checkout switches between version branches. Without that file (any other branch) it does nothing.
+// checkout switches between version branches, and names the jars it writes to libs -mc<version> (see below). Without
+// that file (any other branch) it does nothing.
 
 def pbMc = project.findProperty('minecraft_version')?.toString()
 def pbFile = pbMc ? file(".port/${pbMc}/branch.properties") : null
@@ -49,4 +50,25 @@ if (pbSubs.any { pbProps.getProperty(it).startsWith('maven.modrinth:') }) {
         maven { url = 'https://api.modrinth.com/maven'; content { includeGroup 'maven.modrinth' } }
     }
 }
+// Jar names: every version branch builds the same mod_version, so without this each version's jars would carry the
+// SAME file name (examplemod-1.1.9_mr.jar), and a name is what a release asset, a Modrinth/CurseForge file and a
+// player's mods/ folder know them by. The jars a player can pick up (those written to the libs directory) get
+// "-mc<version>" right after the mod version, as the release tag has it: examplemod-1.1.9_mr.jar ->
+// examplemod-1.1.9-mc1.21.4_mr.jar (the variant suffix stays last, so *_mr.jar globs still match). Jars written
+// elsewhere (a helper embedded into another jar by file name) keep their names: the mod finds them by name.
+tasks.withType(Jar).configureEach { jarTask ->
+    if (jarTask.destinationDirectory.get().asFile != base.libsDirectory.get().asFile) return
+    // read now: a property cannot be set to a provider derived from itself (Gradle: circular evaluation)
+    jarTask.archiveFileName.set(pbJarName(jarTask.archiveFileName.get(), project.version.toString(), pbMc))
+}
 println "version branch: Minecraft ${pbMc} (.port/${pbMc}/branch.properties)"
+
+String pbJarName(String name, String version, String mc) {
+    def tag = "-mc${mc}"
+    if (!name.endsWith('.jar') || name.contains("${tag}_") || name.contains("${tag}-") || name.endsWith("${tag}.jar")) {
+        return name
+    }
+    def at = version ? name.indexOf("-${version}") : -1
+    def cut = at >= 0 ? at + version.length() + 1 : name.length() - 4
+    return name.substring(0, cut) + tag + name.substring(cut)
+}
