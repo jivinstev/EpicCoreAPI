@@ -535,8 +535,12 @@ public final class ShaderPreviewRenderer {
         protected void renderToTexture(GuiPip state, PoseStack unused, SubmitNodeCollector unusedSubmits) {
             int width = state.x1() - state.x0();
             int height = state.y1() - state.y0();
+            // 26.2+ depth is reverse-Z (PictureInPictureRenderer clears depth to 0.0): as vanilla's Projection.getMatrix, the
+            // ortho is built with near and far swapped (setOrtho(..., zFar, zNear, device.isZZeroToOne())); a forward ortho
+            // clipped or back-to-front sorted the item and entity previews (z 180-220). The 1.21.1 GUI range -10000..10000 is kept.
+            boolean zeroToOne = RenderSystem.getDevice().getDeviceInfo().isZZeroToOne();
             RenderSystem.setProjectionMatrix(
-                projection.getBuffer(new Matrix4f().setOrtho(0.0F, width, height, 0.0F, -10000.0F, 10000.0F)),
+                projection.getBuffer(new Matrix4f().setOrtho(0.0F, width, height, 0.0F, 10000.0F, -10000.0F, zeroToOne)),
                 com.mojang.blaze3d.ProjectionType.ORTHOGRAPHIC
             );
             Matrix4fStack modelView = RenderSystem.getModelViewStack();
