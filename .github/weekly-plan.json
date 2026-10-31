@@ -29,7 +29,7 @@
     }
   ],
   "migrator_repo": "jivinstev/mc-mod-version-upgrade",
-  "migrator_sha": "0703e59a4f99c4e75d94c4507dee967ac22d042e",
+  "migrator_sha": "5ebfabff677d558dcb5a5504017c70ff283dc14c",
   "round": {
     "cron": "CRON_TZ=America/Los_Angeles 26 8 * * 3",
     "name": "keep-current weekly round: jivinstev/EpicCoreAPI, jivinstev/TheLastSword",
