@@ -954,8 +954,8 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "26.2": "open",
-        "26.3": "fixed@ad8f2b0"
+        "26.2": "fixed@9e843e9",
+        "26.3": "fixed@9e843e9"
       },
       "title": "26.2: ShaderPreviewRenderer / GuiPipRenderer use a forward-Z ortho projection on reverse-Z 26.2: item and entity previews in the shader generator are missing"
     },
@@ -1005,15 +1005,15 @@
       "severity": "S3",
       "source": "review",
       "status": {
-        "1.21.10": "open",
-        "1.21.11": "open",
-        "1.21.3": "open",
-        "1.21.4": "open",
-        "1.21.5": "open",
-        "1.21.8": "open",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "1.21.10": "fixed@d01f091",
+        "1.21.11": "fixed@d01f091",
+        "1.21.3": "fixed@d01f091",
+        "1.21.4": "fixed@d01f091",
+        "1.21.5": "fixed@d01f091",
+        "1.21.8": "fixed@d01f091",
+        "26.1.2": "fixed@d01f091",
+        "26.2": "fixed@d01f091",
+        "26.3": "fixed@d01f091"
       },
       "title": "Shipped jar names carry no Minecraft version: every version's release ships epic-core-api-<mod_version>_mr/_cf/_dev.jar, so jars of different versions share a name"
     },
