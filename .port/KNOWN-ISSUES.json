@@ -1205,7 +1205,7 @@
       "severity": "S1",
       "source": "review",
       "status": {
-        "1.21.1": "open"
+        "1.21.1": "fixed@26bba65"
       },
       "title": "Extension shader batches and the shader-generator preview leak native memory every frame (a new ByteBufferBuilder per sprite batch / per preview frame, never closed)"
     }
