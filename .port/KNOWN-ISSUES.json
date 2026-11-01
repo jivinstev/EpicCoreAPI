@@ -270,15 +270,15 @@
       "source": "review",
       "status": {
         "1.21.1": "n/a",
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@a4a4541",
+        "1.21.11": "fixed@a4a4541",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "26.1.2": "fixed@a4a4541",
+        "26.2": "fixed@a4a4541",
+        "26.3": "fixed@a4a4541"
       },
       "title": "EntityUtil dismount sync sends ClientboundSetPassengersPacket to every player in the level instead of the vehicle's trackers"
     },
