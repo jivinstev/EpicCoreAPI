@@ -281,14 +281,15 @@ public final class EcaBossBarRenderer {
         float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         int light = LightTexture.FULL_BRIGHT;
         // 1.21.5: a vanilla type (neither this mod's LegacyRenderType nor a dependent's copy) set no shader on set-up;
-        // its quad is built in the type's own format and drawn with its pipeline under the mask blend (VanillaMask)
+        // its quad is built in the type's own format and drawn with its pipeline under the mask blend (VanillaMask);
+        // UV1 (overlay) is filled too: an entity-format type (NEW_ENTITY) needs it, and BufferBuilder skips it for formats without it
         boolean vanilla = !(renderType instanceof net.eca.mv.LegacyRenderType) && !CopyGl.isCopy(renderType);
         BufferBuilder shaderBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS,
                 vanilla ? renderType.format() : DefaultVertexFormat.BLOCK);
-        shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         com.mojang.blaze3d.vertex.MeshData shaderMesh = shaderBuilder.buildOrThrow();
         // 1.21.5 (ECA-035): a dependent's LegacyRenderType copy loaded its shader into ITS OWN LegacyGl on set-up, so
         // this mod's LegacyGl would draw the quad with the POSITION_TEX shader set before; draw it through the copy's LegacyGl
@@ -432,11 +433,12 @@ public final class EcaBossBarRenderer {
         float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
         Matrix4f matrix = graphics.pose().last().pose();
         VertexConsumer consumer = graphics.bufferSource.getBuffer(renderType);
+        // the buffer is in the type's own format: UV1 (overlay) is filled for an entity-format type, skipped otherwise
         int light = LightTexture.FULL_BRIGHT;
-        consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         graphics.flush();
     }
 }
