@@ -66,3 +66,6 @@ commit_current). Written by the keep-current round driver; a union record.
 | `.port/branch.gradle` | fc09a2c581e0f087da919d71fafffcfd108189a8 | 565e5b0b09d7ef8d188e0e89b9345b910dcfd8f4 | ok | jivinstev/EpicCoreAPI 1.21.3, round 2026-10-30 |
 | `.port/1.21.10/shared-renames.tsv` | 35a46a203895e6473d8ff09925e451101081c6eb | 9447ad2fdd34613d1b20cb86686e941174bebe90 | ok | jivinstev/EpicCoreAPI 1.21.10, round 2026-11-18 |
 | `src/main/java/net/eca/mv/ItemStacks.java` | 6e971146d041dba02a34d77303af1fd32229b75e | 31bacbc18deb022f908b7f0c3622b965845e89c8 | ok | jivinstev/EpicCoreAPI 1.21.10, round 2026-11-18 |
+| `.port/1.21.8/shared-renames.tsv` | 17778aa7cbb19c95ed5ebb1dd182effb1fd2fad9 | a5ed1479b425815df0742430e11f70bc30e607ea | ok | jivinstev/EpicCoreAPI 1.21.8, round 2026-11-18 |
+| `src/main/java/net/eca/mv/ItemStacks.java` | 6e971146d041dba02a34d77303af1fd32229b75e | 31bacbc18deb022f908b7f0c3622b965845e89c8 | ok | jivinstev/EpicCoreAPI 1.21.8, round 2026-11-18 |
+| `src/main/java/net/eca/mv/ItemStacks.java` | 69510339c715f176d36ccb95144226e22da6348d | f6371c8ca14249a7c111940f89eba96f6d22ca66 | ok | jivinstev/EpicCoreAPI 1.21.4, round 2026-11-18 |
