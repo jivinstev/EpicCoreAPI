@@ -33,6 +33,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/event/BossShowEditorClientEvents.java` (client)
 - changed: `src/main/java/net/eca/mixin/EntityMixin.java` (mixin)
 - changed: `src/main/java/net/eca/mixin/FogRendererMixin.java` (mixin, client)
+- changed: `src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/LivingEntityMixin.java` (mixin)
 - changed: `src/main/java/net/eca/mixin/ServerGamePacketListenerMixin.java` (mixin)
@@ -44,7 +45,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/util/entity_extension/GlobalFogExtension.java`
 - changed: `src/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java`
 - changed: `src/pro/java/net/eca/pro/EcaProIntroRenderer.java`
-- resources: `src/main/resources/META-INF/accesstransformer.cfg @6830059fa58b`
+- resources: `src/main/resources/META-INF/accesstransformer.cfg @83eae42ae6a3`
 - stub: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
 - stub: `src/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java`
 - behaviour: `main:net/eca/client/render/ArcaneRenderTypes.java#render-use:RenderStateShard.ShaderStateShard` (moved: not in the target's file; an ok row of REVIEW.md names it)
@@ -97,7 +98,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderColor` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShader` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionColorShader` (moved: not in the target's file; an ok row of REVIEW.md names it)
-- behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture` (moved: not in the target's file; an ok row of REVIEW.md names it)
+- behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture` (changed: the target's overlay has a different render-use; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionTexShader` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderStateShard.ShaderStateShard` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.create` (moved: not in the target's file; an ok row of REVIEW.md names it)
@@ -193,6 +194,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape` (moved: not in the target's file; an ok row of REVIEW.md names it)
+- behaviour: `main:net/eca/mixin/GameRendererPostLevelMixin.java#injection:@Inject method=renderLevel @At(value="INVOKE",target="Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V",shift=At.Shift.AFTER)` (unaccounted: the target's overlay has a different injection)
 - behaviour: `main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/LevelRendererMixin.java#injection:@Inject method=renderClouds @At(value="HEAD")` (moved: not in the target's file; reviewed in STUBS.json: (1.21.8, re-reviewed for EpicCoreAPI#32 from the neoforge-21.8.54 sources and javap of neoforge-21.8.54-merged)
 - behaviour: `main:net/eca/mixin/LevelRendererMixin.java#injection:@Inject method=renderSky @At(value="TAIL")` (moved: not in the target's file; reviewed in STUBS.json: (1.21.8, re-reviewed for EpicCoreAPI#32 from the neoforge-21.8.54 sources and javap of neoforge-21.8.54-merged)
