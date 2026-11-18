@@ -280,15 +280,21 @@ public final class EcaBossBarRenderer {
         );
         float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         int light = LightTexture.FULL_BRIGHT;
-        BufferBuilder shaderBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+        // 1.21.5: a vanilla type (neither this mod's LegacyRenderType nor a dependent's copy) set no shader on set-up;
+        // its quad is built in the type's own format and drawn with its pipeline under the mask blend (VanillaMask)
+        boolean vanilla = !(renderType instanceof net.eca.mv.LegacyRenderType) && !CopyGl.isCopy(renderType);
+        BufferBuilder shaderBuilder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS,
+                vanilla ? renderType.format() : DefaultVertexFormat.BLOCK);
         shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         com.mojang.blaze3d.vertex.MeshData shaderMesh = shaderBuilder.buildOrThrow();
         // 1.21.5 (ECA-035): a dependent's LegacyRenderType copy loaded its shader into ITS OWN LegacyGl on set-up, so
-        // this mod's LegacyGl would draw the quad with the POSITION_TEX shader set before; draw it through the copy's
-        if (renderType instanceof net.eca.mv.LegacyRenderType || !CopyGl.drawMasked(renderType, shaderMesh)) {
+        // this mod's LegacyGl would draw the quad with the POSITION_TEX shader set before; draw it through the copy's LegacyGl
+        if (vanilla) {
+            VanillaMask.draw(renderType, shaderMesh);
+        } else if (renderType instanceof net.eca.mv.LegacyRenderType || !CopyGl.drawMasked(renderType, shaderMesh)) {
             net.eca.mv.LegacyGl.drawWithShader(shaderMesh);
         }
         renderType.clearRenderState();
@@ -332,6 +338,10 @@ public final class EcaBossBarRenderer {
         private CopyGl() {
         }
 
+        static boolean isCopy(RenderType type) {
+            return type != null && METHODS.get(type.getClass()) != NOT_COPY;
+        }
+
         static boolean drawMasked(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
             java.lang.reflect.Method[] ms = type == null ? NOT_COPY : METHODS.get(type.getClass());
             if (ms == NOT_COPY) {
@@ -353,6 +363,67 @@ public final class EcaBossBarRenderer {
                 throw new IllegalStateException(e);
             }
             return true;
+        }
+    }
+
+    /**
+     * The shader quad of a vanilla RenderType: 1.21.1-1.21.4's setupRenderState set the type's shader and the quad was
+     * drawn with it under the DST_ALPHA mask blend; 1.21.5's set-up sets no shader, so the quad is drawn here with the
+     * type's own pipeline (its shader, samplers, depth and write masks) into the type's target, its blend replaced by the
+     * mask blend. A pipeline without blend keeps none, as the parent's NO_TRANSPARENCY shard ignored the blend func.
+     */
+    private static final class VanillaMask {
+        private static final com.mojang.blaze3d.pipeline.BlendFunction MASK = new com.mojang.blaze3d.pipeline.BlendFunction(
+                com.mojang.blaze3d.platform.SourceFactor.DST_ALPHA, com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_DST_ALPHA,
+                com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE);
+        private static final java.util.Map<com.mojang.blaze3d.pipeline.RenderPipeline, com.mojang.blaze3d.pipeline.RenderPipeline> MASKED =
+                new java.util.IdentityHashMap<>();
+
+        private VanillaMask() {
+        }
+
+        private static com.mojang.blaze3d.pipeline.RenderPipeline masked(com.mojang.blaze3d.pipeline.RenderPipeline p) {
+            if (p.getBlendFunction().isEmpty()) {
+                return p;
+            }
+            return MASKED.computeIfAbsent(p, q -> q.toBuilder()
+                    .withLocation(ResourceLocation.fromNamespaceAndPath(q.getLocation().getNamespace(),
+                            q.getLocation().getPath() + "/eca_boss_bar_mask"))
+                    .withBlend(MASK)
+                    .build());
+        }
+
+        static void draw(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
+            try (com.mojang.blaze3d.vertex.MeshData m = mesh) {
+                com.mojang.blaze3d.pipeline.RenderPipeline pipeline = masked(type.getRenderPipeline());
+                VertexFormat format = m.drawState().format();
+                com.mojang.blaze3d.buffers.GpuBuffer vertices = format.uploadImmediateVertexBuffer(m.vertexBuffer());
+                com.mojang.blaze3d.buffers.GpuBuffer indices;
+                VertexFormat.IndexType indexType;
+                if (m.indexBuffer() == null) {
+                    RenderSystem.AutoStorageIndexBuffer seq = RenderSystem.getSequentialBuffer(m.drawState().mode());
+                    indices = seq.getBuffer(m.drawState().indexCount());
+                    indexType = seq.type();
+                } else {
+                    indices = format.uploadImmediateIndexBuffer(m.indexBuffer());
+                    indexType = m.drawState().indexType();
+                }
+                com.mojang.blaze3d.pipeline.RenderTarget target = type.getRenderTarget();
+                try (com.mojang.blaze3d.systems.RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                        target.getColorTexture(), java.util.OptionalInt.empty(),
+                        target.useDepth ? target.getDepthTexture() : null, java.util.OptionalDouble.empty())) {
+                    pass.setPipeline(pipeline);
+                    pass.setVertexBuffer(0, vertices);
+                    if (RenderSystem.SCISSOR_STATE.isEnabled()) pass.enableScissor(RenderSystem.SCISSOR_STATE);
+                    if (RenderSystem.STENCIL_TEST != null) pass.enableStencilTest(RenderSystem.STENCIL_TEST);
+                    for (int i = 0; i < 12; i++) {
+                        com.mojang.blaze3d.textures.GpuTexture t = RenderSystem.getShaderTexture(i);
+                        if (t != null) pass.bindSampler("Sampler" + i, t);
+                    }
+                    pass.setIndexBuffer(indices, indexType);
+                    pass.drawIndexed(0, m.drawState().indexCount());
+                }
+            }
         }
     }
 
