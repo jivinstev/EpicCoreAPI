@@ -520,14 +520,14 @@
       "status": {
         "1.21.1": "n/a",
         "1.21.10": "n/a",
-        "1.21.11": "open",
+        "1.21.11": "fixed@e0161a2",
         "1.21.3": "n/a",
         "1.21.4": "n/a",
         "1.21.5": "n/a",
         "1.21.8": "n/a",
-        "26.1.2": "n/a",
-        "26.2": "n/a",
-        "26.3": "n/a"
+        "26.1.2": "fixed@e0161a2",
+        "26.2": "fixed@e0161a2",
+        "26.3": "fixed@e0161a2"
       },
       "title": "ItemRendererMixin stand-in on 1.21.11: extension pass not once-per-submit (first layer, stack kept until LayerRenderState.clear) -- copies of a dropped stack miss or repeat the pass"
     },
@@ -932,13 +932,13 @@
       "severity": "S4",
       "source": "review",
       "status": {
-        "1.21.10": "open",
-        "1.21.11": "open",
-        "1.21.5": "open",
-        "1.21.8": "open",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "1.21.10": "fixed@d903545",
+        "1.21.11": "fixed@d903545",
+        "1.21.5": "fixed@d903545",
+        "1.21.8": "fixed@d903545",
+        "26.1.2": "fixed@d903545",
+        "26.2": "fixed@d903545",
+        "26.3": "fixed@49411ee"
       },
       "title": "26.2+: GameRendererPostLevelMixin's post-level skybox and EcaBossBarRenderer's textured shader pass dispatch only on ECA's own LegacyRenderType: a dependent's copy is drawn with the wrong shader or skipped"
     },
@@ -981,14 +981,14 @@
       "severity": "S4",
       "source": "review",
       "status": {
-        "1.21.10": "open",
-        "1.21.11": "open",
+        "1.21.10": "fixed@64e83f1",
+        "1.21.11": "fixed@64e83f1",
         "1.21.4": "fixed@64e83f1",
-        "1.21.5": "open",
-        "1.21.8": "open",
-        "26.1.2": "open",
-        "26.2": "open",
-        "26.3": "open"
+        "1.21.5": "fixed@64e83f1",
+        "1.21.8": "fixed@64e83f1",
+        "26.1.2": "fixed@64e83f1",
+        "26.2": "fixed@64e83f1",
+        "26.3": "fixed@64e83f1"
       },
       "title": "net.eca.mv.ItemStacks javadoc still says the stack is recorded at appendItemLayers (it is now recorded at updateForTopItem)"
     },
@@ -1255,6 +1255,63 @@
         "1.21.5": "open"
       },
       "title": "EcaBossBarRenderer's texture+RenderType path draws a vanilla RenderType's mask quad with the POSITION_TEX shader on 1.21.5 (the type's Sampler0 drawn flat instead of its shader)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/EcaBossBarRenderer.java"
+      ],
+      "id": "ECA-048",
+      "lowest": "1.21.5",
+      "notes": "found by the round at 1.21.5 (recheck)",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "latent",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S2",
+      "source": "review",
+      "status": {
+        "1.21.10": "fixed@c5e44c0",
+        "1.21.11": "fixed@c5e44c0",
+        "1.21.5": "fixed@c5e44c0",
+        "1.21.8": "fixed@c5e44c0",
+        "26.1.2": "fixed@c5e44c0",
+        "26.2": "fixed@c5e44c0",
+        "26.3": "fixed@c5e44c0"
+      },
+      "title": "1.21.5: EcaBossBarRenderer's texture+shader boss bar crashes the client for a vanilla RenderType whose format has UV1 (every entity* pipeline, NEW_ENTITY): the mask quad is built in the type's format but UV1 is never filled, so BufferBuilder throws 'Missing elements in vertex: UV1'"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/EcaBossBarRenderer.java"
+      ],
+      "id": "ECA-049",
+      "lowest": "1.21.1",
+      "notes": "found by the round at 1.21.5 (recheck)",
+      "override": null,
+      "rubric": {
+        "failure": "crash",
+        "reach": "latent",
+        "visibility": "always",
+        "workaround": false
+      },
+      "severity": "S2",
+      "source": "review",
+      "status": {
+        "1.21.1": "open",
+        "1.21.10": "fixed@c5e44c0",
+        "1.21.11": "fixed@c5e44c0",
+        "1.21.3": "open",
+        "1.21.4": "open",
+        "1.21.5": "fixed@c5e44c0",
+        "1.21.8": "fixed@c5e44c0",
+        "26.1.2": "fixed@c5e44c0",
+        "26.2": "fixed@c5e44c0",
+        "26.3": "fixed@c5e44c0"
+      },
+      "title": "EcaBossBarRenderer.drawRenderType (boss bar with a RenderType and no texture) crashes the client for a RenderType whose format has UV1 (NEW_ENTITY, every entity* type): the bufferSource quad never sets UV1, so BufferBuilder throws 'Missing elements in vertex: UV1'"
     }
   ],
   "schema": 1
