@@ -449,7 +449,7 @@ public final class EcaBossBarRenderer {
                 }
                 com.mojang.blaze3d.buffers.GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(
                         RenderSystem.getModelViewMatrix(), new org.joml.Vector4f(1.0f, 1.0f, 1.0f, alpha),
-                        RenderSystem.getModelOffset(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
+                        new org.joml.Vector3f(), RenderSystem.getTextureMatrix(), RenderSystem.getShaderLineWidth());
                 com.mojang.blaze3d.pipeline.RenderTarget target = composite.state.outputState.getRenderTarget();
                 com.mojang.blaze3d.textures.GpuTextureView color = RenderSystem.outputColorTextureOverride != null
                         ? RenderSystem.outputColorTextureOverride : target.getColorTextureView();
