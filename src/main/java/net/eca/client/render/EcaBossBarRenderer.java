@@ -285,10 +285,75 @@ public final class EcaBossBarRenderer {
         shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        net.eca.mv.LegacyGl.drawWithShader(shaderBuilder.buildOrThrow());
+        com.mojang.blaze3d.vertex.MeshData shaderMesh = shaderBuilder.buildOrThrow();
+        // 1.21.5 (ECA-035): a dependent's LegacyRenderType copy loaded its shader into ITS OWN LegacyGl on set-up, so
+        // this mod's LegacyGl would draw the quad with the POSITION_TEX shader set before; draw it through the copy's
+        if (renderType instanceof net.eca.mv.LegacyRenderType || !CopyGl.drawMasked(renderType, shaderMesh)) {
+            net.eca.mv.LegacyGl.drawWithShader(shaderMesh);
+        }
         renderType.clearRenderState();
 
         net.eca.mv.LegacyGl.defaultBlendFunc();
+    }
+
+    /**
+     * The shader quad of a dependent's LegacyRenderType copy: the copy's setupRenderState loaded the copy's own LegacyGl
+     * (its relocated sibling class), so the DST_ALPHA mask blend and the draw go to that LegacyGl too; when it has none,
+     * the copy draws the mesh itself (its own blend). False (mesh untouched) when {@code type} is no copy.
+     */
+    private static final class CopyGl {
+        private static final java.lang.reflect.Method[] NOT_COPY = new java.lang.reflect.Method[0];
+        private static final java.lang.reflect.Method[] OWN_DRAW = new java.lang.reflect.Method[0];
+        private static final ClassValue<java.lang.reflect.Method[]> METHODS = new ClassValue<>() {
+            @Override
+            protected java.lang.reflect.Method[] computeValue(Class<?> type) {
+                for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+                    if (c.getSimpleName().equals("LegacyRenderType") && c != net.eca.mv.LegacyRenderType.class
+                            && RenderType.class.isAssignableFrom(c)) {
+                        try {
+                            Class<?> gl = Class.forName(c.getPackageName() + ".LegacyGl", false, c.getClassLoader());
+                            java.lang.reflect.Method blend = gl.getMethod("blendFuncSeparate",
+                                    com.mojang.blaze3d.platform.SourceFactor.class, com.mojang.blaze3d.platform.DestFactor.class,
+                                    com.mojang.blaze3d.platform.SourceFactor.class, com.mojang.blaze3d.platform.DestFactor.class);
+                            java.lang.reflect.Method draw = gl.getMethod("drawWithShader", com.mojang.blaze3d.vertex.MeshData.class);
+                            if (java.lang.reflect.Modifier.isStatic(blend.getModifiers()) && java.lang.reflect.Modifier.isStatic(draw.getModifiers())) {
+                                return new java.lang.reflect.Method[] {blend, draw};
+                            }
+                        } catch (ReflectiveOperationException | LinkageError | SecurityException e) {
+                            // no usable sibling LegacyGl: the copy's own draw below
+                        }
+                        return OWN_DRAW;
+                    }
+                }
+                return NOT_COPY;
+            }
+        };
+
+        private CopyGl() {
+        }
+
+        static boolean drawMasked(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
+            java.lang.reflect.Method[] ms = type == null ? NOT_COPY : METHODS.get(type.getClass());
+            if (ms == NOT_COPY) {
+                return false;   // no copy: this mod's LegacyGl path
+            }
+            if (ms == OWN_DRAW) {
+                type.draw(mesh);   // the copy sets up, draws and clears; closes the mesh
+                return true;
+            }
+            try {
+                ms[0].invoke(null, com.mojang.blaze3d.platform.SourceFactor.DST_ALPHA, com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_DST_ALPHA,
+                        com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE);
+                ms[1].invoke(null, mesh);   // closes the mesh
+            } catch (java.lang.reflect.InvocationTargetException e) {
+                if (e.getCause() instanceof RuntimeException r) throw r;
+                if (e.getCause() instanceof Error err) throw err;
+                throw new IllegalStateException(e.getCause());
+            } catch (IllegalAccessException e) {
+                throw new IllegalStateException(e);
+            }
+            return true;
+        }
     }
 
     private static void drawRenderType(GuiGraphics graphics, RenderType renderType,
