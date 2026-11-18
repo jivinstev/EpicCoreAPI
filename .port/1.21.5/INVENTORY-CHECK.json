@@ -1097,8 +1097,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShader",
-   "status": "same",
-   "detail": "rewritten by the rename tables (no counterpart key)"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionColorShader",
@@ -1106,8 +1107,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "GameRenderer.getPositionColorShader",
-   "status": "same",
-   "detail": "rewritten by the rename tables (no counterpart key)"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture",
@@ -1115,8 +1117,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "RenderSystem.setShaderTexture",
-   "status": "same",
-   "detail": "rewritten by the rename tables (no counterpart key)"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionTexShader",
@@ -1124,8 +1127,9 @@
    "file": "net/eca/client/render/EcaBossBarRenderer.java",
    "kind": "render-use",
    "key": "GameRenderer.getPositionTexShader",
-   "status": "same",
-   "detail": "rewritten by the rename tables (no counterpart key)"
+   "status": "moved",
+   "detail": "not in the target's file; an ok row of REVIEW.md names it",
+   "accounted": true
   },
   {
    "id": "main:net/eca/client/render/EntityExtensionLayer.java#render-class:class EntityExtensionLayer : RenderLayer",
@@ -3466,9 +3470,10 @@
    "file": "net/eca/mixin/GameRendererPostLevelMixin.java",
    "kind": "injection",
    "key": "@Inject method=renderLevel @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V\",shift=At.Shift.AFTER)",
-   "status": "same",
-   "detail": "through the rename tables",
-   "now": "@Inject method=renderLevel @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V\",shift=At.Shift.AFTER)"
+   "status": "changed",
+   "detail": "the target's overlay has a different injection; an ok row of REVIEW.md names it",
+   "now": "@Inject method=renderLevel @At(value=\"INVOKE\",target=\"Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lcom/mojang/blaze3d/resource/GraphicsResourceAllocator;Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V\",shift=At.Shift.AFTER)",
+   "accounted": true
   },
   {
    "id": "main:net/eca/mixin/GenerationChunkHolderMixin.java#injection:@Inject method=scheduleChunkGenerationTask @At(value=\"HEAD\")",
@@ -11360,9 +11365,9 @@
  ],
  "unaccounted": [],
  "counts": {
-  "same": 1179,
-  "moved": 64,
-  "changed": 9
+  "same": 1174,
+  "moved": 68,
+  "changed": 10
  },
  "notes": [
   "the authors' src/ changed since INVENTORY.json was built: re-run tools/layer-inventory.py build"

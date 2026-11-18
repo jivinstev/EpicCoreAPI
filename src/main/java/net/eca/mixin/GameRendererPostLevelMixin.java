@@ -142,12 +142,19 @@ public class GameRendererPostLevelMixin {
             bufferBuilder.addVertex(matrix, size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             // 26.2: per face, the type draws itself when it can -- ours or a dependent's own LegacyRenderType copy, whose
-            // set-up loads only ITS OWN LegacyGl -- as GlobalSkyboxHook does; anything else keeps this mod's LegacyGl path
+            // set-up loads only ITS OWN LegacyGl -- as GlobalSkyboxHook does; a copy without its own draw keeps this mod's
+            // LegacyGl path (which sets the copy up in its own LegacyGl)
+            // 1.21.5 (ECA-035): any other type -- a vanilla one, whose set-up loads no shader into LegacyGl -- draws each
+            // face with its own pipeline, textures and target (26.2: RenderType.prepare(), as MultiBufferSource does)
             com.mojang.blaze3d.vertex.MeshData mesh = bufferBuilder.buildOrThrow();
-            if (!net.eca.mv.MultiBufferSource.drawOwn(renderType, mesh)) {
+            if (net.eca.mv.MultiBufferSource.drawOwn(renderType, mesh)) {
+                // drawn; the mesh is closed
+            } else if (net.eca.mv.LegacyRenderType.Copies.isCopy(renderType)) {
                 net.eca.mv.LegacyGl.setupRenderState(renderType);
                 net.eca.mv.LegacyGl.drawWithShader(mesh);
                 net.eca.mv.LegacyGl.clearRenderState(renderType);
+            } else {
+                net.eca.mv.LegacyGl.drawPrepared(renderType.prepare(), mesh);   // closes the mesh
             }
             poseStack.popPose();
         }
