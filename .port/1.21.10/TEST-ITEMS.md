@@ -29,6 +29,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/client/gui/ShaderSourceEditorScreen.java` (client)
 - changed: `src/main/java/net/eca/client/render/BlockExtensionRenderer.java` (client)
 - changed: `src/main/java/net/eca/client/render/BossShowAnchorRenderer.java` (client)
+- changed: `src/main/java/net/eca/client/render/EcaBossBarRenderer.java` (client)
 - changed: `src/main/java/net/eca/client/render/EntityExtensionLayer.java` (client)
 - changed: `src/main/java/net/eca/client/render/FrustumGuard.java` (client)
 - changed: `src/main/java/net/eca/client/render/GeoBlockExtensionLayer.java` (client)
@@ -42,6 +43,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/coremod/EcaTransformationService.java`
 - changed: `src/main/java/net/eca/event/BossShowEditorClientEvents.java` (client)
 - changed: `src/main/java/net/eca/mixin/FallingBlockRendererMixin.java` (mixin, client)
+- changed: `src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/ItemRendererMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/mixin/LivingEntityRendererMixin.java` (mixin, client)
@@ -52,7 +54,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/util/bossshow/BossShowManager.java`
 - changed: `src/main/java/net/eca/util/reflect/UnsafeUtil.java`
 - changed: `src/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java`
-- resources: `src/main/resources/META-INF/accesstransformer.cfg @5ace9471d103`
+- resources: `src/main/resources/META-INF/accesstransformer.cfg @5e1c1b605e74`
 - resources: `src/main/resources/META-INF/services/net.neoforged.neoforgespi.transformation.ClassProcessorProvider @138dd0f67cef`
 - resources: `src/main/resources/assets/eca/lang @8eda32af1725`
 - stub: `src/cf/java/net/eca/coremod/EcaTransformationService.java`
@@ -111,7 +113,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderColor` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShader` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionColorShader` (moved: not in the target's file; an ok row of REVIEW.md names it)
-- behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture` (moved: not in the target's file; an ok row of REVIEW.md names it)
+- behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:RenderSystem.setShaderTexture` (changed: the target's overlay has a different render-use; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/EcaBossBarRenderer.java#render-use:GameRenderer.getPositionTexShader` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderStateShard.ShaderStateShard` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/client/render/ForestRenderTypes.java#render-use:RenderType.create` (moved: not in the target's file; an ok row of REVIEW.md names it)
@@ -211,6 +213,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogStart` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogEnd` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/FogRendererMixin.java#render-use:RenderSystem.setShaderFogShape` (moved: not in the target's file; an ok row of REVIEW.md names it)
+- behaviour: `main:net/eca/mixin/GameRendererPostLevelMixin.java#injection:@Inject method=renderLevel @At(value="INVOKE",target="Lnet/minecraft/client/renderer/LevelRenderer;renderLevel(Lnet/minecraft/client/DeltaTracker;ZLnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/GameRenderer;Lnet/minecraft/client/renderer/LightTexture;Lorg/joml/Matrix4f;Lorg/joml/Matrix4f;)V",shift=At.Shift.AFTER)` (unaccounted: the target's overlay has a different injection)
 - behaviour: `main:net/eca/mixin/ItemRendererMixin.java#injection:@Inject method=render @At(value="INVOKE",target="Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V",shift=At.Shift.BEFORE)` (changed: the target's overlay has a different injection; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/ItemRendererMixin.java#mixin:@Mixin ItemRenderer` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/mixin/LevelRendererMixin.java#injection:@Inject method=renderClouds @At(value="HEAD")` (moved: not in the target's file; reviewed in STUBS.json: Each removed handler is re-done on 1.21.10's frame graph with 1.21.1's effect, not only moved. renderClouds HE)
