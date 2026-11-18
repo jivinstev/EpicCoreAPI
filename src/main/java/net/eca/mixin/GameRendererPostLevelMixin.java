@@ -118,7 +118,13 @@ public class GameRendererPostLevelMixin {
 
         Tesselator tesselator = Tesselator.getInstance();
 
-        renderType.setupRenderState();
+        // 1.21.5 (ECA-035): only this mod's LegacyRenderType loads its shader into this mod's LegacyGl on set-up; any other
+        // type -- a dependent's own LegacyRenderType copy (which loads only ITS OWN LegacyGl) or a vanilla type -- draws
+        // each face itself through RenderType.draw(MeshData), as GlobalSkyboxHook does
+        boolean own = renderType instanceof net.eca.mv.LegacyRenderType;
+        if (own) {
+            renderType.setupRenderState();
+        }
 
         for (int i = 0; i < 6; ++i) {
             poseStack.pushPose();
@@ -129,11 +135,17 @@ public class GameRendererPostLevelMixin {
             bufferBuilder.addVertex(matrix, -size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
             bufferBuilder.addVertex(matrix, size, -size, -size).setColor(255, 255, 255, alphaInt).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
-            net.eca.mv.LegacyGl.drawWithShader(bufferBuilder.buildOrThrow());
+            if (own) {
+                net.eca.mv.LegacyGl.drawWithShader(bufferBuilder.buildOrThrow());
+            } else {
+                renderType.draw(bufferBuilder.buildOrThrow());   // sets up, draws and clears; closes the mesh
+            }
             poseStack.popPose();
         }
 
-        renderType.clearRenderState();
+        if (own) {
+            renderType.clearRenderState();
+        }
     }
 
     private static void rotateToFace(PoseStack poseStack, int face) {
