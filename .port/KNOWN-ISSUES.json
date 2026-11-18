@@ -920,7 +920,7 @@
         "src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java"
       ],
       "id": "ECA-035",
-      "lowest": "26.2",
+      "lowest": "1.21.5",
       "notes": "Found in the 2026-10-21 round (plan #63) beside ECA-034's fix: both paths go through LegacyGl.setupRenderState/drawWithShader, which know only ECA's own LegacyRenderType; same code at 26.2 and 26.3. Visibility invisible: no known dependent passes its own LegacyRenderType copy as a skybox or boss-bar shader type (TheLastSword's Gate C passes). Fix: call MultiBufferSource.drawOwn first, as GlobalSkyboxHook does.",
       "override": null,
       "rubric": {
@@ -932,6 +932,11 @@
       "severity": "S4",
       "source": "review",
       "status": {
+        "1.21.10": "open",
+        "1.21.11": "open",
+        "1.21.5": "open",
+        "1.21.8": "open",
+        "26.1.2": "open",
         "26.2": "open",
         "26.3": "open"
       },
@@ -978,7 +983,7 @@
       "status": {
         "1.21.10": "open",
         "1.21.11": "open",
-        "1.21.4": "open",
+        "1.21.4": "fixed@64e83f1",
         "1.21.5": "open",
         "1.21.8": "open",
         "26.1.2": "open",
@@ -1208,6 +1213,48 @@
         "1.21.1": "fixed@26bba65"
       },
       "title": "Extension shader batches and the shader-generator preview leak native memory every frame (a new ByteBufferBuilder per sprite batch / per preview frame, never closed)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/EcaBossBarRenderer.java"
+      ],
+      "id": "ECA-046",
+      "lowest": "1.21.5",
+      "notes": "found by the round at 1.21.5 (review)",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "unusual",
+        "visibility": "invisible",
+        "workaround": true
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "1.21.5": "open"
+      },
+      "title": "1.21.5+: EcaBossBarRenderer's textured shader-mask quad draws a vanilla RenderType with POSITION_TEX instead of the type's own shader (the type's Sampler0 drawn flat)"
+    },
+    {
+      "files": [
+        "src/main/java/net/eca/client/render/EcaBossBarRenderer.java"
+      ],
+      "id": "ECA-047",
+      "lowest": "1.21.5",
+      "notes": "found by the round at 1.21.5 (fix)",
+      "override": null,
+      "rubric": {
+        "failure": "cosmetic",
+        "reach": "unusual",
+        "visibility": "invisible",
+        "workaround": true
+      },
+      "severity": "S4",
+      "source": "review",
+      "status": {
+        "1.21.5": "open"
+      },
+      "title": "EcaBossBarRenderer's texture+RenderType path draws a vanilla RenderType's mask quad with the POSITION_TEX shader on 1.21.5 (the type's Sampler0 drawn flat instead of its shader)"
     }
   ],
   "schema": 1
