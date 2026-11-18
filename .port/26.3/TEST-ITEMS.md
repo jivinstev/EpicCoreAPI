@@ -55,6 +55,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/pro/java/net/eca/pro/EcaProImmediateWindowProvider.java`
 - deleted: `src/main/java/net/eca/mixin/GuiItemAtlasFeaturesMixin.java`
 - deleted: `src/main/java/net/eca/mixin/PictureInPictureFeaturesMixin.java`
+- resources: `src/main/resources/META-INF/accesstransformer.cfg @499f0d12e753`
 - resources: `src/main/resources/eca.mixins.dev.json @cae12c7f397d`
 - resources: `src/main/resources/eca.mixins.json @e407cc814b0f`
 - stub: `src/main/java/net/eca/blender/client/runtime/BlendMaterialProgram.java` (client)
