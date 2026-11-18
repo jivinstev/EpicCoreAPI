@@ -214,7 +214,7 @@ public final class EcaBossBarRenderer {
                 Matrix4f matrix = new Matrix4f();
                 if (texture != null) {
                     drawTextureWithShaderMask(matrix, texture, renderType,
-                            x, y, drawWidth, drawHeight, fullWidth, fullHeight);
+                            x, y, drawWidth, drawHeight, fullWidth, fullHeight, alpha);
                 } else {
                     drawRenderType(matrix, renderType, x, y, drawWidth, drawHeight, fullWidth);
                 }
@@ -227,7 +227,7 @@ public final class EcaBossBarRenderer {
 
     private static void drawTextureWithShaderMask(Matrix4f matrix, Identifier texture, RenderType renderType,
                                                   int x, int y, int drawWidth, int drawHeight,
-                                                  int fullWidth, int fullHeight) {
+                                                  int fullWidth, int fullHeight, float alpha) {
         flushBuffers();
 
         // 清除渲染区域的 alpha 通道为 0
@@ -288,15 +288,23 @@ public final class EcaBossBarRenderer {
         );
         float shaderU1 = fullWidth <= 0 ? 0.0f : (float) drawWidth / (float) fullWidth;
         int light = 0xF000F0; // LightTexture.FULL_BRIGHT
-        BufferBuilder shaderBuilder = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
-        shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        // 1.21.5: a vanilla type (neither this mod's LegacyRenderType nor a dependent's copy) set no shader on set-up;
+        // its quad is built in the type's own format and drawn with its pipeline under the mask blend (VanillaMask);
+        // UV1 (overlay) is filled too: an entity-format type (NEW_ENTITY) needs it, and BufferBuilder skips it for formats without it
+        boolean vanilla = !(renderType instanceof net.eca.mv.LegacyRenderType) && !CopyGl.isCopy(renderType);
+        BufferBuilder shaderBuilder = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,
+                vanilla ? renderType.format() : DefaultVertexFormat.BLOCK);
+        shaderBuilder.addVertex(matrix, x, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x + drawWidth, y + drawHeight, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x + drawWidth, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(shaderU1, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        shaderBuilder.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         com.mojang.blaze3d.vertex.MeshData shaderMesh = shaderBuilder.buildOrThrow();
-        // 26.2: a dependent's own relocated LegacyRenderType copy (CATALOG V117) was set up above in ITS OWN LegacyGl, so
-        // this mod's LegacyGl would draw the quad with the POSITION_TEX shader set before; draw it through the copy's
-        if (renderType instanceof net.eca.mv.LegacyRenderType || !CopyGl.drawMasked(renderType, shaderMesh)) {
+        // 1.21.5 (ECA-035): a dependent's LegacyRenderType copy loads its shader into ITS OWN LegacyGl on set-up, so
+        // this mod's LegacyGl would draw the quad with the POSITION_TEX shader set before; draw it through the copy's LegacyGl
+        // (26.2: LegacyGl.setupRenderState above set the copy up in its own LegacyGl -- CATALOG V117 -- and clears it below)
+        if (vanilla) {
+            VanillaMask.draw(renderType, shaderMesh, alpha);
+        } else if (renderType instanceof net.eca.mv.LegacyRenderType || !CopyGl.drawMasked(renderType, shaderMesh)) {
             net.eca.mv.LegacyGl.drawWithShader(shaderMesh);
         }
         net.eca.mv.LegacyGl.clearRenderState(renderType);
@@ -328,6 +336,12 @@ public final class EcaBossBarRenderer {
      * The shader quad of a dependent's LegacyRenderType copy: the copy's setupRenderState loaded the copy's own LegacyGl
      * (its relocated sibling class), so the DST_ALPHA mask blend and the draw go to that LegacyGl too; when it has none,
      * the copy draws the mesh itself (its own blend). False (mesh untouched) when {@code type} is no copy with a draw.
+     *
+     * <p>26.3: the bar is painted inside GuiPipRenderer.renderToTexture, where only THIS mod's LegacyGl output override
+     * (PictureInPictureRendererMixin) sends main-target draws into the picture-in-picture texture; the copy's LegacyGl
+     * has no such override and would draw into the main target. While the override is set, a copy that draws into the
+     * main target is drawn into the override's views instead: through its LegacyGl's {@code draw(mesh, colour, depth)},
+     * or its own {@code draw(mesh, pass)} in a pass this opens on those views (ECA-035).
      */
     private static final class CopyGl {
         private static final java.lang.reflect.Method[] NOT_COPY = new java.lang.reflect.Method[0];
@@ -343,8 +357,18 @@ public final class EcaBossBarRenderer {
                             Class<?> f = com.mojang.renderpearl.api.pipeline.BlendFactor.class;
                             java.lang.reflect.Method blend = gl.getMethod("blendFuncSeparate", f, f, f, f);
                             java.lang.reflect.Method draw = gl.getMethod("drawWithShader", com.mojang.blaze3d.vertex.MeshData.class);
+                            java.lang.reflect.Method drawViews = null;   // 26.3 draw(mesh, colour, depth), when the copy has it
+                            try {
+                                Class<?> v = com.mojang.renderpearl.api.textures.GpuTextureView.class;
+                                drawViews = gl.getMethod("draw", com.mojang.blaze3d.vertex.MeshData.class, v, v);
+                                if (!java.lang.reflect.Modifier.isStatic(drawViews.getModifiers())) {
+                                    drawViews = null;
+                                }
+                            } catch (NoSuchMethodException e) {
+                                // an older copy: the copy's own draw into a pass on the override (see drawMasked)
+                            }
                             if (java.lang.reflect.Modifier.isStatic(blend.getModifiers()) && java.lang.reflect.Modifier.isStatic(draw.getModifiers())) {
-                                return new java.lang.reflect.Method[] {blend, draw};
+                                return new java.lang.reflect.Method[] {blend, draw, drawViews};
                             }
                         } catch (ReflectiveOperationException | LinkageError | SecurityException e) {
                             // no usable sibling LegacyGl: the copy's own draw below
@@ -359,18 +383,27 @@ public final class EcaBossBarRenderer {
         private CopyGl() {
         }
 
+        static boolean isCopy(RenderType type) {
+            return type != null && METHODS.get(type.getClass()) != NOT_COPY;
+        }
+
         static boolean drawMasked(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
             java.lang.reflect.Method[] ms = type == null ? NOT_COPY : METHODS.get(type.getClass());
             if (ms == NOT_COPY) {
                 return false;   // no copy: this mod's LegacyGl path
             }
-            if (ms == OWN_DRAW) {
-                return net.eca.mv.MultiBufferSource.drawOwn(type, mesh);
+            boolean redirect = overrideSet() && net.eca.mv.MultiBufferSource.ownDrawsInto(type);
+            if (ms == OWN_DRAW || (redirect && ms[2] == null)) {
+                return drawOwn(type, mesh);
             }
             try {
                 ms[0].invoke(null, com.mojang.renderpearl.api.pipeline.BlendFactor.DST_ALPHA, com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_DST_ALPHA,
                         com.mojang.renderpearl.api.pipeline.BlendFactor.ZERO, com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
-                ms[1].invoke(null, mesh);   // closes the mesh
+                if (redirect) {
+                    ms[2].invoke(null, mesh, net.eca.mv.LegacyGl.mainColorView(), net.eca.mv.LegacyGl.mainDepthView());   // closes the mesh
+                } else {
+                    ms[1].invoke(null, mesh);   // closes the mesh
+                }
             } catch (java.lang.reflect.InvocationTargetException e) {
                 if (e.getCause() instanceof RuntimeException r) throw r;
                 if (e.getCause() instanceof Error err) throw err;
@@ -379,6 +412,82 @@ public final class EcaBossBarRenderer {
                 throw new IllegalStateException(e);
             }
             return true;
+        }
+
+        /** Whether this mod's LegacyGl output override is set (a picture-in-picture texture, see LegacyGl.setOutput). */
+        static boolean overrideSet() {
+            return net.eca.mv.LegacyGl.mainColorView() != Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView();
+        }
+
+        /** A copy's own draw ({@link net.eca.mv.MultiBufferSource#drawOwn}); while the override is set and the copy draws
+         *  into the main target, into a pass of its own on the override's views. False (mesh untouched): no own draw. */
+        static boolean drawOwn(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh) {
+            if (!overrideSet() || !net.eca.mv.MultiBufferSource.ownDrawsInto(type)) {
+                return net.eca.mv.MultiBufferSource.drawOwn(type, mesh);
+            }
+            com.mojang.renderpearl.api.textures.GpuTextureView colour = net.eca.mv.LegacyGl.mainColorView();
+            try (com.mojang.renderpearl.api.commands.RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                    () -> "eca boss bar " + type, colour, java.util.Optional.empty(), net.eca.mv.LegacyGl.mainDepthView(),
+                    java.util.OptionalDouble.empty())) {
+                return net.eca.mv.MultiBufferSource.drawOwn(type, mesh, pass);   // closes the mesh
+            }
+        }
+    }
+
+    /**
+     * The shader quad of a vanilla RenderType: 1.21.1-1.21.4's setupRenderState set the type's shader and the quad was
+     * drawn with it under the DST_ALPHA mask blend; 1.21.5+'s set-up sets no shader, so the quad is drawn here with the
+     * type's own pipeline (its shader, samplers, depth and write masks) into the type's target, its blend replaced by the
+     * mask blend. A pipeline without blend keeps none, as the parent's NO_TRANSPARENCY shard ignored the blend func.
+     * 26.2: RenderType.prepare() gives the type's pipeline, output target, scissor and textures (the pass
+     * PreparedRenderType.drawFromBuffer opens honours the picture-in-picture texture's output override); its
+     * DynamicTransforms block is written again here with the bar's alpha as its colour, from the RenderSetup's layering
+     * and texture transforms (opened by the access transformer).
+     * 26.3: a prepared type names no output target and has no OIT pipelines here (its pipeline is replaced by the
+     * masked one); LegacyGl.drawPrepared opens the pass on the main target, or on the fork layer's output override
+     * while the picture-in-picture texture is drawn; RenderSetup has no output target (its access transformer line is gone).
+     */
+    private static final class VanillaMask {
+        private static final com.mojang.renderpearl.api.pipeline.BlendFunction MASK = new com.mojang.renderpearl.api.pipeline.BlendFunction(
+                com.mojang.renderpearl.api.pipeline.BlendFactor.DST_ALPHA, com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_DST_ALPHA,
+                com.mojang.renderpearl.api.pipeline.BlendFactor.ZERO, com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
+        private static final java.util.Map<com.mojang.renderpearl.api.pipeline.RenderPipeline, com.mojang.renderpearl.api.pipeline.RenderPipeline> MASKED =
+                new java.util.IdentityHashMap<>();
+
+        private VanillaMask() {
+        }
+
+        private static com.mojang.renderpearl.api.pipeline.RenderPipeline masked(com.mojang.renderpearl.api.pipeline.RenderPipeline p) {
+            // 26.1: the blend and the colour write mask are the pipeline's ColorTargetState; the mask blend keeps the
+            // write mask (26.2: and the target format)
+            // 26.3: a pipeline has a list of colour target states; the type draws into the first
+            java.util.List<com.mojang.renderpearl.api.pipeline.ColorTargetState> targets = p.getColorTargetStates();
+            com.mojang.renderpearl.api.pipeline.ColorTargetState cts = targets.isEmpty() ? null : targets.get(0);
+            if (cts == null || cts.blendFunction().isEmpty()) {
+                return p;
+            }
+            return MASKED.computeIfAbsent(p, q -> q.toBuilder()
+                    .withLocation(Identifier.fromNamespaceAndPath(q.getLocation().getNamespace(),
+                            q.getLocation().getPath() + "/eca_boss_bar_mask"))
+                    .withColorTargetState(new com.mojang.renderpearl.api.pipeline.ColorTargetState(
+                            java.util.Optional.of(MASK), cts.format(), cts.writeMask()))
+                    .build());
+        }
+
+        static void draw(RenderType type, com.mojang.blaze3d.vertex.MeshData mesh, float alpha) {
+            net.minecraft.client.renderer.rendertype.RenderSetup setup = type.state;
+            Matrix4f modelView = RenderSystem.getModelViewMatrixCopy();
+            java.util.function.Consumer<Matrix4f> layering = setup.layeringTransform.getModifier();
+            if (layering != null) {
+                layering.accept(modelView);
+            }
+            net.minecraft.client.renderer.rendertype.PreparedRenderType prepared = type.prepare();
+            com.mojang.renderpearl.api.buffers.GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(
+                    modelView, new org.joml.Vector4f(1.0f, 1.0f, 1.0f, alpha), new org.joml.Vector3f(),
+                    setup.textureTransform.createMatrix());
+            net.eca.mv.LegacyGl.drawPrepared(new net.minecraft.client.renderer.rendertype.PreparedRenderType(
+                    prepared.name(), masked(prepared.pipeline()), null, transforms, prepared.scissorState(),
+                    prepared.textures()), mesh);   // closes the mesh
         }
     }
 
@@ -389,12 +498,29 @@ public final class EcaBossBarRenderer {
     private static void drawRenderType(Matrix4f matrix, RenderType renderType,
                                        int x, int y, int width, int height, int fullWidth) {
         float u1 = fullWidth <= 0 ? 0.0f : (float) width / (float) fullWidth;
+        if (!(renderType instanceof net.eca.mv.LegacyRenderType) && net.eca.mv.LegacyRenderType.Copies.isCopy(renderType)
+                && CopyGl.overrideSet()) {
+            // 26.3 (ECA-035): the buffer source would draw a dependent's copy through its own draw into the main target,
+            // not this picture-in-picture texture; draw it into the override's views
+            int l = 0xF000F0; // LightTexture.FULL_BRIGHT
+            BufferBuilder b = Tesselator.getInstance().begin(renderType.primitiveTopology(), renderType.format());
+            b.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(l).setNormal(0.0f, 0.0f, 1.0f);
+            b.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(l).setNormal(0.0f, 0.0f, 1.0f);
+            b.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(l).setNormal(0.0f, 0.0f, 1.0f);
+            b.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(l).setNormal(0.0f, 0.0f, 1.0f);
+            com.mojang.blaze3d.vertex.MeshData mesh = b.build();
+            if (mesh != null && !CopyGl.drawOwn(renderType, mesh)) {
+                mesh.close();
+            }
+            return;
+        }
         VertexConsumer consumer = net.eca.mv.MultiBufferSource.main().getBuffer(renderType);
+        // the buffer is in the type's own format: UV1 (overlay) is filled for an entity-format type, skipped otherwise
         int light = 0xF000F0; // LightTexture.FULL_BRIGHT
-        consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
-        consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x + width, y + height, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 1.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x + width, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(u1, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
+        consumer.addVertex(matrix, x, y, 0).setColor(1.0f, 1.0f, 1.0f, 1.0f).setUv(0.0f, 0.0f).setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 0.0f, 1.0f);
         flushBuffers();
     }
 }

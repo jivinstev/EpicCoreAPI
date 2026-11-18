@@ -17,7 +17,8 @@ import java.util.WeakHashMap;
 /**
  * 1.21.4 renders an item from an ItemStackRenderState that the ItemModelResolver fills from the stack; the stack is
  * not on the state. A mod that decided from the STACK while rendering (an item extension, a glint) records it here
- * from ItemModelResolver.appendItemLayers (a one-line mixin in the fork) and reads it back while the state renders.
+ * from ItemModelResolver.updateForTopItem (a one-line mixin in the fork; not appendItemLayers, which an open bundle
+ * also calls to append its selected item's layers into the bundle's state) and reads it back while the state renders.
  * One state is reused frame to frame and refilled each time, so the latest stack is the right one.
  * <p>
  * Once per item, not per layer: 1.21.1 drew a mod's extra pass once per {@code ItemRenderer.render} call, and one filled
