@@ -77,3 +77,5 @@ commit_current). Written by the keep-current round driver; a union record.
 | `src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java` | 2899a106930997ffe85bd9d125200aec770dd944 | 95d64bdea7116941ce7843dbd5bbed9299f86418 | ok | jivinstev/EpicCoreAPI 1.21.11, round 2026-10-30 |
 | `src/main/java/net/eca/mixin/ItemRendererMixin.java` | dd6207177532a9d2c88cedeb6648c9e924d72f44 | 5b3baf11789d2fdd62252a3c270392f58df5db42 | ok | jivinstev/EpicCoreAPI 1.21.11, round 2026-10-30 |
 | `.port/branch.gradle` | fc09a2c581e0f087da919d71fafffcfd108189a8 | 565e5b0b09d7ef8d188e0e89b9345b910dcfd8f4 | ok | jivinstev/EpicCoreAPI 1.21.3, round 2026-10-30 |
+| `.port/1.21.11/shared-renames.tsv` | 67ebd1ece969586a52033491736415a6500cc1c3 | 0deb27f0eacb31f5bca4dcd7cd580285238f7fb4 | ok | jivinstev/EpicCoreAPI 1.21.11, round 2026-11-18 |
+| `src/main/java/net/eca/mv/ItemStacks.java` | 6e971146d041dba02a34d77303af1fd32229b75e | 31bacbc18deb022f908b7f0c3622b965845e89c8 | ok | jivinstev/EpicCoreAPI 1.21.11, round 2026-11-18 |
