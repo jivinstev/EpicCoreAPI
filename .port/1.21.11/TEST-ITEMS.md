@@ -43,7 +43,7 @@ version because no gate judges it. The fork-versions skill's step 11 turns them 
 - changed: `src/main/java/net/eca/mixin/SoundManagerMixin.java` (mixin, client)
 - changed: `src/main/java/net/eca/util/bossshow/BossShowManager.java`
 - changed: `src/main/java/net/eca/util/entity_extension/GlobalEffectOverrideManager.java`
-- resources: `src/main/resources/META-INF/accesstransformer.cfg @8376fdfd2b87`
+- resources: `src/main/resources/META-INF/accesstransformer.cfg @7efda627f320`
 - stub: `src/main/java/net/eca/mixin/LevelRendererMixin.java` (mixin, client)
 - behaviour: `main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.create` (moved: not in the target's file; an ok row of REVIEW.md names it)
 - behaviour: `main:net/eca/blender/client/runtime/BlendMaterialProgram.java#render-use:RenderType.CompositeState` (moved: not in the target's file; an ok row of REVIEW.md names it)
