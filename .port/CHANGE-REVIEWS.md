@@ -40,3 +40,4 @@ commit_current). Written by the keep-current round driver; a union record.
 | `src/main/java/net/eca/mixin/GameRendererPostLevelMixin.java` | ff9eac1d7fb656d108cd3eaab6d7cbc02194b3aa | 693d90624873b2a8f3932fcdc2c12abc57612cfb | ok | jivinstev/EpicCoreAPI 1.21.5, round 2026-10-30 |
 | `src/main/java/net/eca/mixin/ItemRendererMixin.java` | 897f7d63dd910dab10d40de5c9c80c9d51f7ce50 | d5f8627e932351d1d13ada8dec891754e82542d8 | ok | jivinstev/EpicCoreAPI 1.21.5, round 2026-10-30 |
 | `.port/branch.gradle` | fc09a2c581e0f087da919d71fafffcfd108189a8 | 565e5b0b09d7ef8d188e0e89b9345b910dcfd8f4 | ok | jivinstev/EpicCoreAPI 1.21.3, round 2026-10-30 |
+| `src/main/java/net/eca/mv/ItemStacks.java` | 69510339c715f176d36ccb95144226e22da6348d | f6371c8ca14249a7c111940f89eba96f6d22ca66 | ok | jivinstev/EpicCoreAPI 1.21.4, round 2026-11-18 |
